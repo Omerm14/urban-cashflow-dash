@@ -69,37 +69,41 @@ const pdfToBase64 = async file => {
   const lib = await loadPdfJs();
   const pdf = await lib.getDocument({ data: await file.arrayBuffer() }).promise;
   const page = await pdf.getPage(1);
-  const vp = page.getViewport({ scale: 2 });
+  const vp = page.getViewport({ scale: 1 }); // scale 1 → 4× fewer image tokens vs scale 2
   const canvas = document.createElement("canvas");
   canvas.width = vp.width; canvas.height = vp.height;
   await page.render({ canvasContext: canvas.getContext("2d"), viewport: vp }).promise;
-  return canvas.toDataURL("image/jpeg", 0.92).split(",")[1];
+  return { b64: canvas.toDataURL("image/jpeg", 0.75).split(",")[1], mediaType: "image/jpeg" };
 };
-const fileToBase64 = f => new Promise((res,rej) => { const r = new FileReader(); r.onload = () => res(r.result.split(",")[1]); r.onerror = rej; r.readAsDataURL(f); });
+const fileToBase64 = f => new Promise((res,rej) => {
+  const r = new FileReader();
+  r.onload = () => res({ b64: r.result.split(",")[1], mediaType: f.type || "image/jpeg" });
+  r.onerror = rej;
+  r.readAsDataURL(f);
+});
 
-// ── Claude extraction ─────────────────────────────────────────────────────────
-const extractInvoice = async (b64, suppliers, apiKey) => {
-  if (!apiKey) throw new Error("No API key set — click 🔑 in the nav bar");
-  const names = suppliers.map(s => s.name).join(", ");
-  const res = await fetch("https://api.anthropic.com/v1/messages", {
+// ── persistent anonymous user ID for usage tracking ───────────────────────────
+const getUserId = () => {
+  let id = localStorage.getItem("userId");
+  if (!id) { id = crypto.randomUUID(); localStorage.setItem("userId", id); }
+  return id;
+};
+
+// ── Claude extraction (proxied through server — API key never leaves backend) ──
+const extractInvoice = async (b64, mediaType, suppliers) => {
+  const res = await fetch("/api/extract", {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "x-api-key": apiKey,
-      "anthropic-version": "2023-06-01",
-      "anthropic-dangerous-direct-browser-access": "true",
-    },
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
-      model: "claude-sonnet-4-6", max_tokens: 1000,
-      messages: [{ role: "user", content: [
-        { type: "image", source: { type: "base64", media_type: "image/jpeg", data: b64 } },
-        { type: "text", text: `Extract invoice data. Known suppliers: ${names}. Return ONLY valid JSON with keys: supplier, invoiceNo, invoiceDate (YYYY-MM-DD), amount (number). No markdown.` }
-      ]}]
-    })
+      b64,
+      mediaType,
+      supplierNames: suppliers.map(s => s.name).join(", "),
+      userId: getUserId(),
+    }),
   });
   const data = await res.json();
-  if (data.error) throw new Error(data.error.message);
-  return JSON.parse(data.content.map(b=>b.text||"").join("").replace(/```json|```/g,"").trim());
+  if (data.error) throw new Error(data.error);
+  return data.result;
 };
 
 // ── CSV supplier parser ───────────────────────────────────────────────────────
@@ -168,9 +172,6 @@ export default function App() {
   const [calMonth, setCalMonth] = useState(() => toYM(new Date()));
   const [hoveredBar, setHoveredBar] = useState(null);
   const [tooltip, setTooltip] = useState(null); // {ym, supplier, amount, total, x, y} — x/y are page coords
-  const envKey = import.meta.env.VITE_ANTHROPIC_API_KEY || "";
-  const [apiKey, setApiKey] = useState(() => envKey || localStorage.getItem("apiKey") || "");
-  const [showApiKey, setShowApiKey] = useState(false);
   const fileRef = useRef();
   const csvRef = useRef();
 
@@ -239,9 +240,9 @@ export default function App() {
     for (const file of files) {
       setExtractMsg({ text: `Processing ${file.name}…`, ok: null });
       try {
-        const b64 = file.type==="application/pdf" ? await pdfToBase64(file) : await fileToBase64(file);
+        const { b64, mediaType } = file.type==="application/pdf" ? await pdfToBase64(file) : await fileToBase64(file);
         setExtractMsg({ text: `Reading ${file.name}…`, ok: null });
-        const ex = await extractInvoice(b64, suppliers, apiKey);
+        const ex = await extractInvoice(b64, mediaType, suppliers);
         const candidate = { id: Date.now()+Math.random(), supplier: ex.supplier||"", invoiceNo: ex.invoiceNo||"", invoiceDate: ex.invoiceDate||"", amount: Number(ex.amount)||0, dueDate:"", status: STATUS.UNPAID, notes:"" };
         const dupes = findDuplicates([...cur, candidate]);
         if (dupes.has(candidate.id)) { errors.push(`${file.name}: duplicate invoice detected (${candidate.supplier} · ${candidate.invoiceNo || candidate.invoiceDate} · ₪${candidate.amount})`); continue; }
@@ -290,9 +291,6 @@ export default function App() {
             <button key={v} className={`nav-btn${view===v?" active":""}`} onClick={()=>setView(v)} style={{ textTransform:"capitalize" }}>{v}</button>
           ))}
           <div style={{ marginLeft:"auto", display:"flex", alignItems:"center", gap:10 }}>
-            <button onClick={()=>{ if(!envKey) setShowApiKey(v=>!v); }} title={envKey ? "API key loaded from environment" : apiKey ? "API key set manually" : "Set API key"} style={{ padding:"8px 14px", background:"transparent", border:`1px solid ${apiKey?"#166534":"#7f1d1d"}`, borderRadius:8, color:apiKey?"#4ade80":"#f87171", cursor:envKey?"default":"pointer", fontSize:12, fontWeight:500, fontFamily:"inherit" }}>
-              🔑 {envKey ? "Connected" : apiKey ? "Key set" : "No API key"}
-            </button>
             <button onClick={()=>setShowSuppliers(true)} style={{ padding:"8px 14px", background:"transparent", border:"1px solid #1e2d45", borderRadius:8, color:"#64748b", cursor:"pointer", fontSize:12, fontWeight:500, transition:"all .2s", fontFamily:"inherit" }}
               onMouseEnter={e=>{ e.target.style.borderColor="#334155"; e.target.style.color="#94a3b8"; }}
               onMouseLeave={e=>{ e.target.style.borderColor="#1e2d45"; e.target.style.color="#64748b"; }}>
@@ -597,43 +595,6 @@ export default function App() {
                 style={{ padding:"10px 24px", background:"linear-gradient(135deg,#6366f1,#a78bfa)", border:"none", borderRadius:10, color:"#fff", fontWeight:700, cursor:"pointer", fontFamily:"inherit", fontSize:13, boxShadow:"0 4px 15px #6366f133" }}>
                 Save Invoice
               </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ── API Key Modal ── */}
-      {showApiKey && (
-        <div className="modal-overlay" onClick={e=>e.target===e.currentTarget&&setShowApiKey(false)}>
-          <div className="modal" style={{ width:440 }}>
-            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:20 }}>
-              <div>
-                <div style={{ fontWeight:700, fontSize:17, color:"#f1f5f9" }}>Anthropic API Key</div>
-                <div style={{ fontSize:12, color:"#475569", marginTop:2 }}>Required to extract invoice data from images</div>
-              </div>
-              <button onClick={()=>setShowApiKey(false)} style={{ width:32, height:32, borderRadius:8, background:"#131c2e", border:"1px solid #1e2d45", color:"#64748b", cursor:"pointer", fontSize:16, display:"flex", alignItems:"center", justifyContent:"center" }}>✕</button>
-            </div>
-            {envKey ? (
-              <div style={{ background:"#052e16", border:"1px solid #166534", borderRadius:10, padding:"14px 16px", marginBottom:16 }}>
-                <div style={{ fontSize:13, color:"#4ade80", fontWeight:600, marginBottom:4 }}>✓ Key loaded from environment</div>
-                <div style={{ fontSize:12, color:"#475569" }}>Set via <code style={{ color:"#a78bfa", fontSize:11 }}>VITE_ANTHROPIC_API_KEY</code> in <code style={{ color:"#a78bfa", fontSize:11 }}>.env.local</code></div>
-              </div>
-            ) : (
-              <div style={{ marginBottom:16 }}>
-                <div style={{ fontSize:11, fontWeight:600, color:"#475569", marginBottom:6, textTransform:"uppercase", letterSpacing:".5px" }}>API Key</div>
-                <input type="password" value={apiKey} placeholder="sk-ant-..." className="input"
-                  onChange={e=>setApiKey(e.target.value)} />
-                <div style={{ fontSize:11, color:"#334155", marginTop:8 }}>Stored in your browser only — never sent anywhere except Anthropic.</div>
-              </div>
-            )}
-            <div style={{ display:"flex", gap:10, justifyContent:"flex-end" }}>
-              {!envKey && apiKey && <button onClick={()=>{ setApiKey(""); localStorage.removeItem("apiKey"); setShowApiKey(false); }}
-                style={{ padding:"10px 16px", background:"#2d0a0a", border:"none", borderRadius:10, color:"#f87171", cursor:"pointer", fontFamily:"inherit", fontWeight:500, fontSize:13 }}>Clear</button>}
-              <button onClick={()=>setShowApiKey(false)} style={{ padding:"10px 20px", background:"#131c2e", border:"1px solid #1e2d45", borderRadius:10, color:"#64748b", cursor:"pointer", fontFamily:"inherit", fontWeight:500, fontSize:13 }}>Close</button>
-              {!envKey && <button onClick={()=>{ localStorage.setItem("apiKey", apiKey); setShowApiKey(false); }}
-                style={{ padding:"10px 24px", background:"linear-gradient(135deg,#6366f1,#a78bfa)", border:"none", borderRadius:10, color:"#fff", fontWeight:700, cursor:"pointer", fontFamily:"inherit", fontSize:13 }}>
-                Save Key
-              </button>}
             </div>
           </div>
         </div>
