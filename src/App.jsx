@@ -78,11 +78,17 @@ const pdfToBase64 = async file => {
 const fileToBase64 = f => new Promise((res,rej) => { const r = new FileReader(); r.onload = () => res(r.result.split(",")[1]); r.onerror = rej; r.readAsDataURL(f); });
 
 // ── Claude extraction ─────────────────────────────────────────────────────────
-const extractInvoice = async (b64, suppliers) => {
+const extractInvoice = async (b64, suppliers, apiKey) => {
+  if (!apiKey) throw new Error("No API key set — click 🔑 in the nav bar");
   const names = suppliers.map(s => s.name).join(", ");
   const res = await fetch("https://api.anthropic.com/v1/messages", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: {
+      "Content-Type": "application/json",
+      "x-api-key": apiKey,
+      "anthropic-version": "2023-06-01",
+      "anthropic-dangerous-direct-browser-access": "true",
+    },
     body: JSON.stringify({
       model: "claude-sonnet-4-6", max_tokens: 1000,
       messages: [{ role: "user", content: [
@@ -162,6 +168,8 @@ export default function App() {
   const [calMonth, setCalMonth] = useState(() => toYM(new Date()));
   const [hoveredBar, setHoveredBar] = useState(null);
   const [tooltip, setTooltip] = useState(null); // {ym, supplier, amount, total, x, y} — x/y are page coords
+  const [apiKey, setApiKey] = useState(() => localStorage.getItem("apiKey") || "");
+  const [showApiKey, setShowApiKey] = useState(false);
   const fileRef = useRef();
   const csvRef = useRef();
 
@@ -232,7 +240,7 @@ export default function App() {
       try {
         const b64 = file.type==="application/pdf" ? await pdfToBase64(file) : await fileToBase64(file);
         setExtractMsg({ text: `Reading ${file.name}…`, ok: null });
-        const ex = await extractInvoice(b64, suppliers);
+        const ex = await extractInvoice(b64, suppliers, apiKey);
         const candidate = { id: Date.now()+Math.random(), supplier: ex.supplier||"", invoiceNo: ex.invoiceNo||"", invoiceDate: ex.invoiceDate||"", amount: Number(ex.amount)||0, dueDate:"", status: STATUS.UNPAID, notes:"" };
         const dupes = findDuplicates([...cur, candidate]);
         if (dupes.has(candidate.id)) { errors.push(`${file.name}: duplicate invoice detected (${candidate.supplier} · ${candidate.invoiceNo || candidate.invoiceDate} · ₪${candidate.amount})`); continue; }
@@ -281,6 +289,9 @@ export default function App() {
             <button key={v} className={`nav-btn${view===v?" active":""}`} onClick={()=>setView(v)} style={{ textTransform:"capitalize" }}>{v}</button>
           ))}
           <div style={{ marginLeft:"auto", display:"flex", alignItems:"center", gap:10 }}>
+            <button onClick={()=>setShowApiKey(v=>!v)} title={apiKey ? "API key set" : "Set API key"} style={{ padding:"8px 14px", background:"transparent", border:`1px solid ${apiKey?"#166534":"#7f1d1d"}`, borderRadius:8, color:apiKey?"#4ade80":"#f87171", cursor:"pointer", fontSize:12, fontWeight:500, fontFamily:"inherit" }}>
+              🔑 {apiKey ? "Key set" : "No API key"}
+            </button>
             <button onClick={()=>setShowSuppliers(true)} style={{ padding:"8px 14px", background:"transparent", border:"1px solid #1e2d45", borderRadius:8, color:"#64748b", cursor:"pointer", fontSize:12, fontWeight:500, transition:"all .2s", fontFamily:"inherit" }}
               onMouseEnter={e=>{ e.target.style.borderColor="#334155"; e.target.style.color="#94a3b8"; }}
               onMouseLeave={e=>{ e.target.style.borderColor="#1e2d45"; e.target.style.color="#64748b"; }}>
@@ -584,6 +595,36 @@ export default function App() {
               <button onClick={()=>{ if(editInvoice.id) saveInvoices(invoices.map(i=>i.id===editInvoice.id?editInvoice:i)); else saveInvoices([...invoices,{...editInvoice,id:Date.now()}]); setEditInvoice(null); }}
                 style={{ padding:"10px 24px", background:"linear-gradient(135deg,#6366f1,#a78bfa)", border:"none", borderRadius:10, color:"#fff", fontWeight:700, cursor:"pointer", fontFamily:"inherit", fontSize:13, boxShadow:"0 4px 15px #6366f133" }}>
                 Save Invoice
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── API Key Modal ── */}
+      {showApiKey && (
+        <div className="modal-overlay" onClick={e=>e.target===e.currentTarget&&setShowApiKey(false)}>
+          <div className="modal" style={{ width:440 }}>
+            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:20 }}>
+              <div>
+                <div style={{ fontWeight:700, fontSize:17, color:"#f1f5f9" }}>Anthropic API Key</div>
+                <div style={{ fontSize:12, color:"#475569", marginTop:2 }}>Required to extract invoice data from images</div>
+              </div>
+              <button onClick={()=>setShowApiKey(false)} style={{ width:32, height:32, borderRadius:8, background:"#131c2e", border:"1px solid #1e2d45", color:"#64748b", cursor:"pointer", fontSize:16, display:"flex", alignItems:"center", justifyContent:"center" }}>✕</button>
+            </div>
+            <div style={{ marginBottom:16 }}>
+              <div style={{ fontSize:11, fontWeight:600, color:"#475569", marginBottom:6, textTransform:"uppercase", letterSpacing:".5px" }}>API Key</div>
+              <input type="password" value={apiKey} placeholder="sk-ant-..." className="input"
+                onChange={e=>setApiKey(e.target.value)} />
+              <div style={{ fontSize:11, color:"#334155", marginTop:8 }}>Stored in your browser only — never sent anywhere except Anthropic.</div>
+            </div>
+            <div style={{ display:"flex", gap:10, justifyContent:"flex-end" }}>
+              {apiKey && <button onClick={()=>{ setApiKey(""); localStorage.removeItem("apiKey"); setShowApiKey(false); }}
+                style={{ padding:"10px 16px", background:"#2d0a0a", border:"none", borderRadius:10, color:"#f87171", cursor:"pointer", fontFamily:"inherit", fontWeight:500, fontSize:13 }}>Clear</button>}
+              <button onClick={()=>setShowApiKey(false)} style={{ padding:"10px 20px", background:"#131c2e", border:"1px solid #1e2d45", borderRadius:10, color:"#64748b", cursor:"pointer", fontFamily:"inherit", fontWeight:500, fontSize:13 }}>Cancel</button>
+              <button onClick={()=>{ localStorage.setItem("apiKey", apiKey); setShowApiKey(false); }}
+                style={{ padding:"10px 24px", background:"linear-gradient(135deg,#6366f1,#a78bfa)", border:"none", borderRadius:10, color:"#fff", fontWeight:700, cursor:"pointer", fontFamily:"inherit", fontSize:13 }}>
+                Save Key
               </button>
             </div>
           </div>
