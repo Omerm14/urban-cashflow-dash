@@ -1,4 +1,4 @@
-export default function SuppliersModal({ suppliers, saveSuppliers, editSupplier, setEditSupplier, onClose }) {
+export default function SuppliersModal({ suppliers, addSupplier, updateSupplier, deleteSupplier, editSupplier, setEditSupplier, onClose }) {
   return (
     <div className="modal-overlay" onClick={e => e.target===e.currentTarget && onClose()}>
       <div className="modal" style={{ width:580, maxHeight:"85vh", overflowY:"auto" }}>
@@ -33,7 +33,7 @@ export default function SuppliersModal({ suppliers, saveSuppliers, editSupplier,
                     ))}
                     <td style={{ padding:"6px 8px", whiteSpace:"nowrap" }}>
                       <button className="action-btn" style={{ background:"#052e16", color:"#4ade80", marginRight:4 }}
-                        onClick={() => { saveSuppliers(suppliers.map(s => s.id===editSupplier.id ? editSupplier : s)); setEditSupplier(null); }}>✓</button>
+                        onClick={() => { updateSupplier(editSupplier.id, { name: editSupplier.name, terms: editSupplier.terms, notes: editSupplier.notes }); setEditSupplier(null); }}>✓</button>
                       <button className="action-btn" style={{ background:"#131c2e", color:"#64748b" }} onClick={() => setEditSupplier(null)}>✕</button>
                     </td>
                   </>
@@ -45,7 +45,7 @@ export default function SuppliersModal({ suppliers, saveSuppliers, editSupplier,
                     <td style={{ padding:"8px", whiteSpace:"nowrap" }}>
                       <button className="action-btn" style={{ background:"#131c2e", color:"#64748b", marginRight:4 }} onClick={() => setEditSupplier({...sup})}>Edit</button>
                       <button className="action-btn" style={{ background:"#2d0a0a", color:"#f87171" }}
-                        onClick={() => { if (confirm("Delete?")) saveSuppliers(suppliers.filter(s => s.id !== sup.id)); }}>✕</button>
+                        onClick={() => { if (confirm("Delete?")) deleteSupplier(sup.id); }}>✕</button>
                     </td>
                   </>
                 )}
@@ -54,7 +54,7 @@ export default function SuppliersModal({ suppliers, saveSuppliers, editSupplier,
           </tbody>
         </table>
         <button className="action-btn" style={{ background:"#131c2e", color:"#64748b", marginTop:16, padding:"9px 18px" }}
-          onClick={() => { const n={id:Date.now(),name:"New Supplier",terms:"shotef",notes:""}; saveSuppliers([...suppliers,n]); setEditSupplier(n); }}>
+          onClick={() => addSupplier({ name:"New Supplier", terms:"shotef", notes:"" }).then(row => setEditSupplier(row))}>
           + Add Supplier
         </button>
       </div>

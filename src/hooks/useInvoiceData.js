@@ -1,7 +1,8 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
-import { STATUS, PALETTE, MOCK_NAMES } from "../constants";
+import { STATUS, PALETTE } from "../constants";
 import { calcDueDate, toYM } from "../utils/dates";
 import { findDuplicates, matchSupplier } from "../utils/invoice";
+import { supabase } from "../lib/supabase";
 
 export const useInvoiceData = () => {
   const [suppliers, setSuppliers] = useState([]);
@@ -9,25 +10,56 @@ export const useInvoiceData = () => {
   const [loading,   setLoading]   = useState(true);
 
   useEffect(() => {
-    try {
-      const s = localStorage.getItem("suppliers");
-      if (s) setSuppliers(JSON.parse(s).filter(x => !MOCK_NAMES.includes(x.name)));
-    } catch {}
-    try {
-      const inv = localStorage.getItem("invoices");
-      if (inv) setInvoices(JSON.parse(inv).filter(x => !(MOCK_NAMES.includes(x.supplier) && Number(x.id) < 10)));
-    } catch {}
-    setLoading(false);
+    Promise.all([
+      supabase.from('invoices').select('*').order('created_at'),
+      supabase.from('suppliers').select('*'),
+    ]).then(([{ data: invs, error: ie }, { data: sups, error: se }]) => {
+      if (ie) console.error('invoices load error:', ie.message);
+      if (se) console.error('suppliers load error:', se.message);
+      setInvoices(invs  ?? []);
+      setSuppliers(sups ?? []);
+      setLoading(false);
+    });
   }, []);
 
-  const saveSuppliers = useCallback(d => {
-    setSuppliers(d);
-    localStorage.setItem("suppliers", JSON.stringify(d));
+  // Invoice CRUD
+  const addInvoice = useCallback(async data => {
+    const { data: row, error } = await supabase.from('invoices').insert(data).select().single();
+    if (error) { console.error('addInvoice:', error.message); throw error; }
+    setInvoices(p => [...p, row]);
+    return row;
   }, []);
 
-  const saveInvoices = useCallback(d => {
-    setInvoices(d);
-    localStorage.setItem("invoices", JSON.stringify(d));
+  const updateInvoice = useCallback(async (id, patch) => {
+    const { error } = await supabase.from('invoices').update(patch).eq('id', id);
+    if (error) { console.error('updateInvoice:', error.message); throw error; }
+    setInvoices(p => p.map(i => i.id === id ? { ...i, ...patch } : i));
+  }, []);
+
+  const deleteInvoice = useCallback(async id => {
+    const { error } = await supabase.from('invoices').delete().eq('id', id);
+    if (error) { console.error('deleteInvoice:', error.message); throw error; }
+    setInvoices(p => p.filter(i => i.id !== id));
+  }, []);
+
+  // Supplier CRUD
+  const addSupplier = useCallback(async data => {
+    const { data: row, error } = await supabase.from('suppliers').insert(data).select().single();
+    if (error) { console.error('addSupplier:', error.message); throw error; }
+    setSuppliers(p => [...p, row]);
+    return row;
+  }, []);
+
+  const updateSupplier = useCallback(async (id, patch) => {
+    const { error } = await supabase.from('suppliers').update(patch).eq('id', id);
+    if (error) { console.error('updateSupplier:', error.message); throw error; }
+    setSuppliers(p => p.map(s => s.id === id ? { ...s, ...patch } : s));
+  }, []);
+
+  const deleteSupplier = useCallback(async id => {
+    const { error } = await supabase.from('suppliers').delete().eq('id', id);
+    if (error) { console.error('deleteSupplier:', error.message); throw error; }
+    setSuppliers(p => p.filter(s => s.id !== id));
   }, []);
 
   const getSupplier = useCallback(name => matchSupplier(name, suppliers), [suppliers]);
@@ -36,10 +68,17 @@ export const useInvoiceData = () => {
     const today = new Date(); today.setHours(0, 0, 0, 0);
     return invoices.map(inv => {
       const sup = matchSupplier(inv.supplier, suppliers);
-      const due = inv.dueDate || (calcDueDate(inv.invoiceDate, sup)?.toISOString().split("T")[0] ?? null);
+      const due = inv.due_date || inv.dueDate || (calcDueDate(inv.invoice_date || inv.invoiceDate, sup)?.toISOString().split("T")[0] ?? null);
       let status = inv.status;
       if (status !== STATUS.PAID && due && new Date(due) < today) status = STATUS.OVERDUE;
-      return { ...inv, dueDate: due, status };
+      return {
+        ...inv,
+        // normalise snake_case DB fields → camelCase for UI
+        invoiceNo:   inv.invoice_no   ?? inv.invoiceNo   ?? '',
+        invoiceDate: inv.invoice_date ?? inv.invoiceDate ?? '',
+        dueDate:     due,
+        status,
+      };
     });
   }, [invoices, suppliers]);
 
@@ -76,5 +115,10 @@ export const useInvoiceData = () => {
     };
   }, [computed, monthlyData]);
 
-  return { suppliers, invoices, computed, dupeIds, monthlyData, allNames, color, maxTotal, kpis, loading, saveSuppliers, saveInvoices, getSupplier };
+  return {
+    suppliers, invoices, computed, dupeIds, monthlyData, allNames, color, maxTotal, kpis, loading,
+    addInvoice, updateInvoice, deleteInvoice,
+    addSupplier, updateSupplier, deleteSupplier,
+    getSupplier,
+  };
 };

@@ -1,11 +1,22 @@
 import { calcDueDate } from "../utils/dates";
 import { STATUS } from "../constants";
 
-export default function EditInvoiceModal({ editInvoice, setEditInvoice, suppliers, invoices, saveInvoices, getSupplier }) {
+export default function EditInvoiceModal({ editInvoice, setEditInvoice, suppliers, addInvoice, updateInvoice, getSupplier }) {
   const close = () => setEditInvoice(null);
-  const save  = () => {
-    if (editInvoice.id) saveInvoices(invoices.map(i => i.id===editInvoice.id ? editInvoice : i));
-    else                saveInvoices([...invoices, { ...editInvoice, id: Date.now() }]);
+  const save  = async () => {
+    const { id, ...fields } = editInvoice;
+    // Map camelCase UI fields → snake_case DB columns
+    const patch = {
+      supplier:     fields.supplier,
+      invoice_no:   fields.invoiceNo   ?? fields.invoice_no   ?? '',
+      invoice_date: fields.invoiceDate ?? fields.invoice_date ?? '',
+      amount:       Number(fields.amount) || 0,
+      due_date:     fields.dueDate     ?? fields.due_date     ?? '',
+      status:       fields.status,
+      notes:        fields.notes       ?? '',
+    };
+    if (id) await updateInvoice(id, patch);
+    else    await addInvoice(patch);
     close();
   };
 
@@ -35,7 +46,7 @@ export default function EditInvoiceModal({ editInvoice, setEditInvoice, supplier
           {[["Invoice #","invoiceNo","text"],["Invoice Date","invoiceDate","date"],["Amount","amount","number"],["Due Date (override)","dueDate","date"]].map(([label, key, type]) => (
             <div key={key}>
               <div style={{ fontSize:11, fontWeight:600, color:"#475569", marginBottom:6, textTransform:"uppercase", letterSpacing:".5px" }}>{label}</div>
-              <input type={type} value={editInvoice[key]} className="input" onChange={e => onFieldChange(key, e.target.value)} />
+              <input type={type} value={editInvoice[key] ?? editInvoice[key.replace(/([A-Z])/g, '_$1').toLowerCase()] ?? ''} className="input" onChange={e => onFieldChange(key, e.target.value)} />
             </div>
           ))}
         </div>
@@ -45,7 +56,7 @@ export default function EditInvoiceModal({ editInvoice, setEditInvoice, supplier
             onChange={e => {
               const sup = getSupplier(e.target.value);
               const due = editInvoice.invoiceDate && sup ? calcDueDate(editInvoice.invoiceDate, sup) : null;
-              setEditInvoice({ ...editInvoice, supplier:e.target.value, dueDate: due ? due.toISOString().split("T")[0] : editInvoice.dueDate });
+              setEditInvoice({ ...editInvoice, supplier:e.target.value, dueDate: due ? due.toISOString().split("T")[0] : (editInvoice.dueDate || editInvoice.due_date || '') });
             }}>
             <option value="">— select supplier —</option>
             {suppliers.map(s => <option key={s.id} value={s.name}>{s.name} · {s.terms}</option>)}

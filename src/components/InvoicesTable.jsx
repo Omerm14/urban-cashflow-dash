@@ -2,7 +2,7 @@ import { currency, fmt } from "../utils/dates";
 import { statusStyle } from "../utils/invoice";
 import { STATUS } from "../constants";
 
-export default function InvoicesTable({ computed, dupeIds, invoices, saveInvoices, setEditInvoice, color }) {
+export default function InvoicesTable({ computed, dupeIds, updateInvoice, deleteInvoice, setEditInvoice, color }) {
   return (
     <div className="card" style={{ overflow:"hidden" }}>
       <table style={{ width:"100%", borderCollapse:"collapse", fontSize:13 }}>
@@ -53,11 +53,11 @@ export default function InvoicesTable({ computed, dupeIds, invoices, saveInvoice
                   <div style={{ display:"flex", gap:6, justifyContent:"flex-end" }}>
                     {inv.status !== STATUS.PAID && (
                       <button className="action-btn" style={{ background:"#052e16", color:"#4ade80" }}
-                        onClick={() => saveInvoices(invoices.map(i => i.id===inv.id ? {...i, status:STATUS.PAID} : i))}>✓ Paid</button>
+                        onClick={() => updateInvoice(inv.id, { status: STATUS.PAID })}>✓ Paid</button>
                     )}
                     <button className="action-btn" style={{ background:"#131c2e", color:"#64748b" }} onClick={() => setEditInvoice({...inv})}>Edit</button>
                     <button className="action-btn" style={{ background:"#2d0a0a", color:"#f87171" }}
-                      onClick={() => { if (confirm("Delete this invoice?")) saveInvoices(invoices.filter(i => i.id !== inv.id)); }}>✕</button>
+                      onClick={() => { if (confirm("Delete this invoice?")) deleteInvoice(inv.id); }}>✕</button>
                   </div>
                 </td>
               </tr>

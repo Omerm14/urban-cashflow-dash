@@ -1,4 +1,4 @@
-import { getUserId } from "./invoice";
+import { supabase } from '../lib/supabase'
 
 const loadPdfJs = () => new Promise((res, rej) => {
   if (window.pdfjsLib) { res(window.pdfjsLib); return; }
@@ -17,7 +17,7 @@ export const pdfToBase64 = async file => {
   const lib    = await loadPdfJs();
   const pdf    = await lib.getDocument({ data: await file.arrayBuffer() }).promise;
   const page   = await pdf.getPage(1);
-  const vp     = page.getViewport({ scale: 1 }); // scale 1 → 4× fewer tokens vs scale 2
+  const vp     = page.getViewport({ scale: 1 });
   const canvas = document.createElement("canvas");
   canvas.width = vp.width; canvas.height = vp.height;
   await page.render({ canvasContext: canvas.getContext("2d"), viewport: vp }).promise;
@@ -32,14 +32,17 @@ export const fileToBase64 = f => new Promise((res, rej) => {
 });
 
 export const extractInvoice = async (b64, mediaType, suppliers) => {
+  const { data: { session } } = await supabase.auth.getSession();
   const res = await fetch("/api/extract", {
     method:  "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${session.access_token}`,
+    },
     body: JSON.stringify({
       b64,
       mediaType,
       supplierNames: suppliers.map(s => s.name).join(", "),
-      userId: getUserId(),
     }),
   });
   const data = await res.json();

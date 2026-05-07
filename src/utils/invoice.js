@@ -40,12 +40,6 @@ export const parseCSV = text => {
   }).filter(s => s.name);
 };
 
-export const getUserId = () => {
-  let id = localStorage.getItem("userId");
-  if (!id) { id = crypto.randomUUID(); localStorage.setItem("userId", id); }
-  return id;
-};
-
 export const statusStyle = s =>
   s === "Paid"    ? { bg:"#052e16", color:"#4ade80", dot:"#22c55e" } :
   s === "Overdue" ? { bg:"#2d0a0a", color:"#f87171", dot:"#ef4444" } :

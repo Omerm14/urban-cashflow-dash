@@ -1,10 +1,10 @@
 const Anthropic = require('@anthropic-ai/sdk');
-const storage   = require('../storage');
+const supabase  = require('../lib/supabase');
 
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
 module.exports = async (req, res) => {
-  const { b64, mediaType = 'image/jpeg', supplierNames = '', userId = 'anonymous' } = req.body;
+  const { b64, mediaType = 'image/jpeg', supplierNames = '' } = req.body;
   if (!b64) return res.status(400).json({ error: 'Missing image data' });
 
   try {
@@ -21,8 +21,13 @@ module.exports = async (req, res) => {
       }],
     });
 
-    // fire-and-forget usage recording — don't block the response
-    storage.record(userId, msg.model, msg.usage.input_tokens, msg.usage.output_tokens).catch(console.error);
+    // fire-and-forget: log usage to Supabase without blocking response
+    supabase.from('api_calls').insert({
+      user_id:       req.user.id,
+      model:         msg.model,
+      input_tokens:  msg.usage.input_tokens,
+      output_tokens: msg.usage.output_tokens,
+    }).then(({ error }) => { if (error) console.error('Usage insert error:', error.message) });
 
     const text = msg.content.map(b => b.text || '').join('').replace(/```json|```/g, '').trim();
     res.json({ result: JSON.parse(text) });
