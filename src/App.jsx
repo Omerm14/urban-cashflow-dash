@@ -168,7 +168,8 @@ export default function App() {
   const [calMonth, setCalMonth] = useState(() => toYM(new Date()));
   const [hoveredBar, setHoveredBar] = useState(null);
   const [tooltip, setTooltip] = useState(null); // {ym, supplier, amount, total, x, y} — x/y are page coords
-  const [apiKey, setApiKey] = useState(() => localStorage.getItem("apiKey") || "");
+  const envKey = import.meta.env.VITE_ANTHROPIC_API_KEY || "";
+  const [apiKey, setApiKey] = useState(() => envKey || localStorage.getItem("apiKey") || "");
   const [showApiKey, setShowApiKey] = useState(false);
   const fileRef = useRef();
   const csvRef = useRef();
@@ -289,8 +290,8 @@ export default function App() {
             <button key={v} className={`nav-btn${view===v?" active":""}`} onClick={()=>setView(v)} style={{ textTransform:"capitalize" }}>{v}</button>
           ))}
           <div style={{ marginLeft:"auto", display:"flex", alignItems:"center", gap:10 }}>
-            <button onClick={()=>setShowApiKey(v=>!v)} title={apiKey ? "API key set" : "Set API key"} style={{ padding:"8px 14px", background:"transparent", border:`1px solid ${apiKey?"#166534":"#7f1d1d"}`, borderRadius:8, color:apiKey?"#4ade80":"#f87171", cursor:"pointer", fontSize:12, fontWeight:500, fontFamily:"inherit" }}>
-              🔑 {apiKey ? "Key set" : "No API key"}
+            <button onClick={()=>{ if(!envKey) setShowApiKey(v=>!v); }} title={envKey ? "API key loaded from environment" : apiKey ? "API key set manually" : "Set API key"} style={{ padding:"8px 14px", background:"transparent", border:`1px solid ${apiKey?"#166534":"#7f1d1d"}`, borderRadius:8, color:apiKey?"#4ade80":"#f87171", cursor:envKey?"default":"pointer", fontSize:12, fontWeight:500, fontFamily:"inherit" }}>
+              🔑 {envKey ? "Connected" : apiKey ? "Key set" : "No API key"}
             </button>
             <button onClick={()=>setShowSuppliers(true)} style={{ padding:"8px 14px", background:"transparent", border:"1px solid #1e2d45", borderRadius:8, color:"#64748b", cursor:"pointer", fontSize:12, fontWeight:500, transition:"all .2s", fontFamily:"inherit" }}
               onMouseEnter={e=>{ e.target.style.borderColor="#334155"; e.target.style.color="#94a3b8"; }}
@@ -612,20 +613,27 @@ export default function App() {
               </div>
               <button onClick={()=>setShowApiKey(false)} style={{ width:32, height:32, borderRadius:8, background:"#131c2e", border:"1px solid #1e2d45", color:"#64748b", cursor:"pointer", fontSize:16, display:"flex", alignItems:"center", justifyContent:"center" }}>✕</button>
             </div>
-            <div style={{ marginBottom:16 }}>
-              <div style={{ fontSize:11, fontWeight:600, color:"#475569", marginBottom:6, textTransform:"uppercase", letterSpacing:".5px" }}>API Key</div>
-              <input type="password" value={apiKey} placeholder="sk-ant-..." className="input"
-                onChange={e=>setApiKey(e.target.value)} />
-              <div style={{ fontSize:11, color:"#334155", marginTop:8 }}>Stored in your browser only — never sent anywhere except Anthropic.</div>
-            </div>
+            {envKey ? (
+              <div style={{ background:"#052e16", border:"1px solid #166534", borderRadius:10, padding:"14px 16px", marginBottom:16 }}>
+                <div style={{ fontSize:13, color:"#4ade80", fontWeight:600, marginBottom:4 }}>✓ Key loaded from environment</div>
+                <div style={{ fontSize:12, color:"#475569" }}>Set via <code style={{ color:"#a78bfa", fontSize:11 }}>VITE_ANTHROPIC_API_KEY</code> in <code style={{ color:"#a78bfa", fontSize:11 }}>.env.local</code></div>
+              </div>
+            ) : (
+              <div style={{ marginBottom:16 }}>
+                <div style={{ fontSize:11, fontWeight:600, color:"#475569", marginBottom:6, textTransform:"uppercase", letterSpacing:".5px" }}>API Key</div>
+                <input type="password" value={apiKey} placeholder="sk-ant-..." className="input"
+                  onChange={e=>setApiKey(e.target.value)} />
+                <div style={{ fontSize:11, color:"#334155", marginTop:8 }}>Stored in your browser only — never sent anywhere except Anthropic.</div>
+              </div>
+            )}
             <div style={{ display:"flex", gap:10, justifyContent:"flex-end" }}>
-              {apiKey && <button onClick={()=>{ setApiKey(""); localStorage.removeItem("apiKey"); setShowApiKey(false); }}
+              {!envKey && apiKey && <button onClick={()=>{ setApiKey(""); localStorage.removeItem("apiKey"); setShowApiKey(false); }}
                 style={{ padding:"10px 16px", background:"#2d0a0a", border:"none", borderRadius:10, color:"#f87171", cursor:"pointer", fontFamily:"inherit", fontWeight:500, fontSize:13 }}>Clear</button>}
-              <button onClick={()=>setShowApiKey(false)} style={{ padding:"10px 20px", background:"#131c2e", border:"1px solid #1e2d45", borderRadius:10, color:"#64748b", cursor:"pointer", fontFamily:"inherit", fontWeight:500, fontSize:13 }}>Cancel</button>
-              <button onClick={()=>{ localStorage.setItem("apiKey", apiKey); setShowApiKey(false); }}
+              <button onClick={()=>setShowApiKey(false)} style={{ padding:"10px 20px", background:"#131c2e", border:"1px solid #1e2d45", borderRadius:10, color:"#64748b", cursor:"pointer", fontFamily:"inherit", fontWeight:500, fontSize:13 }}>Close</button>
+              {!envKey && <button onClick={()=>{ localStorage.setItem("apiKey", apiKey); setShowApiKey(false); }}
                 style={{ padding:"10px 24px", background:"linear-gradient(135deg,#6366f1,#a78bfa)", border:"none", borderRadius:10, color:"#fff", fontWeight:700, cursor:"pointer", fontFamily:"inherit", fontSize:13 }}>
                 Save Key
-              </button>
+              </button>}
             </div>
           </div>
         </div>
