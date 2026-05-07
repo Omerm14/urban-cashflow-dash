@@ -84,7 +84,7 @@ const extractInvoice = async (b64, suppliers) => {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
-      model: "claude-sonnet-4-20250514", max_tokens: 1000,
+      model: "claude-sonnet-4-6", max_tokens: 1000,
       messages: [{ role: "user", content: [
         { type: "image", source: { type: "base64", media_type: "image/jpeg", data: b64 } },
         { type: "text", text: `Extract invoice data. Known suppliers: ${names}. Return ONLY valid JSON with keys: supplier, invoiceNo, invoiceDate (YYYY-MM-DD), amount (number). No markdown.` }
@@ -166,21 +166,19 @@ export default function App() {
   const csvRef = useRef();
 
   useEffect(() => {
-    (async () => {
-      try {
-        const s = await window.storage.get("suppliers");
-        if (s) { const p = JSON.parse(s.value); setSuppliers(p.filter(x=>!MOCK_NAMES.includes(x.name))); }
-      } catch {}
-      try {
-        const inv = await window.storage.get("invoices");
-        if (inv) { const p = JSON.parse(inv.value); setInvoices(p.filter(x=>!(MOCK_NAMES.includes(x.supplier)&&Number(x.id)<10))); }
-      } catch {}
-      setLoading(false);
-    })();
+    try {
+      const s = localStorage.getItem("suppliers");
+      if (s) { const p = JSON.parse(s); setSuppliers(p.filter(x=>!MOCK_NAMES.includes(x.name))); }
+    } catch {}
+    try {
+      const inv = localStorage.getItem("invoices");
+      if (inv) { const p = JSON.parse(inv); setInvoices(p.filter(x=>!(MOCK_NAMES.includes(x.supplier)&&Number(x.id)<10))); }
+    } catch {}
+    setLoading(false);
   }, []);
 
-  const saveSuppliers = d => { setSuppliers(d); window.storage.set("suppliers", JSON.stringify(d)); };
-  const saveInvoices  = d => { setInvoices(d);  window.storage.set("invoices",  JSON.stringify(d)); };
+  const saveSuppliers = d => { setSuppliers(d); localStorage.setItem("suppliers", JSON.stringify(d)); };
+  const saveInvoices  = d => { setInvoices(d);  localStorage.setItem("invoices",  JSON.stringify(d)); };
   const getSupplier = name => matchSupplier(name, suppliers);
 
   const computed = invoices.map(inv => {
