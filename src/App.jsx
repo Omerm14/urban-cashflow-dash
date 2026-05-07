@@ -105,12 +105,17 @@ export default function App() {
     const file = e.target.files[0]; if (!file) return;
     const parsed = parseCSV(await file.text());
     if (parsed.length) {
-      await Promise.allSettled(parsed.map(s => addSupplier({ name: s.name, terms: s.terms || "shotef", notes: s.notes || "" })));
-      setExtractMsg({ text: `✓ ${parsed.length} suppliers loaded`, ok: true });
+      const results = await Promise.allSettled(parsed.map(s => addSupplier({ name: s.name, terms: s.terms || "shotef", notes: s.notes || "" })));
+      const failed = results.filter(r => r.status === "rejected");
+      if (failed.length) {
+        setExtractMsg({ text: `${parsed.length - failed.length} added · ${failed.length} failed: ${failed[0].reason?.message || "unknown error"}`, ok: false });
+      } else {
+        setExtractMsg({ text: `✓ ${parsed.length} suppliers loaded`, ok: true });
+      }
     } else {
       setExtractMsg({ text: "Could not parse CSV — expected columns: name, terms, notes", ok: false });
     }
-    setTimeout(() => setExtractMsg(null), 3000);
+    setTimeout(() => setExtractMsg(null), 5000);
     e.target.value = "";
   }, [addSupplier]);
 
