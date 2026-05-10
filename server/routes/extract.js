@@ -33,6 +33,8 @@ module.exports = async (req, res) => {
     res.json({ result: JSON.parse(text) });
   } catch (err) {
     console.error('Extract error:', err.message);
-    res.status(500).json({ error: err.message });
+    // Anthropic SDK errors carry a parsed body in err.error; surface just the message
+    const friendly = err.error?.error?.message || err.message;
+    res.status(err.status || 500).json({ error: friendly });
   }
 };
