@@ -72,17 +72,19 @@ export default function App() {
     });
 
     // Deduplicate against existing invoices
-    const dupeSet = findDuplicates([...computed, ...candidates.map(c => ({ ...c.candidate, id: Math.random() }))]);
-    const toAdd = [];
-    candidates.forEach(({ file, candidate }) => {
-      const tempId = Object.keys(dupeSet).find ? null : null; // dupeSet is a Set of ids
-      toAdd.push({ file, candidate });
-    });
+    const withTempIds = candidates.map((c, i) => ({
+      ...c.candidate,
+      id: `__new_${i}`,
+      invoiceNo:   c.candidate.invoice_no,
+      invoiceDate: c.candidate.invoice_date,
+    }));
+    const dupeSet = findDuplicates([...computed, ...withTempIds]);
+    const toAdd = candidates.filter((_, i) => !dupeSet.has(`__new_${i}`));
 
-    // Add all non-duplicate candidates
+    // Add non-duplicate candidates
     let added = 0;
     await Promise.allSettled(
-      candidates.map(async ({ file, candidate }) => {
+      toAdd.map(async ({ file, candidate }) => {
         try {
           await addInvoice(candidate);
           added++;
