@@ -3,16 +3,19 @@ import { STATUS, PALETTE } from "../constants";
 import { calcDueDate, toYM } from "../utils/dates";
 import { findDuplicates, matchSupplier } from "../utils/invoice";
 import { supabase } from "../lib/supabase";
+import { useAuth } from "../contexts/AuthContext";
 
 export const useInvoiceData = () => {
+  const { user } = useAuth();
   const [suppliers, setSuppliers] = useState([]);
   const [invoices,  setInvoices]  = useState([]);
   const [loading,   setLoading]   = useState(true);
 
   useEffect(() => {
+    if (!user) return;
     Promise.all([
-      supabase.from('invoices').select('*').order('created_at'),
-      supabase.from('suppliers').select('*'),
+      supabase.from('invoices').select('*').eq('user_id', user.id).order('created_at'),
+      supabase.from('suppliers').select('*').eq('user_id', user.id),
     ]).then(([{ data: invs, error: ie }, { data: sups, error: se }]) => {
       if (ie) console.error('invoices load error:', ie.message);
       if (se) console.error('suppliers load error:', se.message);
@@ -20,15 +23,15 @@ export const useInvoiceData = () => {
       setSuppliers(sups ?? []);
       setLoading(false);
     });
-  }, []);
+  }, [user]);
 
   // Invoice CRUD
   const addInvoice = useCallback(async data => {
-    const { data: row, error } = await supabase.from('invoices').insert(data).select().single();
+    const { data: row, error } = await supabase.from('invoices').insert({ ...data, user_id: user.id }).select().single();
     if (error) { console.error('addInvoice:', error.message); throw error; }
     setInvoices(p => [...p, row]);
     return row;
-  }, []);
+  }, [user]);
 
   const updateInvoice = useCallback(async (id, patch) => {
     const { error } = await supabase.from('invoices').update(patch).eq('id', id);
@@ -44,11 +47,11 @@ export const useInvoiceData = () => {
 
   // Supplier CRUD
   const addSupplier = useCallback(async data => {
-    const { data: row, error } = await supabase.from('suppliers').insert(data).select().single();
+    const { data: row, error } = await supabase.from('suppliers').insert({ ...data, user_id: user.id }).select().single();
     if (error) { console.error('addSupplier:', error.message); throw error; }
     setSuppliers(p => [...p, row]);
     return row;
-  }, []);
+  }, [user]);
 
   const updateSupplier = useCallback(async (id, patch) => {
     const { error } = await supabase.from('suppliers').update(patch).eq('id', id);
