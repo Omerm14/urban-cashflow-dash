@@ -33,6 +33,7 @@ export const fileToBase64 = f => new Promise((res, rej) => {
 
 export const extractInvoice = async (b64, mediaType, suppliers) => {
   const { data: { session } } = await supabase.auth.getSession();
+  if (!session) throw new Error('No active session — please sign in again');
   const res = await fetch("/api/extract", {
     method:  "POST",
     headers: {
