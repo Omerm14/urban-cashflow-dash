@@ -60,7 +60,7 @@ export default function App() {
       candidates.push({
         file,
         candidate: {
-          supplier:     ex.supplier    || "",
+          supplier:     sup?.name || ex.supplier || "",
           invoice_no:   ex.invoiceNo   || "",
           invoice_date: ex.invoiceDate || "",
           amount:       Number(ex.amount) || 0,
@@ -72,13 +72,19 @@ export default function App() {
     });
 
     // Deduplicate against existing invoices
+    // Normalize stored supplier names to canonical DB names so fuzzy-extracted
+    // names don't cause missed matches on subsequent uploads.
+    const computedForDedup = computed.map(inv => ({
+      ...inv,
+      supplier: getSupplier(inv.supplier)?.name || inv.supplier,
+    }));
     const withTempIds = candidates.map((c, i) => ({
       ...c.candidate,
       id: `__new_${i}`,
       invoiceNo:   c.candidate.invoice_no,
       invoiceDate: c.candidate.invoice_date,
     }));
-    const dupeSet = findDuplicates([...computed, ...withTempIds]);
+    const dupeSet = findDuplicates([...computedForDedup, ...withTempIds]);
     const toAdd = candidates.filter((_, i) => !dupeSet.has(`__new_${i}`));
 
     // Add non-duplicate candidates

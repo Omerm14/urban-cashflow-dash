@@ -1,9 +1,11 @@
+const normSup = s => s?.toLowerCase().replace(/[.,\s]+$/, '').trim() || '';
+
 export const findDuplicates = invoices => {
   const dupeIds = new Set();
   for (let i = 0; i < invoices.length; i++) {
     for (let j = i + 1; j < invoices.length; j++) {
       const a = invoices[i], b = invoices[j];
-      const sameSup    = a.supplier?.toLowerCase().trim() === b.supplier?.toLowerCase().trim();
+      const sameSup    = normSup(a.supplier) === normSup(b.supplier);
       const exactMatch = sameSup && a.invoiceNo && b.invoiceNo && a.invoiceNo.trim() === b.invoiceNo.trim();
       const fuzzyMatch = sameSup && Number(a.amount) === Number(b.amount) && a.invoiceDate === b.invoiceDate;
       if (exactMatch || fuzzyMatch) { dupeIds.add(a.id); dupeIds.add(b.id); }
