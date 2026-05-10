@@ -1,13 +1,14 @@
-export const endOfMonth  = d => new Date(new Date(d).getFullYear(), new Date(d).getMonth() + 1, 0);
-export const addDays     = (d, n) => { const x = new Date(d); x.setDate(x.getDate() + n); return x; };
+export const endOfMonth          = d => new Date(new Date(d).getFullYear(), new Date(d).getMonth() + 1, 0);
+export const endOfFollowingMonth = d => new Date(new Date(d).getFullYear(), new Date(d).getMonth() + 2, 0);
+export const addDays             = (d, n) => { const x = new Date(d); x.setDate(x.getDate() + n); return x; };
 
 export const calcDueDate = (invoiceDate, supplier) => {
   if (!supplier || !invoiceDate) return null;
   const t = supplier.terms?.toLowerCase() || "";
   if (t === "immediate") return new Date(invoiceDate);
-  if (t === "shotef")    return endOfMonth(invoiceDate);
+  if (t === "shotef")    return endOfFollowingMonth(invoiceDate);
   const m = t.match(/shotef_plus\((\d+)\)/);
-  if (m) return addDays(endOfMonth(invoiceDate), parseInt(m[1]));
+  if (m) return addDays(endOfFollowingMonth(invoiceDate), parseInt(m[1]));
   return null;
 };
 

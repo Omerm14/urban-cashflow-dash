@@ -40,20 +40,27 @@ export default function App() {
     setExtracting(true);
     setExtractMsg({ text: `Processing ${files.length} file${files.length > 1 ? "s" : ""}…`, ok: null });
 
+    // Pre-filter by filename to avoid wasting API tokens on already-uploaded files
+    const existingFileNames = new Set(invoices.map(i => i.source_file).filter(Boolean).map(n => n.toLowerCase()));
+    const [toExtract, fileSkipped] = files.reduce(([ok, skip], f) =>
+      existingFileNames.has(f.name.toLowerCase()) ? [ok, [...skip, f]] : [[...ok, f], skip],
+      [[], []]
+    );
+
     const imageResults = await Promise.allSettled(
-      files.map(f => f.type === "application/pdf" ? pdfToBase64(f) : fileToBase64(f))
+      toExtract.map(f => f.type === "application/pdf" ? pdfToBase64(f) : fileToBase64(f))
     );
 
     const extractResults = await Promise.allSettled(
       imageResults.map((r, i) => {
-        if (r.status === "rejected") return Promise.reject(new Error(`${files[i].name}: ${r.reason.message}`));
-        return extractInvoice(r.value.b64, r.value.mediaType, suppliers).then(ex => ({ file: files[i], ex }));
+        if (r.status === "rejected") return Promise.reject(new Error(`${toExtract[i].name}: ${r.reason.message}`));
+        return extractInvoice(r.value.b64, r.value.mediaType, suppliers).then(ex => ({ file: toExtract[i], ex }));
       })
     );
 
     const candidates = [], errors = [];
     extractResults.forEach((r, i) => {
-      if (r.status === "rejected") { errors.push(r.reason?.message || `${files[i].name}: failed`); return; }
+      if (r.status === "rejected") { errors.push(r.reason?.message || `${toExtract[i].name}: failed`); return; }
       const { file, ex } = r.value;
       const sup = getSupplier(ex.supplier);
       const due = calcDueDate(ex.invoiceDate, sup);
@@ -67,13 +74,12 @@ export default function App() {
           due_date:     due ? due.toISOString().split("T")[0] : "",
           status:       STATUS.UNPAID,
           notes:        "",
+          source_file:  file.name,
         },
       });
     });
 
     // Deduplicate against existing invoices
-    // Normalize stored supplier names to canonical DB names so fuzzy-extracted
-    // names don't cause missed matches on subsequent uploads.
     const computedForDedup = computed.map(inv => ({
       ...inv,
       supplier: getSupplier(inv.supplier)?.name || inv.supplier,
@@ -86,6 +92,7 @@ export default function App() {
     }));
     const dupeSet = findDuplicates([...computedForDedup, ...withTempIds]);
     const toAdd = candidates.filter((_, i) => !dupeSet.has(`__new_${i}`));
+    const contentDupeCount = candidates.length - toAdd.length;
 
     // Add non-duplicate candidates
     let added = 0;
@@ -101,11 +108,14 @@ export default function App() {
     );
 
     setExtracting(false);
-    setExtractMsg(errors.length
-      ? { text: `${added} added · ${errors.length} failed: ${errors[0]}`, ok: false }
-      : { text: `✓ ${added} invoice${added !== 1 ? "s" : ""} extracted`, ok: true }
-    );
-    setTimeout(() => setExtractMsg(null), 4000);
+    const parts = [];
+    if (added) parts.push(`${added} added`);
+    if (fileSkipped.length) parts.push(`${fileSkipped.length} already uploaded`);
+    if (contentDupeCount) parts.push(`${contentDupeCount} already exist`);
+    if (errors.length) parts.push(`${errors.length} failed: ${errors[0]}`);
+    const hasIssue = fileSkipped.length || contentDupeCount || errors.length;
+    setExtractMsg({ text: (added && !hasIssue ? "✓ " : "") + (parts.join(" · ") || "nothing to add"), ok: !hasIssue && added > 0 });
+    setTimeout(() => setExtractMsg(null), 5000);
     e.target.value = "";
   }, [invoices, suppliers, addInvoice, getSupplier, computed]);
 
