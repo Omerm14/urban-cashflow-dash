@@ -160,8 +160,8 @@ export default function App() {
         {view !== "admin" && (
           <div style={{ display:"flex", gap:10, marginBottom:32, alignItems:"center", flexWrap:"wrap" }}>
             <button className="upload-btn" style={{ background:"linear-gradient(135deg,#6366f1,#a78bfa)", color:"#fff", boxShadow:"0 4px 20px #6366f133" }}
-              onClick={() => fileRef.current.click()} disabled={extracting}>
-              <span style={{ fontSize:16 }}>+</span>{extracting ? "Extracting…" : "Upload Invoices"}
+              onClick={() => fileRef.current.click()} disabled={extracting || loading}>
+              <span style={{ fontSize:16 }}>+</span>{extracting ? "Extracting…" : loading ? "Loading…" : "Upload Invoices"}
             </button>
             <input ref={fileRef} type="file" accept="image/*,application/pdf" multiple onChange={handleUpload} style={{ display:"none" }} />
 

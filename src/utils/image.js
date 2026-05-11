@@ -13,16 +13,10 @@ const loadPdfJs = () => new Promise((res, rej) => {
   document.head.appendChild(s);
 });
 
-// For digitally-generated PDFs: extract the text layer directly (no vision tokens).
-// For scanned/image-only PDFs: fall back to canvas render.
 export const processPdf = async file => {
   const lib  = await loadPdfJs();
   const pdf  = await lib.getDocument({ data: await file.arrayBuffer() }).promise;
   const page = await pdf.getPage(1);
-
-  const content = await page.getTextContent();
-  const text = content.items.map(item => item.str).join(' ').replace(/\s+/g, ' ').trim();
-  if (text.length > 50) return { text };
 
   const vp     = page.getViewport({ scale: 2 });
   const canvas = document.createElement("canvas");

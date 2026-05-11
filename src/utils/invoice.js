@@ -17,18 +17,31 @@ export const findDuplicates = invoices => {
 export const matchSupplier = (name, suppliers) => {
   if (!name) return null;
   const n = name.toLowerCase().trim();
+
+  // 1. exact match
   let hit = suppliers.find(s => s.name.toLowerCase() === n);
   if (hit) return hit;
-  hit = suppliers.find(s => n.includes(s.name.toLowerCase()) || s.name.toLowerCase().includes(n));
+
+  // 2. substring match — require both sides to share enough characters to avoid
+  //    false positives when one supplier name is a short substring of another
+  const lenRatio = (a, b) => Math.min(a.length, b.length) / Math.max(a.length, b.length);
+  hit = suppliers.find(s => {
+    const sn = s.name.toLowerCase();
+    return (n.includes(sn) || sn.includes(n)) && lenRatio(n, sn) >= 0.6;
+  });
   if (hit) return hit;
+
+  // 3. word-overlap — pick the supplier with the highest share of matching words,
+  //    require at least half the query words to match
   const words = n.split(/\s+/).filter(w => w.length > 2);
+  if (!words.length) return null;
   let best = null, bestScore = 0;
   suppliers.forEach(s => {
     const sw    = s.name.toLowerCase().split(/\s+/);
     const score = words.filter(w => sw.some(x => x.includes(w) || w.includes(x))).length;
     if (score > bestScore) { bestScore = score; best = s; }
   });
-  return bestScore > 0 ? best : null;
+  return bestScore >= Math.ceil(words.length / 2) ? best : null;
 };
 
 export const parseCSV = text => {
