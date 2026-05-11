@@ -32,9 +32,7 @@ module.exports = async (req, res) => {
     }).then(({ error }) => { if (error) console.error('Usage insert error:', error.message) });
 
     const responseText = msg.content.map(b => b.text || '').join('').replace(/```json|```/g, '').trim();
-    const parsed = JSON.parse(responseText);
-    console.log('[extract] raw result:', JSON.stringify(parsed));
-    res.json({ result: parsed });
+    res.json({ result: JSON.parse(responseText) });
   } catch (err) {
     console.error('Extract error:', err.message);
     const friendly = err.error?.error?.message || err.message;

@@ -30,8 +30,11 @@ export const matchSupplier = (name, suppliers) => {
   if (hit) return hit;
 
   // 3. word-overlap — must pass threshold AND be an unambiguous winner
-  //    ties on common suffixes (בע"מ) resolve to null rather than a wrong supplier
-  const words = n.split(/\s+/).filter(w => w.length > 2);
+  //    exclude generic business-entity suffixes (בע"מ etc.) so they don't
+  //    cause every Israeli company name to match whichever DB entry happens
+  //    to also end with בע"מ
+  const STOP = new Set(['בע"מ', 'בעמ', 'ובע"מ']);
+  const words = n.split(/\s+/).filter(w => w.length > 2 && !STOP.has(w));
   if (!words.length) return null;
   let best = null, bestScore = 0, secondBest = 0;
   suppliers.forEach(s => {
