@@ -22,23 +22,25 @@ export const matchSupplier = (name, suppliers) => {
   let hit = suppliers.find(s => s.name.normalize('NFC').toLowerCase() === n);
   if (hit) return hit;
 
-  // 2. substring match
+  // 2. substring match — no length-ratio guard
   hit = suppliers.find(s => {
     const sn = s.name.normalize('NFC').toLowerCase();
     return n.includes(sn) || sn.includes(n);
   });
   if (hit) return hit;
 
-  // 3. word-overlap — any single matching word is sufficient
+  // 3. word-overlap — must pass threshold AND be an unambiguous winner
+  //    ties on common suffixes (בע"מ) resolve to null rather than a wrong supplier
   const words = n.split(/\s+/).filter(w => w.length > 2);
   if (!words.length) return null;
-  let best = null, bestScore = 0;
+  let best = null, bestScore = 0, secondBest = 0;
   suppliers.forEach(s => {
     const sw = s.name.normalize('NFC').toLowerCase().split(/\s+/);
     const score = words.filter(w => sw.some(x => x.includes(w) || w.includes(x))).length;
-    if (score > bestScore) { bestScore = score; best = s; }
+    if (score > bestScore) { secondBest = bestScore; bestScore = score; best = s; }
+    else if (score > secondBest) { secondBest = score; }
   });
-  return bestScore > 0 ? best : null;
+  return bestScore >= Math.ceil(words.length / 2) && bestScore > secondBest ? best : null;
 };
 
 export const parseCSV = text => {
