@@ -8,19 +8,17 @@ module.exports = async (req, res) => {
   if (!b64 && !text) return res.status(400).json({ error: 'Missing image or text data' });
 
   try {
-    const supplierHint = supplierNames
-      ? ` If the supplier matches one of these known suppliers, use that exact name: ${supplierNames}.`
-      : '';
+    const supplierHint = supplierNames ? ` Known suppliers: ${supplierNames}.` : '';
 
     const messageContent = text
-      ? [{ type: 'text', text: `Extract invoice fields from the following invoice text.${supplierHint} Return ONLY valid JSON.\n\n${text}` }]
+      ? [{ type: 'text', text: `Extract invoice data.${supplierHint} Return ONLY valid JSON with keys: supplier, invoiceNo, invoiceDate (YYYY-MM-DD), amount (number). No markdown.\n\n${text}` }]
       : [
           { type: 'image', source: { type: 'base64', media_type: mediaType, data: b64 } },
-          { type: 'text',  text: `Extract the invoice fields from this image. For "supplier", read the vendor/supplier name from the invoice.${supplierHint}` },
+          { type: 'text',  text: `Extract invoice data.${supplierHint} Return ONLY valid JSON with keys: supplier, invoiceNo, invoiceDate (YYYY-MM-DD), amount (number). No markdown.` },
         ];
 
     const msg = await client.messages.create({
-      model:      'claude-haiku-4-5-20251001',
+      model:      'claude-sonnet-4-6',
       max_tokens: 256,
       system:     'You are an invoice data extractor. Analyze the input and return ONLY valid JSON: { "supplier": string, "invoiceNo": string, "invoiceDate": "YYYY-MM-DD", "amount": number }. No markdown, no explanation.',
       messages: [{ role: 'user', content: messageContent }],
