@@ -22,26 +22,23 @@ export const matchSupplier = (name, suppliers) => {
   let hit = suppliers.find(s => s.name.normalize('NFC').toLowerCase() === n);
   if (hit) return hit;
 
-  // 2. substring match — require both sides to share enough characters to avoid
-  //    false positives when one supplier name is a short substring of another
-  const lenRatio = (a, b) => Math.min(a.length, b.length) / Math.max(a.length, b.length);
+  // 2. substring match
   hit = suppliers.find(s => {
     const sn = s.name.normalize('NFC').toLowerCase();
-    return (n.includes(sn) || sn.includes(n)) && lenRatio(n, sn) >= 0.6;
+    return n.includes(sn) || sn.includes(n);
   });
   if (hit) return hit;
 
-  // 3. word-overlap — pick the supplier with the highest share of matching words,
-  //    require at least half the query words to match
+  // 3. word-overlap — any single matching word is sufficient
   const words = n.split(/\s+/).filter(w => w.length > 2);
   if (!words.length) return null;
   let best = null, bestScore = 0;
   suppliers.forEach(s => {
-    const sw    = s.name.normalize('NFC').toLowerCase().split(/\s+/);
+    const sw = s.name.normalize('NFC').toLowerCase().split(/\s+/);
     const score = words.filter(w => sw.some(x => x.includes(w) || w.includes(x))).length;
     if (score > bestScore) { bestScore = score; best = s; }
   });
-  return bestScore >= Math.ceil(words.length / 2) ? best : null;
+  return bestScore > 0 ? best : null;
 };
 
 export const parseCSV = text => {

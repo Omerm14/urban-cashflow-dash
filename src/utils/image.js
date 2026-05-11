@@ -41,7 +41,7 @@ export const extractInvoice = async (payload, suppliers) => {
       "Content-Type": "application/json",
       "Authorization": `Bearer ${session.access_token}`,
     },
-    body: JSON.stringify({ ...payload, supplierNames: suppliers.map(s => s.name).join(", ") }),
+    body: JSON.stringify({ ...payload }),
   });
   const data = await res.json();
   if (data.error) throw new Error(data.error);
