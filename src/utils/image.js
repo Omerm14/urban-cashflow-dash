@@ -13,15 +13,22 @@ const loadPdfJs = () => new Promise((res, rej) => {
   document.head.appendChild(s);
 });
 
-export const pdfToBase64 = async file => {
-  const lib    = await loadPdfJs();
-  const pdf    = await lib.getDocument({ data: await file.arrayBuffer() }).promise;
-  const page   = await pdf.getPage(1);
-  const vp     = page.getViewport({ scale: 1 });
+// For digitally-generated PDFs: extract the text layer directly (no vision tokens).
+// For scanned/image-only PDFs: fall back to canvas render.
+export const processPdf = async file => {
+  const lib  = await loadPdfJs();
+  const pdf  = await lib.getDocument({ data: await file.arrayBuffer() }).promise;
+  const page = await pdf.getPage(1);
+
+  const content = await page.getTextContent();
+  const text = content.items.map(item => item.str).join(' ').replace(/\s+/g, ' ').trim();
+  if (text.length > 50) return { text };
+
+  const vp     = page.getViewport({ scale: 2 });
   const canvas = document.createElement("canvas");
   canvas.width = vp.width; canvas.height = vp.height;
   await page.render({ canvasContext: canvas.getContext("2d"), viewport: vp }).promise;
-  return { b64: canvas.toDataURL("image/jpeg", 0.75).split(",")[1], mediaType: "image/jpeg" };
+  return { b64: canvas.toDataURL("image/jpeg", 0.92).split(",")[1], mediaType: "image/jpeg" };
 };
 
 export const fileToBase64 = f => new Promise((res, rej) => {
@@ -31,7 +38,8 @@ export const fileToBase64 = f => new Promise((res, rej) => {
   r.readAsDataURL(f);
 });
 
-export const extractInvoice = async (b64, mediaType, suppliers) => {
+// payload is either { text } or { b64, mediaType }
+export const extractInvoice = async (payload, suppliers) => {
   const { data: { session } } = await supabase.auth.getSession();
   if (!session) throw new Error('No active session — please sign in again');
   const res = await fetch("/api/extract", {
@@ -41,8 +49,7 @@ export const extractInvoice = async (b64, mediaType, suppliers) => {
       "Authorization": `Bearer ${session.access_token}`,
     },
     body: JSON.stringify({
-      b64,
-      mediaType,
+      ...payload,
       supplierNames: suppliers.map(s => s.name).join(", "),
     }),
   });

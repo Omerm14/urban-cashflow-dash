@@ -4,25 +4,26 @@ const supabase  = require('../lib/supabase');
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
 module.exports = async (req, res) => {
-  const { b64, mediaType = 'image/jpeg', supplierNames = '' } = req.body;
-  if (!b64) return res.status(400).json({ error: 'Missing image data' });
+  const { b64, mediaType = 'image/jpeg', text, supplierNames = '' } = req.body;
+  if (!b64 && !text) return res.status(400).json({ error: 'Missing image or text data' });
 
   try {
-    const userText = supplierNames
-      ? `Extract the invoice fields from this image. For "supplier", read the vendor/supplier name from the invoice. If it matches one of these known suppliers, return that exact name: ${supplierNames}. Otherwise return the name as shown on the invoice.`
-      : 'Extract the invoice fields from this image.';
+    const supplierHint = supplierNames
+      ? ` If the supplier matches one of these known suppliers, use that exact name: ${supplierNames}.`
+      : '';
+
+    const messageContent = text
+      ? [{ type: 'text', text: `Extract invoice fields from the following invoice text.${supplierHint} Return ONLY valid JSON.\n\n${text}` }]
+      : [
+          { type: 'image', source: { type: 'base64', media_type: mediaType, data: b64 } },
+          { type: 'text',  text: `Extract the invoice fields from this image. For "supplier", read the vendor/supplier name from the invoice.${supplierHint}` },
+        ];
 
     const msg = await client.messages.create({
       model:      'claude-haiku-4-5-20251001',
       max_tokens: 256,
-      system:     'You are an invoice data extractor. Analyze invoice images and return ONLY valid JSON: { "supplier": string, "invoiceNo": string, "invoiceDate": "YYYY-MM-DD", "amount": number }. No markdown, no explanation.',
-      messages: [{
-        role:    'user',
-        content: [
-          { type: 'image', source: { type: 'base64', media_type: mediaType, data: b64 } },
-          { type: 'text',  text: userText },
-        ],
-      }],
+      system:     'You are an invoice data extractor. Analyze the input and return ONLY valid JSON: { "supplier": string, "invoiceNo": string, "invoiceDate": "YYYY-MM-DD", "amount": number }. No markdown, no explanation.',
+      messages: [{ role: 'user', content: messageContent }],
     });
 
     // fire-and-forget: log usage to Supabase without blocking response
@@ -33,11 +34,10 @@ module.exports = async (req, res) => {
       output_tokens: msg.usage.output_tokens,
     }).then(({ error }) => { if (error) console.error('Usage insert error:', error.message) });
 
-    const text = msg.content.map(b => b.text || '').join('').replace(/```json|```/g, '').trim();
-    res.json({ result: JSON.parse(text) });
+    const responseText = msg.content.map(b => b.text || '').join('').replace(/```json|```/g, '').trim();
+    res.json({ result: JSON.parse(responseText) });
   } catch (err) {
     console.error('Extract error:', err.message);
-    // Anthropic SDK errors carry a parsed body in err.error; surface just the message
     const friendly = err.error?.error?.message || err.message;
     res.status(err.status || 500).json({ error: friendly });
   }
