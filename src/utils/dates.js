@@ -6,11 +6,11 @@ export const addDays              = (d, n) => { const x = new Date(d); x.setDate
 export const calcDueDate = (invoiceDate, supplier) => {
   if (!supplier || !invoiceDate) return null;
   const t = supplier.terms?.toLowerCase() || "";
-  // shotef: end of the following month
-  if (t === "shotef") return endOfFollowingMonth(invoiceDate);
-  // shotef_plus(N): 1st of following month + N days (e.g. Jan+30 → Feb1+30 ≈ Mar3)
+  // shotef: end of the same month as the invoice date
+  if (t === "shotef") return endOfMonth(invoiceDate);
+  // shotef_plus(N): end of same month + N days
   const m = t.match(/shotef_plus\((\d+)\)/);
-  if (m) return addDays(firstOfFollowingMonth(invoiceDate), parseInt(m[1]));
+  if (m) return addDays(endOfMonth(invoiceDate), parseInt(m[1]));
   if (t === "immediate") return new Date(invoiceDate);
   return null;
 };
