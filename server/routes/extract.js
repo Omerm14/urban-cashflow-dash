@@ -4,12 +4,11 @@ const supabase  = require('../lib/supabase');
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
 module.exports = async (req, res) => {
-  const { b64, mediaType = 'image/jpeg', text, supplierNames = '' } = req.body;
+  const { b64, mediaType = 'image/jpeg', text } = req.body;
   if (!b64 && !text) return res.status(400).json({ error: 'Missing image or text data' });
 
   try {
-    const supplierHint = supplierNames ? ` Known suppliers: ${supplierNames}.` : '';
-    const prompt = `Extract invoice data.${supplierHint} Return ONLY valid JSON with keys: supplier, invoiceNo, invoiceDate (YYYY-MM-DD), amount (number). No markdown.`;
+    const prompt = `Extract invoice data. Return ONLY valid JSON with keys: supplier, invoiceNo, invoiceDate (YYYY-MM-DD), amount (number). No markdown.`;
 
     const messageContent = text
       ? [{ type: 'text', text: `${prompt}\n\n${text}` }]
