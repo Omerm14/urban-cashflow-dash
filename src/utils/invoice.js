@@ -1,4 +1,6 @@
+// Canonical form: NFC, lowercase, all quote variants → ASCII "
 const normSup = s => s?.toLowerCase().replace(/[.,\s]+$/, '').trim() || '';
+const norm    = s => s?.normalize('NFC').toLowerCase().trim().replace(/[״"""]/g, '"') ?? '';
 
 export const findDuplicates = invoices => {
   const dupeIds = new Set();
@@ -15,35 +17,38 @@ export const findDuplicates = invoices => {
 };
 
 export const matchSupplier = (name, suppliers) => {
-  if (!name) return null;
-  const n = name.normalize('NFC').toLowerCase().trim();
+  if (!name || !suppliers?.length) return null;
+  const n = norm(name);
 
-  // 1. exact match
-  let hit = suppliers.find(s => s.name.normalize('NFC').toLowerCase() === n);
-  if (hit) return hit;
+  // 1. exact match (quote-normalised)
+  let hit = suppliers.find(s => norm(s.name) === n);
+  if (hit) { console.log('[match]', name, '→', hit.name, '(exact)'); return hit; }
 
-  // 2. substring match — no length-ratio guard
+  // 2. substring match — require ≥60% length ratio to avoid short-name false positives
   hit = suppliers.find(s => {
-    const sn = s.name.normalize('NFC').toLowerCase();
-    return n.includes(sn) || sn.includes(n);
+    const sn = norm(s.name);
+    const ratio = Math.min(n.length, sn.length) / Math.max(n.length, sn.length);
+    return ratio >= 0.6 && (n.includes(sn) || sn.includes(n));
   });
-  if (hit) return hit;
+  if (hit) { console.log('[match]', name, '→', hit.name, '(substring)'); return hit; }
 
-  // 3. word-overlap — must pass threshold AND be an unambiguous winner
-  //    exclude generic business-entity suffixes (בע"מ etc.) so they don't
-  //    cause every Israeli company name to match whichever DB entry happens
-  //    to also end with בע"מ
+  // 3. word-overlap — exclude generic business-entity suffix so that בע"מ
+  //    (in any quote encoding) never drives a match on its own
   const STOP = new Set(['בע"מ', 'בעמ', 'ובע"מ']);
   const words = n.split(/\s+/).filter(w => w.length > 2 && !STOP.has(w));
-  if (!words.length) return null;
+  if (!words.length) { console.log('[match]', name, '→ null (no meaningful words)'); return null; }
+
   let best = null, bestScore = 0, secondBest = 0;
   suppliers.forEach(s => {
-    const sw = s.name.normalize('NFC').toLowerCase().split(/\s+/);
+    const sw = norm(s.name).split(/\s+/).filter(w => !STOP.has(w));
     const score = words.filter(w => sw.some(x => x.includes(w) || w.includes(x))).length;
-    if (score > bestScore) { secondBest = bestScore; bestScore = score; best = s; }
+    if (score > bestScore)       { secondBest = bestScore; bestScore = score; best = s; }
     else if (score > secondBest) { secondBest = score; }
   });
-  return bestScore >= Math.ceil(words.length / 2) && bestScore > secondBest ? best : null;
+
+  const result = bestScore >= Math.ceil(words.length / 2) && bestScore > secondBest ? best : null;
+  console.log('[match]', name, '→', result?.name ?? null, `(score ${bestScore} vs ${secondBest})`);
+  return result;
 };
 
 export const parseCSV = text => {
