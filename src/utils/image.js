@@ -1,29 +1,11 @@
 import { supabase } from '../lib/supabase'
 
-const loadPdfJs = () => new Promise((res, rej) => {
-  if (window.pdfjsLib) { res(window.pdfjsLib); return; }
-  const s = document.createElement("script");
-  s.src = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js";
-  s.onload = () => {
-    window.pdfjsLib.GlobalWorkerOptions.workerSrc =
-      "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
-    res(window.pdfjsLib);
-  };
-  s.onerror = () => rej(new Error("Failed to load PDF.js"));
-  document.head.appendChild(s);
+export const processPdf = f => new Promise((res, rej) => {
+  const r = new FileReader();
+  r.onload  = () => res({ b64: r.result.split(",")[1], mediaType: 'application/pdf' });
+  r.onerror = rej;
+  r.readAsDataURL(f);
 });
-
-export const processPdf = async file => {
-  const lib  = await loadPdfJs();
-  const pdf  = await lib.getDocument({ data: await file.arrayBuffer() }).promise;
-  const page = await pdf.getPage(1);
-
-  const vp     = page.getViewport({ scale: 3 });
-  const canvas = document.createElement("canvas");
-  canvas.width = vp.width; canvas.height = vp.height;
-  await page.render({ canvasContext: canvas.getContext("2d"), viewport: vp }).promise;
-  return { b64: canvas.toDataURL("image/jpeg", 0.97).split(",")[1], mediaType: "image/jpeg" };
-};
 
 export const fileToBase64 = f => new Promise((res, rej) => {
   const r = new FileReader();

@@ -12,10 +12,15 @@ module.exports = async (req, res) => {
 
     const messageContent = text
       ? [{ type: 'text', text: `${prompt}\n\n${text}` }]
-      : [
-          { type: 'image', source: { type: 'base64', media_type: mediaType, data: b64 } },
-          { type: 'text',  text: prompt },
-        ];
+      : mediaType === 'application/pdf'
+        ? [
+            { type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: b64 } },
+            { type: 'text', text: prompt },
+          ]
+        : [
+            { type: 'image', source: { type: 'base64', media_type: mediaType, data: b64 } },
+            { type: 'text', text: prompt },
+          ];
 
     const msg = await client.messages.create({
       model:      'claude-sonnet-4-6',
