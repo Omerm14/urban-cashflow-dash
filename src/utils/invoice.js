@@ -16,17 +16,17 @@ export const findDuplicates = invoices => {
 
 export const matchSupplier = (name, suppliers) => {
   if (!name) return null;
-  const n = name.toLowerCase().trim();
+  const n = name.normalize('NFC').toLowerCase().trim();
 
   // 1. exact match
-  let hit = suppliers.find(s => s.name.toLowerCase() === n);
+  let hit = suppliers.find(s => s.name.normalize('NFC').toLowerCase() === n);
   if (hit) return hit;
 
   // 2. substring match — require both sides to share enough characters to avoid
   //    false positives when one supplier name is a short substring of another
   const lenRatio = (a, b) => Math.min(a.length, b.length) / Math.max(a.length, b.length);
   hit = suppliers.find(s => {
-    const sn = s.name.toLowerCase();
+    const sn = s.name.normalize('NFC').toLowerCase();
     return (n.includes(sn) || sn.includes(n)) && lenRatio(n, sn) >= 0.6;
   });
   if (hit) return hit;
@@ -37,7 +37,7 @@ export const matchSupplier = (name, suppliers) => {
   if (!words.length) return null;
   let best = null, bestScore = 0;
   suppliers.forEach(s => {
-    const sw    = s.name.toLowerCase().split(/\s+/);
+    const sw    = s.name.normalize('NFC').toLowerCase().split(/\s+/);
     const score = words.filter(w => sw.some(x => x.includes(w) || w.includes(x))).length;
     if (score > bestScore) { bestScore = score; best = s; }
   });
