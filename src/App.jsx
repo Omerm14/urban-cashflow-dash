@@ -9,7 +9,7 @@ import InvoicesTable       from "./components/InvoicesTable";
 import CalendarView        from "./components/CalendarView";
 import EditInvoiceModal    from "./components/EditInvoiceModal";
 import SuppliersModal      from "./components/SuppliersModal";
-import { pdfToBase64, fileToBase64, extractInvoice } from "./utils/image";
+import { processPdf, fileToBase64, extractInvoice } from "./utils/image";
 import { findDuplicates, parseCSV }                  from "./utils/invoice";
 import { calcDueDate, toYM }                         from "./utils/dates";
 import { STATUS }                                    from "./constants";
@@ -48,13 +48,13 @@ export default function App() {
     );
 
     const imageResults = await Promise.allSettled(
-      toExtract.map(f => f.type === "application/pdf" ? pdfToBase64(f) : fileToBase64(f))
+      toExtract.map(f => f.type === "application/pdf" ? processPdf(f) : fileToBase64(f))
     );
 
     const extractResults = await Promise.allSettled(
       imageResults.map((r, i) => {
         if (r.status === "rejected") return Promise.reject(new Error(`${toExtract[i].name}: ${r.reason.message}`));
-        return extractInvoice(r.value.b64, r.value.mediaType, suppliers).then(ex => ({ file: toExtract[i], ex }));
+        return extractInvoice(r.value, suppliers).then(ex => ({ file: toExtract[i], ex }));
       })
     );
 
