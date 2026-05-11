@@ -8,19 +8,25 @@ module.exports = async (req, res) => {
   if (!b64 && !text) return res.status(400).json({ error: 'Missing image or text data' });
 
   try {
-    const supplierHint = supplierNames ? ` Known suppliers: ${supplierNames}.` : '';
+    const supplierHint = supplierNames
+      ? `\n- supplier: The company that ISSUED this invoice (the seller/vendor). It appears in the header or letterhead. NEVER use the buyer/customer/recipient name. You MUST use the exact name from this list that best matches the issuing company: ${supplierNames}.`
+      : '\n- supplier: The company that ISSUED this invoice (the seller/vendor shown in the header/letterhead). Never the buyer or recipient.';
+
+    const fields = `\n- invoiceNo: Invoice number as printed.\n- invoiceDate: Invoice date in YYYY-MM-DD format.\n- amount: Final total amount including VAT/tax, as a plain number.`;
+
+    const instruction = `Extract the following fields from this invoice:${supplierHint}${fields}\n\nReturn ONLY valid JSON: {"supplier":"...","invoiceNo":"...","invoiceDate":"YYYY-MM-DD","amount":0}. No markdown.`;
 
     const messageContent = text
-      ? [{ type: 'text', text: `Extract invoice data.${supplierHint} Return ONLY valid JSON with keys: supplier, invoiceNo, invoiceDate (YYYY-MM-DD), amount (number). No markdown.\n\n${text}` }]
+      ? [{ type: 'text', text: `${instruction}\n\n${text}` }]
       : [
           { type: 'image', source: { type: 'base64', media_type: mediaType, data: b64 } },
-          { type: 'text',  text: `Extract invoice data.${supplierHint} Return ONLY valid JSON with keys: supplier, invoiceNo, invoiceDate (YYYY-MM-DD), amount (number). No markdown.` },
+          { type: 'text',  text: instruction },
         ];
 
     const msg = await client.messages.create({
       model:      'claude-sonnet-4-6',
       max_tokens: 256,
-      system:     'You are an invoice data extractor. Analyze the input and return ONLY valid JSON: { "supplier": string, "invoiceNo": string, "invoiceDate": "YYYY-MM-DD", "amount": number }. No markdown, no explanation.',
+      system:     'You are an invoice data extractor. Return ONLY valid JSON, no markdown, no explanation.',
       messages: [{ role: 'user', content: messageContent }],
     });
 
