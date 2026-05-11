@@ -8,15 +8,19 @@ module.exports = async (req, res) => {
   if (!b64) return res.status(400).json({ error: 'Missing image data' });
 
   try {
+    const userText = supplierNames
+      ? `Extract the invoice fields from this image. For "supplier", read the vendor/supplier name from the invoice. If it matches one of these known suppliers, return that exact name: ${supplierNames}. Otherwise return the name as shown on the invoice.`
+      : 'Extract the invoice fields from this image.';
+
     const msg = await client.messages.create({
       model:      'claude-haiku-4-5-20251001',
       max_tokens: 256,
-      system:     'Extract invoice data. Return ONLY valid JSON: { "supplier": string, "invoiceNo": string, "invoiceDate": "YYYY-MM-DD", "amount": number }. No markdown.',
+      system:     'You are an invoice data extractor. Analyze invoice images and return ONLY valid JSON: { "supplier": string, "invoiceNo": string, "invoiceDate": "YYYY-MM-DD", "amount": number }. No markdown, no explanation.',
       messages: [{
         role:    'user',
         content: [
           { type: 'image', source: { type: 'base64', media_type: mediaType, data: b64 } },
-          { type: 'text',  text: supplierNames ? `Known suppliers: ${supplierNames}` : 'Extract the invoice fields.' },
+          { type: 'text',  text: userText },
         ],
       }],
     });
