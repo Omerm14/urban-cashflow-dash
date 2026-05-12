@@ -48,19 +48,29 @@ export default function App() {
     );
 
     const imageResults = await Promise.allSettled(
-      toExtract.map(f => f.type === "application/pdf" ? processPdf(f) : fileToBase64(f))
+      toExtract.map(f => f.type === "application/pdf" ? processPdf(f) : fileToBase64(f).then(img => [img]))
     );
 
+    // Flatten: each PDF page becomes its own extraction unit
+    const pageUnits = [];
+    imageResults.forEach((r, i) => {
+      if (r.status === "rejected") {
+        pageUnits.push({ file: toExtract[i], error: r.reason });
+      } else {
+        r.value.forEach(pageImage => pageUnits.push({ file: toExtract[i], pageImage }));
+      }
+    });
+
     const extractResults = await Promise.allSettled(
-      imageResults.map((r, i) => {
-        if (r.status === "rejected") return Promise.reject(new Error(`${toExtract[i].name}: ${r.reason.message}`));
-        return extractInvoice(r.value, suppliers).then(ex => ({ file: toExtract[i], ex }));
+      pageUnits.map(unit => {
+        if (unit.error) return Promise.reject(new Error(`${unit.file.name}: ${unit.error.message}`));
+        return extractInvoice(unit.pageImage, suppliers).then(ex => ({ file: unit.file, ex }));
       })
     );
 
     const candidates = [], errors = [];
     extractResults.forEach((r, i) => {
-      if (r.status === "rejected") { errors.push(r.reason?.message || `${toExtract[i].name}: failed`); return; }
+      if (r.status === "rejected") { errors.push(r.reason?.message || `${pageUnits[i].file.name}: failed`); return; }
       const { file, ex } = r.value;
       const sup = getSupplier(ex.supplier);
       const due = calcDueDate(ex.invoiceDate, sup);

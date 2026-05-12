@@ -13,15 +13,21 @@ const loadPdfJs = () => new Promise((res, rej) => {
   document.head.appendChild(s);
 });
 
-export const processPdf = async file => {
-  const lib  = await loadPdfJs();
-  const pdf  = await lib.getDocument({ data: await file.arrayBuffer() }).promise;
-  const page = await pdf.getPage(1);
-  const vp   = page.getViewport({ scale: 2 });
+const renderPage = async (pdf, pageNum) => {
+  const page   = await pdf.getPage(pageNum);
+  const vp     = page.getViewport({ scale: 2 });
   const canvas = document.createElement("canvas");
   canvas.width = vp.width; canvas.height = vp.height;
   await page.render({ canvasContext: canvas.getContext("2d"), viewport: vp }).promise;
   return { b64: canvas.toDataURL("image/jpeg", 0.92).split(",")[1], mediaType: "image/jpeg" };
+};
+
+export const processPdf = async file => {
+  const lib = await loadPdfJs();
+  const pdf = await lib.getDocument({ data: await file.arrayBuffer() }).promise;
+  return Promise.all(
+    Array.from({ length: pdf.numPages }, (_, i) => renderPage(pdf, i + 1))
+  );
 };
 
 export const fileToBase64 = f => new Promise((res, rej) => {
