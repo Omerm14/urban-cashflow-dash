@@ -8,14 +8,21 @@ module.exports = async (req, res) => {
   if (!b64 && !text) return res.status(400).json({ error: 'Missing image or text data' });
 
   try {
-    const prompt = `Extract data from this invoice or statement. The "supplier" is the company that ISSUED this document and is owed payment — the seller/creditor whose name appears in the document header or letterhead. Do NOT return the recipient or buyer name. Return ONLY valid JSON: {"supplier":"<issuer company name>","invoiceNo":"<invoice number>","invoiceDate":"<YYYY-MM-DD>","amount":<total amount as number>}. No markdown, no explanation.`;
+    const { mode } = req.body;
 
-    const messageContent = text
-      ? [{ type: 'text', text: `${prompt}\n\n${text}` }]
-      : [
-          { type: 'image', source: { type: 'base64', media_type: mediaType, data: b64 } },
-          { type: 'text',  text: prompt },
-        ];
+    let messageContent;
+    if (mode === 'translate') {
+      const translatePrompt = `You are a transliteration assistant. The following is an Israeli company name written in English. Transliterate/translate it to Hebrew as it appears on Israeli business documents. Return ONLY valid JSON: {"hebrew":"<Hebrew company name>"}. No markdown, no explanation.\n\nCompany name: ${text}`;
+      messageContent = [{ type: 'text', text: translatePrompt }];
+    } else {
+      const prompt = `Extract data from this invoice or statement. The "supplier" is the company that ISSUED this document and is owed payment — the seller/creditor whose name appears in the document header or letterhead. Do NOT return the recipient or buyer name. All dates on this document follow Israeli format: DD/MM/YYYY or DD/MM/YY (day first, then month, then year). A two-digit year means 20YY — for example "14/04/26" means 14 April 2026, not 2014. Return ONLY valid JSON: {"supplier":"<issuer company name>","invoiceNo":"<invoice number>","invoiceDate":"<YYYY-MM-DD>","amount":<total amount as number>}. No markdown, no explanation.`;
+      messageContent = text
+        ? [{ type: 'text', text: `${prompt}\n\n${text}` }]
+        : [
+            { type: 'image', source: { type: 'base64', media_type: mediaType, data: b64 } },
+            { type: 'text',  text: prompt },
+          ];
+    }
 
     const msg = await client.messages.create({
       model:      'claude-sonnet-4-6',

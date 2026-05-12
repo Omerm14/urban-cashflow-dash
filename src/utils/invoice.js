@@ -1,3 +1,8 @@
+// True when the string has Latin letters and no Hebrew characters — used to trigger
+// the translation fallback before supplier matching.
+export const isLatinOnly = s =>
+  Boolean(s) && /[A-Za-z]/.test(s) && !/[א-ת]/.test(s);
+
 // Canonical form: NFC, lowercase, all quote variants → ASCII "
 const normSup = s => s?.toLowerCase().replace(/[.,\s]+$/, '').trim() || '';
 const norm    = s => s?.normalize('NFC').toLowerCase().trim().replace(/[״"""]/g, '"') ?? '';

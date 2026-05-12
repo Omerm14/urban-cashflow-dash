@@ -37,19 +37,29 @@ export const fileToBase64 = f => new Promise((res, rej) => {
   r.readAsDataURL(f);
 });
 
-// payload is either { text } or { b64, mediaType }
-export const extractInvoice = async (payload, suppliers) => {
+const apiExtract = async (body) => {
   const { data: { session } } = await supabase.auth.getSession();
   if (!session) throw new Error('No active session — please sign in again');
   const res = await fetch("/api/extract", {
     method:  "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "Authorization": `Bearer ${session.access_token}`,
-    },
-    body: JSON.stringify({ ...payload }),
+    headers: { "Content-Type": "application/json", "Authorization": `Bearer ${session.access_token}` },
+    body: JSON.stringify(body),
   });
   const data = await res.json();
   if (data.error) throw new Error(data.error);
   return data.result;
+};
+
+// payload is either { text } or { b64, mediaType }
+export const extractInvoice = payload => apiExtract({ ...payload });
+
+// Transliterates an English Israeli company name to Hebrew via a lightweight text-only Claude call.
+// Returns the Hebrew string or null on failure.
+export const translateSupplierName = async name => {
+  try {
+    const result = await apiExtract({ text: name, mode: 'translate' });
+    return result?.hebrew || null;
+  } catch {
+    return null;
+  }
 };
