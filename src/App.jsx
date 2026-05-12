@@ -9,9 +9,9 @@ import InvoicesTable       from "./components/InvoicesTable";
 import CalendarView        from "./components/CalendarView";
 import EditInvoiceModal    from "./components/EditInvoiceModal";
 import SuppliersModal      from "./components/SuppliersModal";
-import { processPdf, fileToBase64, extractInvoice } from "./utils/image";
-import { findDuplicates, parseCSV }                  from "./utils/invoice";
-import { calcDueDate, toYM }                         from "./utils/dates";
+import { processPdf, fileToBase64, extractInvoice, translateSupplierName } from "./utils/image";
+import { findDuplicates, parseCSV, isLatinOnly }                           from "./utils/invoice";
+import { calcDueDate, toYM, correctSwappedDate }                           from "./utils/dates";
 import { STATUS }                                    from "./constants";
 
 export default function App() {
@@ -64,29 +64,41 @@ export default function App() {
     const extractResults = await Promise.allSettled(
       pageUnits.map(unit => {
         if (unit.error) return Promise.reject(new Error(`${unit.file.name}: ${unit.error.message}`));
-        return extractInvoice(unit.pageImage, suppliers).then(ex => ({ file: unit.file, ex }));
+        return extractInvoice(unit.pageImage).then(ex => ({ file: unit.file, ex }));
+      })
+    );
+
+    const candidateResults = await Promise.allSettled(
+      extractResults.map(async (r, i) => {
+        if (r.status === "rejected") throw new Error(r.reason?.message || `${pageUnits[i].file.name}: failed`);
+        const { file, ex } = r.value;
+        const invoiceDate = correctSwappedDate(ex.invoiceDate) || ex.invoiceDate || "";
+        let sup = getSupplier(ex.supplier);
+        if (!sup && isLatinOnly(ex.supplier)) {
+          const hebrew = await translateSupplierName(ex.supplier);
+          if (hebrew) sup = getSupplier(hebrew) || null;
+        }
+        const due = calcDueDate(invoiceDate, sup);
+        return {
+          file,
+          candidate: {
+            supplier:     sup?.name || ex.supplier || "",
+            invoice_no:   ex.invoiceNo   || "",
+            invoice_date: invoiceDate,
+            amount:       Number(ex.amount) || 0,
+            due_date:     due ? due.toISOString().split("T")[0] : "",
+            status:       STATUS.UNPAID,
+            notes:        "",
+            source_file:  file.name,
+          },
+        };
       })
     );
 
     const candidates = [], errors = [];
-    extractResults.forEach((r, i) => {
+    candidateResults.forEach((r, i) => {
       if (r.status === "rejected") { errors.push(r.reason?.message || `${pageUnits[i].file.name}: failed`); return; }
-      const { file, ex } = r.value;
-      const sup = getSupplier(ex.supplier);
-      const due = calcDueDate(ex.invoiceDate, sup);
-      candidates.push({
-        file,
-        candidate: {
-          supplier:     sup?.name || ex.supplier || "",
-          invoice_no:   ex.invoiceNo   || "",
-          invoice_date: ex.invoiceDate || "",
-          amount:       Number(ex.amount) || 0,
-          due_date:     due ? due.toISOString().split("T")[0] : "",
-          status:       STATUS.UNPAID,
-          notes:        "",
-          source_file:  file.name,
-        },
-      });
+      candidates.push(r.value);
     });
 
     // Deduplicate against existing invoices

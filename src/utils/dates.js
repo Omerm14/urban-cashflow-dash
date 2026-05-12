@@ -15,6 +15,27 @@ export const calcDueDate = (invoiceDate, supplier) => {
   return null;
 };
 
+// Detect the YY/MM/DD mis-parse of Israeli DD/MM/YY invoices and swap year ↔ day back.
+// E.g. "2014-04-26" (Claude read 14/04/26 as YY/MM/DD) → "2026-04-14".
+export const correctSwappedDate = dateStr => {
+  if (!dateStr) return dateStr;
+  const parts = dateStr.split('-');
+  if (parts.length !== 3) return dateStr;
+  const [y, m, d] = parts.map(Number);
+  if (isNaN(y) || isNaN(m) || isNaN(d)) return dateStr;
+  if (y >= 2015) return dateStr;
+  // Year looks like a 2-digit day (00–31) mapped to 20xx, and day looks like a 2-digit year (15–31 → 2015–2031)
+  if (y >= 2000 && d >= 15 && d <= 31) {
+    const correctedYear = 2000 + d;
+    const correctedDay  = y - 2000;
+    const check = new Date(correctedYear, m - 1, correctedDay);
+    if (check.getFullYear() === correctedYear && check.getMonth() === m - 1 && check.getDate() === correctedDay) {
+      return `${correctedYear}-${String(m).padStart(2, '0')}-${String(correctedDay).padStart(2, '0')}`;
+    }
+  }
+  return dateStr;
+};
+
 export const fmt          = d  => d ? new Date(d).toLocaleDateString("en-GB") : "—";
 export const toYM         = d  => { const x = new Date(d); return `${x.getFullYear()}-${String(x.getMonth()+1).padStart(2,"0")}`; };
 export const fmtMonth     = ym => { const [y,m] = ym.split("-"); return new Date(y,m-1).toLocaleString("en-GB",{month:"long",year:"numeric"}); };
