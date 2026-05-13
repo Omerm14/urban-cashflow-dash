@@ -45,6 +45,18 @@ export const useInvoiceData = () => {
     setInvoices(p => p.filter(i => i.id !== id));
   }, []);
 
+  const bulkMarkPaid = useCallback(async ids => {
+    const { error } = await supabase.from('invoices').update({ status: STATUS.PAID }).in('id', ids);
+    if (error) { console.error('bulkMarkPaid:', error.message); throw error; }
+    setInvoices(p => p.map(i => ids.includes(i.id) ? { ...i, status: STATUS.PAID } : i));
+  }, []);
+
+  const bulkDelete = useCallback(async ids => {
+    const { error } = await supabase.from('invoices').delete().in('id', ids);
+    if (error) { console.error('bulkDelete:', error.message); throw error; }
+    setInvoices(p => p.filter(i => !ids.includes(i.id)));
+  }, []);
+
   // Supplier CRUD
   const addSupplier = useCallback(async data => {
     const { data: row, error } = await supabase.from('suppliers').insert({ ...data, user_id: user.id }).select().single();
@@ -120,7 +132,7 @@ export const useInvoiceData = () => {
 
   return {
     suppliers, invoices, computed, dupeIds, monthlyData, allNames, color, maxTotal, kpis, loading,
-    addInvoice, updateInvoice, deleteInvoice,
+    addInvoice, updateInvoice, deleteInvoice, bulkMarkPaid, bulkDelete,
     addSupplier, updateSupplier, deleteSupplier,
     getSupplier,
   };
