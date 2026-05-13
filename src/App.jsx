@@ -5,7 +5,7 @@ import LoginPage           from "./pages/LoginPage";
 import AdminPage           from "./pages/AdminPage";
 import NavBar              from "./components/NavBar";
 import Dashboard           from "./components/Dashboard";
-import InvoicesTable       from "./components/InvoicesTable";
+import InvoicesView        from "./components/InvoicesView";
 import CalendarView        from "./components/CalendarView";
 import EditInvoiceModal    from "./components/EditInvoiceModal";
 import SuppliersModal      from "./components/SuppliersModal";
@@ -29,7 +29,7 @@ export default function App() {
 
   const {
     suppliers, invoices, computed, dupeIds, monthlyData, allNames, color, maxTotal, kpis, loading,
-    addInvoice, updateInvoice, deleteInvoice,
+    addInvoice, updateInvoice, deleteInvoice, bulkMarkPaid, bulkDelete,
     addSupplier, updateSupplier, deleteSupplier,
     getSupplier,
   } = useInvoiceData();
@@ -205,7 +205,7 @@ export default function App() {
         )}
 
         {view === "dashboard" && <Dashboard  kpis={kpis} monthlyData={monthlyData} allNames={allNames} color={color} maxTotal={maxTotal} />}
-        {view === "invoices"  && <InvoicesTable computed={computed} dupeIds={dupeIds} updateInvoice={updateInvoice} deleteInvoice={deleteInvoice} setEditInvoice={setEditInvoice} color={color} />}
+        {view === "invoices"  && <InvoicesView computed={computed} dupeIds={dupeIds} updateInvoice={updateInvoice} deleteInvoice={deleteInvoice} bulkMarkPaid={bulkMarkPaid} bulkDelete={bulkDelete} setEditInvoice={setEditInvoice} color={color} />}
         {view === "calendar"  && <CalendarView computed={computed} calMonth={calMonth} setCalMonth={setCalMonth} color={color} />}
         {view === "admin"     && <AdminPage />}
       </div>

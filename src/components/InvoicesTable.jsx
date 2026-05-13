@@ -1,13 +1,32 @@
+import { useRef, useEffect } from "react";
 import { currency, fmt } from "../utils/dates";
 import { statusStyle } from "../utils/invoice";
 import { STATUS } from "../constants";
 
-export default function InvoicesTable({ computed, dupeIds, updateInvoice, deleteInvoice, setEditInvoice, color }) {
+export default function InvoicesTable({ computed, dupeIds, updateInvoice, deleteInvoice, setEditInvoice, color, selectedIds, onToggleSelect, onToggleAll }) {
+  const allIds = computed.map(i => i.id);
+  const allSelected = allIds.length > 0 && allIds.every(id => selectedIds.has(id));
+  const someSelected = !allSelected && allIds.some(id => selectedIds.has(id));
+
+  const selectAllRef = useRef();
+  useEffect(() => {
+    if (selectAllRef.current) selectAllRef.current.indeterminate = someSelected;
+  }, [someSelected]);
+
   return (
     <div className="card" style={{ overflow:"hidden" }}>
       <table style={{ width:"100%", borderCollapse:"collapse", fontSize:13 }}>
         <thead>
           <tr style={{ borderBottom:"1px solid #111d2e" }}>
+            <th style={{ padding:"14px 14px 14px 18px", width:36 }}>
+              <input
+                ref={selectAllRef}
+                type="checkbox"
+                checked={allSelected}
+                onChange={() => onToggleAll(allIds)}
+                style={{ accentColor:"#6366f1", cursor:"pointer", width:14, height:14 }}
+              />
+            </th>
             {["Invoice #","Supplier","Date","Amount","Due Date","Status",""].map(h => (
               <th key={h} style={{ padding:"14px 18px", textAlign:"left", fontSize:10, fontWeight:700, color:"#334155", textTransform:"uppercase", letterSpacing:"1px" }}>{h}</th>
             ))}
@@ -15,15 +34,24 @@ export default function InvoicesTable({ computed, dupeIds, updateInvoice, delete
         </thead>
         <tbody>
           {computed.length === 0 && (
-            <tr><td colSpan={7} style={{ padding:"60px 0", textAlign:"center", color:"#334155" }}>
+            <tr><td colSpan={8} style={{ padding:"60px 0", textAlign:"center", color:"#334155" }}>
               <div style={{ fontSize:36, marginBottom:10 }}>🧾</div>
               <div>No invoices yet — upload some above</div>
             </td></tr>
           )}
           {computed.map(inv => {
             const ss = statusStyle(inv.status);
+            const isSelected = selectedIds.has(inv.id);
             return (
-              <tr key={inv.id} className="row-hover" style={{ borderTop:"1px solid #0d1626", transition:"background .15s" }}>
+              <tr key={inv.id} className="row-hover" style={{ borderTop:"1px solid #0d1626", transition:"background .15s", background: isSelected ? "#0d1a2e" : undefined }}>
+                <td style={{ padding:"13px 14px 13px 18px" }}>
+                  <input
+                    type="checkbox"
+                    checked={isSelected}
+                    onChange={() => onToggleSelect(inv.id)}
+                    style={{ accentColor:"#6366f1", cursor:"pointer", width:14, height:14 }}
+                  />
+                </td>
                 <td style={{ padding:"13px 18px", color:"#475569", fontFamily:"monospace", fontSize:12 }}>{inv.invoiceNo}</td>
                 <td style={{ padding:"13px 18px" }}>
                   <div style={{ display:"flex", alignItems:"center", gap:9 }}>
