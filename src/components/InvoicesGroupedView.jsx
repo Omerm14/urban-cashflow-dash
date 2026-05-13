@@ -118,6 +118,7 @@ function SupplierCard({ supplier, invoices, dupeIds, updateInvoice, deleteInvoic
 
 export default function InvoicesGroupedView({ computed, dupeIds, updateInvoice, deleteInvoice, setEditInvoice, color, selectedIds, onToggleSelect, onToggleAll, selectedMonth, onMonthChange, sortField }) {
   const monthInvoices = computed.filter(inv => inv.dueDate && inv.dueDate.startsWith(selectedMonth));
+  const monthTotal = monthInvoices.reduce((s, i) => s + Number(i.amount), 0);
 
   const groups = Object.entries(
     monthInvoices.reduce((acc, inv) => {
@@ -143,6 +144,18 @@ export default function InvoicesGroupedView({ computed, dupeIds, updateInvoice, 
           style={{ background:"#131c2e", border:"1px solid #1e2d45", color:"#94a3b8", borderRadius:6, padding:"5px 12px", cursor:"pointer", fontSize:14, fontWeight:600 }}>
           ›
         </button>
+      </div>
+
+      {/* Month total banner */}
+      <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between",
+        padding:"14px 20px", marginBottom:20, borderRadius:10,
+        background:"#0d1626", border:"1px solid #1e2d45" }}>
+        <span style={{ fontSize:12, color:"#475569", fontWeight:600, textTransform:"uppercase", letterSpacing:"1px" }}>
+          Total due in {fmtMonth(selectedMonth)}
+        </span>
+        <span style={{ fontSize:20, fontWeight:700, color:"#e2e8f0" }}>
+          {currency(monthTotal)}
+        </span>
       </div>
 
       {/* Empty state */}

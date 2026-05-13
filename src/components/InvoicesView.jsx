@@ -5,7 +5,7 @@ import InvoicesGroupedView from "./InvoicesGroupedView";
 
 export default function InvoicesView({ computed, dupeIds, updateInvoice, deleteInvoice, bulkMarkPaid, bulkDelete, setEditInvoice, color }) {
   const [selectedIds, setSelectedIds]   = useState(new Set());
-  const [viewMode,    setViewMode]      = useState("table");
+  const [viewMode,    setViewMode]      = useState("grouped");
   const [selectedMonth, setSelectedMonth] = useState(() => toYM(new Date()));
   const [sortField,   setSortField]     = useState("invoiceDate");
 
