@@ -7,10 +7,18 @@ const SCOPES = {
   gmail:        ['https://www.googleapis.com/auth/gmail.readonly'],
 };
 
+// GOOGLE_REDIRECT_URI must be registered in Google Cloud Console.
+// Register two URIs: one for production (https://your-domain.vercel.app/api/integrations/google/callback)
+// and one for local dev (http://localhost:3001/api/integrations/google/callback).
+// Branch/preview URLs don't need separate registration — returnUrl in OAuth state handles the final redirect.
+const getRedirectUri = () =>
+  process.env.GOOGLE_REDIRECT_URI ||
+  'http://localhost:3001/api/integrations/google/callback';
+
 const makeOAuth2 = () => new google.auth.OAuth2(
   process.env.GOOGLE_CLIENT_ID,
   process.env.GOOGLE_CLIENT_SECRET,
-  process.env.GOOGLE_REDIRECT_URI,
+  getRedirectUri(),
 );
 
 // GET /api/integrations
@@ -34,16 +42,22 @@ exports.remove = async (req, res) => {
   res.json({ ok: true });
 };
 
-// GET /api/integrations/google/auth-url?type=google_drive
+// GET /api/integrations/google/auth-url?type=google_drive&returnUrl=https://...
+// returnUrl is the frontend origin — carried through OAuth state so the callback can
+// redirect back to the correct URL regardless of which environment (branch, preview, local) initiated the flow.
 exports.googleAuthUrl = async (req, res) => {
-  const { type } = req.query;
+  const { type, returnUrl } = req.query;
   if (!SCOPES[type]) return res.status(400).json({ error: 'Invalid integration type' });
-  if (!process.env.GOOGLE_CLIENT_ID) return res.status(500).json({ error: 'Google OAuth not configured — set GOOGLE_CLIENT_ID in .env.local' });
+  if (!process.env.GOOGLE_CLIENT_ID) {
+    return res.status(500).json({
+      error: 'Google OAuth not configured. Add GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET to .env.local — use the same values from your Supabase project → Authentication → Providers → Google.',
+    });
+  }
 
   const url = makeOAuth2().generateAuthUrl({
     access_type: 'offline',
     scope:       SCOPES[type],
-    state:       JSON.stringify({ userId: req.user.id, type }),
+    state:       JSON.stringify({ userId: req.user.id, type, returnUrl: returnUrl || null }),
     prompt:      'consent',
   });
   res.json({ url });
@@ -51,14 +65,15 @@ exports.googleAuthUrl = async (req, res) => {
 
 // GET /api/integrations/google/callback  (no auth middleware — redirects browser)
 exports.googleCallback = async (req, res) => {
-  const frontend = process.env.FRONTEND_URL || 'http://localhost:5173';
   const { code, state, error } = req.query;
 
-  if (error) return res.redirect(`${frontend}?view=integrations&oauth_error=${encodeURIComponent(error)}`);
+  // Parse state first so we can redirect back to the correct frontend URL (branch/preview/local)
+  let stateData = {};
+  try { stateData = JSON.parse(state || '{}'); } catch { /* fall through */ }
+  const frontend = stateData.returnUrl || process.env.FRONTEND_URL || 'http://localhost:5173';
 
-  let stateData;
-  try { stateData = JSON.parse(state); }
-  catch { return res.redirect(`${frontend}?view=integrations&oauth_error=invalid_state`); }
+  if (error) return res.redirect(`${frontend}?view=integrations&oauth_error=${encodeURIComponent(error)}`);
+  if (!stateData.userId) return res.redirect(`${frontend}?view=integrations&oauth_error=invalid_state`);
 
   const { userId, type } = stateData;
   try {

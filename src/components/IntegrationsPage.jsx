@@ -166,7 +166,8 @@ function IntegrationCard({ type, integration, onSync, onDisconnect, onUpdate }) 
   const handleConnect = async () => {
     if (type === "google_drive" || type === "gmail") {
       try {
-        const { url } = await apiCall(`/api/integrations/google/auth-url?type=${type}`);
+        const returnUrl = encodeURIComponent(window.location.origin);
+        const { url } = await apiCall(`/api/integrations/google/auth-url?type=${type}&returnUrl=${returnUrl}`);
         window.location.href = url;
       } catch (err) {
         alert(err.message);
