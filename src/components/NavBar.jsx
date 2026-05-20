@@ -1,8 +1,10 @@
 export default function NavBar({ view, setView, suppliersCount, onSuppliersClick, user, onSignOut }) {
   const isAdmin = user?.email && import.meta.env.VITE_ADMIN_EMAIL && user.email === import.meta.env.VITE_ADMIN_EMAIL;
   const views = isAdmin
-    ? ["dashboard","invoices","calendar","admin"]
-    : ["dashboard","invoices","calendar"];
+    ? ["dashboard","invoices","calendar","integrations","admin"]
+    : ["dashboard","invoices","calendar","integrations"];
+
+  const VIEW_LABELS = { dashboard:"Dashboard", invoices:"Invoices", calendar:"Calendar", integrations:"Integrations", admin:"Admin" };
 
   return (
     <div style={{ background:"#0a1120", borderBottom:"1px solid #111d2e", position:"sticky", top:0, zIndex:40, backdropFilter:"blur(12px)" }}>
@@ -12,7 +14,7 @@ export default function NavBar({ view, setView, suppliersCount, onSuppliersClick
           <span style={{ fontWeight:700, fontSize:15, color:"#f1f5f9", letterSpacing:"-0.3px" }}>Cashflow</span>
         </div>
         {views.map(v => (
-          <button key={v} className={`nav-btn${view===v?" active":""}`} onClick={() => setView(v)} style={{ textTransform:"capitalize" }}>{v}</button>
+          <button key={v} className={`nav-btn${view===v?" active":""}`} onClick={() => setView(v)}>{VIEW_LABELS[v] || v}</button>
         ))}
         <div style={{ marginLeft:"auto", display:"flex", alignItems:"center", gap:10 }}>
           <button onClick={onSuppliersClick}

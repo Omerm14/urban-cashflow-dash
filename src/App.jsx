@@ -1,8 +1,9 @@
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import { useAuth }         from "./contexts/AuthContext";
 import { useInvoiceData }  from "./hooks/useInvoiceData";
 import LoginPage           from "./pages/LoginPage";
 import AdminPage           from "./pages/AdminPage";
+import IntegrationsPage    from "./components/IntegrationsPage";
 import NavBar              from "./components/NavBar";
 import Dashboard           from "./components/Dashboard";
 import InvoicesView        from "./components/InvoicesView";
@@ -18,6 +19,7 @@ export default function App() {
   const { user, loading: authLoading, signOut } = useAuth();
 
   const [view,          setView]          = useState("dashboard");
+  const [oauthResult,   setOauthResult]   = useState(null);
   const [extracting,    setExtracting]    = useState(false);
   const [extractMsg,    setExtractMsg]    = useState(null);
   const [editInvoice,   setEditInvoice]   = useState(null);
@@ -26,6 +28,17 @@ export default function App() {
   const [calMonth,      setCalMonth]      = useState(() => toYM(new Date()));
   const fileRef = useRef();
   const csvRef  = useRef();
+
+  // Handle OAuth callback redirect params (?view=integrations&oauth_connected=google_drive)
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const targetView = params.get("view");
+    const connected  = params.get("oauth_connected");
+    const oauthError = params.get("oauth_error");
+    if (targetView) setView(targetView);
+    if (connected || oauthError) setOauthResult({ connected, error: oauthError });
+    if (params.toString()) window.history.replaceState({}, "", window.location.pathname);
+  }, []);
 
   const {
     suppliers, invoices, computed, dupeIds, monthlyData, allNames, color, maxTotal, kpis, loading,
@@ -204,10 +217,11 @@ export default function App() {
           </div>
         )}
 
-        {view === "dashboard" && <Dashboard  kpis={kpis} monthlyData={monthlyData} allNames={allNames} color={color} maxTotal={maxTotal} />}
-        {view === "invoices"  && <InvoicesView computed={computed} dupeIds={dupeIds} updateInvoice={updateInvoice} deleteInvoice={deleteInvoice} bulkMarkPaid={bulkMarkPaid} bulkDelete={bulkDelete} setEditInvoice={setEditInvoice} color={color} />}
-        {view === "calendar"  && <CalendarView computed={computed} calMonth={calMonth} setCalMonth={setCalMonth} color={color} />}
-        {view === "admin"     && <AdminPage />}
+        {view === "dashboard"    && <Dashboard  kpis={kpis} monthlyData={monthlyData} allNames={allNames} color={color} maxTotal={maxTotal} />}
+        {view === "invoices"     && <InvoicesView computed={computed} dupeIds={dupeIds} updateInvoice={updateInvoice} deleteInvoice={deleteInvoice} bulkMarkPaid={bulkMarkPaid} bulkDelete={bulkDelete} setEditInvoice={setEditInvoice} color={color} />}
+        {view === "calendar"     && <CalendarView computed={computed} calMonth={calMonth} setCalMonth={setCalMonth} color={color} />}
+        {view === "integrations" && <IntegrationsPage oauthResult={oauthResult} />}
+        {view === "admin"        && <AdminPage />}
       </div>
 
       {editInvoice   && <EditInvoiceModal editInvoice={editInvoice} setEditInvoice={setEditInvoice} suppliers={suppliers} addInvoice={addInvoice} updateInvoice={updateInvoice} getSupplier={getSupplier} />}
