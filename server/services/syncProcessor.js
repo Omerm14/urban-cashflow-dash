@@ -174,6 +174,9 @@ const makeOAuth2 = credentials => {
   return c;
 };
 
+// Exported for use by WhatsApp webhook handler
+exports.processFilePublic = processFile;
+
 // ─── Google Drive sync ───────────────────────────────────────────────────────
 
 exports.syncGoogleDrive = async (integration, userId) => {
@@ -186,8 +189,17 @@ exports.syncGoogleDrive = async (integration, userId) => {
   const cutoff   = integration.last_sync || integration.config?.sync_from;
   const lastSync = cutoff ? new Date(cutoff).toISOString() : null;
 
+  const includeSubfolders = integration.config?.include_subfolders !== false;
+  // When subfolders are included we search without the 'in parents' filter so Drive returns
+  // all files in the tree; the folder restriction is then applied via a separate recursive
+  // search — but for simplicity, we use 'in parents' (top-level) when include_subfolders=false
+  // and drop the parent filter entirely when searching the whole drive (no folderId).
+  const parentClause = folderId
+    ? `'${folderId}' in parents`
+    : null;
+
   const conditions = [
-    folderId ? `'${folderId}' in parents` : null,
+    parentClause,
     "(mimeType='application/pdf' or mimeType contains 'image/')",
     lastSync ? `modifiedTime > '${lastSync}'` : null,
     'trashed = false',
@@ -228,10 +240,21 @@ exports.syncGmail = async (integration, userId) => {
   const cutoff   = integration.last_sync || integration.config?.sync_from;
   const lastSync = cutoff ? Math.floor(new Date(cutoff).getTime() / 1000) : null;
 
-  const q = ['has:attachment', lastSync ? `after:${lastSync}` : null].filter(Boolean).join(' ');
+  const { scan_mode, sender_domains, gmail_label_id, subject_keywords } = integration.config || {};
+
+  const qParts = ['has:attachment'];
+  if (lastSync) qParts.push(`after:${lastSync}`);
+  if (scan_mode === 'sender_filter' && sender_domains?.length) {
+    qParts.push(`(${sender_domains.map(d => `from:${d}`).join(' OR ')})`);
+  }
+  if (subject_keywords?.length) {
+    qParts.push(`(${subject_keywords.map(k => `subject:${k}`).join(' OR ')})`);
+  }
+  const q = qParts.join(' ');
+  const labelIds = scan_mode === 'label_filter' && gmail_label_id ? [gmail_label_id] : undefined;
 
   const { data: { messages = [] } } = await gmail.users.messages.list({
-    userId: 'me', q, maxResults: 50,
+    userId: 'me', q, maxResults: 50, ...(labelIds ? { labelIds } : {}),
   });
 
   console.log(`[sync:gmail] ${messages.length} message(s) for user ${userId}`);

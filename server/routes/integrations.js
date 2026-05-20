@@ -2,6 +2,17 @@ const { google } = require('googleapis');
 const supabase   = require('../lib/supabase');
 const sync       = require('../services/syncProcessor');
 
+// OAuth2 client with stored credentials (for Drive/Gmail info endpoints)
+const makeOAuth2WithCreds = credentials => {
+  const c = new google.auth.OAuth2(
+    process.env.GOOGLE_CLIENT_ID,
+    process.env.GOOGLE_CLIENT_SECRET,
+    getRedirectUri(),
+  );
+  c.setCredentials(credentials);
+  return c;
+};
+
 const SCOPES = {
   google_drive: ['https://www.googleapis.com/auth/drive.readonly'],
   gmail:        ['https://www.googleapis.com/auth/gmail.readonly'],
@@ -99,17 +110,44 @@ exports.connectGreenInvoice = async (req, res) => {
   const { apiKey, apiSecret } = req.body;
   if (!apiKey || !apiSecret) return res.status(400).json({ error: 'apiKey and apiSecret are required' });
 
+  // Test credentials before saving
+  let token, accountName;
+  try {
+    const authRes = await fetch('https://api.greeninvoice.co.il/api/v1/account/token', {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ id: apiKey, secret: apiSecret }),
+    });
+    if (!authRes.ok) {
+      const msg = authRes.status === 401 ? 'Invalid API key or secret' : `Green Invoice returned ${authRes.status}`;
+      return res.status(400).json({ error: msg });
+    }
+    const tokenData = await authRes.json();
+    token = tokenData.token;
+
+    // Fetch account info to get business name
+    const acctRes = await fetch('https://api.greeninvoice.co.il/api/v1/account', {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (acctRes.ok) {
+      const acct = await acctRes.json();
+      accountName = acct.name || acct.businessName || acct.companyName || null;
+    }
+  } catch (err) {
+    return res.status(400).json({ error: `Could not reach Green Invoice: ${err.message}` });
+  }
+
   const { error } = await supabase.from('integrations').upsert({
     user_id:       req.user.id,
     type:          'green_invoice',
     status:        'connected',
     credentials:   { apiKey, apiSecret },
-    config:        {},
+    config:        { setup_complete: false, account_name: accountName || null },
     error_message: null,
   }, { onConflict: 'user_id,type' });
 
   if (error) return res.status(500).json({ error: error.message });
-  res.json({ ok: true });
+  res.json({ ok: true, accountName: accountName || null });
 };
 
 // PATCH /api/integrations/:id/config  { config: {...} }
@@ -122,6 +160,83 @@ exports.updateConfig = async (req, res) => {
     .eq('user_id', req.user.id);
   if (error) return res.status(500).json({ error: error.message });
   res.json({ ok: true });
+};
+
+// GET /api/integrations/google/drive/folder-info?folderId=X
+exports.driveFolderInfo = async (req, res) => {
+  const { folderId } = req.query;
+  if (!folderId) return res.status(400).json({ error: 'folderId required' });
+
+  const { data: integration } = await supabase
+    .from('integrations')
+    .select('credentials')
+    .eq('user_id', req.user.id)
+    .eq('type', 'google_drive')
+    .single();
+
+  if (!integration) return res.status(404).json({ error: 'Google Drive not connected' });
+
+  try {
+    const auth  = makeOAuth2WithCreds(integration.credentials);
+    const drive = google.drive({ version: 'v3', auth });
+
+    const { data: folder } = await drive.files.get({
+      fileId: folderId,
+      fields: 'id,name,mimeType',
+    });
+    if (folder.mimeType !== 'application/vnd.google-apps.folder') {
+      return res.status(400).json({ error: 'That link is not a folder' });
+    }
+
+    const { data: { files = [] } } = await drive.files.list({
+      q: `'${folderId}' in parents and (mimeType='application/pdf' or mimeType contains 'image/') and trashed = false`,
+      fields: 'files(id)',
+      pageSize: 100,
+    });
+
+    res.json({ name: folder.name, fileCount: files.length });
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+};
+
+// GET /api/integrations/gmail/labels
+exports.gmailLabels = async (req, res) => {
+  const { data: integration } = await supabase
+    .from('integrations')
+    .select('credentials')
+    .eq('user_id', req.user.id)
+    .eq('type', 'gmail')
+    .single();
+
+  if (!integration) return res.status(404).json({ error: 'Gmail not connected' });
+
+  try {
+    const auth  = makeOAuth2WithCreds(integration.credentials);
+    const gmail = google.gmail({ version: 'v1', auth });
+    const { data } = await gmail.users.labels.list({ userId: 'me' });
+    const labels = (data.labels || [])
+      .filter(l => l.type === 'user') // only user-created labels
+      .map(l => ({ id: l.id, name: l.name }));
+    res.json({ labels });
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+};
+
+// POST /api/integrations/whatsapp/connect
+exports.connectWhatsapp = async (req, res) => {
+  const { error } = await supabase.from('integrations').upsert({
+    user_id:       req.user.id,
+    type:          'whatsapp',
+    status:        'connected',
+    credentials:   {},
+    config:        { setup_complete: false },
+    error_message: null,
+  }, { onConflict: 'user_id,type' });
+
+  if (error) return res.status(500).json({ error: error.message });
+  res.json({ ok: true, systemPhone: process.env.WHATSAPP_SYSTEM_PHONE || null });
 };
 
 // POST /api/integrations/:id/sync
