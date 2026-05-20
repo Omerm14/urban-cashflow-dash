@@ -83,7 +83,7 @@ exports.googleCallback = async (req, res) => {
       type,
       status:        'connected',
       credentials:   tokens,
-      config:        {},
+      config:        { setup_complete: false },  // user must complete setup before first sync
       error_message: null,
     }, { onConflict: 'user_id,type' });
 
@@ -133,6 +133,7 @@ exports.triggerSync = async (req, res) => {
     .eq('user_id', req.user.id)
     .single();
   if (error || !integration) return res.status(404).json({ error: 'Integration not found' });
+  if (!integration.config?.setup_complete) return res.status(400).json({ error: 'Complete integration setup before syncing' });
 
   try {
     let added = 0;

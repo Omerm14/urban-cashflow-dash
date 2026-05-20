@@ -181,7 +181,10 @@ exports.syncGoogleDrive = async (integration, userId) => {
   const drive = google.drive({ version: 'v3', auth });
 
   const folderId  = integration.config?.folder_id;
-  const lastSync  = integration.last_sync ? new Date(integration.last_sync).toISOString() : null;
+  // After first sync, use last_sync for incremental updates.
+  // On first sync, use sync_from (set during setup) so we don't pull the entire Drive history.
+  const cutoff   = integration.last_sync || integration.config?.sync_from;
+  const lastSync = cutoff ? new Date(cutoff).toISOString() : null;
 
   const conditions = [
     folderId ? `'${folderId}' in parents` : null,
@@ -222,9 +225,8 @@ exports.syncGmail = async (integration, userId) => {
   const auth  = makeOAuth2({ ...integration.credentials, _userId: userId, _type: 'gmail' });
   const gmail = google.gmail({ version: 'v1', auth });
 
-  const lastSync = integration.last_sync
-    ? Math.floor(new Date(integration.last_sync).getTime() / 1000)
-    : null;
+  const cutoff   = integration.last_sync || integration.config?.sync_from;
+  const lastSync = cutoff ? Math.floor(new Date(cutoff).getTime() / 1000) : null;
 
   const q = ['has:attachment', lastSync ? `after:${lastSync}` : null].filter(Boolean).join(' ');
 
