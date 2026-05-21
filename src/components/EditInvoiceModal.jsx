@@ -1,11 +1,11 @@
-import { calcDueDate } from "../utils/dates";
-import { STATUS } from "../constants";
+import { calcDueDate } from '../utils/dates';
+import { STATUS } from '../constants';
 
 export default function EditInvoiceModal({ editInvoice, setEditInvoice, suppliers, addInvoice, updateInvoice, getSupplier }) {
   const close = () => setEditInvoice(null);
-  const save  = async () => {
+
+  const save = async () => {
     const { id, ...fields } = editInvoice;
-    // Map camelCase UI fields → snake_case DB columns
     const patch = {
       supplier:     fields.supplier,
       invoice_no:   fields.invoiceNo   ?? fields.invoice_no   ?? '',
@@ -22,55 +22,103 @@ export default function EditInvoiceModal({ editInvoice, setEditInvoice, supplier
 
   const onFieldChange = (key, value) => {
     const u = { ...editInvoice, [key]: value };
-    if ((key === "invoiceDate" || key === "supplier") && u.invoiceDate && u.supplier) {
+    if ((key === 'invoiceDate' || key === 'supplier') && u.invoiceDate && u.supplier) {
       const sup = getSupplier(u.supplier);
-      if (sup && sup.terms !== "custom") {
+      if (sup && sup.terms !== 'custom') {
         const d = calcDueDate(u.invoiceDate, sup);
-        if (d) u.dueDate = d.toISOString().split("T")[0];
+        if (d) u.dueDate = d.toISOString().split('T')[0];
       }
     }
     setEditInvoice(u);
   };
 
+  const labelStyle = {
+    fontSize: 11, fontWeight: 600, color: 'var(--ink-soft)',
+    letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: 6,
+  };
+
   return (
-    <div className="modal-overlay" onClick={e => e.target===e.currentTarget && close()}>
-      <div className="modal">
-        <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:24 }}>
+    <div className="modal-overlay" onClick={e => e.target === e.currentTarget && close()}>
+      <div className="modal" style={{ maxWidth: 520 }}>
+        <div className="modal-header">
           <div>
-            <div style={{ fontWeight:700, fontSize:17, color:"#f1f5f9" }}>{editInvoice.id ? "Edit Invoice" : "New Invoice"}</div>
-            <div style={{ fontSize:12, color:"#475569", marginTop:2 }}>Invoice details & payment info</div>
-          </div>
-          <button onClick={close} style={{ width:32, height:32, borderRadius:8, background:"#131c2e", border:"1px solid #1e2d45", color:"#64748b", cursor:"pointer", fontSize:16, display:"flex", alignItems:"center", justifyContent:"center" }}>✕</button>
-        </div>
-        <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:14, marginBottom:14 }}>
-          {[["Invoice #","invoiceNo","text"],["Invoice Date","invoiceDate","date"],["Amount","amount","number"],["Due Date (override)","dueDate","date"]].map(([label, key, type]) => (
-            <div key={key}>
-              <div style={{ fontSize:11, fontWeight:600, color:"#475569", marginBottom:6, textTransform:"uppercase", letterSpacing:".5px" }}>{label}</div>
-              <input type={type} value={editInvoice[key] ?? editInvoice[key.replace(/([A-Z])/g, '_$1').toLowerCase()] ?? ''} className="input" onChange={e => onFieldChange(key, e.target.value)} />
+            <div style={{ fontSize: 20, fontWeight: 700, letterSpacing: '-0.01em' }}>
+              {editInvoice.id ? 'Edit Invoice' : 'New Invoice'}
             </div>
-          ))}
+            <div style={{ fontSize: 13, color: 'var(--ink-soft)', marginTop: 2 }}>Invoice details & payment info</div>
+          </div>
+          <button
+            onClick={close}
+            style={{
+              width: 32, height: 32, borderRadius: 8,
+              background: 'var(--surface2)', border: '1px solid var(--line)',
+              color: 'var(--ink-soft)', cursor: 'pointer',
+              fontSize: 16, display: 'flex', alignItems: 'center', justifyContent: 'center',
+            }}
+          >✕</button>
         </div>
-        <div style={{ marginBottom:14 }}>
-          <div style={{ fontSize:11, fontWeight:600, color:"#475569", marginBottom:6, textTransform:"uppercase", letterSpacing:".5px" }}>Supplier</div>
-          <select value={editInvoice.supplier} className="input"
-            onChange={e => {
-              const sup = getSupplier(e.target.value);
-              const due = editInvoice.invoiceDate && sup ? calcDueDate(editInvoice.invoiceDate, sup) : null;
-              setEditInvoice({ ...editInvoice, supplier:e.target.value, dueDate: due ? due.toISOString().split("T")[0] : (editInvoice.dueDate || editInvoice.due_date || '') });
-            }}>
-            <option value="">— select supplier —</option>
-            {suppliers.map(s => <option key={s.id} value={s.name}>{s.name} · {s.terms}</option>)}
-          </select>
-        </div>
-        <div style={{ marginBottom:24 }}>
-          <div style={{ fontSize:11, fontWeight:600, color:"#475569", marginBottom:6, textTransform:"uppercase", letterSpacing:".5px" }}>Status</div>
-          <select value={editInvoice.status} className="input" onChange={e => setEditInvoice({...editInvoice, status:e.target.value})}>
-            {Object.values(STATUS).map(s => <option key={s}>{s}</option>)}
-          </select>
-        </div>
-        <div style={{ display:"flex", gap:10, justifyContent:"flex-end" }}>
-          <button onClick={close} style={{ padding:"10px 20px", background:"#131c2e", border:"1px solid #1e2d45", borderRadius:10, color:"#64748b", cursor:"pointer", fontFamily:"inherit", fontWeight:500, fontSize:13 }}>Cancel</button>
-          <button onClick={save}  style={{ padding:"10px 24px", background:"linear-gradient(135deg,#6366f1,#a78bfa)", border:"none", borderRadius:10, color:"#fff", fontWeight:700, cursor:"pointer", fontFamily:"inherit", fontSize:13, boxShadow:"0 4px 15px #6366f133" }}>Save Invoice</button>
+
+        <div className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+            {[
+              ['Invoice #',          'invoiceNo',   'text'],
+              ['Invoice Date',       'invoiceDate', 'date'],
+              ['Amount (₪)',         'amount',      'number'],
+              ['Due Date (override)', 'dueDate',    'date'],
+            ].map(([label, key, type]) => (
+              <div key={key}>
+                <div style={labelStyle}>{label}</div>
+                <input
+                  type={type}
+                  className="input"
+                  value={editInvoice[key] ?? editInvoice[key.replace(/([A-Z])/g, '_$1').toLowerCase()] ?? ''}
+                  onChange={e => onFieldChange(key, e.target.value)}
+                />
+              </div>
+            ))}
+          </div>
+
+          <div>
+            <div style={labelStyle}>Supplier</div>
+            <select
+              className="input"
+              value={editInvoice.supplier || ''}
+              onChange={e => {
+                const sup = getSupplier(e.target.value);
+                const due = editInvoice.invoiceDate && sup ? calcDueDate(editInvoice.invoiceDate, sup) : null;
+                setEditInvoice({
+                  ...editInvoice,
+                  supplier: e.target.value,
+                  dueDate: due ? due.toISOString().split('T')[0] : (editInvoice.dueDate || editInvoice.due_date || ''),
+                });
+              }}
+            >
+              <option value="">— select supplier —</option>
+              {suppliers.map(s => <option key={s.id} value={s.name}>{s.name} · {s.terms}</option>)}
+            </select>
+          </div>
+
+          <div>
+            <div style={labelStyle}>Status</div>
+            <select
+              className="input"
+              value={editInvoice.status || STATUS.UNPAID}
+              onChange={e => setEditInvoice({ ...editInvoice, status: e.target.value })}
+            >
+              {Object.values(STATUS).map(s => <option key={s}>{s}</option>)}
+            </select>
+          </div>
+
+          <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', paddingTop: 4 }}>
+            <button
+              className="btn"
+              onClick={close}
+            >Cancel</button>
+            <button
+              className="btn btn-primary"
+              onClick={save}
+            >Save Invoice</button>
+          </div>
         </div>
       </div>
     </div>
