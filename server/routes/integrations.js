@@ -224,6 +224,30 @@ exports.gmailLabels = async (req, res) => {
   }
 };
 
+// GET /api/integrations/google/access-token
+// Returns a fresh Google access token for the connected google_drive integration.
+// Used by the Google Drive Picker component in the frontend.
+exports.googleAccessToken = async (req, res) => {
+  const { data: integration } = await supabase
+    .from('integrations')
+    .select('credentials')
+    .eq('user_id', req.user.id)
+    .eq('type', 'google_drive')
+    .single();
+
+  if (!integration?.credentials) {
+    return res.status(404).json({ error: 'Google Drive not connected' });
+  }
+
+  try {
+    const auth  = makeOAuth2WithCreds(integration.credentials);
+    const { token } = await auth.getAccessToken();
+    res.json({ token });
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+};
+
 // GET /api/integrations/google/drive/folders?parentId=root
 exports.driveFolders = async (req, res) => {
   let { parentId } = req.query;
