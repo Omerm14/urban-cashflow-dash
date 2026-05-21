@@ -14,8 +14,11 @@ app.get('/api/integrations',                               auth, integrations.li
 app.delete('/api/integrations/:id',                        auth, integrations.remove);
 app.get('/api/integrations/google/auth-url',               auth, integrations.googleAuthUrl);
 app.get('/api/integrations/google/callback',                    integrations.googleCallback);
+app.get('/api/integrations/google/drive/folders',          auth, integrations.driveFolders);
 app.get('/api/integrations/google/drive/folder-info',      auth, integrations.driveFolderInfo);
 app.get('/api/integrations/gmail/labels',                  auth, integrations.gmailLabels);
+app.get('/api/integrations/gmail/recent-senders',          auth, integrations.gmailRecentSenders);
+app.get('/api/integrations/green-invoice/preview',         auth, integrations.greenInvoicePreview);
 app.post('/api/integrations/green-invoice',                auth, integrations.connectGreenInvoice);
 app.post('/api/integrations/whatsapp/connect',             auth, integrations.connectWhatsapp);
 app.patch('/api/integrations/:id/config',                  auth, integrations.updateConfig);

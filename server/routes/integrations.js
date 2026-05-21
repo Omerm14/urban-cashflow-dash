@@ -224,6 +224,157 @@ exports.gmailLabels = async (req, res) => {
   }
 };
 
+// GET /api/integrations/google/drive/folders?parentId=root
+exports.driveFolders = async (req, res) => {
+  let { parentId } = req.query;
+  if (!parentId || parentId === 'root') parentId = 'root';
+  else if (!/^[a-zA-Z0-9_-]+$/.test(parentId)) {
+    return res.status(400).json({ error: 'Invalid parentId' });
+  }
+
+  const { data: integration } = await supabase
+    .from('integrations')
+    .select('credentials')
+    .eq('user_id', req.user.id)
+    .eq('type', 'google_drive')
+    .single();
+
+  if (!integration) return res.status(404).json({ error: 'Google Drive not connected' });
+
+  try {
+    const auth  = makeOAuth2WithCreds(integration.credentials);
+    const drive = google.drive({ version: 'v3', auth });
+
+    const [foldersRes, filesRes] = await Promise.all([
+      drive.files.list({
+        q:        `'${parentId}' in parents and mimeType='application/vnd.google-apps.folder' and trashed=false`,
+        fields:   'files(id,name)',
+        pageSize: 50,
+        orderBy:  'name',
+      }),
+      drive.files.list({
+        q:        `'${parentId}' in parents and (mimeType='application/pdf' or mimeType contains 'image/') and trashed=false`,
+        fields:   'files(id)',
+        pageSize: 100,
+      }),
+    ]);
+
+    const rawFolders = foldersRes.data.files || [];
+
+    // Check each folder for children (cheap 1-result query per folder, capped at 20 folders)
+    const capped = rawFolders.slice(0, 20);
+    const childChecks = await Promise.all(
+      capped.map(f =>
+        drive.files.list({
+          q:        `'${f.id}' in parents and mimeType='application/vnd.google-apps.folder' and trashed=false`,
+          fields:   'files(id)',
+          pageSize: 1,
+        }).then(r => (r.data.files || []).length > 0).catch(() => false)
+      )
+    );
+
+    const folders = capped.map((f, i) => ({ id: f.id, name: f.name, hasChildren: childChecks[i] }));
+
+    res.json({ folders, invoiceFileCount: (filesRes.data.files || []).length, parentId });
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+};
+
+// GET /api/integrations/gmail/recent-senders
+exports.gmailRecentSenders = async (req, res) => {
+  const { data: integration } = await supabase
+    .from('integrations')
+    .select('credentials')
+    .eq('user_id', req.user.id)
+    .eq('type', 'gmail')
+    .single();
+
+  if (!integration) return res.status(404).json({ error: 'Gmail not connected' });
+
+  const PERSONAL_DOMAINS = new Set(['gmail.com','googlemail.com','yahoo.com','hotmail.com','outlook.com','icloud.com','me.com','live.com']);
+
+  try {
+    const auth  = makeOAuth2WithCreds(integration.credentials);
+    const gmail = google.gmail({ version: 'v1', auth });
+
+    const after = Math.floor((Date.now() - 90 * 86400 * 1000) / 1000);
+    const { data: listData } = await gmail.users.messages.list({
+      userId: 'me', q: `has:attachment after:${after}`, maxResults: 50,
+    });
+
+    const messages = listData.messages || [];
+    if (!messages.length) return res.json({ senders: [] });
+
+    const metaBatch = await Promise.all(
+      messages.map(m =>
+        gmail.users.messages.get({
+          userId: 'me', id: m.id, format: 'metadata', metadataHeaders: ['From'],
+        }).then(r => r.data).catch(() => null)
+      )
+    );
+
+    const domainMap = {};
+    for (const msg of metaBatch) {
+      if (!msg) continue;
+      const fromHeader = (msg.payload?.headers || []).find(h => h.name === 'From')?.value || '';
+      // Parse "Display Name <email@domain.com>" or bare "email@domain.com"
+      const match = fromHeader.match(/^(.*?)\s*<([^>]+)>$/) || fromHeader.match(/^(.+)$/);
+      if (!match) continue;
+      const email = (match[2] || match[1] || '').trim().toLowerCase();
+      const name  = (match[2] ? match[1] : '').trim().replace(/^["']|["']$/g, '');
+      const domain = email.split('@')[1];
+      if (!domain || PERSONAL_DOMAINS.has(domain)) continue;
+
+      if (!domainMap[domain]) domainMap[domain] = { domain, name, email, count: 0 };
+      domainMap[domain].count++;
+      if (name && !domainMap[domain].name) domainMap[domain].name = name;
+    }
+
+    const senders = Object.values(domainMap).sort((a, b) => b.count - a.count).slice(0, 15);
+    res.json({ senders });
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+};
+
+// GET /api/integrations/green-invoice/preview?since=YYYY-MM-DD
+exports.greenInvoicePreview = async (req, res) => {
+  const { since } = req.query;
+  if (!since) return res.status(400).json({ error: 'since is required' });
+
+  const { data: integration } = await supabase
+    .from('integrations')
+    .select('credentials')
+    .eq('user_id', req.user.id)
+    .eq('type', 'green_invoice')
+    .single();
+
+  if (!integration) return res.status(404).json({ error: 'Green Invoice not connected' });
+
+  try {
+    const { apiKey, apiSecret } = integration.credentials || {};
+    const authRes = await fetch('https://api.greeninvoice.co.il/api/v1/account/token', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: apiKey, secret: apiSecret }),
+    });
+    if (!authRes.ok) return res.status(400).json({ error: 'Green Invoice auth failed' });
+    const { token } = await authRes.json();
+
+    const params = new URLSearchParams({ type: 500, fromDate: since, page: 1, perPage: 1 });
+    const docsRes = await fetch(`https://api.greeninvoice.co.il/api/v1/documents?${params}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!docsRes.ok) return res.status(400).json({ error: 'Green Invoice fetch failed' });
+
+    const body = await docsRes.json();
+    const count = body.total ?? body.totalItems ?? (body.items || []).length;
+    res.json({ count });
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+};
+
 // POST /api/integrations/whatsapp/connect
 exports.connectWhatsapp = async (req, res) => {
   const { error } = await supabase.from('integrations').upsert({
