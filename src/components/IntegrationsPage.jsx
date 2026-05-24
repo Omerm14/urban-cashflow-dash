@@ -9,12 +9,20 @@ import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Card, CardContent } from "@/components/ui/card";
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { RefreshCw, Settings, Unplug, Check, ChevronRight, Globe } from "lucide-react";
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetDescription,
+} from "@/components/ui/sheet";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { RefreshCw, Settings, Unplug, Check, ChevronRight, Globe, Clock } from "lucide-react";
 
 const apiCall = async (path, opts = {}) => {
   const { data: { session } } = await supabase.auth.getSession();
@@ -86,9 +94,36 @@ const normalizeIsraeliPhone = raw => {
   return raw;
 };
 
-const GOOGLE_APP_ID  = import.meta.env.VITE_GOOGLE_APP_ID  || "";
-const GOOGLE_API_KEY = import.meta.env.VITE_GOOGLE_API_KEY || "";
+const GOOGLE_APP_ID      = import.meta.env.VITE_GOOGLE_APP_ID  || "";
+const GOOGLE_API_KEY     = import.meta.env.VITE_GOOGLE_API_KEY || "";
 const canUseGooglePicker = !!GOOGLE_APP_ID && !!GOOGLE_API_KEY;
+const WHATSAPP_ENABLED   = import.meta.env.VITE_WHATSAPP_ENABLED === "true";
+
+const CADENCE_OPTIONS = [
+  { value: "hourly",    label: "Every hour" },
+  { value: "every_4h", label: "Every 4 hours" },
+  { value: "daily",    label: "Daily" },
+  { value: "weekly",   label: "Weekly" },
+];
+
+function CadenceSelect({ value, onChange }) {
+  return (
+    <div className="flex flex-col gap-1.5">
+      <FieldLabel>Auto-sync schedule</FieldLabel>
+      <Select value={value} onValueChange={onChange}>
+        <SelectTrigger>
+          <SelectValue placeholder="Select schedule…" />
+        </SelectTrigger>
+        <SelectContent>
+          {CADENCE_OPTIONS.map(opt => (
+            <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+      <p className="text-[11px] text-muted-foreground/50">How often to check for new invoices automatically.</p>
+    </div>
+  );
+}
 
 // ─── Step transition ──────────────────────────────────────────────────────────
 
@@ -412,6 +447,7 @@ function GoogleDriveWizard({ integration, onComplete }) {
   const [folderLoading,      setFolderLoading]     = useState(false);
   const [syncFrom,           setSyncFrom]          = useState(defaultSyncFrom());
   const [includeSubfolders,  setIncludeSubfolders] = useState(true);
+  const [cadence,            setCadence]           = useState("daily");
   const [saving,             setSaving]            = useState(false);
   const [error,              setError]             = useState(null);
   const debounceRef = useRef(null);
@@ -458,6 +494,7 @@ function GoogleDriveWizard({ integration, onComplete }) {
           ...integration.config, setup_complete: true,
           sync_from: syncFrom, folder_id: folderId || null,
           folder_name: folderName || null, include_subfolders: includeSubfolders,
+          auto_sync: true, cadence,
         }}),
       });
       onComplete();
@@ -545,12 +582,15 @@ function GoogleDriveWizard({ integration, onComplete }) {
         )}
 
         {step === 2 && (
-          <div className="flex flex-col gap-2">
+          <div className="flex flex-col gap-3">
             <p className="text-xs font-semibold text-muted-foreground mb-1">Setup summary</p>
             <SummaryRow label="Folder"     value={displayFolderName} />
             <SummaryRow label="Sync from"  value={syncFrom} />
             <SummaryRow label="Subfolders" value={includeSubfolders ? "Included" : "Top level only"} />
             {folderInfo?.fileCount > 0 && <SummaryRow label="Available files" value={`${folderInfo.fileCount} invoice files`} />}
+            <div className="pt-2 border-t border-border">
+              <CadenceSelect value={cadence} onChange={setCadence} />
+            </div>
             <WizardFooter onBack={() => go(1)} onComplete={save} completeLabel="Start first sync" saving={saving} error={error} />
           </div>
         )}
@@ -608,6 +648,7 @@ function GmailWizard({ integration, onComplete }) {
   const [keywords,       setKeywords]       = useState("");
   const [showAdvanced,   setShowAdvanced]   = useState(false);
   const [syncFrom,       setSyncFrom]       = useState(defaultSyncFrom());
+  const [cadence,        setCadence]        = useState("daily");
   const [saving,         setSaving]         = useState(false);
   const [error,          setError]          = useState(null);
 
@@ -650,6 +691,7 @@ function GmailWizard({ integration, onComplete }) {
           gmail_label_id: scanMode === "label_filter" ? labelId : null,
           gmail_label_name: scanMode === "label_filter" ? (selectedLabel?.name || null) : null,
           subject_keywords: subjectKeywords,
+          auto_sync: true, cadence,
         }}),
       });
       onComplete();
@@ -775,7 +817,7 @@ function GmailWizard({ integration, onComplete }) {
         )}
 
         {step === 2 && (
-          <div className="flex flex-col gap-2">
+          <div className="flex flex-col gap-3">
             <p className="text-xs font-semibold text-muted-foreground mb-1">Setup summary</p>
             <SummaryRow label="Scan mode" value={{ all: "All attachments", sender_filter: "Sender filter", label_filter: "Gmail label" }[scanMode]} />
             {scanMode === "sender_filter" && selectedDomains.size > 0 && (
@@ -784,6 +826,9 @@ function GmailWizard({ integration, onComplete }) {
             {scanMode === "label_filter" && labelName && <SummaryRow label="Label" value={labelName} />}
             {keywords && <SummaryRow label="Keywords" value={keywords} />}
             <SummaryRow label="Sync from" value={syncFrom} />
+            <div className="pt-2 border-t border-border">
+              <CadenceSelect value={cadence} onChange={setCadence} />
+            </div>
             <WizardFooter onBack={() => go(1)} onComplete={save} completeLabel="Start first sync" saving={saving} error={error} />
           </div>
         )}
@@ -833,6 +878,7 @@ function GreenInvoiceConnect({ onConnected }) {
 
 function GreenInvoiceWizard({ integration, onComplete }) {
   const [syncFrom,       setSyncFrom]       = useState(defaultSyncFrom());
+  const [cadence,        setCadence]        = useState("daily");
   const [previewCount,   setPreviewCount]   = useState(null);
   const [previewLoading, setPreviewLoading] = useState(false);
   const [saving,         setSaving]         = useState(false);
@@ -859,7 +905,7 @@ function GreenInvoiceWizard({ integration, onComplete }) {
     try {
       await apiCall(`/api/integrations/${integration.id}/config`, {
         method: "PATCH",
-        body: JSON.stringify({ config: { ...integration.config, setup_complete: true, sync_from: syncFrom } }),
+        body: JSON.stringify({ config: { ...integration.config, setup_complete: true, sync_from: syncFrom, auto_sync: true, cadence } }),
       });
       onComplete();
     } catch (err) { setError(err.message); }
@@ -895,6 +941,10 @@ function GreenInvoiceWizard({ integration, onComplete }) {
         </AnimatePresence>
 
         <p className="mt-2 text-xs text-muted-foreground/40">Only received invoices (document type 500) from Green Invoice will be imported.</p>
+      </div>
+
+      <div className="pt-2 border-t border-border">
+        <CadenceSelect value={cadence} onChange={setCadence} />
       </div>
 
       {error && <p className="text-xs text-destructive">{error}</p>}
@@ -1148,6 +1198,7 @@ function IntegrationCard({ type, integration, onSync, onDisconnect }) {
   const setupComplete = integration?.config?.setup_complete === true;
   const isReady       = isConnected && setupComplete;
   const hasError      = integration?.status === "error";
+  const isPending     = type === "whatsapp" && !WHATSAPP_ENABLED;
 
   const handleConnect = async () => {
     if (type === "google_drive" || type === "gmail") {
@@ -1210,16 +1261,14 @@ function IntegrationCard({ type, integration, onSync, onDisconnect }) {
     if (type === "whatsapp" && config.registered_phones?.length)
       parts.push(`${config.registered_phones.length} registered supplier${config.registered_phones.length !== 1 ? "s" : ""}`);
     if (config.sync_from) parts.push(`Since ${config.sync_from}`);
+    if (config.cadence) {
+      const cadenceLabel = CADENCE_OPTIONS.find(o => o.value === config.cadence)?.label;
+      if (cadenceLabel) parts.push(`Auto-sync: ${cadenceLabel.toLowerCase()}`);
+    }
     return parts.length ? parts.join(" · ") : null;
   })();
 
-  const WizardContent = () => {
-    if (type === "google_drive")  return <GoogleDriveWizard  integration={integration} onComplete={wizardDone} />;
-    if (type === "gmail")         return <GmailWizard        integration={integration} onComplete={wizardDone} />;
-    if (type === "green_invoice") return <GreenInvoiceWizard integration={integration} onComplete={wizardDone} />;
-    if (type === "whatsapp")      return <WhatsAppWizard     integration={integration} onComplete={wizardDone} />;
-    return null;
-  };
+  const hasWizard = type === "google_drive" || type === "gmail" || type === "green_invoice" || type === "whatsapp";
 
   return (
     <>
@@ -1231,51 +1280,65 @@ function IntegrationCard({ type, integration, onSync, onDisconnect }) {
       >
         <Card className={cn(
           "transition-colors duration-200",
-          !meta.comingSoon && "hover:border-border/80"
+          !meta.comingSoon && !isPending && "hover:border-border/80"
         )}
-          style={{ borderColor: isReady ? `${meta.color}25` : hasError ? "hsl(var(--destructive) / 0.3)" : undefined }}
+          style={{ borderColor: isReady ? `${meta.color}30` : hasError ? "hsl(var(--destructive) / 0.3)" : undefined }}
         >
           <CardContent className="p-5">
-            <div className="flex justify-between items-start gap-3">
-              <div className="flex gap-3 items-start flex-1">
+            <div className="flex justify-between items-start gap-4">
+              <div className="flex gap-3.5 items-start flex-1">
                 <motion.div
-                  whileHover={!meta.comingSoon ? { scale: 1.08 } : {}}
-                  className="w-10 h-10 rounded-xl flex items-center justify-center text-xl flex-shrink-0"
-                  style={{ background: `${meta.color}18` }}
+                  whileHover={!meta.comingSoon && !isPending ? { scale: 1.06 } : {}}
+                  className="w-12 h-12 rounded-xl flex items-center justify-center text-2xl flex-shrink-0 shadow-sm"
+                  style={{
+                    background: `linear-gradient(135deg, ${meta.color}22, ${meta.color}10)`,
+                    border: `1px solid ${meta.color}20`,
+                  }}
                 >
                   {meta.icon}
                 </motion.div>
 
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-1 flex-wrap">
-                    <span className="font-bold text-sm text-foreground">{meta.label}</span>
+                    <span className="font-semibold text-sm text-foreground">{meta.label}</span>
                     {meta.comingSoon
                       ? <Badge variant="outline" className="text-[10px] text-muted-foreground border-border">COMING SOON</Badge>
+                      : isPending
+                      ? <Badge variant="outline" className="text-[10px] text-amber-400 border-amber-400/30 bg-amber-950/30 gap-1">
+                          <span className="w-1.5 h-1.5 rounded-full bg-amber-400 inline-block" />
+                          Pending verification
+                        </Badge>
                       : <StatusBadge status={integration?.status || "disconnected"} setupComplete={setupComplete} />
                     }
                   </div>
-                  <p className="text-xs text-muted-foreground leading-relaxed">{meta.description}</p>
+                  <p className="text-xs text-muted-foreground leading-relaxed">
+                    {isPending
+                      ? "Available once Meta Business verification is complete. You can pre-configure supplier phones in advance."
+                      : meta.description}
+                  </p>
 
                   {integration?.error_message && (
                     <p className="mt-1.5 text-xs text-destructive">Error: {integration.error_message}</p>
                   )}
-                  {statsLine && <p className="mt-1 text-xs text-muted-foreground/50">{statsLine}</p>}
+                  {statsLine && (
+                    <p className="mt-1.5 text-[11px] text-muted-foreground/60 leading-relaxed">{statsLine}</p>
+                  )}
                   {isReady && integration.last_sync && (
-                    <p className="mt-0.5 text-xs text-muted-foreground/40">
+                    <p className="mt-0.5 text-[11px] text-muted-foreground/40">
                       Last sync: {new Date(integration.last_sync).toLocaleString("he-IL")}
                       {" · "}{integration.sync_count || 0} invoices imported
                     </p>
                   )}
                   {isReady && !integration.last_sync && type !== "whatsapp" && (
-                    <p className="mt-0.5 text-xs text-muted-foreground/40">Ready — click "Sync now" to import</p>
+                    <p className="mt-0.5 text-[11px] text-muted-foreground/40">Ready — click "Sync now" to import</p>
                   )}
                   {isReady && !integration.last_sync && type === "whatsapp" && (
-                    <p className="mt-0.5 text-xs text-muted-foreground/40">Live — invoices auto-import as WhatsApp messages arrive</p>
+                    <p className="mt-0.5 text-[11px] text-muted-foreground/40">Live — invoices auto-import as WhatsApp messages arrive</p>
                   )}
                   <AnimatePresence>
                     {lastAdded !== null && (
                       <motion.p initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
-                        className={cn("mt-1 text-xs", lastAdded > 0 ? "text-green-400" : "text-muted-foreground")}>
+                        className={cn("mt-1 text-xs font-medium", lastAdded > 0 ? "text-green-400" : "text-muted-foreground")}>
                         {lastAdded > 0 ? `✓ ${lastAdded} new invoice${lastAdded !== 1 ? "s" : ""} added` : "No new invoices found"}
                       </motion.p>
                     )}
@@ -1312,18 +1375,24 @@ function IntegrationCard({ type, integration, onSync, onDisconnect }) {
                       {syncing ? "Retrying…" : "↺ Retry"}
                     </Button>
                   )}
-                  {!isConnected && (
+                  {!isConnected && !isPending && (
                     <Button size="sm" onClick={handleConnect} disabled={connecting}
-                      style={{ background: `linear-gradient(135deg,${meta.color}cc,${meta.color})` }}
-                      className="text-white border-none hover:opacity-90">
+                      style={{ background: `linear-gradient(135deg,${meta.color}bb,${meta.color})` }}
+                      className="text-white border-none hover:opacity-90 shadow-sm">
                       {connecting ? "Connecting…" : "Connect"}
+                    </Button>
+                  )}
+                  {isPending && (
+                    <Button size="sm" onClick={() => setWizardOpen(true)} variant="outline"
+                      className="text-amber-400 border-amber-400/30 hover:bg-amber-950/40 hover:text-amber-300">
+                      Pre-configure
                     </Button>
                   )}
                 </div>
               )}
             </div>
 
-            {/* Green Invoice credential form (not a wizard, shown inline before connecting) */}
+            {/* Green Invoice credential form (inline before connecting) */}
             {!isConnected && showForm && type === "green_invoice" && (
               <GreenInvoiceConnect onConnected={() => { setShowForm(false); onSync(); }} />
             )}
@@ -1331,24 +1400,43 @@ function IntegrationCard({ type, integration, onSync, onDisconnect }) {
         </Card>
       </motion.div>
 
-      {/* Wizard Dialog */}
-      {integration && (type === "google_drive" || type === "gmail" || type === "green_invoice" || type === "whatsapp") && (
-        <Dialog open={wizardOpen} onOpenChange={setWizardOpen}>
-          <DialogContent className="max-w-[540px] max-h-[90vh] overflow-y-auto">
-            <DialogHeader className="pb-2">
-              <div className="flex items-center gap-2.5">
-                <span className="text-2xl">{meta.icon}</span>
+      {/* Wizard Sheet (slide-over panel) */}
+      {hasWizard && (integration || isPending) && (
+        <Sheet open={wizardOpen} onOpenChange={setWizardOpen}>
+          <SheetContent>
+            <SheetHeader>
+              <div className="flex items-center gap-3 pr-6">
+                <div
+                  className="w-10 h-10 rounded-xl flex items-center justify-center text-xl flex-shrink-0"
+                  style={{ background: `linear-gradient(135deg, ${meta.color}22, ${meta.color}10)`, border: `1px solid ${meta.color}20` }}
+                >
+                  {meta.icon}
+                </div>
                 <div>
-                  <DialogTitle className="text-base">{isReady ? `${meta.label} settings` : `Set up ${meta.label}`}</DialogTitle>
-                  <p className="text-xs text-muted-foreground mt-0.5">{meta.description}</p>
+                  <SheetTitle>{isReady ? `${meta.label} settings` : `Set up ${meta.label}`}</SheetTitle>
+                  <SheetDescription>{meta.description}</SheetDescription>
                 </div>
               </div>
-            </DialogHeader>
-            <div className="pt-2">
-              <WizardContent />
+            </SheetHeader>
+            <div className="flex-1 overflow-y-auto px-6 py-5" style={{ scrollbarWidth: "thin" }}>
+              {integration && type === "google_drive"  && <GoogleDriveWizard  integration={integration} onComplete={wizardDone} />}
+              {integration && type === "gmail"         && <GmailWizard        integration={integration} onComplete={wizardDone} />}
+              {integration && type === "green_invoice" && <GreenInvoiceWizard integration={integration} onComplete={wizardDone} />}
+              {(integration || isPending) && type === "whatsapp" && (
+                integration
+                  ? <WhatsAppWizard integration={integration} onComplete={wizardDone} />
+                  : <div className="flex flex-col gap-4 text-center py-8">
+                      <div className="text-5xl">⏳</div>
+                      <p className="text-sm font-semibold text-foreground">Pending Meta verification</p>
+                      <p className="text-xs text-muted-foreground leading-relaxed">
+                        WhatsApp will be available once Meta Business verification completes.
+                        Once live, supplier invoice photos sent to your dedicated number will automatically appear in your Invoices tab.
+                      </p>
+                    </div>
+              )}
             </div>
-          </DialogContent>
-        </Dialog>
+          </SheetContent>
+        </Sheet>
       )}
     </>
   );
@@ -1407,13 +1495,13 @@ export default function IntegrationsPage({ oauthResult }) {
       </AnimatePresence>
 
       {loading ? (
-        <div className="flex flex-col gap-3">
-          {[1, 2, 3].map(i => (
-            <div key={i} className="shimmer rounded-xl" style={{ height: 96, opacity: 1 - (i - 1) * 0.2 }} />
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          {[1, 2, 3, 4].map(i => (
+            <div key={i} className="shimmer rounded-xl" style={{ height: 110, opacity: 1 - (i - 1) * 0.18 }} />
           ))}
         </div>
       ) : (
-        <motion.div className="flex flex-col gap-3"
+        <motion.div className="grid grid-cols-1 sm:grid-cols-2 gap-3"
           initial="hidden" animate="visible"
           variants={{ visible: { transition: { staggerChildren: 0.07 } } }}>
           {Object.keys(INTEGRATION_META).map(type => (
@@ -1426,9 +1514,9 @@ export default function IntegrationsPage({ oauthResult }) {
 
       <div className="mt-7 px-4 py-3.5 rounded-lg text-xs leading-relaxed border border-border/40 text-muted-foreground/50">
         <p className="font-semibold mb-1 text-muted-foreground">How syncing works</p>
-        Each connected source checks for new invoices when you click "Sync now" (WhatsApp syncs automatically
-        as photos arrive). New invoices are extracted using AI, matched to your supplier list, and
-        deduplicated automatically — invoices already in the system are never added twice.
+        Connected sources run on the schedule you choose during setup. WhatsApp syncs automatically
+        as photos arrive. New invoices are AI-extracted, matched to your supplier list, and
+        deduplicated — invoices already in the system are never added twice.
       </div>
     </div>
   );

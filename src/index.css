@@ -1,7 +1,8 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
 @import "tailwindcss";
+@plugin "tailwindcss-animate";
 
-/* shadcn/ui CSS variables — mapped to the app's dark navy palette */
+/* shadcn/ui CSS variables — raw HSL values used by component base styles */
 :root {
   --background: 222 47% 5%;
   --foreground: 214 32% 91%;
@@ -23,6 +24,29 @@
   --input: 215 28% 14%;
   --ring: 239 84% 67%;
   --radius: 0.625rem;
+}
+
+/* Tailwind v4 color bridge — maps :root HSL vars to utility classes (bg-card, text-primary, etc.) */
+@theme inline {
+  --color-background:           hsl(222, 47%, 5%);
+  --color-foreground:           hsl(214, 32%, 91%);
+  --color-card:                 hsl(220, 45%, 9%);
+  --color-card-foreground:      hsl(214, 32%, 91%);
+  --color-popover:              hsl(220, 45%, 9%);
+  --color-popover-foreground:   hsl(214, 32%, 91%);
+  --color-primary:              hsl(239, 84%, 67%);
+  --color-primary-foreground:   hsl(0, 0%, 100%);
+  --color-secondary:            hsl(217, 33%, 17%);
+  --color-secondary-foreground: hsl(214, 32%, 91%);
+  --color-muted:                hsl(215, 28%, 17%);
+  --color-muted-foreground:     hsl(215, 16%, 47%);
+  --color-accent:               hsl(217, 33%, 17%);
+  --color-accent-foreground:    hsl(214, 32%, 91%);
+  --color-destructive:          hsl(0, 72%, 71%);
+  --color-destructive-foreground: hsl(0, 0%, 100%);
+  --color-border:               hsl(215, 28%, 19%);
+  --color-input:                hsl(215, 28%, 14%);
+  --color-ring:                 hsl(239, 84%, 67%);
 }
 
 @theme {

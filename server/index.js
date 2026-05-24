@@ -1,5 +1,6 @@
 require('dotenv').config({ path: '.env.local' });
 const express = require('express');
+const cron    = require('node-cron');
 
 if (!process.env.ANTHROPIC_API_KEY) {
   console.error('ERROR: ANTHROPIC_API_KEY not set in .env.local');
@@ -37,3 +38,44 @@ app.post('/api/webhooks/whatsapp', waWebhook.receive);
 
 const PORT = process.env.PORT || 3001;
 app.listen(PORT, () => console.log(`API server → http://localhost:${PORT}`));
+
+// ─── Auto-sync cron (every 15 min) ───────────────────────────────────────────
+
+const supabaseServer     = require('./lib/supabase');
+const { syncGoogleDrive, syncGmail, syncGreenInvoice } = require('./services/syncProcessor');
+
+const CADENCE_MS = {
+  hourly:    3_600_000,
+  every_4h: 14_400_000,
+  daily:    86_400_000,
+  weekly:  604_800_000,
+};
+
+const SYNC_FN = { google_drive: syncGoogleDrive, gmail: syncGmail, green_invoice: syncGreenInvoice };
+
+cron.schedule('*/15 * * * *', async () => {
+  try {
+    const { data: rows, error } = await supabaseServer
+      .from('integrations')
+      .select('id, type, user_id, config, last_sync')
+      .eq('status', 'connected');
+
+    if (error) { console.error('[cron] fetch error:', error.message); return; }
+
+    const now = Date.now();
+    for (const row of rows || []) {
+      if (!row.config?.setup_complete || !row.config?.auto_sync) continue;
+      const fn = SYNC_FN[row.type];
+      if (!fn) continue;
+      const cadenceMs = CADENCE_MS[row.config.cadence];
+      if (!cadenceMs) continue;
+      const lastMs = row.last_sync ? new Date(row.last_sync).getTime() : 0;
+      if (now - lastMs < cadenceMs) continue;
+      fn(row, row.user_id).catch(err =>
+        console.error(`[cron] sync ${row.type}/${row.id} failed:`, err.message)
+      );
+    }
+  } catch (err) {
+    console.error('[cron] unexpected error:', err.message);
+  }
+});
