@@ -1,6 +1,10 @@
 const { google } = require('googleapis');
+const crypto     = require('crypto');
 const supabase   = require('../lib/supabase');
 const sync       = require('../services/syncProcessor');
+
+// In-memory OTP store — keyed by userId, expires in 10 min
+const otpStore = new Map();
 
 const SCOPES = {
   google_drive: ['https://www.googleapis.com/auth/drive.readonly'],
@@ -122,6 +126,103 @@ exports.updateConfig = async (req, res) => {
     .eq('user_id', req.user.id);
   if (error) return res.status(500).json({ error: error.message });
   res.json({ ok: true });
+};
+
+// POST /api/integrations/whatsapp/request-otp  { phone }
+exports.whatsappRequestOtp = async (req, res) => {
+  const { phone } = req.body;
+  if (!phone) return res.status(400).json({ error: 'phone is required' });
+
+  const otp  = Math.floor(100000 + Math.random() * 900000).toString();
+  const hash = crypto.createHash('sha256').update(otp).digest('hex');
+  otpStore.set(req.user.id, { phone, hash, expiry: Date.now() + 10 * 60 * 1000 });
+
+  if (process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN) {
+    try {
+      const twilio = require('twilio')(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
+      await twilio.messages.create({
+        from: `whatsapp:${process.env.TWILIO_WHATSAPP_FROM}`,
+        to:   `whatsapp:${phone}`,
+        body: `Your Cashflow verification code: ${otp}. Valid for 10 minutes.`,
+      });
+    } catch (err) {
+      return res.status(500).json({ error: `Failed to send WhatsApp message: ${err.message}` });
+    }
+  } else {
+    console.log(`[WhatsApp OTP] To ${phone}: ${otp}`);
+  }
+
+  res.json({ ok: true });
+};
+
+// POST /api/integrations/whatsapp/verify-otp  { phone, otp }
+exports.whatsappVerifyOtp = async (req, res) => {
+  const { phone, otp } = req.body;
+  if (!phone || !otp) return res.status(400).json({ error: 'phone and otp are required' });
+
+  const stored = otpStore.get(req.user.id);
+  if (!stored || stored.phone !== phone || Date.now() > stored.expiry) {
+    return res.status(400).json({ error: 'Code expired or not found. Request a new code.' });
+  }
+
+  const hash = crypto.createHash('sha256').update(String(otp)).digest('hex');
+  if (hash !== stored.hash) return res.status(400).json({ error: 'Invalid verification code.' });
+
+  otpStore.delete(req.user.id);
+
+  const { error } = await supabase.from('integrations').upsert({
+    user_id:       req.user.id,
+    type:          'whatsapp',
+    status:        'connected',
+    credentials:   {},
+    config:        { phone_number: phone, auto_sync: true },
+    error_message: null,
+  }, { onConflict: 'user_id,type' });
+
+  if (error) return res.status(500).json({ error: error.message });
+  res.json({ ok: true });
+};
+
+// POST /api/integrations/whatsapp/webhook  (no auth — Twilio inbound)
+exports.whatsappWebhook = async (req, res) => {
+  const from     = (req.body.From || '').replace('whatsapp:', '');
+  const numMedia = parseInt(req.body.NumMedia || '0', 10);
+  if (!from || numMedia === 0) return res.sendStatus(200);
+
+  const { data: rows } = await supabase
+    .from('integrations')
+    .select('id, user_id, config, sync_count')
+    .eq('type', 'whatsapp')
+    .eq('status', 'connected');
+
+  const integration = rows?.find(r => r.config?.phone_number === from);
+  if (!integration) {
+    console.log(`[whatsapp] no linked account for ${from}`);
+    return res.sendStatus(200);
+  }
+
+  let added = 0;
+  for (let i = 0; i < numMedia; i++) {
+    const mediaUrl  = req.body[`MediaUrl${i}`];
+    const mediaType = req.body[`MediaContentType${i}`];
+    if (!mediaUrl) continue;
+    if (!mediaType?.includes('image') && !mediaType?.includes('pdf')) continue;
+    try {
+      const result = await sync.processWhatsAppMessage(integration.user_id, mediaUrl, mediaType);
+      if (result) added++;
+    } catch (err) {
+      console.error('[whatsapp] process error:', err.message);
+    }
+  }
+
+  if (added > 0) {
+    await supabase.from('integrations').update({
+      last_sync:  new Date().toISOString(),
+      sync_count: (integration.sync_count || 0) + added,
+    }).eq('id', integration.id);
+  }
+
+  res.sendStatus(200);
 };
 
 // POST /api/integrations/:id/sync

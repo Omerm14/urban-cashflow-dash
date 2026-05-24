@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import { useAuth }         from "./contexts/AuthContext";
 import { useInvoiceData }  from "./hooks/useInvoiceData";
 import LoginPage           from "./pages/LoginPage";
@@ -9,6 +9,7 @@ import InvoicesView        from "./components/InvoicesView";
 import CalendarView        from "./components/CalendarView";
 import EditInvoiceModal    from "./components/EditInvoiceModal";
 import SuppliersModal      from "./components/SuppliersModal";
+import IntegrationsPage    from "./components/IntegrationsPage";
 import { processPdf, fileToBase64, extractInvoice, translateSupplierName } from "./utils/image";
 import { findDuplicates, parseCSV, isLatinOnly }                           from "./utils/invoice";
 import { calcDueDate, toYM, correctSwappedDate }                           from "./utils/dates";
@@ -17,7 +18,14 @@ import { STATUS }                                    from "./constants";
 export default function App() {
   const { user, loading: authLoading, signOut } = useAuth();
 
-  const [view,          setView]          = useState("dashboard");
+  const [view,          setView]          = useState(() => {
+    const params = new URLSearchParams(window.location.search);
+    return params.get('view') === 'integrations' ? 'integrations' : 'dashboard';
+  });
+  const [oauthConnected, setOauthConnected] = useState(() => {
+    const params = new URLSearchParams(window.location.search);
+    return params.get('oauth_connected') || null;
+  });
   const [extracting,    setExtracting]    = useState(false);
   const [extractMsg,    setExtractMsg]    = useState(null);
   const [editInvoice,   setEditInvoice]   = useState(null);
@@ -26,6 +34,14 @@ export default function App() {
   const [calMonth,      setCalMonth]      = useState(() => toYM(new Date()));
   const fileRef = useRef();
   const csvRef  = useRef();
+
+  // Clear OAuth URL params after reading them on mount
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.has('view') || params.has('oauth_connected') || params.has('oauth_error')) {
+      window.history.replaceState({}, '', window.location.pathname);
+    }
+  }, []);
 
   const {
     suppliers, invoices, computed, dupeIds, monthlyData, allNames, color, maxTotal, kpis, loading,
@@ -204,10 +220,11 @@ export default function App() {
           </div>
         )}
 
-        {view === "dashboard" && <Dashboard  kpis={kpis} monthlyData={monthlyData} allNames={allNames} color={color} maxTotal={maxTotal} />}
-        {view === "invoices"  && <InvoicesView computed={computed} dupeIds={dupeIds} updateInvoice={updateInvoice} deleteInvoice={deleteInvoice} bulkMarkPaid={bulkMarkPaid} bulkDelete={bulkDelete} setEditInvoice={setEditInvoice} color={color} />}
-        {view === "calendar"  && <CalendarView computed={computed} calMonth={calMonth} setCalMonth={setCalMonth} color={color} />}
-        {view === "admin"     && <AdminPage />}
+        {view === "dashboard"    && <Dashboard  kpis={kpis} monthlyData={monthlyData} allNames={allNames} color={color} maxTotal={maxTotal} />}
+        {view === "invoices"     && <InvoicesView computed={computed} dupeIds={dupeIds} updateInvoice={updateInvoice} deleteInvoice={deleteInvoice} bulkMarkPaid={bulkMarkPaid} bulkDelete={bulkDelete} setEditInvoice={setEditInvoice} color={color} />}
+        {view === "calendar"     && <CalendarView computed={computed} calMonth={calMonth} setCalMonth={setCalMonth} color={color} />}
+        {view === "admin"        && <AdminPage />}
+        {view === "integrations" && <IntegrationsPage initialOAuthConnected={oauthConnected} onOAuthHandled={() => setOauthConnected(null)} />}
       </div>
 
       {editInvoice   && <EditInvoiceModal editInvoice={editInvoice} setEditInvoice={setEditInvoice} suppliers={suppliers} addInvoice={addInvoice} updateInvoice={updateInvoice} getSupplier={getSupplier} />}

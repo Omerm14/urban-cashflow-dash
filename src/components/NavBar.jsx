@@ -1,8 +1,8 @@
 export default function NavBar({ view, setView, suppliersCount, onSuppliersClick, user, onSignOut }) {
   const isAdmin = user?.email && import.meta.env.VITE_ADMIN_EMAIL && user.email === import.meta.env.VITE_ADMIN_EMAIL;
   const views = isAdmin
-    ? ["dashboard","invoices","calendar","admin"]
-    : ["dashboard","invoices","calendar"];
+    ? ["dashboard","invoices","calendar","integrations","admin"]
+    : ["dashboard","invoices","calendar","integrations"];
 
   return (
     <div style={{ background:"#0a1120", borderBottom:"1px solid #111d2e", position:"sticky", top:0, zIndex:40, backdropFilter:"blur(12px)" }}>

@@ -265,6 +265,29 @@ exports.syncGmail = async (integration, userId) => {
   return added;
 };
 
+// ─── WhatsApp inbound message processing ────────────────────────────────────
+
+exports.processWhatsAppMessage = async (userId, mediaUrl, mediaType) => {
+  const suppliers        = await getSuppliers(userId);
+  const existingInvoices = await getExistingInvoices(userId);
+
+  const sid   = process.env.TWILIO_ACCOUNT_SID;
+  const token = process.env.TWILIO_AUTH_TOKEN;
+  const fetchOpts = (sid && token)
+    ? { headers: { Authorization: `Basic ${Buffer.from(`${sid}:${token}`).toString('base64')}` } }
+    : {};
+
+  const resp = await fetch(mediaUrl, fetchOpts);
+  if (!resp.ok) throw new Error(`Failed to download WhatsApp media: ${resp.status}`);
+
+  const buffer   = Buffer.from(await resp.arrayBuffer());
+  const ext      = mediaType.includes('pdf') ? 'pdf' : (mediaType.split('/')[1] || 'jpg');
+  const filename = `whatsapp_${Date.now()}.${ext}`;
+
+  const result = await processFile(buffer, filename, mediaType, userId, suppliers, existingInvoices);
+  return result ? 1 : 0;
+};
+
 // ─── Green Invoice (חשבונית ירוקה) sync ─────────────────────────────────────
 
 exports.syncGreenInvoice = async (integration, userId) => {
