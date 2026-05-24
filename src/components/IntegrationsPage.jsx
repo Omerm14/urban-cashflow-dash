@@ -2,6 +2,19 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { DrivePicker, DrivePickerDocsView } from "@googleworkspace/drive-picker-react";
 import { supabase } from "../lib/supabase";
+import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Card, CardContent } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { RefreshCw, Settings, Unplug, Check, ChevronRight, Globe } from "lucide-react";
 
 const apiCall = async (path, opts = {}) => {
   const { data: { session } } = await supabase.auth.getSession();
@@ -21,40 +34,35 @@ const apiCall = async (path, opts = {}) => {
 
 const INTEGRATION_META = {
   google_drive: {
-    label:       "Google Drive",
-    icon:        "📁",
-    description: "Watch a Google Drive folder and automatically import new invoices.",
-    color:       "#4285F4",
-    gradient:    "from-blue-600 to-blue-500",
+    label:      "Google Drive",
+    icon:       "📁",
+    description:"Watch a Google Drive folder and automatically import new invoices.",
+    color:      "#4285F4",
   },
   gmail: {
-    label:       "Gmail",
-    icon:        "📧",
-    description: "Scan your Gmail inbox for invoice attachments from suppliers.",
-    color:       "#EA4335",
-    gradient:    "from-red-600 to-red-500",
+    label:      "Gmail",
+    icon:       "📧",
+    description:"Scan your Gmail inbox for invoice attachments from suppliers.",
+    color:      "#EA4335",
   },
   green_invoice: {
-    label:       "Green Invoice",
-    icon:        "🟢",
-    description: "חשבונית ירוקה — pull received expense documents from your Green Invoice account.",
-    color:       "#34d399",
-    gradient:    "from-emerald-500 to-emerald-400",
+    label:      "Green Invoice",
+    icon:       "🟢",
+    description:"חשבונית ירוקה — pull received expense documents from your Green Invoice account.",
+    color:      "#34d399",
   },
   whatsapp: {
-    label:       "WhatsApp",
-    icon:        "💬",
-    description: "Suppliers send invoice photos over WhatsApp — they're imported automatically.",
-    color:       "#25D366",
-    gradient:    "from-green-600 to-green-500",
+    label:      "WhatsApp",
+    icon:       "💬",
+    description:"Suppliers send invoice photos over WhatsApp — they're imported automatically.",
+    color:      "#25D366",
   },
   bizzibox: {
-    label:       "Bizzibox",
-    icon:        "📊",
-    description: "Connect your Bizzibox account to sync supplier invoices.",
-    color:       "#6366f1",
-    gradient:    "from-indigo-600 to-indigo-500",
-    comingSoon:  true,
+    label:      "Bizzibox",
+    icon:       "📊",
+    description:"Connect your Bizzibox account to sync supplier invoices.",
+    color:      "#6366f1",
+    comingSoon: true,
   },
 };
 
@@ -82,7 +90,7 @@ const GOOGLE_APP_ID  = import.meta.env.VITE_GOOGLE_APP_ID  || "";
 const GOOGLE_API_KEY = import.meta.env.VITE_GOOGLE_API_KEY || "";
 const canUseGooglePicker = !!GOOGLE_APP_ID && !!GOOGLE_API_KEY;
 
-// ─── Step transition config ───────────────────────────────────────────────────
+// ─── Step transition ──────────────────────────────────────────────────────────
 
 const stepVariants = {
   enter:  dir => ({ x: dir > 0 ? 40 : -40, opacity: 0 }),
@@ -94,12 +102,8 @@ function StepAnimator({ step, dir, children }) {
   return (
     <AnimatePresence mode="wait" custom={dir}>
       <motion.div
-        key={step}
-        custom={dir}
-        variants={stepVariants}
-        initial="enter"
-        animate="center"
-        exit="exit"
+        key={step} custom={dir} variants={stepVariants}
+        initial="enter" animate="center" exit="exit"
         transition={{ duration: 0.22, ease: "easeInOut" }}
       >
         {children}
@@ -108,38 +112,39 @@ function StepAnimator({ step, dir, children }) {
   );
 }
 
-// ─── Shared UI primitives ─────────────────────────────────────────────────────
+// ─── Step indicator ───────────────────────────────────────────────────────────
 
 function StepIndicator({ steps, current }) {
   return (
-    <div className="flex items-center gap-1.5 mb-5">
+    <div className="flex items-center gap-0 mb-6">
       {steps.map((label, i) => (
-        <div key={i} className="flex items-center gap-1.5">
-          <motion.div
-            animate={{
-              background: i < current
-                ? "#6366f1"
-                : i === current
-                  ? "linear-gradient(135deg,#6366f1,#a78bfa)"
-                  : "#131c2e",
-              scale: i === current ? 1.1 : 1,
-            }}
-            transition={{ duration: 0.3 }}
-            className="w-6 h-6 rounded-full flex items-center justify-center text-[11px] font-bold flex-shrink-0"
-            style={{
-              color: i <= current ? "#fff" : "#334155",
-              border: i === current ? "none" : "1px solid #1e2d45",
-            }}
-          >
-            {i < current ? "✓" : i + 1}
-          </motion.div>
-          <span className="text-[11px] whitespace-nowrap" style={{
-            color: i === current ? "#a78bfa" : i < current ? "#4ade80" : "#334155",
-          }}>
-            {label}
-          </span>
+        <div key={i} className="flex items-center flex-1 last:flex-none">
+          <div className="flex flex-col items-center gap-1.5">
+            <motion.div
+              animate={{
+                background: i < current ? "hsl(var(--primary))"
+                  : i === current ? "hsl(var(--primary))"
+                  : "hsl(var(--muted))",
+                scale: i === current ? 1.05 : 1,
+              }}
+              transition={{ duration: 0.25 }}
+              className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0"
+              style={{ color: i <= current ? "hsl(var(--primary-foreground))" : "hsl(var(--muted-foreground))" }}
+            >
+              {i < current ? <Check className="w-3.5 h-3.5" /> : <span>{i + 1}</span>}
+            </motion.div>
+            <span className={cn(
+              "text-[11px] whitespace-nowrap font-medium",
+              i === current ? "text-primary" : i < current ? "text-muted-foreground" : "text-muted-foreground/50"
+            )}>
+              {label}
+            </span>
+          </div>
           {i < steps.length - 1 && (
-            <div className="w-5 h-px flex-shrink-0" style={{ background: i < current ? "#6366f140" : "#1e2d45" }} />
+            <div
+              className="flex-1 h-px mx-2 mb-5"
+              style={{ background: i < current ? "hsl(var(--primary) / 0.4)" : "hsl(var(--border))" }}
+            />
           )}
         </div>
       ))}
@@ -147,70 +152,41 @@ function StepIndicator({ steps, current }) {
   );
 }
 
-function WizardShell({ children, onBack, onNext, onComplete, nextLabel, completeLabel, saving, error, canNext = true }) {
+// ─── Wizard navigation footer ─────────────────────────────────────────────────
+
+function WizardFooter({ onBack, onNext, onComplete, nextLabel, completeLabel, saving, error, canNext = true }) {
   return (
-    <div className="flex flex-col gap-3.5">
-      {children}
+    <div className="flex flex-col gap-2 mt-4 pt-4 border-t border-border">
       {error && (
-        <motion.div
-          initial={{ opacity: 0, y: -4 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="text-[12px]"
-          style={{ color: "#f87171" }}
+        <motion.p
+          initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }}
+          className="text-xs text-destructive"
         >
           {error}
-        </motion.div>
+        </motion.p>
       )}
-      <div className="flex gap-2 mt-1">
+      <div className="flex gap-2">
         {onBack && (
-          <motion.button
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
-            onClick={onBack}
-            className="px-3.5 py-1.5 rounded-md text-[12px] cursor-pointer"
-            style={{ background: "#131c2e", color: "#64748b", border: "1px solid #1e2d45" }}
-          >
+          <Button variant="outline" size="sm" onClick={onBack}>
             ← Back
-          </motion.button>
+          </Button>
         )}
         {onNext && (
-          <motion.button
-            whileHover={canNext ? { scale: 1.02, filter: "brightness(1.1)" } : {}}
-            whileTap={canNext ? { scale: 0.98 } : {}}
-            onClick={onNext}
-            disabled={!canNext || saving}
-            className="px-4 py-1.5 rounded-md text-[12px] font-semibold border-none"
-            style={{
-              background: canNext ? "linear-gradient(135deg,#6366f1,#a78bfa)" : "#131c2e",
-              color: canNext ? "#fff" : "#334155",
-              cursor: canNext ? "pointer" : "default",
-              opacity: saving ? 0.7 : 1,
-            }}
-          >
+          <Button size="sm" onClick={onNext} disabled={!canNext || saving}>
             {saving ? "Loading…" : (nextLabel || "Next →")}
-          </motion.button>
+          </Button>
         )}
         {onComplete && (
-          <motion.button
-            whileHover={canNext ? { scale: 1.02, filter: "brightness(1.1)" } : {}}
-            whileTap={canNext ? { scale: 0.98 } : {}}
-            onClick={onComplete}
-            disabled={!canNext || saving}
-            className="px-4 py-1.5 rounded-md text-[12px] font-semibold border-none"
-            style={{
-              background: canNext ? "linear-gradient(135deg,#6366f1,#a78bfa)" : "#131c2e",
-              color: canNext ? "#fff" : "#334155",
-              cursor: canNext ? "pointer" : "default",
-              opacity: saving ? 0.7 : 1,
-            }}
-          >
+          <Button size="sm" onClick={onComplete} disabled={!canNext || saving}>
             {saving ? "Saving…" : (completeLabel || "Complete setup →")}
-          </motion.button>
+          </Button>
         )}
       </div>
     </div>
   );
 }
+
+// ─── Shared primitives ────────────────────────────────────────────────────────
 
 function ShimmerRows({ count = 3, height = 32 }) {
   return (
@@ -224,37 +200,29 @@ function ShimmerRows({ count = 3, height = 32 }) {
 
 function SummaryRow({ label, value }) {
   return (
-    <div className="flex gap-2 text-[12px]">
-      <span className="min-w-[110px] flex-shrink-0" style={{ color: "#475569" }}>{label}</span>
-      <span style={{ color: "#94a3b8" }}>{value}</span>
+    <div className="flex gap-2 text-xs">
+      <span className="min-w-[110px] flex-shrink-0 text-muted-foreground">{label}</span>
+      <span className="text-foreground/70">{value}</span>
     </div>
   );
 }
 
 function FieldLabel({ children }) {
   return (
-    <div className="block text-[11px] font-semibold uppercase tracking-[0.5px] mb-1" style={{ color: "#64748b" }}>
+    <div className="text-[11px] font-semibold uppercase tracking-wider mb-1 text-muted-foreground">
       {children}
     </div>
   );
 }
 
-function TextInput({ value, onChange, placeholder, type = "text", style = {} }) {
+function InfoBox({ children, variant = "default" }) {
   return (
-    <input
-      type={type}
-      value={value}
-      onChange={onChange}
-      placeholder={placeholder}
-      className="input"
-      style={style}
-    />
-  );
-}
-
-function InfoBox({ children, color = "#475569", border = "#1e2d45", bg = "#0a1120" }) {
-  return (
-    <div className="text-[11px] px-3 py-2 rounded-md" style={{ background: bg, border: `1px solid ${border}`, color }}>
+    <div className={cn(
+      "text-xs px-3 py-2 rounded-md border",
+      variant === "success"
+        ? "bg-green-950/50 border-green-800/50 text-green-400"
+        : "bg-background/50 border-border text-muted-foreground"
+    )}>
       {children}
     </div>
   );
@@ -263,10 +231,10 @@ function InfoBox({ children, color = "#475569", border = "#1e2d45", bg = "#0a112
 // ─── Google Drive Picker ──────────────────────────────────────────────────────
 
 function DrivePickerButton({ onSelect }) {
-  const [open,        setOpen]        = useState(false);
-  const [oauthToken,  setOauthToken]  = useState(null);
-  const [loading,     setLoading]     = useState(false);
-  const [error,       setError]       = useState(null);
+  const [open,       setOpen]       = useState(false);
+  const [oauthToken, setOauthToken] = useState(null);
+  const [loading,    setLoading]    = useState(false);
+  const [error,      setError]      = useState(null);
 
   const openPicker = async () => {
     setError(null);
@@ -288,53 +256,37 @@ function DrivePickerButton({ onSelect }) {
   const handlePicked = (e) => {
     setOpen(false);
     const docs = e.detail?.docs || [];
-    if (docs.length > 0) {
-      const doc = docs[0];
-      onSelect(doc.id, doc.name);
-    }
+    if (docs.length > 0) onSelect(docs[0].id, docs[0].name);
   };
-
-  const handleCanceled = () => setOpen(false);
 
   return (
     <div>
-      <motion.button
-        whileHover={{ scale: 1.02, filter: "brightness(1.1)" }}
-        whileTap={{ scale: 0.97 }}
+      <Button
+        variant="outline"
+        size="sm"
         onClick={openPicker}
         disabled={loading}
-        className="flex items-center gap-2 px-4 py-2.5 rounded-lg font-semibold text-[13px] border-none cursor-pointer"
-        style={{ background: "linear-gradient(135deg,#4285F4cc,#4285F4)", color: "#fff", opacity: loading ? 0.7 : 1 }}
+        className="gap-2 border-[#4285F4]/30 text-[#4285F4] hover:bg-[#4285F4]/10 hover:text-[#4285F4]"
       >
-        <span style={{ fontSize: 16 }}>📁</span>
+        <span className="text-base">📁</span>
         {loading ? "Loading Drive…" : "Browse Google Drive"}
-      </motion.button>
-
-      {error && (
-        <div className="mt-2 text-[11px]" style={{ color: "#f87171" }}>{error}</div>
-      )}
-
+      </Button>
+      {error && <p className="mt-1.5 text-xs text-destructive">{error}</p>}
       {open && oauthToken && (
         <DrivePicker
-          appId={GOOGLE_APP_ID}
-          developerKey={GOOGLE_API_KEY}
-          oauthToken={oauthToken}
-          onPicked={handlePicked}
-          onCanceled={handleCanceled}
-          visible
+          appId={GOOGLE_APP_ID} developerKey={GOOGLE_API_KEY}
+          oauthToken={oauthToken} onPicked={handlePicked}
+          onCanceled={() => setOpen(false)} visible
         >
-          <DrivePickerDocsView
-            selectFolderEnabled
-            includeFolders
-            mimeTypes="application/vnd.google-apps.folder"
-          />
+          <DrivePickerDocsView selectFolderEnabled includeFolders
+            mimeTypes="application/vnd.google-apps.folder" />
         </DrivePicker>
       )}
     </div>
   );
 }
 
-// ─── Fallback: FolderBrowser (when Google Picker env vars not configured) ────
+// ─── Fallback: FolderBrowser ──────────────────────────────────────────────────
 
 function FolderBrowser({ onSelect }) {
   const [breadcrumb, setBreadcrumb] = useState([{ id: "root", name: "My Drive" }]);
@@ -350,39 +302,27 @@ function FolderBrowser({ onSelect }) {
       const data = await apiCall(`/api/integrations/google/drive/folders?parentId=${encodeURIComponent(parentId)}`);
       setFolders(data.folders || []);
       setFileCount(data.invoiceFileCount || 0);
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
+    } catch (err) { setError(err.message); }
+    finally { setLoading(false); }
   }, []);
 
   useEffect(() => { fetchLevel("root"); }, [fetchLevel]);
 
   const navigateInto = folder => {
     setBreadcrumb(b => [...b, { id: folder.id, name: folder.name }]);
-    setSelectedId(null);
-    onSelect(null, null, 0);
+    setSelectedId(null); onSelect(null, null, 0);
     fetchLevel(folder.id);
   };
 
   const navigateTo = idx => {
     const crumb = breadcrumb[idx];
     setBreadcrumb(b => b.slice(0, idx + 1));
-    setSelectedId(null);
-    onSelect(null, null, 0);
+    setSelectedId(null); onSelect(null, null, 0);
     fetchLevel(crumb.id);
   };
 
-  const selectFolder = folder => {
-    setSelectedId(folder.id);
-    onSelect(folder.id, folder.name, fileCount);
-  };
-
-  const selectEntireDrive = () => {
-    setSelectedId("root");
-    onSelect(null, null, 0);
-  };
+  const selectFolder = folder => { setSelectedId(folder.id); onSelect(folder.id, folder.name, fileCount); };
+  const selectEntireDrive = () => { setSelectedId("root"); onSelect(null, null, 0); };
 
   return (
     <div>
@@ -390,74 +330,70 @@ function FolderBrowser({ onSelect }) {
       <div className="flex items-center gap-1 mb-2 flex-wrap">
         {breadcrumb.map((crumb, i) => (
           <span key={i} className="flex items-center gap-1">
-            {i > 0 && <span className="text-[11px]" style={{ color: "#334155" }}>›</span>}
+            {i > 0 && <ChevronRight className="w-3 h-3 text-muted-foreground/40" />}
             <button onClick={() => navigateTo(i)}
-              className="text-[11px] bg-none border-none cursor-pointer p-0"
-              style={{ color: i === breadcrumb.length - 1 ? "#a78bfa" : "#475569", fontWeight: i === breadcrumb.length - 1 ? 600 : 400 }}>
+              className={cn("text-xs bg-transparent border-none cursor-pointer p-0",
+                i === breadcrumb.length - 1 ? "text-primary font-semibold" : "text-muted-foreground hover:text-foreground")}>
               {crumb.name}
             </button>
           </span>
         ))}
       </div>
 
-      <div className="rounded-lg overflow-y-auto" style={{ background: "#0d1626", border: "1px solid #1e2d45", height: 210, scrollbarWidth: "thin" }}>
+      <div className="rounded-lg overflow-y-auto border border-border" style={{ background: "hsl(var(--muted) / 0.3)", height: 210, scrollbarWidth: "thin" }}>
         <button onClick={selectEntireDrive}
-          className="w-full flex items-center gap-2.5 px-3 py-2.5 text-left border-none cursor-pointer"
-          style={{
-            background: selectedId === "root" ? "#13103a" : "transparent",
-            borderLeft: selectedId === "root" ? "3px solid #6366f1" : "3px solid transparent",
-            borderBottom: "1px solid #1a2335",
-          }}>
-          <span style={{ fontSize: 16 }}>🌐</span>
+          className={cn("w-full flex items-center gap-2.5 px-3 py-2.5 text-left border-none cursor-pointer transition-colors",
+            selectedId === "root" ? "bg-primary/10 border-l-2 border-l-primary" : "bg-transparent hover:bg-muted/50 border-l-2 border-l-transparent"
+          )}
+          style={{ borderBottom: "1px solid hsl(var(--border))" }}>
+          <Globe className="w-4 h-4 text-muted-foreground flex-shrink-0" />
           <div className="flex-1">
-            <div className="text-[12px] font-semibold" style={{ color: selectedId === "root" ? "#a78bfa" : "#94a3b8" }}>Watch entire Drive</div>
-            <div className="text-[10px] mt-0.5" style={{ color: "#334155" }}>All PDFs and images across all folders</div>
+            <div className={cn("text-xs font-semibold", selectedId === "root" ? "text-primary" : "text-foreground/70")}>
+              Watch entire Drive
+            </div>
+            <div className="text-[10px] text-muted-foreground/50 mt-0.5">All PDFs and images across all folders</div>
           </div>
-          {selectedId === "root" && <span className="text-[11px]" style={{ color: "#a78bfa" }}>✓</span>}
+          {selectedId === "root" && <Check className="w-3.5 h-3.5 text-primary" />}
         </button>
 
         {loading ? (
           <div className="p-3"><ShimmerRows count={3} height={36} /></div>
         ) : error ? (
-          <div className="p-3 text-[12px]" style={{ color: "#f87171" }}>⚠ {error}</div>
+          <div className="p-3 text-xs text-destructive">⚠ {error}</div>
         ) : folders.length === 0 ? (
-          <div className="p-4 text-[12px] text-center" style={{ color: "#475569" }}>No subfolders found</div>
+          <div className="p-4 text-xs text-center text-muted-foreground">No subfolders found</div>
         ) : (
           folders.map(folder => (
-            <div key={folder.id} className="flex items-center"
-              style={{
-                background: selectedId === folder.id ? "#0c1525" : "transparent",
-                borderLeft: selectedId === folder.id ? "3px solid #6366f1" : "3px solid transparent",
-                borderBottom: "1px solid #111d2e",
-              }}>
+            <div key={folder.id} className={cn("flex items-center transition-colors",
+              selectedId === folder.id ? "bg-primary/10 border-l-2 border-l-primary" : "hover:bg-muted/30 border-l-2 border-l-transparent"
+            )} style={{ borderBottom: "1px solid hsl(var(--border) / 0.5)" }}>
               <button onClick={() => selectFolder(folder)}
                 className="flex-1 flex items-center gap-2.5 px-3 py-2.5 bg-transparent border-none cursor-pointer text-left">
-                <span style={{ fontSize: 16 }}>📁</span>
-                <span className="text-[13px]" style={{ color: selectedId === folder.id ? "#e2e8f0" : "#94a3b8", fontWeight: selectedId === folder.id ? 600 : 400 }}>
+                <span className="text-base">📁</span>
+                <span className={cn("text-sm", selectedId === folder.id ? "text-foreground font-semibold" : "text-foreground/60")}>
                   {folder.name}
                 </span>
               </button>
               {folder.hasChildren && (
                 <button onClick={() => navigateInto(folder)}
-                  className="px-3.5 py-2.5 bg-transparent border-none cursor-pointer text-[14px] flex-shrink-0"
-                  style={{ color: "#334155" }}>›</button>
+                  className="px-3 py-2.5 bg-transparent border-none cursor-pointer flex-shrink-0 text-muted-foreground/40 hover:text-muted-foreground">
+                  <ChevronRight className="w-4 h-4" />
+                </button>
               )}
-              {selectedId === folder.id && (
-                <span className="text-[11px] pr-3" style={{ color: "#a78bfa" }}>✓</span>
-              )}
+              {selectedId === folder.id && <Check className="w-3.5 h-3.5 text-primary mr-3" />}
             </div>
           ))
         )}
       </div>
 
       {selectedId && selectedId !== "root" && (
-        <div className="mt-1.5 text-[11px]" style={{ color: fileCount > 0 ? "#4ade80" : "#475569" }}>
+        <p className={cn("mt-1.5 text-xs", fileCount > 0 ? "text-green-400" : "text-muted-foreground")}>
           {fileCount > 0
             ? `✓ ${fileCount} invoice file${fileCount !== 1 ? "s" : ""} in this folder`
             : "No invoice files yet — files added later will be synced"}
-        </div>
+        </p>
       )}
-      <div className="mt-2 text-[11px]" style={{ color: "#334155" }}>We only read files — we never modify or delete anything.</div>
+      <p className="mt-2 text-[11px] text-muted-foreground/50">We only read files — we never modify or delete anything.</p>
     </div>
   );
 }
@@ -480,7 +416,7 @@ function GoogleDriveWizard({ integration, onComplete }) {
   const [error,              setError]             = useState(null);
   const debounceRef = useRef(null);
 
-  const go = (s) => { setDir(s > step ? 1 : -1); setStep(s); };
+  const go = s => { setDir(s > step ? 1 : -1); setStep(s); };
 
   const resolveFolderUrl = useCallback(async url => {
     const folderId = extractFolderId(url);
@@ -489,35 +425,26 @@ function GoogleDriveWizard({ integration, onComplete }) {
     try {
       const info = await apiCall(`/api/integrations/google/drive/folder-info?folderId=${encodeURIComponent(folderId)}`);
       setFolderInfo(info);
-    } catch (err) {
-      setFolderError(err.message);
-    } finally {
-      setFolderLoading(false);
-    }
+    } catch (err) { setFolderError(err.message); }
+    finally { setFolderLoading(false); }
   }, []);
 
   const onFolderUrlChange = e => {
     const val = e.target.value;
-    setFolderUrl(val);
-    setFolderInfo(null); setFolderError(null);
+    setFolderUrl(val); setFolderInfo(null); setFolderError(null);
     clearTimeout(debounceRef.current);
     if (val.trim()) debounceRef.current = setTimeout(() => resolveFolderUrl(val), 600);
   };
 
-  // Used by FolderBrowser (fallback)
   const handleBrowseSelect = (id, name, count) => {
-    setSelectedFolderId(id);
-    setSelectedFolderName(name);
+    setSelectedFolderId(id); setSelectedFolderName(name);
     setFolderInfo(id ? { name, fileCount: count } : null);
     setFolderUrl(id || "");
   };
 
-  // Used by Google Drive Picker (primary)
   const handlePickerSelect = (id, name) => {
-    setSelectedFolderId(id);
-    setSelectedFolderName(name);
-    setFolderInfo({ name, fileCount: null });
-    setFolderUrl(id || "");
+    setSelectedFolderId(id); setSelectedFolderName(name);
+    setFolderInfo({ name, fileCount: null }); setFolderUrl(id || "");
   };
 
   const save = async () => {
@@ -527,23 +454,15 @@ function GoogleDriveWizard({ integration, onComplete }) {
       const folderName = browseMode ? selectedFolderName : folderInfo?.name || null;
       await apiCall(`/api/integrations/${integration.id}/config`, {
         method: "PATCH",
-        body: JSON.stringify({
-          config: {
-            ...integration.config,
-            setup_complete:     true,
-            sync_from:          syncFrom,
-            folder_id:          folderId || null,
-            folder_name:        folderName || null,
-            include_subfolders: includeSubfolders,
-          },
-        }),
+        body: JSON.stringify({ config: {
+          ...integration.config, setup_complete: true,
+          sync_from: syncFrom, folder_id: folderId || null,
+          folder_name: folderName || null, include_subfolders: includeSubfolders,
+        }}),
       });
       onComplete();
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setSaving(false);
-    }
+    } catch (err) { setError(err.message); }
+    finally { setSaving(false); }
   };
 
   const displayFolderName = browseMode
@@ -553,124 +472,90 @@ function GoogleDriveWizard({ integration, onComplete }) {
   const steps = ["Choose folder", "Scope the sync", "Confirm"];
 
   return (
-    <div className="mt-4 p-4 rounded-xl" style={{ background: "#060d1a", border: "1px solid #1e2d45" }}>
+    <>
       <StepIndicator steps={steps} current={step} />
       <StepAnimator step={step} dir={dir}>
         {step === 0 && (
-          <WizardShell onNext={() => go(1)} canNext={true} nextLabel="Next →">
+          <div className="flex flex-col gap-3">
+            <div className="flex justify-between items-baseline">
+              <FieldLabel>Choose a folder to watch</FieldLabel>
+              {canUseGooglePicker && (
+                <button onClick={() => setBrowseMode(v => !v)}
+                  className="text-[11px] text-muted-foreground hover:text-foreground bg-transparent border-none cursor-pointer p-0 underline">
+                  {browseMode ? "Paste URL instead" : "Browse folders"}
+                </button>
+              )}
+            </div>
+
             {canUseGooglePicker && browseMode ? (
-              <div className="flex flex-col gap-3">
-                <div className="flex justify-between items-baseline">
-                  <FieldLabel>Choose a folder to watch</FieldLabel>
-                  <button onClick={() => setBrowseMode(false)}
-                    className="text-[11px] bg-none border-none cursor-pointer p-0 underline"
-                    style={{ color: "#334155" }}>
-                    Paste URL instead
-                  </button>
-                </div>
-
+              <>
                 <DrivePickerButton onSelect={handlePickerSelect} />
-
                 <AnimatePresence>
                   {selectedFolderName && (
                     <motion.div
-                      initial={{ opacity: 0, y: -8 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0 }}
-                      className="flex items-center gap-2 px-3 py-2.5 rounded-lg text-[13px] font-semibold"
-                      style={{ background: "#0c1f0c", border: "1px solid #4ade8033", color: "#4ade80" }}
+                      initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
+                      className="flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm font-semibold"
+                      style={{ background: "hsl(142 76% 5%)", border: "1px solid hsl(142 76% 36% / 0.2)", color: "#4ade80" }}
                     >
-                      <span>✓</span>
+                      <Check className="w-4 h-4 flex-shrink-0" />
                       <span>Selected: <strong>{selectedFolderName}</strong></span>
-                      <motion.button
-                        whileHover={{ scale: 1.1 }}
+                      <button whileHover={{ scale: 1.1 }}
                         onClick={() => { setSelectedFolderId(null); setSelectedFolderName(null); setFolderInfo(null); }}
-                        className="ml-auto text-[11px] bg-none border-none cursor-pointer"
-                        style={{ color: "#4ade8080" }}
-                      >
+                        className="ml-auto text-xs bg-transparent border-none cursor-pointer text-green-400/50 hover:text-green-400">
                         ✕ change
-                      </motion.button>
+                      </button>
                     </motion.div>
                   )}
                 </AnimatePresence>
-
                 {!selectedFolderName && (
-                  <motion.div
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    className="text-center py-2 text-[12px]"
-                    style={{ color: "#334155" }}
-                  >
-                    or leave blank to watch your entire Drive
-                  </motion.div>
+                  <p className="text-center text-xs text-muted-foreground/40">or leave blank to watch your entire Drive</p>
                 )}
-
-                <InfoBox>🔒 We only read files — we never modify or delete anything in your Drive.</InfoBox>
-              </div>
+              </>
+            ) : !canUseGooglePicker ? (
+              <FolderBrowser onSelect={handleBrowseSelect} />
             ) : (
-              <div className="flex flex-col gap-3">
-                {canUseGooglePicker && (
-                  <div className="flex justify-between items-baseline">
-                    <FieldLabel>Google Drive folder URL</FieldLabel>
-                    <button onClick={() => setBrowseMode(true)}
-                      className="text-[11px] bg-none border-none cursor-pointer p-0 underline"
-                      style={{ color: "#334155" }}>
-                      Browse folders instead
-                    </button>
-                  </div>
-                )}
-                {!canUseGooglePicker && <FieldLabel>Choose a folder to watch</FieldLabel>}
-
-                {!canUseGooglePicker ? (
-                  <FolderBrowser onSelect={handleBrowseSelect} />
-                ) : (
-                  <div>
-                    <TextInput value={folderUrl} onChange={onFolderUrlChange}
-                      placeholder="Paste folder URL from Google Drive, or leave blank to watch all" />
-                    {folderLoading && <div className="text-[11px] mt-1" style={{ color: "#64748b" }}>Verifying folder…</div>}
-                    {folderInfo && <div className="text-[11px] mt-1" style={{ color: "#4ade80" }}>✓ Found: "{folderInfo.name}" · {folderInfo.fileCount} files</div>}
-                    {folderError && <div className="text-[11px] mt-1" style={{ color: "#f87171" }}>✗ {folderError}</div>}
-                  </div>
-                )}
-
-                <InfoBox>🔒 We only read files — we never modify or delete anything in your Drive.</InfoBox>
+              <div>
+                <Input value={folderUrl} onChange={onFolderUrlChange}
+                  placeholder="Paste folder URL from Google Drive, or leave blank to watch all" />
+                {folderLoading && <p className="text-xs mt-1 text-muted-foreground">Verifying folder…</p>}
+                {folderInfo  && <p className="text-xs mt-1 text-green-400">✓ Found: "{folderInfo.name}" · {folderInfo.fileCount} files</p>}
+                {folderError && <p className="text-xs mt-1 text-destructive">✗ {folderError}</p>}
               </div>
             )}
-          </WizardShell>
+
+            <InfoBox>🔒 We only read files — we never modify or delete anything in your Drive.</InfoBox>
+            <WizardFooter onNext={() => go(1)} />
+          </div>
         )}
 
         {step === 1 && (
-          <WizardShell onBack={() => go(0)} onNext={() => go(2)} nextLabel="Review →">
-            <div className="flex flex-col gap-3">
-              <div>
-                <FieldLabel>Import files from this date onwards</FieldLabel>
-                <input type="date" value={syncFrom} onChange={e => setSyncFrom(e.target.value)}
-                  className="input" style={{ width: "auto", colorScheme: "dark" }} />
-                <div className="text-[11px] mt-1.5" style={{ color: "#334155" }}>Only files modified on or after this date.</div>
-              </div>
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input type="checkbox" checked={includeSubfolders}
-                  onChange={e => setIncludeSubfolders(e.target.checked)}
-                  style={{ accentColor: "#6366f1", width: 14, height: 14 }} />
-                <span className="text-[12px]" style={{ color: "#94a3b8" }}>Include subfolders</span>
-              </label>
+          <div className="flex flex-col gap-3">
+            <div>
+              <FieldLabel>Import files from this date onwards</FieldLabel>
+              <input type="date" value={syncFrom} onChange={e => setSyncFrom(e.target.value)}
+                className="input" style={{ width: "auto", colorScheme: "dark" }} />
+              <p className="text-xs mt-1.5 text-muted-foreground/50">Only files modified on or after this date.</p>
             </div>
-          </WizardShell>
+            <label className="flex items-center gap-2 cursor-pointer">
+              <Checkbox checked={includeSubfolders} onCheckedChange={setIncludeSubfolders} />
+              <span className="text-sm text-muted-foreground">Include subfolders</span>
+            </label>
+            <WizardFooter onBack={() => go(0)} onNext={() => go(2)} nextLabel="Review →" />
+          </div>
         )}
 
         {step === 2 && (
-          <WizardShell onBack={() => go(1)} onComplete={save} completeLabel="Start first sync" saving={saving} error={error}>
-            <div className="flex flex-col gap-2">
-              <div className="text-[12px] font-semibold mb-1" style={{ color: "#94a3b8" }}>Setup summary</div>
-              <SummaryRow label="Folder"     value={displayFolderName} />
-              <SummaryRow label="Sync from"  value={syncFrom} />
-              <SummaryRow label="Subfolders" value={includeSubfolders ? "Included" : "Top level only"} />
-              {folderInfo?.fileCount > 0 && <SummaryRow label="Available files" value={`${folderInfo.fileCount} invoice files`} />}
-            </div>
-          </WizardShell>
+          <div className="flex flex-col gap-2">
+            <p className="text-xs font-semibold text-muted-foreground mb-1">Setup summary</p>
+            <SummaryRow label="Folder"     value={displayFolderName} />
+            <SummaryRow label="Sync from"  value={syncFrom} />
+            <SummaryRow label="Subfolders" value={includeSubfolders ? "Included" : "Top level only"} />
+            {folderInfo?.fileCount > 0 && <SummaryRow label="Available files" value={`${folderInfo.fileCount} invoice files`} />}
+            <WizardFooter onBack={() => go(1)} onComplete={save} completeLabel="Start first sync" saving={saving} error={error} />
+          </div>
         )}
       </StepAnimator>
-    </div>
+    </>
   );
 }
 
@@ -679,30 +564,26 @@ function GoogleDriveWizard({ integration, onComplete }) {
 function SenderChip({ domain, name, count, selected, onToggle }) {
   return (
     <motion.button
-      layout
-      whileHover={{ scale: 1.04 }}
-      whileTap={{ scale: 0.96 }}
+      layout whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.96 }}
       onClick={onToggle}
-      className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-full cursor-pointer"
-      style={{
-        background: selected ? "#0c1f0c" : "#0d1626",
-        border: `1px solid ${selected ? "#4ade8044" : "#1e2d45"}`,
-        color: selected ? "#4ade80" : "#94a3b8",
-        transition: "background 0.2s, border-color 0.2s, color 0.2s",
-      }}
+      className={cn(
+        "inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-full cursor-pointer text-xs transition-colors",
+        selected
+          ? "bg-green-950/60 border border-green-700/40 text-green-400"
+          : "bg-muted/50 border border-border text-muted-foreground hover:border-border/80"
+      )}
     >
       <motion.span
-        animate={{ background: selected ? "#4ade80" : "#334155" }}
+        animate={{ background: selected ? "#4ade80" : "hsl(var(--muted-foreground))" }}
         className="w-2 h-2 rounded-full flex-shrink-0"
       />
-      <span className="text-[12px]" style={{ fontWeight: selected ? 600 : 400 }}>
+      <span style={{ fontWeight: selected ? 600 : 400 }}>
         {name && name !== domain ? name : domain}
       </span>
       {name && name !== domain && (
-        <span className="text-[10px]" style={{ color: selected ? "#86efac" : "#475569" }}>{domain}</span>
+        <span className={cn("text-[10px]", selected ? "text-green-300/60" : "text-muted-foreground/50")}>{domain}</span>
       )}
-      <span className="px-1.5 py-0 rounded-full text-[10px] font-semibold ml-1"
-        style={{ background: "#1e2d45", color: "#64748b" }}>
+      <span className="px-1.5 py-0 rounded-full text-[10px] font-semibold ml-1 bg-border/50 text-muted-foreground">
         {count}
       </span>
     </motion.button>
@@ -712,23 +593,23 @@ function SenderChip({ domain, name, count, selected, onToggle }) {
 // ─── Gmail wizard ─────────────────────────────────────────────────────────────
 
 function GmailWizard({ integration, onComplete }) {
-  const [step,           setStep]          = useState(0);
-  const [dir,            setDir]           = useState(1);
-  const [scanMode,       setScanMode]      = useState("all");
-  const [recentSenders,  setRecentSenders] = useState([]);
-  const [sendersLoading, setSendersLoading]= useState(false);
-  const [sendersLoaded,  setSendersLoaded] = useState(false);
-  const [selectedDomains,setSelectedDomains] = useState(new Set());
-  const [showManualInput,setShowManualInput] = useState(false);
-  const [manualDomains,  setManualDomains] = useState("");
-  const [labels,         setLabels]        = useState([]);
-  const [labelId,        setLabelId]       = useState("");
-  const [labelName,      setLabelName]     = useState("");
-  const [keywords,       setKeywords]      = useState("");
-  const [showAdvanced,   setShowAdvanced]  = useState(false);
-  const [syncFrom,       setSyncFrom]      = useState(defaultSyncFrom());
-  const [saving,         setSaving]        = useState(false);
-  const [error,          setError]         = useState(null);
+  const [step,           setStep]           = useState(0);
+  const [dir,            setDir]            = useState(1);
+  const [scanMode,       setScanMode]       = useState("all");
+  const [recentSenders,  setRecentSenders]  = useState([]);
+  const [sendersLoading, setSendersLoading] = useState(false);
+  const [sendersLoaded,  setSendersLoaded]  = useState(false);
+  const [selectedDomains,setSelectedDomains]= useState(new Set());
+  const [showManualInput,setShowManualInput]= useState(false);
+  const [manualDomains,  setManualDomains]  = useState("");
+  const [labels,         setLabels]         = useState([]);
+  const [labelId,        setLabelId]        = useState("");
+  const [labelName,      setLabelName]      = useState("");
+  const [keywords,       setKeywords]       = useState("");
+  const [showAdvanced,   setShowAdvanced]   = useState(false);
+  const [syncFrom,       setSyncFrom]       = useState(defaultSyncFrom());
+  const [saving,         setSaving]         = useState(false);
+  const [error,          setError]          = useState(null);
 
   const go = s => { setDir(s > step ? 1 : -1); setStep(s); };
 
@@ -745,18 +626,12 @@ function GmailWizard({ integration, onComplete }) {
         .finally(() => setSendersLoading(false));
     }
     if (scanMode === "label_filter" && labels.length === 0) {
-      apiCall("/api/integrations/gmail/labels")
-        .then(({ labels: l }) => setLabels(l))
-        .catch(() => {});
+      apiCall("/api/integrations/gmail/labels").then(({ labels: l }) => setLabels(l)).catch(() => {});
     }
   }, [scanMode, sendersLoaded, sendersLoading, labels.length]);
 
   const toggleDomain = domain => {
-    setSelectedDomains(prev => {
-      const next = new Set(prev);
-      next.has(domain) ? next.delete(domain) : next.add(domain);
-      return next;
-    });
+    setSelectedDomains(prev => { const n = new Set(prev); n.has(domain) ? n.delete(domain) : n.add(domain); return n; });
   };
 
   const save = async () => {
@@ -767,193 +642,153 @@ function GmailWizard({ integration, onComplete }) {
       const senderDomains   = [...new Set([...chipDomains, ...manualList])];
       const subjectKeywords = keywords.split(/[\n,]+/).map(s => s.trim()).filter(Boolean);
       const selectedLabel   = labels.find(l => l.id === labelId);
-
       await apiCall(`/api/integrations/${integration.id}/config`, {
         method: "PATCH",
-        body: JSON.stringify({
-          config: {
-            ...integration.config,
-            setup_complete:   true,
-            sync_from:        syncFrom,
-            scan_mode:        scanMode,
-            sender_domains:   scanMode === "sender_filter" ? senderDomains : [],
-            gmail_label_id:   scanMode === "label_filter"  ? labelId : null,
-            gmail_label_name: scanMode === "label_filter"  ? (selectedLabel?.name || null) : null,
-            subject_keywords: subjectKeywords,
-          },
-        }),
+        body: JSON.stringify({ config: {
+          ...integration.config, setup_complete: true, sync_from: syncFrom, scan_mode: scanMode,
+          sender_domains: scanMode === "sender_filter" ? senderDomains : [],
+          gmail_label_id: scanMode === "label_filter" ? labelId : null,
+          gmail_label_name: scanMode === "label_filter" ? (selectedLabel?.name || null) : null,
+          subject_keywords: subjectKeywords,
+        }}),
       });
       onComplete();
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setSaving(false);
-    }
+    } catch (err) { setError(err.message); }
+    finally { setSaving(false); }
   };
 
   const steps = ["Filter emails", "Sync scope", "Confirm"];
 
   return (
-    <div className="mt-4 p-4 rounded-xl" style={{ background: "#060d1a", border: "1px solid #1e2d45" }}>
+    <>
       <StepIndicator steps={steps} current={step} />
       <StepAnimator step={step} dir={dir}>
         {step === 0 && (
-          <WizardShell onNext={() => go(1)} nextLabel="Next →">
-            <div className="flex flex-col gap-2">
-              <div className="text-[12px] font-semibold mb-1" style={{ color: "#94a3b8" }}>Which emails should we watch?</div>
+          <div className="flex flex-col gap-2">
+            <p className="text-sm font-semibold text-foreground/80 mb-1">Which emails should we watch?</p>
 
-              {[
-                { id: "all",           label: "All emails with PDF or image attachments" },
-                { id: "sender_filter", label: "Only from specific senders (recommended)" },
-                { id: "label_filter",  label: "Only emails with a specific Gmail label" },
-              ].map(opt => (
-                <motion.button
-                  key={opt.id}
-                  whileHover={{ scale: 1.01 }}
-                  whileTap={{ scale: 0.99 }}
-                  onClick={() => setScanMode(opt.id)}
-                  className="px-3 py-2 rounded-md border text-[12px] text-left w-full cursor-pointer"
-                  style={{
-                    border: `1px solid ${scanMode === opt.id ? "#6366f1" : "#1e2d45"}`,
-                    background: scanMode === opt.id ? "#13103a" : "#0d1626",
-                    color: scanMode === opt.id ? "#a78bfa" : "#64748b",
-                  }}
-                >
-                  <span className="mr-1.5">{scanMode === opt.id ? "●" : "○"}</span>{opt.label}
-                </motion.button>
-              ))}
+            {[
+              { id: "all",           label: "All emails with PDF or image attachments" },
+              { id: "sender_filter", label: "Only from specific senders (recommended)" },
+              { id: "label_filter",  label: "Only emails with a specific Gmail label" },
+            ].map(opt => (
+              <motion.button
+                key={opt.id} whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.99 }}
+                onClick={() => setScanMode(opt.id)}
+                className={cn(
+                  "px-3 py-2.5 rounded-lg border text-sm text-left w-full cursor-pointer transition-colors",
+                  scanMode === opt.id
+                    ? "border-primary/50 bg-primary/10 text-primary"
+                    : "border-border bg-muted/20 text-muted-foreground hover:border-border/80"
+                )}
+              >
+                <span className="mr-2 text-xs">{scanMode === opt.id ? "●" : "○"}</span>{opt.label}
+              </motion.button>
+            ))}
 
-              <AnimatePresence>
-                {scanMode === "sender_filter" && (
-                  <motion.div
-                    initial={{ opacity: 0, height: 0 }}
-                    animate={{ opacity: 1, height: "auto" }}
-                    exit={{ opacity: 0, height: 0 }}
-                    className="overflow-hidden"
-                  >
-                    <div className="mt-1">
-                      <div className="text-[11px] mb-2" style={{ color: "#64748b" }}>
-                        {sendersLoading ? "Detecting senders from recent emails…" :
-                          recentSenders.length > 0 ? "Select which senders to import from:" :
-                          "No recent business senders found — add manually below."}
+            <AnimatePresence>
+              {scanMode === "sender_filter" && (
+                <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }} className="overflow-hidden">
+                  <div className="mt-1">
+                    <p className="text-xs text-muted-foreground mb-2">
+                      {sendersLoading ? "Detecting senders from recent emails…" :
+                        recentSenders.length > 0 ? "Select which senders to import from:" :
+                        "No recent business senders found — add manually below."}
+                    </p>
+                    {sendersLoading ? (
+                      <div className="flex flex-wrap gap-2">
+                        {[90, 120, 75, 105].map((w, i) => (
+                          <div key={i} className="shimmer rounded-full" style={{ height: 30, width: w, opacity: 1 - i * 0.15 }} />
+                        ))}
                       </div>
+                    ) : recentSenders.length > 0 ? (
+                      <motion.div className="flex flex-wrap gap-2">
+                        {recentSenders.map((s, i) => (
+                          <motion.div key={s.domain} initial={{ opacity: 0, scale: 0.85 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: i * 0.06 }}>
+                            <SenderChip domain={s.domain} name={s.name} count={s.count}
+                              selected={selectedDomains.has(s.domain)} onToggle={() => toggleDomain(s.domain)} />
+                          </motion.div>
+                        ))}
+                      </motion.div>
+                    ) : null}
+                    {recentSenders.length > 0 && !showManualInput && (
+                      <button onClick={() => setShowManualInput(true)}
+                        className="mt-2.5 text-xs text-muted-foreground hover:text-foreground bg-transparent border-none cursor-pointer p-0 underline">
+                        + Add sender manually
+                      </button>
+                    )}
+                    {(showManualInput || recentSenders.length === 0) && (
+                      <div className="mt-2">
+                        <FieldLabel>Sender emails or domains (one per line)</FieldLabel>
+                        <textarea value={manualDomains} onChange={e => setManualDomains(e.target.value)}
+                          placeholder={"tnuva.co.il\nosem.co.il\nsupplier@example.com"}
+                          rows={3} className="input" style={{ resize: "vertical" }} />
+                      </div>
+                    )}
+                  </div>
+                </motion.div>
+              )}
+              {scanMode === "label_filter" && (
+                <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }} className="overflow-hidden mt-1">
+                  <FieldLabel>Gmail label</FieldLabel>
+                  {labels.length === 0
+                    ? <p className="text-sm text-muted-foreground">Loading labels…</p>
+                    : <select value={labelId}
+                        onChange={e => { setLabelId(e.target.value); setLabelName(labels.find(l => l.id === e.target.value)?.name || ""); }}
+                        className="input" style={{ cursor: "pointer" }}>
+                        <option value="">Select a label…</option>
+                        {labels.map(l => <option key={l.id} value={l.id}>{l.name}</option>)}
+                      </select>
+                  }
+                </motion.div>
+              )}
+            </AnimatePresence>
 
-                      {sendersLoading ? (
-                        <div className="flex flex-wrap gap-2">
-                          {[90, 120, 75, 105].map((w, i) => (
-                            <div key={i} className="shimmer rounded-full"
-                              style={{ height: 30, width: w, opacity: 1 - i * 0.15 }} />
-                          ))}
-                        </div>
-                      ) : recentSenders.length > 0 ? (
-                        <motion.div className="flex flex-wrap gap-2">
-                          {recentSenders.map((s, i) => (
-                            <motion.div
-                              key={s.domain}
-                              initial={{ opacity: 0, scale: 0.85 }}
-                              animate={{ opacity: 1, scale: 1 }}
-                              transition={{ delay: i * 0.06 }}
-                            >
-                              <SenderChip
-                                domain={s.domain} name={s.name} count={s.count}
-                                selected={selectedDomains.has(s.domain)}
-                                onToggle={() => toggleDomain(s.domain)}
-                              />
-                            </motion.div>
-                          ))}
-                        </motion.div>
-                      ) : null}
+            <button onClick={() => setShowAdvanced(v => !v)}
+              className="self-start text-xs text-muted-foreground/50 hover:text-muted-foreground bg-transparent border-none cursor-pointer p-0 mt-1">
+              {showAdvanced ? "▾" : "▸"} Advanced options
+            </button>
+            <AnimatePresence>
+              {showAdvanced && (
+                <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }}>
+                  <FieldLabel>Subject must contain (keywords, comma-separated)</FieldLabel>
+                  <Input value={keywords} onChange={e => setKeywords(e.target.value)} placeholder="invoice, חשבונית, receipt" />
+                </motion.div>
+              )}
+            </AnimatePresence>
 
-                      {recentSenders.length > 0 && !showManualInput && (
-                        <button onClick={() => setShowManualInput(true)}
-                          className="mt-2.5 bg-none border-none cursor-pointer p-0 underline text-[11px]"
-                          style={{ color: "#334155" }}>
-                          + Add sender manually
-                        </button>
-                      )}
-
-                      {(showManualInput || recentSenders.length === 0) && (
-                        <div className="mt-2">
-                          <FieldLabel>Sender emails or domains (one per line)</FieldLabel>
-                          <textarea value={manualDomains} onChange={e => setManualDomains(e.target.value)}
-                            placeholder={"tnuva.co.il\nosem.co.il\nsupplier@example.com"}
-                            rows={3} className="input" style={{ resize: "vertical" }} />
-                        </div>
-                      )}
-                    </div>
-                  </motion.div>
-                )}
-
-                {scanMode === "label_filter" && (
-                  <motion.div
-                    initial={{ opacity: 0, height: 0 }}
-                    animate={{ opacity: 1, height: "auto" }}
-                    exit={{ opacity: 0, height: 0 }}
-                    className="overflow-hidden mt-1"
-                  >
-                    <FieldLabel>Gmail label</FieldLabel>
-                    {labels.length === 0
-                      ? <div className="text-[12px]" style={{ color: "#475569" }}>Loading labels…</div>
-                      : (
-                        <select value={labelId}
-                          onChange={e => { setLabelId(e.target.value); setLabelName(labels.find(l => l.id === e.target.value)?.name || ""); }}
-                          className="input" style={{ cursor: "pointer" }}>
-                          <option value="">Select a label…</option>
-                          {labels.map(l => <option key={l.id} value={l.id}>{l.name}</option>)}
-                        </select>
-                      )
-                    }
-                  </motion.div>
-                )}
-              </AnimatePresence>
-
-              <button onClick={() => setShowAdvanced(v => !v)}
-                className="self-start bg-none border-none cursor-pointer p-0 text-[11px] mt-1"
-                style={{ color: "#334155" }}>
-                {showAdvanced ? "▾" : "▸"} Advanced options
-              </button>
-              <AnimatePresence>
-                {showAdvanced && (
-                  <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }}>
-                    <FieldLabel>Subject must contain (keywords, comma-separated)</FieldLabel>
-                    <TextInput value={keywords} onChange={e => setKeywords(e.target.value)}
-                      placeholder="invoice, חשבונית, receipt" />
-                  </motion.div>
-                )}
-              </AnimatePresence>
-
-              <InfoBox>🔒 Only file attachments are processed — email body text is never read or stored.</InfoBox>
-            </div>
-          </WizardShell>
+            <InfoBox>🔒 Only file attachments are processed — email body text is never read or stored.</InfoBox>
+            <WizardFooter onNext={() => go(1)} />
+          </div>
         )}
 
         {step === 1 && (
-          <WizardShell onBack={() => go(0)} onNext={() => go(2)} nextLabel="Review →">
+          <div className="flex flex-col gap-3">
             <div>
               <FieldLabel>Import emails received from this date onwards</FieldLabel>
               <input type="date" value={syncFrom} onChange={e => setSyncFrom(e.target.value)}
                 className="input" style={{ width: "auto", colorScheme: "dark" }} />
-              <div className="text-[11px] mt-1.5" style={{ color: "#334155" }}>Only emails received on or after this date.</div>
+              <p className="text-xs mt-1.5 text-muted-foreground/50">Only emails received on or after this date.</p>
             </div>
-          </WizardShell>
+            <WizardFooter onBack={() => go(0)} onNext={() => go(2)} nextLabel="Review →" />
+          </div>
         )}
 
         {step === 2 && (
-          <WizardShell onBack={() => go(1)} onComplete={save} completeLabel="Start first sync" saving={saving} error={error}>
-            <div className="flex flex-col gap-2">
-              <div className="text-[12px] font-semibold mb-1" style={{ color: "#94a3b8" }}>Setup summary</div>
-              <SummaryRow label="Scan mode" value={{ all: "All attachments", sender_filter: "Sender filter", label_filter: "Gmail label" }[scanMode]} />
-              {scanMode === "sender_filter" && selectedDomains.size > 0 && (
-                <SummaryRow label="Senders" value={[...selectedDomains, ...manualDomains.split(/[\n,]+/).map(s => s.trim()).filter(Boolean)].join(", ")} />
-              )}
-              {scanMode === "label_filter" && labelName && <SummaryRow label="Label" value={labelName} />}
-              {keywords && <SummaryRow label="Keywords" value={keywords} />}
-              <SummaryRow label="Sync from" value={syncFrom} />
-            </div>
-          </WizardShell>
+          <div className="flex flex-col gap-2">
+            <p className="text-xs font-semibold text-muted-foreground mb-1">Setup summary</p>
+            <SummaryRow label="Scan mode" value={{ all: "All attachments", sender_filter: "Sender filter", label_filter: "Gmail label" }[scanMode]} />
+            {scanMode === "sender_filter" && selectedDomains.size > 0 && (
+              <SummaryRow label="Senders" value={[...selectedDomains, ...manualDomains.split(/[\n,]+/).map(s => s.trim()).filter(Boolean)].join(", ")} />
+            )}
+            {scanMode === "label_filter" && labelName && <SummaryRow label="Label" value={labelName} />}
+            {keywords && <SummaryRow label="Keywords" value={keywords} />}
+            <SummaryRow label="Sync from" value={syncFrom} />
+            <WizardFooter onBack={() => go(1)} onComplete={save} completeLabel="Start first sync" saving={saving} error={error} />
+          </div>
         )}
       </StepAnimator>
-    </div>
+    </>
   );
 }
 
@@ -970,33 +805,28 @@ function GreenInvoiceConnect({ onConnected }) {
     setSaving(true); setError(null);
     try {
       const { accountName } = await apiCall("/api/integrations/green-invoice", {
-        method: "POST",
-        body: JSON.stringify({ apiKey, apiSecret }),
+        method: "POST", body: JSON.stringify({ apiKey, apiSecret }),
       });
       onConnected(accountName);
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setSaving(false);
-    }
+    } catch (err) { setError(err.message); }
+    finally { setSaving(false); }
   };
 
   return (
-    <div className="mt-4 flex flex-col gap-2">
-      <TextInput value={apiKey} onChange={e => setApiKey(e.target.value)} placeholder="Green Invoice API ID" />
-      <TextInput value={apiSecret} onChange={e => setApiSecret(e.target.value)} placeholder="Green Invoice API Secret" type="password" />
-      <div className="text-[11px]" style={{ color: "#334155" }}>Find these in Green Invoice → Account Settings → API Keys.</div>
-      {error && <div className="text-[11px]" style={{ color: "#f87171" }}>{error}</div>}
-      <motion.button
-        whileHover={{ scale: 1.02, filter: "brightness(1.1)" }}
-        whileTap={{ scale: 0.98 }}
+    <div className="flex flex-col gap-3 mt-2">
+      <Input value={apiKey} onChange={e => setApiKey(e.target.value)} placeholder="Green Invoice API ID" />
+      <Input value={apiSecret} onChange={e => setApiSecret(e.target.value)} placeholder="Green Invoice API Secret" type="password" />
+      <p className="text-xs text-muted-foreground/50">Find these in Green Invoice → Account Settings → API Keys.</p>
+      {error && <p className="text-xs text-destructive">{error}</p>}
+      <Button
+        size="sm"
         onClick={connect}
         disabled={saving}
-        className="self-start px-4 py-1.5 rounded-md text-[12px] font-semibold border-none cursor-pointer"
-        style={{ background: "linear-gradient(135deg,#34d39988,#34d399)", color: "#fff" }}
+        className="self-start"
+        style={{ background: "linear-gradient(135deg,#34d39988,#34d399)" }}
       >
         {saving ? "Verifying credentials…" : "Connect"}
-      </motion.button>
+      </Button>
     </div>
   );
 }
@@ -1018,11 +848,8 @@ function GreenInvoiceWizard({ integration, onComplete }) {
       try {
         const { count } = await apiCall(`/api/integrations/green-invoice/preview?since=${encodeURIComponent(syncFrom)}`);
         setPreviewCount(count);
-      } catch {
-        setPreviewCount(null);
-      } finally {
-        setPreviewLoading(false);
-      }
+      } catch { setPreviewCount(null); }
+      finally { setPreviewLoading(false); }
     }, 600);
     return () => clearTimeout(debounceRef.current);
   }, [syncFrom, integration.id]);
@@ -1035,24 +862,15 @@ function GreenInvoiceWizard({ integration, onComplete }) {
         body: JSON.stringify({ config: { ...integration.config, setup_complete: true, sync_from: syncFrom } }),
       });
       onComplete();
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setSaving(false);
-    }
+    } catch (err) { setError(err.message); }
+    finally { setSaving(false); }
   };
 
   return (
-    <div className="mt-4 p-4 rounded-xl flex flex-col gap-3.5" style={{ background: "#060d1a", border: "1px solid #1e2d45" }}>
+    <div className="flex flex-col gap-4">
       {accountName && (
-        <motion.div
-          initial={{ opacity: 0, y: -6 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="flex items-center gap-2 px-3 py-2 rounded-lg text-[12px]"
-          style={{ background: "#052e16", border: "1px solid #166534", color: "#4ade80" }}
-        >
-          <span>✓</span>
-          <span>Connected as <strong>{accountName}</strong></span>
+        <motion.div initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }}>
+          <InfoBox variant="success">✓ Connected as <strong>{accountName}</strong></InfoBox>
         </motion.div>
       )}
 
@@ -1063,46 +881,27 @@ function GreenInvoiceWizard({ integration, onComplete }) {
 
         <AnimatePresence mode="wait">
           {previewLoading ? (
-            <motion.div key="loading" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-              className="mt-2 text-[11px]" style={{ color: "#64748b" }}>
-              Checking available documents…
-            </motion.div>
+            <motion.p key="loading" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+              className="mt-2 text-xs text-muted-foreground">Checking available documents…</motion.p>
           ) : previewCount !== null ? (
-            <motion.div
-              key={previewCount}
-              initial={{ opacity: 0, scale: 0.97 }}
-              animate={{ opacity: 1, scale: 1 }}
-              className="mt-2.5 px-3.5 py-2.5 rounded-lg text-[13px] font-semibold"
-              style={{
-                background: previewCount > 0 ? "#052e16" : "#0d1626",
-                border: `1px solid ${previewCount > 0 ? "#166534" : "#1e2d45"}`,
-                color: previewCount > 0 ? "#4ade80" : "#475569",
-              }}
-            >
-              {previewCount > 0
-                ? `✓ Found ${previewCount} expense document${previewCount !== 1 ? "s" : ""} since ${syncFrom}`
-                : `No documents found since ${syncFrom}`}
+            <motion.div key={previewCount} initial={{ opacity: 0, scale: 0.97 }} animate={{ opacity: 1, scale: 1 }}>
+              <InfoBox variant={previewCount > 0 ? "success" : "default"} className="mt-2.5">
+                {previewCount > 0
+                  ? `✓ Found ${previewCount} expense document${previewCount !== 1 ? "s" : ""} since ${syncFrom}`
+                  : `No documents found since ${syncFrom}`}
+              </InfoBox>
             </motion.div>
           ) : null}
         </AnimatePresence>
 
-        <div className="mt-2 text-[11px]" style={{ color: "#334155" }}>
-          Only received invoices (document type 500) from Green Invoice will be imported.
-        </div>
+        <p className="mt-2 text-xs text-muted-foreground/40">Only received invoices (document type 500) from Green Invoice will be imported.</p>
       </div>
 
-      {error && <div className="text-[12px]" style={{ color: "#f87171" }}>{error}</div>}
+      {error && <p className="text-xs text-destructive">{error}</p>}
 
-      <motion.button
-        whileHover={{ scale: 1.02, filter: "brightness(1.1)" }}
-        whileTap={{ scale: 0.98 }}
-        onClick={save}
-        disabled={saving}
-        className="self-start px-5 py-2 rounded-lg text-[13px] font-semibold border-none cursor-pointer"
-        style={{ background: "linear-gradient(135deg,#6366f1,#a78bfa)", color: "#fff", opacity: saving ? 0.7 : 1 }}
-      >
+      <Button size="sm" onClick={save} disabled={saving} className="self-start">
         {saving ? "Saving…" : "Complete setup →"}
-      </motion.button>
+      </Button>
     </div>
   );
 }
@@ -1111,30 +910,22 @@ function GreenInvoiceWizard({ integration, onComplete }) {
 
 function SupplierPhoneRow({ supplier, checked, phone, phoneError, onToggle, onPhoneChange }) {
   return (
-    <motion.div
-      layout
-      className="flex items-center gap-2.5 py-2.5"
-      style={{ borderBottom: "1px solid #0d1626" }}
-    >
-      <input type="checkbox" checked={checked} onChange={onToggle}
-        style={{ accentColor: "#25D366", width: 15, height: 15, flexShrink: 0, cursor: "pointer" }} />
-      <span className="flex-1 text-[13px] min-w-0 overflow-hidden text-ellipsis whitespace-nowrap"
-        style={{ color: checked ? "#e2e8f0" : "#475569", fontWeight: checked ? 500 : 400 }}>
+    <motion.div layout className="flex items-center gap-2.5 py-2.5 border-b border-muted/30">
+      <Checkbox checked={checked} onCheckedChange={onToggle}
+        className="border-[#25D366]/40 data-[state=checked]:bg-[#25D366] data-[state=checked]:border-[#25D366]" />
+      <span className={cn("flex-1 text-sm min-w-0 overflow-hidden text-ellipsis whitespace-nowrap",
+        checked ? "text-foreground font-medium" : "text-muted-foreground")}>
         {supplier.name}
       </span>
       <AnimatePresence>
         {checked && (
-          <motion.div
-            initial={{ opacity: 0, width: 0 }}
-            animate={{ opacity: 1, width: "auto" }}
-            exit={{ opacity: 0, width: 0 }}
-            className="flex flex-col gap-0.5 flex-shrink-0 overflow-hidden"
-          >
+          <motion.div initial={{ opacity: 0, width: 0 }} animate={{ opacity: 1, width: "auto" }}
+            exit={{ opacity: 0, width: 0 }} className="flex flex-col gap-0.5 flex-shrink-0 overflow-hidden">
             <input value={phone} onChange={e => onPhoneChange(e.target.value)}
               placeholder="0501234567" autoFocus
               className="input"
-              style={{ width: 140, fontFamily: "monospace", fontSize: 12, borderColor: phoneError ? "#7f1d1d" : "#1e2d45" }} />
-            {phoneError && <div className="text-[10px]" style={{ color: "#f87171" }}>{phoneError}</div>}
+              style={{ width: 140, fontFamily: "monospace", fontSize: 12, borderColor: phoneError ? "#7f1d1d" : undefined }} />
+            {phoneError && <p className="text-[10px] text-destructive">{phoneError}</p>}
           </motion.div>
         )}
       </AnimatePresence>
@@ -1145,20 +936,19 @@ function SupplierPhoneRow({ supplier, checked, phone, phoneError, onToggle, onPh
 // ─── WhatsApp wizard ──────────────────────────────────────────────────────────
 
 function WhatsAppWizard({ integration, onComplete }) {
-  const [step,         setStep]        = useState(0);
-  const [dir,          setDir]         = useState(1);
-  const [savedContact, setSavedContact]= useState(false);
-  const [suppliers,    setSuppliers]   = useState([]);
-  const [suppLoading,  setSuppLoading] = useState(true);
-  const [checkedIds,   setCheckedIds]  = useState(new Set());
-  const [phoneMap,     setPhoneMap]    = useState({});
-  const [manualPhones, setManualPhones]= useState([]);
-  const [saving,       setSaving]      = useState(false);
-  const [error,        setError]       = useState(null);
+  const [step,         setStep]         = useState(0);
+  const [dir,          setDir]          = useState(1);
+  const [savedContact, setSavedContact] = useState(false);
+  const [suppliers,    setSuppliers]    = useState([]);
+  const [suppLoading,  setSuppLoading]  = useState(true);
+  const [checkedIds,   setCheckedIds]   = useState(new Set());
+  const [phoneMap,     setPhoneMap]     = useState({});
+  const [manualPhones, setManualPhones] = useState([]);
+  const [saving,       setSaving]       = useState(false);
+  const [error,        setError]        = useState(null);
   const isMounted = useRef(true);
 
   const systemPhone = import.meta.env.VITE_WHATSAPP_SYSTEM_PHONE || "+972-XX-XXXXXXX";
-
   const go = s => { setDir(s > step ? 1 : -1); setStep(s); };
 
   useEffect(() => {
@@ -1171,14 +961,12 @@ function WhatsAppWizard({ integration, onComplete }) {
           const list = data || [];
           setSuppliers(list);
           const existing = integration.config?.registered_phones || [];
-          const initChecked = new Set();
-          const initPhones  = {};
+          const initChecked = new Set(); const initPhones = {};
           existing.forEach(p => {
             const sup = list.find(s => s.name === p.label);
             if (sup) { initChecked.add(sup.id); initPhones[sup.id] = p.phone; }
           });
-          setCheckedIds(initChecked);
-          setPhoneMap(initPhones);
+          setCheckedIds(initChecked); setPhoneMap(initPhones);
         })
         .finally(() => { if (isMounted.current) setSuppLoading(false); });
     });
@@ -1216,141 +1004,103 @@ function WhatsAppWizard({ integration, onComplete }) {
     try {
       await apiCall(`/api/integrations/${integration.id}/config`, {
         method: "PATCH",
-        body: JSON.stringify({
-          config: { ...integration.config, setup_complete: true, registered_phones: registeredPhones, send_confirmation: true },
-        }),
+        body: JSON.stringify({ config: {
+          ...integration.config, setup_complete: true,
+          registered_phones: registeredPhones, send_confirmation: true,
+        }}),
       });
       onComplete();
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setSaving(false);
-    }
+    } catch (err) { setError(err.message); }
+    finally { setSaving(false); }
   };
 
   const steps = ["Save contact", "Register suppliers", "Go live"];
 
   return (
-    <div className="mt-4 p-4 rounded-xl" style={{ background: "#060d1a", border: "1px solid #1e2d45" }}>
+    <>
       <StepIndicator steps={steps} current={step} />
       <StepAnimator step={step} dir={dir}>
         {step === 0 && (
-          <WizardShell onNext={() => { if (savedContact) go(1); }} canNext={savedContact} nextLabel="Next →">
-            <div className="text-center py-3">
-              <motion.div
-                animate={{ scale: [1, 1.05, 1] }}
-                transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
-                className="text-[40px] mb-3"
-              >
+          <div>
+            <div className="text-center py-4">
+              <motion.div animate={{ scale: [1, 1.05, 1] }} transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }} className="text-[40px] mb-3">
                 💬
               </motion.div>
-              <div className="text-[14px] font-bold mb-1.5" style={{ color: "#e2e8f0" }}>Your Invoice WhatsApp number</div>
-              <div className="text-[26px] font-bold mb-1 tracking-wider" style={{ color: "#25D366" }}>{systemPhone}</div>
-              <div className="text-[11px] mb-4" style={{ color: "#475569" }}>
-                Save this number in your contacts as "Invoice Bot" so suppliers can send invoices to it.
-              </div>
-              <motion.button
-                whileHover={{ scale: 1.04, filter: "brightness(1.1)" }}
-                whileTap={{ scale: 0.97 }}
+              <p className="text-sm font-bold mb-1.5 text-foreground">Your Invoice WhatsApp number</p>
+              <p className="text-2xl font-bold mb-1 tracking-wider" style={{ color: "#25D366" }}>{systemPhone}</p>
+              <p className="text-xs text-muted-foreground mb-4">Save this number in your contacts as "Invoice Bot" so suppliers can send invoices to it.</p>
+              <Button variant="outline" size="sm"
                 onClick={() => window.open(`https://wa.me/${systemPhone.replace(/\D/g, "")}`, "_blank")}
-                className="px-4 py-2 rounded-lg text-[12px] font-semibold cursor-pointer mb-4"
-                style={{ background: "#25D36622", border: "1px solid #25D36644", color: "#25D366" }}
-              >
+                className="border-[#25D366]/30 text-[#25D366] hover:bg-[#25D366]/10 hover:text-[#25D366] mb-4">
                 Open in WhatsApp ↗
-              </motion.button>
+              </Button>
             </div>
             <label className="flex items-center gap-2 cursor-pointer">
-              <input type="checkbox" id="saved" checked={savedContact} onChange={e => setSavedContact(e.target.checked)}
-                style={{ accentColor: "#25D366", width: 14, height: 14 }} />
-              <span className="text-[12px]" style={{ color: "#94a3b8" }}>I've saved the number in my contacts</span>
+              <Checkbox checked={savedContact} onCheckedChange={setSavedContact}
+                className="border-[#25D366]/40 data-[state=checked]:bg-[#25D366] data-[state=checked]:border-[#25D366]" />
+              <span className="text-sm text-muted-foreground">I've saved the number in my contacts</span>
             </label>
-          </WizardShell>
+            <WizardFooter onNext={() => { if (savedContact) go(1); }} canNext={savedContact} />
+          </div>
         )}
 
         {step === 1 && (
-          <WizardShell onBack={() => go(0)} onNext={() => { if (canProceed) go(2); }} canNext={canProceed} nextLabel="Review →">
-            <div>
-              <div className="text-[12px] font-semibold mb-0.5" style={{ color: "#94a3b8" }}>
-                Which suppliers will send invoice photos on WhatsApp?
-              </div>
-              <div className="text-[11px] mb-3" style={{ color: "#334155" }}>
-                Check a supplier and enter their WhatsApp number.
-              </div>
+          <div>
+            <p className="text-sm font-semibold text-foreground/80 mb-0.5">Which suppliers will send invoice photos on WhatsApp?</p>
+            <p className="text-xs text-muted-foreground mb-3">Check a supplier and enter their WhatsApp number.</p>
 
-              {suppLoading ? (
-                <ShimmerRows count={4} height={40} />
-              ) : suppliers.length > 0 ? (
-                <div className="max-h-60 overflow-y-auto mb-2" style={{ scrollbarWidth: "thin" }}>
-                  {suppliers.map((sup, i) => (
-                    <SupplierPhoneRow
-                      key={sup.id} supplier={sup}
-                      checked={checkedIds.has(sup.id)}
-                      phone={phoneMap[sup.id] || ""}
-                      phoneError={supplierPhoneErrors[i]}
-                      onToggle={() => toggleSupplier(sup.id)}
-                      onPhoneChange={val => setPhoneMap(m => ({ ...m, [sup.id]: val }))}
-                    />
-                  ))}
-                </div>
-              ) : (
-                <InfoBox className="mb-2">
-                  No suppliers yet — add phone numbers below and they'll match when suppliers send messages.
-                </InfoBox>
-              )}
-
-              <div className="pt-3 mt-2" style={{ borderTop: "1px solid #1e2d45" }}>
-                {suppliers.length > 0 && (
-                  <div className="text-[11px] mb-2" style={{ color: "#475569" }}>Supplier not in your list?</div>
-                )}
-                {manualPhones.map((ph, i) => (
-                  <div key={i} className="flex gap-1.5 mb-2 items-start">
-                    <div className="flex-1">
-                      <TextInput value={ph.phone} onChange={e => updateManualPhone(i, "phone", e.target.value)}
-                        placeholder="0501234567"
-                        style={{ fontFamily: "monospace", borderColor: manualPhoneErrors[i] ? "#7f1d1d" : "#1e2d45" }} />
-                      {manualPhoneErrors[i] && <div className="text-[10px] mt-0.5" style={{ color: "#f87171" }}>{manualPhoneErrors[i]}</div>}
-                    </div>
-                    <TextInput value={ph.label} onChange={e => updateManualPhone(i, "label", e.target.value)} placeholder="Supplier name" />
-                    <button onClick={() => removeManualPhone(i)}
-                      className="px-2.5 py-2 rounded-md cursor-pointer text-[12px] flex-shrink-0"
-                      style={{ background: "#1a0a0a", border: "1px solid #7f1d1d", color: "#f87171" }}>✕</button>
-                  </div>
+            {suppLoading ? (
+              <ShimmerRows count={4} height={40} />
+            ) : suppliers.length > 0 ? (
+              <div className="max-h-60 overflow-y-auto mb-2" style={{ scrollbarWidth: "thin" }}>
+                {suppliers.map((sup, i) => (
+                  <SupplierPhoneRow key={sup.id} supplier={sup}
+                    checked={checkedIds.has(sup.id)} phone={phoneMap[sup.id] || ""}
+                    phoneError={supplierPhoneErrors[i]}
+                    onToggle={() => toggleSupplier(sup.id)}
+                    onPhoneChange={val => setPhoneMap(m => ({ ...m, [sup.id]: val }))} />
                 ))}
-                <motion.button
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                  onClick={addManualPhone}
-                  className="px-3 py-1.5 rounded-md text-[12px] cursor-pointer"
-                  style={{ background: "#0d1626", border: "1px dashed #1e2d45", color: "#64748b" }}
-                >
-                  + Add supplier
-                </motion.button>
               </div>
-              <div className="text-[11px] mt-2.5" style={{ color: "#334155" }}>
-                Israeli numbers only (+972). Add more suppliers later in settings.
-              </div>
+            ) : (
+              <InfoBox className="mb-2">No suppliers yet — add phone numbers below and they'll match when suppliers send messages.</InfoBox>
+            )}
+
+            <div className="pt-3 mt-2 border-t border-border">
+              {suppliers.length > 0 && <p className="text-xs text-muted-foreground mb-2">Supplier not in your list?</p>}
+              {manualPhones.map((ph, i) => (
+                <div key={i} className="flex gap-1.5 mb-2 items-start">
+                  <div className="flex-1">
+                    <Input value={ph.phone} onChange={e => updateManualPhone(i, "phone", e.target.value)}
+                      placeholder="0501234567"
+                      className={cn("font-mono text-xs", manualPhoneErrors[i] && "border-destructive")} />
+                    {manualPhoneErrors[i] && <p className="text-[10px] mt-0.5 text-destructive">{manualPhoneErrors[i]}</p>}
+                  </div>
+                  <Input value={ph.label} onChange={e => updateManualPhone(i, "label", e.target.value)} placeholder="Supplier name" className="text-xs" />
+                  <Button variant="destructive" size="sm" onClick={() => removeManualPhone(i)} className="flex-shrink-0">✕</Button>
+                </div>
+              ))}
+              <Button variant="outline" size="sm" onClick={addManualPhone} className="border-dashed text-muted-foreground">
+                + Add supplier
+              </Button>
             </div>
-          </WizardShell>
+            <p className="text-xs mt-2.5 text-muted-foreground/40">Israeli numbers only (+972). Add more suppliers later in settings.</p>
+            <WizardFooter onBack={() => go(0)} onNext={() => { if (canProceed) go(2); }} canNext={canProceed} nextLabel="Review →" />
+          </div>
         )}
 
         {step === 2 && (
-          <WizardShell onBack={() => go(1)} onComplete={save} completeLabel="Go live →" saving={saving} error={error}>
-            <div className="flex flex-col gap-2">
-              <div className="text-[12px] font-semibold mb-1" style={{ color: "#94a3b8" }}>Setup summary</div>
-              <SummaryRow label="System number" value={systemPhone} />
-              <SummaryRow
-                label="Registered suppliers"
-                value={registeredPhones.map(p => `${p.label || "Unnamed"} (${p.phone})`).join(", ")}
-              />
-              <SummaryRow label="Auto-reply" value="Enabled — suppliers get a confirmation after each import" />
-              <InfoBox border="#25D36633">
-                Once live, any invoice photo sent to {systemPhone} by a registered supplier will automatically appear in your Invoices tab.
-              </InfoBox>
-            </div>
-          </WizardShell>
+          <div className="flex flex-col gap-2">
+            <p className="text-xs font-semibold text-muted-foreground mb-1">Setup summary</p>
+            <SummaryRow label="System number" value={systemPhone} />
+            <SummaryRow label="Registered suppliers"
+              value={registeredPhones.map(p => `${p.label || "Unnamed"} (${p.phone})`).join(", ")} />
+            <SummaryRow label="Auto-reply" value="Enabled — suppliers get a confirmation after each import" />
+            <InfoBox>Once live, any invoice photo sent to {systemPhone} by a registered supplier will automatically appear in your Invoices tab.</InfoBox>
+            <WizardFooter onBack={() => go(1)} onComplete={save} completeLabel="Go live →" saving={saving} error={error} />
+          </div>
         )}
       </StepAnimator>
-    </div>
+    </>
   );
 }
 
@@ -1359,34 +1109,28 @@ function WhatsAppWizard({ integration, onComplete }) {
 function StatusBadge({ status, setupComplete }) {
   if (status === "connected" && !setupComplete) {
     return (
-      <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold"
-        style={{ background: "#1c1a00", color: "#facc15" }}>
-        <span className="w-1.5 h-1.5 rounded-full inline-block" style={{ background: "#eab308" }} />
+      <Badge variant="outline" className="text-yellow-400 border-yellow-400/30 bg-yellow-950/30 gap-1.5 text-[10px]">
+        <span className="w-1.5 h-1.5 rounded-full bg-yellow-400 inline-block" />
         Setup required
-      </span>
+      </Badge>
     );
   }
   const cfg = {
-    connected:    { bg: "#052e16", color: "#4ade80", dot: "#22c55e", label: "Connected"    },
-    disconnected: { bg: "#1e1b40", color: "#a78bfa", dot: "#818cf8", label: "Disconnected" },
-    error:        { bg: "#2d0a0a", color: "#f87171", dot: "#ef4444", label: "Error"        },
-  }[status] || { bg: "#1e1b40", color: "#94a3b8", dot: "#64748b", label: status };
+    connected:    { className: "text-green-400 border-green-400/30 bg-green-950/30",   dot: "bg-green-400",   label: "Connected"    },
+    disconnected: { className: "text-violet-400 border-violet-400/30 bg-violet-950/30", dot: "bg-violet-400",  label: "Disconnected" },
+    error:        { className: "text-red-400 border-red-400/30 bg-red-950/30",           dot: "bg-red-400",     label: "Error"        },
+  }[status] || { className: "text-muted-foreground border-border", dot: "bg-muted-foreground", label: status };
 
   return (
-    <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold"
-      style={{ background: cfg.bg, color: cfg.color }}>
+    <Badge variant="outline" className={cn("gap-1.5 text-[10px]", cfg.className)}>
       {status === "connected" && setupComplete ? (
-        <motion.span
-          animate={{ opacity: [1, 0.4, 1] }}
-          transition={{ duration: 2, repeat: Infinity }}
-          className="w-1.5 h-1.5 rounded-full inline-block"
-          style={{ background: cfg.dot }}
-        />
+        <motion.span animate={{ opacity: [1, 0.4, 1] }} transition={{ duration: 2, repeat: Infinity }}
+          className={cn("w-1.5 h-1.5 rounded-full inline-block", cfg.dot)} />
       ) : (
-        <span className="w-1.5 h-1.5 rounded-full inline-block" style={{ background: cfg.dot }} />
+        <span className={cn("w-1.5 h-1.5 rounded-full inline-block", cfg.dot)} />
       )}
       {cfg.label}
-    </span>
+    </Badge>
   );
 }
 
@@ -1394,11 +1138,11 @@ function StatusBadge({ status, setupComplete }) {
 
 function IntegrationCard({ type, integration, onSync, onDisconnect }) {
   const meta           = INTEGRATION_META[type];
-  const [syncing,      setSyncing]     = useState(false);
-  const [showForm,     setShowForm]    = useState(false);
-  const [showSettings, setShowSettings]= useState(false);
-  const [lastAdded,    setLastAdded]   = useState(null);
-  const [connecting,   setConnecting]  = useState(false);
+  const [syncing,      setSyncing]      = useState(false);
+  const [wizardOpen,   setWizardOpen]   = useState(false);
+  const [showForm,     setShowForm]     = useState(false);
+  const [lastAdded,    setLastAdded]    = useState(null);
+  const [connecting,   setConnecting]   = useState(false);
 
   const isConnected   = integration?.status === "connected";
   const setupComplete = integration?.config?.setup_complete === true;
@@ -1419,6 +1163,7 @@ function IntegrationCard({ type, integration, onSync, onDisconnect }) {
       try {
         await apiCall("/api/integrations/whatsapp/connect", { method: "POST" });
         await onSync();
+        setWizardOpen(true);
       } catch (err) { alert(err.message); }
       finally { setConnecting(false); }
     }
@@ -1428,12 +1173,9 @@ function IntegrationCard({ type, integration, onSync, onDisconnect }) {
     setSyncing(true); setLastAdded(null);
     try {
       const { added } = await apiCall(`/api/integrations/${integration.id}/sync`, { method: "POST" });
-      setLastAdded(added);
-      onSync();
-    } catch (err) {
-      alert(`Sync failed: ${err.message}`);
-      onSync();
-    } finally { setSyncing(false); }
+      setLastAdded(added); onSync();
+    } catch (err) { alert(`Sync failed: ${err.message}`); onSync(); }
+    finally { setSyncing(false); }
   };
 
   const handleDisconnect = async () => {
@@ -1444,7 +1186,12 @@ function IntegrationCard({ type, integration, onSync, onDisconnect }) {
     } catch (err) { alert(err.message); }
   };
 
-  const wizardDone = () => { setShowSettings(false); onSync(); };
+  const wizardDone = () => { setWizardOpen(false); onSync(); };
+
+  // Open wizard automatically when connected but not set up yet
+  useEffect(() => {
+    if (isConnected && !setupComplete) setWizardOpen(true);
+  }, [isConnected, setupComplete]);
 
   const config = integration?.config || {};
 
@@ -1466,172 +1213,144 @@ function IntegrationCard({ type, integration, onSync, onDisconnect }) {
     return parts.length ? parts.join(" · ") : null;
   })();
 
-  const borderColor = isConnected && !setupComplete ? "#2a2200"
-    : hasError ? "#4a1010"
-    : isReady   ? `${meta.color}18`
-    : "#1e2d45";
+  const WizardContent = () => {
+    if (type === "google_drive")  return <GoogleDriveWizard  integration={integration} onComplete={wizardDone} />;
+    if (type === "gmail")         return <GmailWizard        integration={integration} onComplete={wizardDone} />;
+    if (type === "green_invoice") return <GreenInvoiceWizard integration={integration} onComplete={wizardDone} />;
+    if (type === "whatsapp")      return <WhatsAppWizard     integration={integration} onComplete={wizardDone} />;
+    return null;
+  };
 
   return (
-    <motion.div
-      layout
-      initial={{ opacity: 0, y: 12 }}
-      animate={{ opacity: 1, y: 0 }}
-      whileHover={!meta.comingSoon ? { borderColor: `${meta.color}30` } : {}}
-      transition={{ duration: 0.25 }}
-      className="rounded-xl p-5"
-      style={{ background: "#0a1120", border: `1px solid ${borderColor}` }}
-    >
-      {/* Header */}
-      <div className="flex justify-between items-start gap-3">
-        <div className="flex gap-3 items-start flex-1">
-          <motion.div
-            whileHover={!meta.comingSoon ? { scale: 1.1 } : {}}
-            className="w-10 h-10 rounded-xl flex items-center justify-center text-xl flex-shrink-0"
-            style={{ background: `${meta.color}18` }}
-          >
-            {meta.icon}
-          </motion.div>
-
-          <div className="flex-1">
-            <div className="flex items-center gap-2 mb-1 flex-wrap">
-              <span className="font-bold text-[14px]" style={{ color: "#e2e8f0" }}>{meta.label}</span>
-              {meta.comingSoon
-                ? <span className="text-[10px] px-2 py-0.5 rounded-full font-semibold" style={{ background: "#1e2d45", color: "#64748b" }}>COMING SOON</span>
-                : <StatusBadge status={integration?.status || "disconnected"} setupComplete={setupComplete} />
-              }
-            </div>
-            <div className="text-[12px] leading-relaxed" style={{ color: "#475569" }}>{meta.description}</div>
-
-            {integration?.error_message && (
-              <div className="mt-1.5 text-[11px]" style={{ color: "#f87171" }}>Error: {integration.error_message}</div>
-            )}
-            {statsLine && (
-              <div className="mt-1 text-[11px]" style={{ color: "#334155" }}>{statsLine}</div>
-            )}
-            {isReady && integration.last_sync && (
-              <div className="mt-0.5 text-[11px]" style={{ color: "#334155" }}>
-                Last sync: {new Date(integration.last_sync).toLocaleString("he-IL")}
-                {" · "}{integration.sync_count || 0} invoices imported
-              </div>
-            )}
-            {isReady && !integration.last_sync && type !== "whatsapp" && (
-              <div className="mt-0.5 text-[11px]" style={{ color: "#334155" }}>Ready — click "Sync now" to import</div>
-            )}
-            {isReady && !integration.last_sync && type === "whatsapp" && (
-              <div className="mt-0.5 text-[11px]" style={{ color: "#334155" }}>Live — invoices auto-import as WhatsApp messages arrive</div>
-            )}
-            <AnimatePresence>
-              {lastAdded !== null && (
-                <motion.div
-                  initial={{ opacity: 0, y: -4 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0 }}
-                  className="mt-1 text-[11px]"
-                  style={{ color: lastAdded > 0 ? "#4ade80" : "#94a3b8" }}
-                >
-                  {lastAdded > 0 ? `✓ ${lastAdded} new invoice${lastAdded !== 1 ? "s" : ""} added` : "No new invoices found"}
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </div>
-        </div>
-
-        {/* Action buttons */}
-        {!meta.comingSoon && (
-          <div className="flex gap-2 flex-shrink-0 flex-wrap justify-end">
-            {isReady && type !== "whatsapp" && (
-              <motion.button
-                whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.97 }}
-                onClick={handleSync} disabled={syncing}
-                className="px-3.5 py-1.5 rounded-lg text-[12px] font-semibold cursor-pointer"
-                style={{ background: "#131c2e", color: "#a78bfa", border: "1px solid #2d1d5e" }}
-              >
-                {syncing ? "Syncing…" : "↺ Sync now"}
-              </motion.button>
-            )}
-            {isReady && (
-              <motion.button
-                whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.97 }}
-                onClick={() => setShowSettings(v => !v)}
-                className="px-3 py-1.5 rounded-lg text-[12px] cursor-pointer"
-                style={{
-                  background: showSettings ? "#13103a" : "#131c2e",
-                  color: showSettings ? "#a78bfa" : "#64748b",
-                  border: `1px solid ${showSettings ? "#4338ca" : "#1e2d45"}`,
-                }}
-              >
-                ⚙
-              </motion.button>
-            )}
-            {isReady && (
-              <motion.button
-                whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.97 }}
-                onClick={handleDisconnect}
-                className="px-3.5 py-1.5 rounded-lg text-[12px] cursor-pointer"
-                style={{ background: "#1a0a0a", color: "#f87171", border: "1px solid #7f1d1d" }}
-              >
-                Disconnect
-              </motion.button>
-            )}
-            {hasError && !setupComplete && (
-              <motion.button
-                whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.97 }}
-                onClick={handleSync} disabled={syncing}
-                className="px-3.5 py-1.5 rounded-lg text-[12px] font-semibold cursor-pointer"
-                style={{ background: "#131c2e", color: "#f87171", border: "1px solid #7f1d1d" }}
-              >
-                {syncing ? "Retrying…" : "↺ Retry"}
-              </motion.button>
-            )}
-            {!isConnected && (
-              <motion.button
-                whileHover={{ scale: 1.04, filter: "brightness(1.1)" }} whileTap={{ scale: 0.97 }}
-                onClick={handleConnect} disabled={connecting}
-                className="px-4 py-1.5 rounded-lg text-[12px] font-semibold border-none cursor-pointer"
-                style={{ background: `linear-gradient(135deg,${meta.color}cc,${meta.color})`, color: "#fff" }}
-              >
-                {connecting ? "Connecting…" : "Connect"}
-              </motion.button>
-            )}
-            {isConnected && !setupComplete && !isReady && (
-              <motion.button
-                whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.97 }}
-                onClick={handleDisconnect}
-                className="px-3.5 py-1.5 rounded-lg text-[12px] cursor-pointer"
-                style={{ background: "#1a0a0a", color: "#f87171", border: "1px solid #7f1d1d" }}
-              >
-                Disconnect
-              </motion.button>
-            )}
-          </div>
+    <>
+      <motion.div
+        layout
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.25 }}
+      >
+        <Card className={cn(
+          "transition-colors duration-200",
+          !meta.comingSoon && "hover:border-border/80"
         )}
-      </div>
+          style={{ borderColor: isReady ? `${meta.color}25` : hasError ? "hsl(var(--destructive) / 0.3)" : undefined }}
+        >
+          <CardContent className="p-5">
+            <div className="flex justify-between items-start gap-3">
+              <div className="flex gap-3 items-start flex-1">
+                <motion.div
+                  whileHover={!meta.comingSoon ? { scale: 1.08 } : {}}
+                  className="w-10 h-10 rounded-xl flex items-center justify-center text-xl flex-shrink-0"
+                  style={{ background: `${meta.color}18` }}
+                >
+                  {meta.icon}
+                </motion.div>
 
-      {/* Wizard / settings panels */}
-      <AnimatePresence>
-        {isConnected && !setupComplete && !showSettings && (() => {
-          if (type === "google_drive")  return <GoogleDriveWizard integration={integration} onComplete={wizardDone} />;
-          if (type === "gmail")         return <GmailWizard       integration={integration} onComplete={wizardDone} />;
-          if (type === "green_invoice") return <GreenInvoiceWizard integration={integration} onComplete={wizardDone} />;
-          if (type === "whatsapp")      return <WhatsAppWizard    integration={integration} onComplete={wizardDone} />;
-          return null;
-        })()}
-      </AnimatePresence>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 mb-1 flex-wrap">
+                    <span className="font-bold text-sm text-foreground">{meta.label}</span>
+                    {meta.comingSoon
+                      ? <Badge variant="outline" className="text-[10px] text-muted-foreground border-border">COMING SOON</Badge>
+                      : <StatusBadge status={integration?.status || "disconnected"} setupComplete={setupComplete} />
+                    }
+                  </div>
+                  <p className="text-xs text-muted-foreground leading-relaxed">{meta.description}</p>
 
-      <AnimatePresence>
-        {isReady && showSettings && (() => {
-          if (type === "google_drive")  return <GoogleDriveWizard integration={integration} onComplete={wizardDone} />;
-          if (type === "gmail")         return <GmailWizard       integration={integration} onComplete={wizardDone} />;
-          if (type === "green_invoice") return <GreenInvoiceWizard integration={integration} onComplete={wizardDone} />;
-          if (type === "whatsapp")      return <WhatsAppWizard    integration={integration} onComplete={wizardDone} />;
-          return null;
-        })()}
-      </AnimatePresence>
+                  {integration?.error_message && (
+                    <p className="mt-1.5 text-xs text-destructive">Error: {integration.error_message}</p>
+                  )}
+                  {statsLine && <p className="mt-1 text-xs text-muted-foreground/50">{statsLine}</p>}
+                  {isReady && integration.last_sync && (
+                    <p className="mt-0.5 text-xs text-muted-foreground/40">
+                      Last sync: {new Date(integration.last_sync).toLocaleString("he-IL")}
+                      {" · "}{integration.sync_count || 0} invoices imported
+                    </p>
+                  )}
+                  {isReady && !integration.last_sync && type !== "whatsapp" && (
+                    <p className="mt-0.5 text-xs text-muted-foreground/40">Ready — click "Sync now" to import</p>
+                  )}
+                  {isReady && !integration.last_sync && type === "whatsapp" && (
+                    <p className="mt-0.5 text-xs text-muted-foreground/40">Live — invoices auto-import as WhatsApp messages arrive</p>
+                  )}
+                  <AnimatePresence>
+                    {lastAdded !== null && (
+                      <motion.p initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
+                        className={cn("mt-1 text-xs", lastAdded > 0 ? "text-green-400" : "text-muted-foreground")}>
+                        {lastAdded > 0 ? `✓ ${lastAdded} new invoice${lastAdded !== 1 ? "s" : ""} added` : "No new invoices found"}
+                      </motion.p>
+                    )}
+                  </AnimatePresence>
+                </div>
+              </div>
 
-      {!isConnected && showForm && type === "green_invoice" && (
-        <GreenInvoiceConnect onConnected={() => { setShowForm(false); onSync(); }} />
+              {/* Action buttons */}
+              {!meta.comingSoon && (
+                <div className="flex gap-2 flex-shrink-0 flex-wrap justify-end items-center">
+                  {isReady && type !== "whatsapp" && (
+                    <Button variant="outline" size="sm" onClick={handleSync} disabled={syncing}
+                      className="gap-1.5 text-primary border-primary/20 hover:bg-primary/10 hover:text-primary">
+                      <RefreshCw className={cn("w-3.5 h-3.5", syncing && "animate-spin")} />
+                      {syncing ? "Syncing…" : "Sync now"}
+                    </Button>
+                  )}
+                  {isReady && (
+                    <Button variant="outline" size="sm" onClick={() => setWizardOpen(true)}
+                      className="gap-1.5 text-muted-foreground hover:text-foreground">
+                      <Settings className="w-3.5 h-3.5" />
+                    </Button>
+                  )}
+                  {(isReady || (isConnected && !setupComplete)) && (
+                    <Button variant="destructive" size="sm" onClick={handleDisconnect}
+                      className="gap-1.5">
+                      <Unplug className="w-3.5 h-3.5" />
+                      Disconnect
+                    </Button>
+                  )}
+                  {hasError && !setupComplete && (
+                    <Button variant="outline" size="sm" onClick={handleSync} disabled={syncing}
+                      className="text-destructive border-destructive/30 hover:bg-destructive/10">
+                      {syncing ? "Retrying…" : "↺ Retry"}
+                    </Button>
+                  )}
+                  {!isConnected && (
+                    <Button size="sm" onClick={handleConnect} disabled={connecting}
+                      style={{ background: `linear-gradient(135deg,${meta.color}cc,${meta.color})` }}
+                      className="text-white border-none hover:opacity-90">
+                      {connecting ? "Connecting…" : "Connect"}
+                    </Button>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Green Invoice credential form (not a wizard, shown inline before connecting) */}
+            {!isConnected && showForm && type === "green_invoice" && (
+              <GreenInvoiceConnect onConnected={() => { setShowForm(false); onSync(); }} />
+            )}
+          </CardContent>
+        </Card>
+      </motion.div>
+
+      {/* Wizard Dialog */}
+      {integration && (type === "google_drive" || type === "gmail" || type === "green_invoice" || type === "whatsapp") && (
+        <Dialog open={wizardOpen} onOpenChange={setWizardOpen}>
+          <DialogContent className="max-w-[540px] max-h-[90vh] overflow-y-auto">
+            <DialogHeader className="pb-2">
+              <div className="flex items-center gap-2.5">
+                <span className="text-2xl">{meta.icon}</span>
+                <div>
+                  <DialogTitle className="text-base">{isReady ? `${meta.label} settings` : `Set up ${meta.label}`}</DialogTitle>
+                  <p className="text-xs text-muted-foreground mt-0.5">{meta.description}</p>
+                </div>
+              </div>
+            </DialogHeader>
+            <div className="pt-2">
+              <WizardContent />
+            </div>
+          </DialogContent>
+        </Dialog>
       )}
-    </motion.div>
+    </>
   );
 }
 
@@ -1648,11 +1367,8 @@ export default function IntegrationsPage({ oauthResult }) {
       const map = {};
       list.forEach(i => { map[i.type] = i; });
       setIntegrations(map);
-    } catch (err) {
-      console.error("integrations load:", err.message);
-    } finally {
-      setLoading(false);
-    }
+    } catch (err) { console.error("integrations load:", err.message); }
+    finally { setLoading(false); }
   }, []);
 
   useEffect(() => { load(); }, [load]);
@@ -1675,25 +1391,16 @@ export default function IntegrationsPage({ oauthResult }) {
   return (
     <div>
       <div className="mb-6">
-        <div className="font-bold text-[20px] mb-1.5" style={{ color: "#f1f5f9" }}>Integrations</div>
-        <div className="text-[13px]" style={{ color: "#475569" }}>
-          Connect data sources to automatically import invoices — no manual upload needed.
-        </div>
+        <h2 className="font-bold text-xl mb-1.5 text-foreground">Integrations</h2>
+        <p className="text-sm text-muted-foreground">Connect data sources to automatically import invoices — no manual upload needed.</p>
       </div>
 
       <AnimatePresence>
         {notice && (
-          <motion.div
-            initial={{ opacity: 0, y: -8 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -8 }}
-            className="mb-5 px-4 py-2.5 rounded-lg text-[13px]"
-            style={{
-              background: notice.ok ? "#052e16" : "#2d0a0a",
-              border: `1px solid ${notice.ok ? "#166534" : "#7f1d1d"}`,
-              color: notice.ok ? "#4ade80" : "#f87171",
-            }}
-          >
+          <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}
+            className={cn("mb-5 px-4 py-2.5 rounded-lg text-sm border",
+              notice.ok ? "bg-green-950/50 border-green-800/50 text-green-400" : "bg-red-950/50 border-red-800/50 text-red-400"
+            )}>
             {notice.text}
           </motion.div>
         )}
@@ -1706,26 +1413,19 @@ export default function IntegrationsPage({ oauthResult }) {
           ))}
         </div>
       ) : (
-        <motion.div
-          className="flex flex-col gap-3"
-          initial="hidden"
-          animate="visible"
-          variants={{ visible: { transition: { staggerChildren: 0.07 } } }}
-        >
+        <motion.div className="flex flex-col gap-3"
+          initial="hidden" animate="visible"
+          variants={{ visible: { transition: { staggerChildren: 0.07 } } }}>
           {Object.keys(INTEGRATION_META).map(type => (
-            <IntegrationCard
-              key={type}
-              type={type}
+            <IntegrationCard key={type} type={type}
               integration={integrations[type] || null}
-              onSync={load}
-              onDisconnect={handleDisconnect}
-            />
+              onSync={load} onDisconnect={handleDisconnect} />
           ))}
         </motion.div>
       )}
 
-      <div className="mt-7 px-4 py-3.5 rounded-lg text-[12px] leading-relaxed" style={{ background: "#080e1a", border: "1px solid #111d2e", color: "#334155" }}>
-        <div className="font-semibold mb-1" style={{ color: "#475569" }}>How syncing works</div>
+      <div className="mt-7 px-4 py-3.5 rounded-lg text-xs leading-relaxed border border-border/40 text-muted-foreground/50">
+        <p className="font-semibold mb-1 text-muted-foreground">How syncing works</p>
         Each connected source checks for new invoices when you click "Sync now" (WhatsApp syncs automatically
         as photos arrive). New invoices are extracted using AI, matched to your supplier list, and
         deduplicated automatically — invoices already in the system are never added twice.
