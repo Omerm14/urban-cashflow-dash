@@ -22,7 +22,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { RefreshCw, Settings, Unplug, Check, ChevronRight, Globe, Clock } from "lucide-react";
+import { RefreshCw, Settings, Unplug, Check, ChevronRight, Globe, Clock, AlertCircle } from "lucide-react";
 
 const apiCall = async (path, opts = {}) => {
   const { data: { session } } = await supabase.auth.getSession();
@@ -1184,6 +1184,26 @@ function StatusBadge({ status, setupComplete }) {
   );
 }
 
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+const relativeTime = (iso) => {
+  const ms = Date.now() - new Date(iso).getTime();
+  if (ms < 60_000) return "just now";
+  if (ms < 3_600_000) return `${Math.floor(ms / 60_000)}m ago`;
+  if (ms < 86_400_000) return `${Math.floor(ms / 3_600_000)}h ago`;
+  return `${Math.floor(ms / 86_400_000)}d ago`;
+};
+
+const parseApiError = (msg) => {
+  if (!msg) return { message: null, url: null };
+  const url = (msg.match(/https?:\/\/[^\s)]+/) || [])[0] || null;
+  if (msg.includes("has not been used") || msg.includes("is disabled")) {
+    const apiName = msg.toLowerCase().includes("gmail") ? "Gmail" : "Google Drive";
+    return { message: `${apiName} API is not enabled in your Google Cloud project.`, url };
+  }
+  return { message: msg, url };
+};
+
 // ─── Integration card ─────────────────────────────────────────────────────────
 
 function IntegrationCard({ type, integration, onSync, onDisconnect }) {
@@ -1193,6 +1213,7 @@ function IntegrationCard({ type, integration, onSync, onDisconnect }) {
   const [showForm,     setShowForm]     = useState(false);
   const [lastAdded,    setLastAdded]    = useState(null);
   const [connecting,   setConnecting]   = useState(false);
+  const [localError,   setLocalError]   = useState(null);
 
   const isConnected   = integration?.status === "connected";
   const setupComplete = integration?.config?.setup_complete === true;
@@ -1201,12 +1222,13 @@ function IntegrationCard({ type, integration, onSync, onDisconnect }) {
   const isPending     = type === "whatsapp" && !WHATSAPP_ENABLED;
 
   const handleConnect = async () => {
+    setLocalError(null);
     if (type === "google_drive" || type === "gmail") {
       try {
         const returnUrl = encodeURIComponent(window.location.origin);
         const { url }   = await apiCall(`/api/integrations/google/auth-url?type=${type}&returnUrl=${returnUrl}`);
         window.location.href = url;
-      } catch (err) { alert(err.message); }
+      } catch (err) { setLocalError(err.message); }
     } else if (type === "green_invoice") {
       setShowForm(true);
     } else if (type === "whatsapp") {
@@ -1215,26 +1237,27 @@ function IntegrationCard({ type, integration, onSync, onDisconnect }) {
         await apiCall("/api/integrations/whatsapp/connect", { method: "POST" });
         await onSync();
         setWizardOpen(true);
-      } catch (err) { alert(err.message); }
+      } catch (err) { setLocalError(err.message); }
       finally { setConnecting(false); }
     }
   };
 
   const handleSync = async () => {
-    setSyncing(true); setLastAdded(null);
+    setSyncing(true); setLastAdded(null); setLocalError(null);
     try {
       const { added } = await apiCall(`/api/integrations/${integration.id}/sync`, { method: "POST" });
       setLastAdded(added); onSync();
-    } catch (err) { alert(`Sync failed: ${err.message}`); onSync(); }
+    } catch (err) { setLocalError(err.message); onSync(); }
     finally { setSyncing(false); }
   };
 
   const handleDisconnect = async () => {
     if (!confirm(`Disconnect ${meta.label}? Your imported invoices will be kept.`)) return;
+    setLocalError(null);
     try {
       await apiCall(`/api/integrations/${integration.id}`, { method: "DELETE" });
       onDisconnect(type);
-    } catch (err) { alert(err.message); }
+    } catch (err) { setLocalError(err.message); }
   };
 
   const wizardDone = () => { setWizardOpen(false); onSync(); };
@@ -1270,6 +1293,9 @@ function IntegrationCard({ type, integration, onSync, onDisconnect }) {
 
   const hasWizard = type === "google_drive" || type === "gmail" || type === "green_invoice" || type === "whatsapp";
 
+  const errorDisplay = parseApiError(localError || (hasError ? integration?.error_message : null));
+  const showErrorBox = !!errorDisplay.message;
+
   return (
     <>
       <motion.div
@@ -1279,124 +1305,164 @@ function IntegrationCard({ type, integration, onSync, onDisconnect }) {
         transition={{ duration: 0.25 }}
       >
         <Card className={cn(
-          "transition-colors duration-200",
-          !meta.comingSoon && !isPending && "hover:border-border/80"
+          "overflow-hidden transition-all duration-200",
+          !meta.comingSoon && !isPending && "hover:border-border/60",
+          meta.comingSoon && "opacity-60"
         )}
-          style={{ borderColor: isReady ? `${meta.color}30` : hasError ? "hsl(var(--destructive) / 0.3)" : undefined }}
+          style={{ borderColor: isReady && !showErrorBox ? `${meta.color}25` : undefined }}
         >
-          <CardContent className="p-5">
-            <div className="flex justify-between items-start gap-4">
-              <div className="flex gap-3.5 items-start flex-1">
-                <motion.div
-                  whileHover={!meta.comingSoon && !isPending ? { scale: 1.06 } : {}}
-                  className="w-12 h-12 rounded-xl flex items-center justify-center text-2xl flex-shrink-0 shadow-sm"
-                  style={{
-                    background: `linear-gradient(135deg, ${meta.color}22, ${meta.color}10)`,
-                    border: `1px solid ${meta.color}20`,
-                  }}
-                >
-                  {meta.icon}
-                </motion.div>
-
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-1 flex-wrap">
-                    <span className="font-semibold text-sm text-foreground">{meta.label}</span>
-                    {meta.comingSoon
-                      ? <Badge variant="outline" className="text-[10px] text-muted-foreground border-border">COMING SOON</Badge>
-                      : isPending
-                      ? <Badge variant="outline" className="text-[10px] text-amber-400 border-amber-400/30 bg-amber-950/30 gap-1">
-                          <span className="w-1.5 h-1.5 rounded-full bg-amber-400 inline-block" />
-                          Pending verification
-                        </Badge>
-                      : <StatusBadge status={integration?.status || "disconnected"} setupComplete={setupComplete} />
-                    }
-                  </div>
-                  <p className="text-xs text-muted-foreground leading-relaxed">
-                    {isPending
-                      ? "Available once Meta Business verification is complete. You can pre-configure supplier phones in advance."
-                      : meta.description}
-                  </p>
-
-                  {integration?.error_message && (
-                    <p className="mt-1.5 text-xs text-destructive">Error: {integration.error_message}</p>
-                  )}
-                  {statsLine && (
-                    <p className="mt-1.5 text-[11px] text-muted-foreground/60 leading-relaxed">{statsLine}</p>
-                  )}
-                  {isReady && integration.last_sync && (
-                    <p className="mt-0.5 text-[11px] text-muted-foreground/40">
-                      Last sync: {new Date(integration.last_sync).toLocaleString("he-IL")}
-                      {" · "}{integration.sync_count || 0} invoices imported
-                    </p>
-                  )}
-                  {isReady && !integration.last_sync && type !== "whatsapp" && (
-                    <p className="mt-0.5 text-[11px] text-muted-foreground/40">Ready — click "Sync now" to import</p>
-                  )}
-                  {isReady && !integration.last_sync && type === "whatsapp" && (
-                    <p className="mt-0.5 text-[11px] text-muted-foreground/40">Live — invoices auto-import as WhatsApp messages arrive</p>
-                  )}
-                  <AnimatePresence>
-                    {lastAdded !== null && (
-                      <motion.p initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
-                        className={cn("mt-1 text-xs font-medium", lastAdded > 0 ? "text-green-400" : "text-muted-foreground")}>
-                        {lastAdded > 0 ? `✓ ${lastAdded} new invoice${lastAdded !== 1 ? "s" : ""} added` : "No new invoices found"}
-                      </motion.p>
-                    )}
-                  </AnimatePresence>
-                </div>
+          {/* ── Card body ── */}
+          <CardContent className="p-5 pb-4">
+            <div className="flex items-start gap-4">
+              {/* Icon */}
+              <div
+                className="w-11 h-11 rounded-xl flex items-center justify-center text-xl flex-shrink-0"
+                style={{
+                  background: `linear-gradient(135deg, ${meta.color}20, ${meta.color}0a)`,
+                  border: `1px solid ${meta.color}18`,
+                  boxShadow: `0 2px 8px ${meta.color}10`,
+                }}
+              >
+                {meta.icon}
               </div>
 
-              {/* Action buttons */}
-              {!meta.comingSoon && (
-                <div className="flex gap-2 flex-shrink-0 flex-wrap justify-end items-center">
-                  {isReady && type !== "whatsapp" && (
-                    <Button variant="outline" size="sm" onClick={handleSync} disabled={syncing}
-                      className="gap-1.5 text-primary border-primary/20 hover:bg-primary/10 hover:text-primary">
-                      <RefreshCw className={cn("w-3.5 h-3.5", syncing && "animate-spin")} />
-                      {syncing ? "Syncing…" : "Sync now"}
-                    </Button>
-                  )}
-                  {isReady && (
-                    <Button variant="outline" size="sm" onClick={() => setWizardOpen(true)}
-                      className="gap-1.5 text-muted-foreground hover:text-foreground">
-                      <Settings className="w-3.5 h-3.5" />
-                    </Button>
-                  )}
-                  {(isReady || (isConnected && !setupComplete)) && (
-                    <Button variant="destructive" size="sm" onClick={handleDisconnect}
-                      className="gap-1.5">
-                      <Unplug className="w-3.5 h-3.5" />
-                      Disconnect
-                    </Button>
-                  )}
-                  {hasError && !setupComplete && (
-                    <Button variant="outline" size="sm" onClick={handleSync} disabled={syncing}
-                      className="text-destructive border-destructive/30 hover:bg-destructive/10">
-                      {syncing ? "Retrying…" : "↺ Retry"}
-                    </Button>
-                  )}
-                  {!isConnected && !isPending && (
-                    <Button size="sm" onClick={handleConnect} disabled={connecting}
-                      style={{ background: `linear-gradient(135deg,${meta.color}bb,${meta.color})` }}
-                      className="text-white border-none hover:opacity-90 shadow-sm">
-                      {connecting ? "Connecting…" : "Connect"}
-                    </Button>
-                  )}
-                  {isPending && (
-                    <Button size="sm" onClick={() => setWizardOpen(true)} variant="outline"
-                      className="text-amber-400 border-amber-400/30 hover:bg-amber-950/40 hover:text-amber-300">
-                      Pre-configure
-                    </Button>
-                  )}
+              {/* Title + status + description */}
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center justify-between gap-2 mb-0.5">
+                  <span className="font-semibold text-sm text-foreground leading-tight">{meta.label}</span>
+                  {meta.comingSoon
+                    ? <Badge variant="outline" className="text-[10px] text-muted-foreground border-border flex-shrink-0">Soon</Badge>
+                    : isPending
+                    ? <Badge variant="outline" className="text-[10px] text-amber-400 border-amber-400/30 bg-amber-950/20 gap-1 flex-shrink-0">
+                        <span className="w-1.5 h-1.5 rounded-full bg-amber-400 inline-block" />
+                        Pending
+                      </Badge>
+                    : <StatusBadge status={integration?.status || "disconnected"} setupComplete={setupComplete} />
+                  }
                 </div>
-              )}
+                <p className="text-xs text-muted-foreground leading-relaxed line-clamp-2">
+                  {isPending
+                    ? "Available once Meta Business verification is complete."
+                    : meta.description}
+                </p>
+              </div>
             </div>
+
+            {/* Error box */}
+            <AnimatePresence>
+              {showErrorBox && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0, marginTop: 0 }}
+                  animate={{ opacity: 1, height: "auto", marginTop: 12 }}
+                  exit={{ opacity: 0, height: 0, marginTop: 0 }}
+                  className="overflow-hidden"
+                >
+                  <div className="rounded-lg bg-destructive/8 border border-destructive/20 px-3 py-2.5 flex gap-2.5 items-start">
+                    <AlertCircle className="w-3.5 h-3.5 text-destructive flex-shrink-0 mt-0.5" />
+                    <div className="min-w-0">
+                      <p className="text-xs text-destructive leading-relaxed">{errorDisplay.message}</p>
+                      {errorDisplay.url && (
+                        <a
+                          href={errorDisplay.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-xs text-destructive/80 underline underline-offset-2 hover:text-destructive mt-0.5 inline-block"
+                        >
+                          Enable in Cloud Console →
+                        </a>
+                      )}
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            {/* Stats row */}
+            {isReady && statsLine && !showErrorBox && (
+              <p className="mt-3 text-[11px] text-muted-foreground/60 leading-relaxed">{statsLine}</p>
+            )}
+
+            {/* Sync success feedback */}
+            <AnimatePresence>
+              {lastAdded !== null && (
+                <motion.p initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
+                  className={cn("mt-2 text-xs font-medium", lastAdded > 0 ? "text-green-400" : "text-muted-foreground/60")}>
+                  {lastAdded > 0 ? `✓ ${lastAdded} new invoice${lastAdded !== 1 ? "s" : ""} added` : "No new invoices found"}
+                </motion.p>
+              )}
+            </AnimatePresence>
 
             {/* Green Invoice credential form (inline before connecting) */}
             {!isConnected && showForm && type === "green_invoice" && (
-              <GreenInvoiceConnect onConnected={() => { setShowForm(false); onSync(); }} />
+              <div className="mt-4">
+                <GreenInvoiceConnect onConnected={() => { setShowForm(false); onSync(); }} />
+              </div>
             )}
           </CardContent>
+
+          {/* ── Card footer ── */}
+          {!meta.comingSoon && (
+            <div className="px-5 py-3 border-t border-border/40 flex items-center gap-2">
+              {/* Left: last sync time or status hint */}
+              <div className="flex-1 min-w-0">
+                {isReady && integration?.last_sync && (
+                  <span className="text-[11px] text-muted-foreground/50">
+                    Last synced {relativeTime(integration.last_sync)}
+                    {integration.sync_count > 0 && ` · ${integration.sync_count} invoices`}
+                  </span>
+                )}
+                {isReady && !integration?.last_sync && type !== "whatsapp" && (
+                  <span className="text-[11px] text-muted-foreground/50">Ready to sync</span>
+                )}
+                {isReady && type === "whatsapp" && (
+                  <span className="text-[11px] text-muted-foreground/50">Live — auto-imports on WhatsApp</span>
+                )}
+              </div>
+
+              {/* Right: action buttons */}
+              <div className="flex items-center gap-1.5">
+                {isReady && type !== "whatsapp" && (
+                  <Button variant="outline" size="sm" onClick={handleSync} disabled={syncing}
+                    className="h-7 px-2.5 gap-1.5 text-xs text-primary border-primary/20 hover:bg-primary/10 hover:text-primary">
+                    <RefreshCw className={cn("w-3 h-3", syncing && "animate-spin")} />
+                    {syncing ? "Syncing…" : "Sync"}
+                  </Button>
+                )}
+                {hasError && setupComplete && (
+                  <Button variant="outline" size="sm" onClick={handleSync} disabled={syncing}
+                    className="h-7 px-2.5 gap-1.5 text-xs text-destructive border-destructive/30 hover:bg-destructive/10">
+                    <RefreshCw className={cn("w-3 h-3", syncing && "animate-spin")} />
+                    {syncing ? "Retrying…" : "Retry"}
+                  </Button>
+                )}
+                {isReady && (
+                  <Button variant="ghost" size="sm" onClick={() => setWizardOpen(true)}
+                    className="h-7 w-7 p-0 text-muted-foreground hover:text-foreground">
+                    <Settings className="w-3.5 h-3.5" />
+                  </Button>
+                )}
+                {(isReady || (isConnected && !setupComplete)) && (
+                  <Button variant="ghost" size="sm" onClick={handleDisconnect}
+                    className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive">
+                    <Unplug className="w-3.5 h-3.5" />
+                  </Button>
+                )}
+                {!isConnected && !isPending && (
+                  <Button size="sm" onClick={handleConnect} disabled={connecting}
+                    style={{ background: `linear-gradient(135deg,${meta.color}cc,${meta.color})` }}
+                    className="h-7 px-3 text-xs text-white border-none hover:opacity-90 shadow-sm">
+                    {connecting ? "Connecting…" : "Connect"}
+                  </Button>
+                )}
+                {isPending && (
+                  <Button size="sm" onClick={() => setWizardOpen(true)} variant="outline"
+                    className="h-7 px-3 text-xs text-amber-400 border-amber-400/30 hover:bg-amber-950/40 hover:text-amber-300">
+                    Pre-configure
+                  </Button>
+                )}
+              </div>
+            </div>
+          )}
         </Card>
       </motion.div>
 
