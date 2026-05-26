@@ -35,7 +35,7 @@ const makeOAuth2WithCreds = credentials => {
 exports.list = async (req, res) => {
   const { data, error } = await supabase
     .from('integrations')
-    .select('id,type,status,config,last_sync,sync_count,error_message,error_count,last_error_at,auto_sync_enabled,sync_frequency_min,created_at')
+    .select('*')
     .eq('user_id', req.user.id);
   if (error) return res.status(500).json({ error: error.message });
   res.json({ integrations: data || [] });
