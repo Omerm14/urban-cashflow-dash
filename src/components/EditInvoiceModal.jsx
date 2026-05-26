@@ -68,6 +68,24 @@ export default function EditInvoiceModal({ editInvoice, setEditInvoice, supplier
             {Object.values(STATUS).map(s => <option key={s}>{s}</option>)}
           </select>
         </div>
+        {/* Sync audit trail — read-only, shown only for auto-synced invoices */}
+        {editInvoice.sync_source && (
+          <div style={{ marginBottom:20, padding:"10px 14px", background:"#0d1626", borderRadius:10, border:"1px solid #1e2d45" }}>
+            <div style={{ fontSize:10, fontWeight:700, color:"#334155", textTransform:"uppercase", letterSpacing:".7px", marginBottom:6 }}>Sync Audit</div>
+            <div style={{ fontSize:12, color:"#475569", display:"flex", flexDirection:"column", gap:3 }}>
+              <span>Source: <strong style={{ color:"#94a3b8" }}>
+                {{ google_drive:"📁 Google Drive", gmail:"✉️ Gmail", whatsapp:"💬 WhatsApp", green_invoice:"🟢 Green Invoice" }[editInvoice.sync_source] || editInvoice.sync_source}
+              </strong></span>
+              {editInvoice.sync_timestamp && (
+                <span>Synced: <strong style={{ color:"#94a3b8" }}>{new Date(editInvoice.sync_timestamp).toLocaleString("en-GB", { day:"2-digit", month:"short", year:"numeric", hour:"2-digit", minute:"2-digit" })}</strong></span>
+              )}
+              {editInvoice.sync_source_meta?.filename && (
+                <span>File: <strong style={{ color:"#94a3b8" }}>{editInvoice.sync_source_meta.filename}</strong></span>
+              )}
+            </div>
+          </div>
+        )}
+
         <div style={{ display:"flex", gap:10, justifyContent:"flex-end" }}>
           <button onClick={close} style={{ padding:"10px 20px", background:"#131c2e", border:"1px solid #1e2d45", borderRadius:10, color:"#64748b", cursor:"pointer", fontFamily:"inherit", fontWeight:500, fontSize:13 }}>Cancel</button>
           <button onClick={save}  style={{ padding:"10px 24px", background:"linear-gradient(135deg,#6366f1,#a78bfa)", border:"none", borderRadius:10, color:"#fff", fontWeight:700, cursor:"pointer", fontFamily:"inherit", fontSize:13, boxShadow:"0 4px 15px #6366f133" }}>Save Invoice</button>

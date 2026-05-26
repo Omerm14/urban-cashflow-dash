@@ -1,5 +1,6 @@
 const Anthropic = require('@anthropic-ai/sdk');
 const { google } = require('googleapis');
+const crypto     = require('crypto');
 const supabase   = require('../lib/supabase');
 
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
@@ -100,14 +101,29 @@ const isDuplicate = (candidate, existing) => existing.some(inv => {
   return exactMatch || fuzzyMatch;
 });
 
+// ─── Audit logging ───────────────────────────────────────────────────────────
+
+const logSyncEvent = (integrationId, userId, eventType, fields = {}) => {
+  supabase.from('sync_events').insert({
+    integration_id: integrationId,
+    user_id:        userId,
+    event_type:     eventType,
+    ...fields,
+  }).then(({ error }) => { if (error) console.error('[sync_events]', error.message); });
+};
+
 // ─── Core pipeline: buffer → extract → save ─────────────────────────────────
 
-const processFile = async (buffer, filename, mediaType, userId, suppliers, existingInvoices) => {
+const md5 = buf => crypto.createHash('md5').update(buf).digest('hex');
+
+const processFile = async (buffer, filename, mediaType, userId, suppliers, existingInvoices, integrationId, syncSource, syncMeta = {}) => {
+  const fileHash = md5(buffer);
   let extracted;
   try {
     extracted = await extractFromBuffer(buffer, mediaType, userId);
   } catch (err) {
     console.error(`[sync] extract failed for ${filename}:`, err.message);
+    logSyncEvent(integrationId, userId, 'ocr_failed', { source_file: filename, file_hash: fileHash, error_message: err.message });
     return null;
   }
 
@@ -116,24 +132,33 @@ const processFile = async (buffer, filename, mediaType, userId, suppliers, exist
   const dueDate     = sup ? calcDueDate(invoiceDate, sup.terms) : null;
 
   const candidate = {
-    user_id:      userId,
-    supplier:     sup?.name || extracted.supplier || '',
-    invoice_no:   extracted.invoiceNo  || '',
-    invoice_date: invoiceDate,
-    amount:       Number(extracted.amount) || 0,
-    due_date:     dueDate || '',
-    status:       'Unpaid',
-    notes:        '',
-    source_file:  filename,
+    user_id:          userId,
+    supplier:         sup?.name || extracted.supplier || '',
+    invoice_no:       extracted.invoiceNo  || '',
+    invoice_date:     invoiceDate,
+    amount:           Number(extracted.amount) || 0,
+    due_date:         dueDate || '',
+    status:           'Unpaid',
+    notes:            '',
+    source_file:      filename,
+    sync_source:      syncSource,
+    sync_source_meta: { ...syncMeta, filename },
+    sync_timestamp:   new Date().toISOString(),
   };
 
   if (isDuplicate(candidate, existingInvoices)) {
     console.log(`[sync] duplicate skipped: ${filename}`);
+    logSyncEvent(integrationId, userId, 'dedup_skipped', { source_file: filename, file_hash: fileHash });
     return null;
   }
 
   const { data, error } = await supabase.from('invoices').insert(candidate).select().single();
-  if (error) { console.error(`[sync] save failed for ${filename}:`, error.message); return null; }
+  if (error) {
+    console.error(`[sync] save failed for ${filename}:`, error.message);
+    logSyncEvent(integrationId, userId, 'ocr_failed', { source_file: filename, file_hash: fileHash, error_message: error.message });
+    return null;
+  }
+  logSyncEvent(integrationId, userId, 'saved', { source_file: filename, file_hash: fileHash, invoice_id: data.id });
   return data;
 };
 
@@ -198,7 +223,7 @@ exports.syncGoogleDrive = async (integration, userId) => {
 
   console.log(`[sync:drive] ${files.length} new file(s) for user ${userId}`);
 
-  const suppliers       = await getSuppliers(userId);
+  const suppliers        = await getSuppliers(userId);
   const existingInvoices = await getExistingInvoices(userId);
   let added = 0;
 
@@ -206,10 +231,14 @@ exports.syncGoogleDrive = async (integration, userId) => {
     try {
       const resp   = await drive.files.get({ fileId: file.id, alt: 'media' }, { responseType: 'arraybuffer' });
       const buffer = Buffer.from(resp.data);
-      const result = await processFile(buffer, file.name, file.mimeType, userId, suppliers, existingInvoices);
+      const result = await processFile(
+        buffer, file.name, file.mimeType, userId, suppliers, existingInvoices,
+        integration.id, 'google_drive', { folder_id: folderId, drive_file_id: file.id },
+      );
       if (result) { added++; existingInvoices.push(result); }
     } catch (err) {
       console.error(`[sync:drive] ${file.name}:`, err.message);
+      logSyncEvent(integration.id, userId, 'download_failed', { source_file: file.name, error_message: err.message });
     }
   }
 
@@ -226,7 +255,9 @@ exports.syncGmail = async (integration, userId) => {
     ? Math.floor(new Date(integration.last_sync).getTime() / 1000)
     : null;
 
-  const q = ['has:attachment', lastSync ? `after:${lastSync}` : null].filter(Boolean).join(' ');
+  const labelIds   = integration.config?.label_ids || [];
+  const labelQuery = labelIds.length ? `label:${labelIds.join(' OR label:')}` : '';
+  const q = ['has:attachment', lastSync ? `after:${lastSync}` : null, labelQuery || null].filter(Boolean).join(' ');
 
   const { data: { messages = [] } } = await gmail.users.messages.list({
     userId: 'me', q, maxResults: 50,
@@ -254,11 +285,15 @@ exports.syncGmail = async (integration, userId) => {
           userId: 'me', messageId: msg.id, id: part.body.attachmentId,
         });
         const buffer = Buffer.from(att.data, 'base64url');
-        const result = await processFile(buffer, part.filename, part.mimeType, userId, suppliers, existingInvoices);
+        const result = await processFile(
+          buffer, part.filename, part.mimeType, userId, suppliers, existingInvoices,
+          integration.id, 'gmail', { message_id: msg.id, thread_id: message.threadId },
+        );
         if (result) { added++; existingInvoices.push(result); }
       }
     } catch (err) {
       console.error(`[sync:gmail] msg ${msg.id}:`, err.message);
+      logSyncEvent(integration.id, userId, 'download_failed', { source_file: `msg:${msg.id}`, error_message: err.message });
     }
   }
 
@@ -299,21 +334,72 @@ exports.syncGreenInvoice = async (integration, userId) => {
                          : (sup ? calcDueDate(invoiceDate, sup.terms) : null);
 
     const candidate = {
-      user_id:      userId,
-      supplier:     sup?.name || supplierName,
-      invoice_no:   doc.number?.toString() || '',
-      invoice_date: invoiceDate,
-      amount:       doc.amount || doc.total || 0,
-      due_date:     dueDate || '',
-      status:       'Unpaid',
-      notes:        'Imported from Green Invoice',
-      source_file:  `green_invoice_${doc.id}`,
+      user_id:          userId,
+      supplier:         sup?.name || supplierName,
+      invoice_no:       doc.number?.toString() || '',
+      invoice_date:     invoiceDate,
+      amount:           doc.amount || doc.total || 0,
+      due_date:         dueDate || '',
+      status:           'Unpaid',
+      notes:            'Imported from Green Invoice',
+      source_file:      `green_invoice_${doc.id}`,
+      sync_source:      'green_invoice',
+      sync_source_meta: { green_invoice_id: doc.id },
+      sync_timestamp:   new Date().toISOString(),
     };
 
-    if (isDuplicate(candidate, existingInvoices)) continue;
+    if (isDuplicate(candidate, existingInvoices)) {
+      logSyncEvent(integration.id, userId, 'dedup_skipped', { source_file: candidate.source_file });
+      continue;
+    }
     const { data, error } = await supabase.from('invoices').insert(candidate).select().single();
-    if (!error && data) { added++; existingInvoices.push(data); }
+    if (!error && data) {
+      logSyncEvent(integration.id, userId, 'saved', { source_file: candidate.source_file, invoice_id: data.id });
+      added++;
+      existingInvoices.push(data);
+    }
   }
 
   return added;
+};
+
+// ─── WhatsApp Business sync ──────────────────────────────────────────────────
+
+exports.processWhatsAppMedia = async (integration, userId, mediaId, filename, mimeType, waMessageId) => {
+  const { api_token } = integration.credentials || {};
+  if (!api_token) throw new Error('WhatsApp API token not set');
+
+  // Check idempotency — skip if already processed
+  const { data: existing } = await supabase
+    .from('sync_events')
+    .select('id')
+    .eq('integration_id', integration.id)
+    .contains('sync_source_meta', { wa_message_id: waMessageId })
+    .maybeSingle();
+  if (existing) {
+    console.log(`[sync:whatsapp] already processed message ${waMessageId}`);
+    return null;
+  }
+
+  // Retrieve media URL from WhatsApp Cloud API
+  const metaRes = await fetch(`https://graph.facebook.com/v19.0/${mediaId}`, {
+    headers: { Authorization: `Bearer ${api_token}` },
+  });
+  if (!metaRes.ok) throw new Error(`WhatsApp media metadata failed: ${metaRes.status}`);
+  const { url: mediaUrl } = await metaRes.json();
+
+  // Download media content
+  const mediaRes = await fetch(mediaUrl, {
+    headers: { Authorization: `Bearer ${api_token}` },
+  });
+  if (!mediaRes.ok) throw new Error(`WhatsApp media download failed: ${mediaRes.status}`);
+  const buffer = Buffer.from(await mediaRes.arrayBuffer());
+
+  const suppliers        = await getSuppliers(userId);
+  const existingInvoices = await getExistingInvoices(userId);
+
+  return processFile(
+    buffer, filename || `whatsapp_${mediaId}`, mimeType, userId, suppliers, existingInvoices,
+    integration.id, 'whatsapp', { wa_message_id: waMessageId, media_id: mediaId },
+  );
 };

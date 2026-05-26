@@ -3,6 +3,18 @@ const express = require('express');
 
 const app  = express();
 const auth = require('../server/middleware/auth');
+
+// Capture raw body for webhook signature verification before JSON parsing
+app.use((req, res, next) => {
+  if (req.path === '/api/webhook/whatsapp' && req.method === 'POST') {
+    let data = '';
+    req.on('data', chunk => { data += chunk; });
+    req.on('end', () => { req.rawBody = data; next(); });
+  } else {
+    next();
+  }
+});
+
 app.use(express.json({ limit: '20mb' }));
 
 app.post('/api/extract',    auth, require('../server/routes/extract'));
@@ -10,12 +22,26 @@ app.get('/api/admin/usage',      require('../server/routes/admin'));
 
 // Integrations
 const integrations = require('../server/routes/integrations');
-app.get('/api/integrations',                       auth, integrations.list);
-app.delete('/api/integrations/:id',                auth, integrations.remove);
-app.get('/api/integrations/google/auth-url',       auth, integrations.googleAuthUrl);
-app.get('/api/integrations/google/callback',            integrations.googleCallback);
-app.post('/api/integrations/green-invoice',        auth, integrations.connectGreenInvoice);
-app.patch('/api/integrations/:id/config',          auth, integrations.updateConfig);
-app.post('/api/integrations/:id/sync',             auth, integrations.triggerSync);
+app.get('/api/integrations',                        auth, integrations.list);
+app.delete('/api/integrations/:id',                 auth, integrations.remove);
+app.get('/api/integrations/google/auth-url',        auth, integrations.googleAuthUrl);
+app.get('/api/integrations/google/callback',             integrations.googleCallback);
+app.get('/api/integrations/google/folders',         auth, integrations.googleFolders);
+app.get('/api/integrations/google/labels',          auth, integrations.googleLabels);
+app.get('/api/integrations/:id/events',             auth, integrations.listEvents);
+app.post('/api/integrations/:id/resync',            auth, integrations.resync);
+app.post('/api/integrations/green-invoice',         auth, integrations.connectGreenInvoice);
+app.post('/api/integrations/whatsapp',              auth, integrations.connectWhatsApp);
+app.patch('/api/integrations/:id/config',           auth, integrations.updateConfig);
+app.patch('/api/integrations/:id/auto-sync',        auth, integrations.updateAutoSync);
+app.post('/api/integrations/:id/sync',              auth, integrations.triggerSync);
+
+// WhatsApp webhook (no auth — verified by HMAC signature)
+const webhook = require('../server/routes/webhook');
+app.get('/api/webhook/whatsapp',  webhook.verifyWhatsApp);
+app.post('/api/webhook/whatsapp', webhook.handleWhatsApp);
+
+// Cron (secured by CRON_SECRET header)
+app.get('/api/cron/sync', require('../server/routes/cron').runSync);
 
 module.exports = app;

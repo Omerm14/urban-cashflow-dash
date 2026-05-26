@@ -21,11 +21,21 @@ const makeOAuth2 = () => new google.auth.OAuth2(
   getRedirectUri(),
 );
 
+const makeOAuth2WithCreds = credentials => {
+  const c = new google.auth.OAuth2(
+    process.env.GOOGLE_CLIENT_ID,
+    process.env.GOOGLE_CLIENT_SECRET,
+    getRedirectUri(),
+  );
+  c.setCredentials(credentials);
+  return c;
+};
+
 // GET /api/integrations
 exports.list = async (req, res) => {
   const { data, error } = await supabase
     .from('integrations')
-    .select('id,type,status,config,last_sync,sync_count,error_message,created_at')
+    .select('id,type,status,config,last_sync,sync_count,error_message,error_count,last_error_at,auto_sync_enabled,sync_frequency_min,created_at')
     .eq('user_id', req.user.id);
   if (error) return res.status(500).json({ error: error.message });
   res.json({ integrations: data || [] });
@@ -85,12 +95,124 @@ exports.googleCallback = async (req, res) => {
       credentials:   tokens,
       config:        {},
       error_message: null,
+      error_count:   0,
     }, { onConflict: 'user_id,type' });
 
     res.redirect(`${frontend}?view=integrations&oauth_connected=${type}`);
   } catch (err) {
     console.error('Google callback error:', err.message);
     res.redirect(`${frontend}?view=integrations&oauth_error=${encodeURIComponent(err.message)}`);
+  }
+};
+
+// GET /api/integrations/google/folders  — list Drive folders for connected user
+exports.googleFolders = async (req, res) => {
+  const { data: integration, error: intErr } = await supabase
+    .from('integrations')
+    .select('credentials')
+    .eq('user_id', req.user.id)
+    .eq('type', 'google_drive')
+    .eq('status', 'connected')
+    .maybeSingle();
+  if (intErr || !integration) return res.status(404).json({ error: 'Google Drive not connected' });
+
+  try {
+    const auth  = makeOAuth2WithCreds(integration.credentials);
+    const drive = google.drive({ version: 'v3', auth });
+    const { data: { files = [] } } = await drive.files.list({
+      q:        "mimeType='application/vnd.google-apps.folder' and trashed=false",
+      fields:   'files(id,name)',
+      pageSize: 100,
+      orderBy:  'name',
+    });
+    res.json({ folders: files });
+  } catch (err) {
+    console.error('[folders]', err.message);
+    res.status(500).json({ error: err.message });
+  }
+};
+
+// GET /api/integrations/google/labels  — list Gmail labels for connected user
+exports.googleLabels = async (req, res) => {
+  const { data: integration, error: intErr } = await supabase
+    .from('integrations')
+    .select('credentials')
+    .eq('user_id', req.user.id)
+    .eq('type', 'gmail')
+    .eq('status', 'connected')
+    .maybeSingle();
+  if (intErr || !integration) return res.status(404).json({ error: 'Gmail not connected' });
+
+  try {
+    const auth  = makeOAuth2WithCreds(integration.credentials);
+    const gmail = google.gmail({ version: 'v1', auth });
+    const { data: { labels = [] } } = await gmail.users.labels.list({ userId: 'me' });
+    const filtered = labels.filter(l => !l.id.startsWith('CATEGORY_') && l.type !== 'system');
+    res.json({ labels: filtered });
+  } catch (err) {
+    console.error('[labels]', err.message);
+    res.status(500).json({ error: err.message });
+  }
+};
+
+// GET /api/integrations/:id/events  — last 50 sync events for this integration
+exports.listEvents = async (req, res) => {
+  const { data: integration } = await supabase
+    .from('integrations')
+    .select('id')
+    .eq('id', req.params.id)
+    .eq('user_id', req.user.id)
+    .maybeSingle();
+  if (!integration) return res.status(404).json({ error: 'Integration not found' });
+
+  const { data, error } = await supabase
+    .from('sync_events')
+    .select('id,event_type,source_file,invoice_id,error_message,created_at')
+    .eq('integration_id', req.params.id)
+    .order('created_at', { ascending: false })
+    .limit(50);
+  if (error) return res.status(500).json({ error: error.message });
+  res.json({ events: data || [] });
+};
+
+// POST /api/integrations/:id/resync  — clear last_sync and trigger full resync
+exports.resync = async (req, res) => {
+  const { data: integration, error } = await supabase
+    .from('integrations')
+    .select('*')
+    .eq('id', req.params.id)
+    .eq('user_id', req.user.id)
+    .single();
+  if (error || !integration) return res.status(404).json({ error: 'Integration not found' });
+
+  // Clear last_sync so the adapter pulls all historical files
+  await supabase.from('integrations').update({ last_sync: null }).eq('id', integration.id);
+  const resetIntegration = { ...integration, last_sync: null };
+
+  try {
+    let added = 0;
+    if (integration.type === 'google_drive')     added = await sync.syncGoogleDrive(resetIntegration, req.user.id);
+    else if (integration.type === 'gmail')        added = await sync.syncGmail(resetIntegration, req.user.id);
+    else if (integration.type === 'green_invoice') added = await sync.syncGreenInvoice(resetIntegration, req.user.id);
+
+    await supabase.from('integrations').update({
+      last_sync:     new Date().toISOString(),
+      sync_count:    (integration.sync_count || 0) + added,
+      status:        'connected',
+      error_message: null,
+      error_count:   0,
+    }).eq('id', integration.id);
+
+    res.json({ ok: true, added });
+  } catch (err) {
+    console.error('[resync] error:', err.message);
+    await supabase.from('integrations').update({
+      status:        'error',
+      error_message: err.message,
+      error_count:   (integration.error_count || 0) + 1,
+      last_error_at: new Date().toISOString(),
+    }).eq('id', integration.id);
+    res.status(500).json({ error: err.message });
   }
 };
 
@@ -106,6 +228,28 @@ exports.connectGreenInvoice = async (req, res) => {
     credentials:   { apiKey, apiSecret },
     config:        {},
     error_message: null,
+    error_count:   0,
+  }, { onConflict: 'user_id,type' });
+
+  if (error) return res.status(500).json({ error: error.message });
+  res.json({ ok: true });
+};
+
+// POST /api/integrations/whatsapp  { api_token, phone_number_id, webhook_secret }
+exports.connectWhatsApp = async (req, res) => {
+  const { api_token, phone_number_id, webhook_secret } = req.body;
+  if (!api_token || !phone_number_id || !webhook_secret) {
+    return res.status(400).json({ error: 'api_token, phone_number_id, and webhook_secret are required' });
+  }
+
+  const { error } = await supabase.from('integrations').upsert({
+    user_id:       req.user.id,
+    type:          'whatsapp',
+    status:        'connected',
+    credentials:   { api_token, phone_number_id, webhook_secret },
+    config:        { phone_number_id },
+    error_message: null,
+    error_count:   0,
   }, { onConflict: 'user_id,type' });
 
   if (error) return res.status(500).json({ error: error.message });
@@ -124,6 +268,18 @@ exports.updateConfig = async (req, res) => {
   res.json({ ok: true });
 };
 
+// PATCH /api/integrations/:id/auto-sync  { auto_sync_enabled, sync_frequency_min }
+exports.updateAutoSync = async (req, res) => {
+  const { auto_sync_enabled, sync_frequency_min } = req.body;
+  const { error } = await supabase
+    .from('integrations')
+    .update({ auto_sync_enabled, sync_frequency_min })
+    .eq('id', req.params.id)
+    .eq('user_id', req.user.id);
+  if (error) return res.status(500).json({ error: error.message });
+  res.json({ ok: true });
+};
+
 // POST /api/integrations/:id/sync
 exports.triggerSync = async (req, res) => {
   const { data: integration, error } = await supabase
@@ -136,8 +292,8 @@ exports.triggerSync = async (req, res) => {
 
   try {
     let added = 0;
-    if (integration.type === 'google_drive')  added = await sync.syncGoogleDrive(integration, req.user.id);
-    else if (integration.type === 'gmail')    added = await sync.syncGmail(integration, req.user.id);
+    if (integration.type === 'google_drive')      added = await sync.syncGoogleDrive(integration, req.user.id);
+    else if (integration.type === 'gmail')         added = await sync.syncGmail(integration, req.user.id);
     else if (integration.type === 'green_invoice') added = await sync.syncGreenInvoice(integration, req.user.id);
 
     await supabase.from('integrations').update({
@@ -145,6 +301,7 @@ exports.triggerSync = async (req, res) => {
       sync_count:    (integration.sync_count || 0) + added,
       status:        'connected',
       error_message: null,
+      error_count:   0,
     }).eq('id', integration.id);
 
     res.json({ ok: true, added });
@@ -153,6 +310,8 @@ exports.triggerSync = async (req, res) => {
     await supabase.from('integrations').update({
       status:        'error',
       error_message: err.message,
+      error_count:   (integration.error_count || 0) + 1,
+      last_error_at: new Date().toISOString(),
     }).eq('id', integration.id);
     res.status(500).json({ error: err.message });
   }

@@ -1,8 +1,8 @@
-export default function NavBar({ view, setView, suppliersCount, onSuppliersClick, user, onSignOut }) {
+export default function NavBar({ view, setView, suppliersCount, onSuppliersClick, user, onSignOut, integrationError }) {
   const isAdmin = user?.email && import.meta.env.VITE_ADMIN_EMAIL && user.email === import.meta.env.VITE_ADMIN_EMAIL;
   const views = isAdmin
-    ? ["dashboard","invoices","calendar","admin"]
-    : ["dashboard","invoices","calendar"];
+    ? ["dashboard","invoices","calendar","integrations","admin"]
+    : ["dashboard","invoices","calendar","integrations"];
 
   return (
     <div style={{ background:"#0a1120", borderBottom:"1px solid #111d2e", position:"sticky", top:0, zIndex:40, backdropFilter:"blur(12px)" }}>
@@ -12,7 +12,13 @@ export default function NavBar({ view, setView, suppliersCount, onSuppliersClick
           <span style={{ fontWeight:700, fontSize:15, color:"#f1f5f9", letterSpacing:"-0.3px" }}>Cashflow</span>
         </div>
         {views.map(v => (
-          <button key={v} className={`nav-btn${view===v?" active":""}`} onClick={() => setView(v)} style={{ textTransform:"capitalize" }}>{v}</button>
+          <button key={v} className={`nav-btn${view===v?" active":""}`} onClick={() => setView(v)}
+            style={{ textTransform:"capitalize", position:"relative" }}>
+            {v === "integrations" ? "Integrations" : v}
+            {v === "integrations" && integrationError && (
+              <span style={{ position:"absolute", top:6, right:-2, width:7, height:7, borderRadius:"50%", background:"#f87171", border:"2px solid #0a1120" }} />
+            )}
+          </button>
         ))}
         <div style={{ marginLeft:"auto", display:"flex", alignItems:"center", gap:10 }}>
           <button onClick={onSuppliersClick}

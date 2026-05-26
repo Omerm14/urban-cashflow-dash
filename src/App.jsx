@@ -1,14 +1,15 @@
-import { useState, useRef, useCallback } from "react";
-import { useAuth }         from "./contexts/AuthContext";
-import { useInvoiceData }  from "./hooks/useInvoiceData";
-import LoginPage           from "./pages/LoginPage";
-import AdminPage           from "./pages/AdminPage";
-import NavBar              from "./components/NavBar";
-import Dashboard           from "./components/Dashboard";
-import InvoicesView        from "./components/InvoicesView";
-import CalendarView        from "./components/CalendarView";
-import EditInvoiceModal    from "./components/EditInvoiceModal";
-import SuppliersModal      from "./components/SuppliersModal";
+import { useState, useRef, useCallback, useEffect } from "react";
+import { useAuth }            from "./contexts/AuthContext";
+import { useInvoiceData }     from "./hooks/useInvoiceData";
+import LoginPage              from "./pages/LoginPage";
+import AdminPage              from "./pages/AdminPage";
+import NavBar                 from "./components/NavBar";
+import Dashboard              from "./components/Dashboard";
+import InvoicesView           from "./components/InvoicesView";
+import CalendarView           from "./components/CalendarView";
+import IntegrationsPage       from "./components/IntegrationsPage";
+import EditInvoiceModal       from "./components/EditInvoiceModal";
+import SuppliersModal         from "./components/SuppliersModal";
 import { processPdf, fileToBase64, extractInvoice, translateSupplierName } from "./utils/image";
 import { findDuplicates, parseCSV, isLatinOnly }                           from "./utils/invoice";
 import { calcDueDate, toYM, correctSwappedDate }                           from "./utils/dates";
@@ -24,8 +25,24 @@ export default function App() {
   const [showSuppliers, setShowSuppliers] = useState(false);
   const [editSupplier,  setEditSupplier]  = useState(null);
   const [calMonth,      setCalMonth]      = useState(() => toYM(new Date()));
+  const [oauthResult,   setOAuthResult]   = useState(null);
   const fileRef = useRef();
   const csvRef  = useRef();
+
+  // Handle OAuth redirect params and view= param from Google OAuth callback
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const viewParam      = params.get("view");
+    const oauthConnected = params.get("oauth_connected");
+    const oauthError     = params.get("oauth_error");
+    if (viewParam === "integrations") {
+      setView("integrations");
+      if (oauthConnected) setOAuthResult({ connected: oauthConnected });
+      if (oauthError)     setOAuthResult({ error: decodeURIComponent(oauthError) });
+      // Clean up URL
+      window.history.replaceState({}, "", window.location.pathname);
+    }
+  }, []);
 
   const {
     suppliers, invoices, computed, dupeIds, monthlyData, allNames, color, maxTotal, kpis, loading,
@@ -176,10 +193,11 @@ export default function App() {
   return (
     <div style={{ background:"#080e1a", minHeight:"100vh", color:"#e2e8f0", fontFamily:"Inter,system-ui,sans-serif" }}>
       <NavBar view={view} setView={setView} suppliersCount={suppliers.length}
-        onSuppliersClick={() => setShowSuppliers(true)} user={user} onSignOut={signOut} />
+        onSuppliersClick={() => setShowSuppliers(true)} user={user} onSignOut={signOut}
+        integrationError={false} />
 
       <div style={{ maxWidth:1140, margin:"0 auto", padding:"28px 28px 60px" }}>
-        {view !== "admin" && (
+        {view !== "admin" && view !== "integrations" && (
           <div style={{ display:"flex", gap:10, marginBottom:32, alignItems:"center", flexWrap:"wrap" }}>
             <button className="upload-btn" style={{ background:"linear-gradient(135deg,#6366f1,#a78bfa)", color:"#fff", boxShadow:"0 4px 20px #6366f133" }}
               onClick={() => fileRef.current.click()} disabled={extracting || loading}>
@@ -204,10 +222,16 @@ export default function App() {
           </div>
         )}
 
-        {view === "dashboard" && <Dashboard  kpis={kpis} monthlyData={monthlyData} allNames={allNames} color={color} maxTotal={maxTotal} />}
-        {view === "invoices"  && <InvoicesView computed={computed} dupeIds={dupeIds} updateInvoice={updateInvoice} deleteInvoice={deleteInvoice} bulkMarkPaid={bulkMarkPaid} bulkDelete={bulkDelete} setEditInvoice={setEditInvoice} color={color} />}
-        {view === "calendar"  && <CalendarView computed={computed} calMonth={calMonth} setCalMonth={setCalMonth} color={color} />}
-        {view === "admin"     && <AdminPage />}
+        {view === "dashboard"    && <Dashboard  kpis={kpis} monthlyData={monthlyData} allNames={allNames} color={color} maxTotal={maxTotal} />}
+        {view === "invoices"     && <InvoicesView computed={computed} dupeIds={dupeIds} updateInvoice={updateInvoice} deleteInvoice={deleteInvoice} bulkMarkPaid={bulkMarkPaid} bulkDelete={bulkDelete} setEditInvoice={setEditInvoice} color={color} />}
+        {view === "calendar"     && <CalendarView computed={computed} calMonth={calMonth} setCalMonth={setCalMonth} color={color} />}
+        {view === "admin"        && <AdminPage />}
+        {view === "integrations" && (
+          <IntegrationsPage
+            oauthResult={oauthResult}
+            onClearOAuthResult={() => setOAuthResult(null)}
+          />
+        )}
       </div>
 
       {editInvoice   && <EditInvoiceModal editInvoice={editInvoice} setEditInvoice={setEditInvoice} suppliers={suppliers} addInvoice={addInvoice} updateInvoice={updateInvoice} getSupplier={getSupplier} />}

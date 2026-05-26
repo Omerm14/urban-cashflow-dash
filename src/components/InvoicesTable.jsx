@@ -27,14 +27,14 @@ export default function InvoicesTable({ computed, dupeIds, updateInvoice, delete
                 style={{ accentColor:"#6366f1", cursor:"pointer", width:14, height:14 }}
               />
             </th>
-            {["Invoice #","Supplier","Date","Amount","Due Date","Status",""].map(h => (
+            {["Invoice #","Supplier","Date","Amount","Due Date","Status","Source",""].map(h => (
               <th key={h} style={{ padding:"14px 18px", textAlign:"left", fontSize:10, fontWeight:700, color:"#334155", textTransform:"uppercase", letterSpacing:"1px" }}>{h}</th>
             ))}
           </tr>
         </thead>
         <tbody>
           {computed.length === 0 && (
-            <tr><td colSpan={8} style={{ padding:"60px 0", textAlign:"center", color:"#334155" }}>
+            <tr><td colSpan={9} style={{ padding:"60px 0", textAlign:"center", color:"#334155" }}>
               <div style={{ fontSize:36, marginBottom:10 }}>🧾</div>
               <div>No invoices yet — upload some above</div>
             </td></tr>
@@ -76,6 +76,21 @@ export default function InvoicesTable({ computed, dupeIds, updateInvoice, delete
                     <span style={{ width:5, height:5, borderRadius:"50%", background:ss.dot, marginRight:6, display:"inline-block" }} />
                     {inv.status}
                   </span>
+                </td>
+                <td style={{ padding:"13px 18px" }}>
+                  {inv.sync_source ? (
+                    <span title={`Synced from ${inv.sync_source.replace("_"," ")} on ${inv.sync_timestamp ? new Date(inv.sync_timestamp).toLocaleDateString() : "—"}`}
+                      style={{ fontSize:11, color:"#475569", display:"flex", alignItems:"center", gap:4 }}>
+                      {{ google_drive:"📁", gmail:"✉️", whatsapp:"💬", green_invoice:"🟢" }[inv.sync_source] || "🔗"}
+                      {inv.sync_source === "google_drive" ? "Drive"
+                       : inv.sync_source === "gmail"        ? "Gmail"
+                       : inv.sync_source === "whatsapp"     ? "WA"
+                       : inv.sync_source === "green_invoice"? "GI"
+                       : inv.sync_source}
+                    </span>
+                  ) : (
+                    <span style={{ fontSize:11, color:"#334155" }}>Manual</span>
+                  )}
                 </td>
                 <td style={{ padding:"13px 18px" }}>
                   <div style={{ display:"flex", gap:6, justifyContent:"flex-end" }}>
