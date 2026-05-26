@@ -6,8 +6,5 @@
     "api/index.js": {
       "maxDuration": 30
     }
-  },
-  "crons": [
-    { "path": "/api/cron/sync", "schedule": "0 * * * *" }
-  ]
+  }
 }
