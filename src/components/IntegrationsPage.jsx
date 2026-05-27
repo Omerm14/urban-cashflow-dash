@@ -519,8 +519,16 @@ function IntegrationCard({ type, integration, onRefresh, showToast, onConnectMod
       const ep = isResync
         ? `/api/integrations/${integration.id}/resync`
         : `/api/integrations/${integration.id}/sync`;
-      const { added } = await apiFetch(ep, { method: "POST" });
-      showToast(`${added} new invoice${added !== 1 ? "s" : ""} added from ${cfg.label}`, true);
+      const { added, filesFound, errors } = await apiFetch(ep, { method: "POST" });
+      let msg;
+      if (filesFound === 0 || filesFound == null) {
+        msg = `No files found — try setting a longer lookback window in Settings`;
+      } else if (added === 0) {
+        msg = `Found ${filesFound} file${filesFound !== 1 ? "s" : ""} but none were new${errors > 0 ? ` (${errors} failed extraction)` : " (all already imported)"}`;
+      } else {
+        msg = `${added} new invoice${added !== 1 ? "s" : ""} added from ${cfg.label}`;
+      }
+      showToast(msg, added > 0);
       onRefresh();
     } catch (e) { showToast(e.message, false); }
     finally { setSyncing(false); setResyncing(false); }

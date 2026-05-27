@@ -199,6 +199,29 @@ const makeOAuth2 = credentials => {
   return c;
 };
 
+// ─── Drive recursive folder collection ───────────────────────────────────────
+
+const collectFolderTree = async (drive, rootId) => {
+  const ids   = [rootId];
+  const queue = [rootId];
+  while (queue.length) {
+    const parent = queue.shift();
+    try {
+      const { data: { files: subs = [] } } = await drive.files.list({
+        q:        `'${parent}' in parents and mimeType='application/vnd.google-apps.folder' and trashed=false`,
+        fields:   'files(id)',
+        pageSize: 100,
+      });
+      for (const f of subs) {
+        if (ids.length >= 50) break;
+        ids.push(f.id);
+        queue.push(f.id);
+      }
+    } catch { break; }
+  }
+  return ids;
+};
+
 // ─── Lookback helper ─────────────────────────────────────────────────────────
 
 const computeCutoff = (lastSync, lookbackDays) => {
@@ -223,24 +246,31 @@ exports.syncGoogleDrive = async (integration, userId) => {
 
   console.log(`[sync:drive] cutoff=${cutoffISO || 'none'} lookback=${lookback} user=${userId}`);
 
+  let folderCond = null;
+  if (folderId) {
+    const allFolderIds = await collectFolderTree(drive, folderId);
+    console.log(`[sync:drive] searching ${allFolderIds.length} folder(s) recursively`);
+    folderCond = `(${allFolderIds.map(id => `'${id}' in parents`).join(' or ')})`;
+  }
+
   const conditions = [
-    folderId ? `'${folderId}' in parents` : null,
+    folderCond,
     "(mimeType='application/pdf' or mimeType contains 'image/')",
     cutoffISO ? `modifiedTime > '${cutoffISO}'` : null,
     'trashed = false',
   ].filter(Boolean).join(' and ');
 
   const { data: { files = [] } } = await drive.files.list({
-    q:       conditions,
-    fields:  'files(id,name,mimeType)',
+    q:        conditions,
+    fields:   'files(id,name,mimeType)',
     pageSize: 50,
   });
 
-  console.log(`[sync:drive] ${files.length} new file(s) for user ${userId}`);
+  console.log(`[sync:drive] ${files.length} file(s) found for user ${userId}`);
 
   const suppliers        = await getSuppliers(userId);
   const existingInvoices = await getExistingInvoices(userId);
-  let added = 0;
+  let added = 0, errors = 0;
 
   for (const file of files) {
     try {
@@ -252,12 +282,13 @@ exports.syncGoogleDrive = async (integration, userId) => {
       );
       if (result) { added++; existingInvoices.push(result); }
     } catch (err) {
+      errors++;
       console.error(`[sync:drive] ${file.name}:`, err.message);
       logSyncEvent(integration.id, userId, 'download_failed', { source_file: file.name, error_message: err.message });
     }
   }
 
-  return added;
+  return { added, filesFound: files.length, errors };
 };
 
 // ─── Gmail sync ──────────────────────────────────────────────────────────────
@@ -270,7 +301,8 @@ exports.syncGmail = async (integration, userId) => {
   const cutoffISO  = computeCutoff(integration.last_sync, lookback);
   const lastSync   = cutoffISO ? Math.floor(new Date(cutoffISO).getTime() / 1000) : null;
 
-  const labelNames = integration.config?.label_names || [];
+  const labelNames = (integration.config?.label_names || [])
+    .map(n => n.toLowerCase().replace(/\s+/g, '-'));
   const fromFilter = integration.config?.filters?.from    || '';
   const subjFilter = integration.config?.filters?.subject || '';
 
@@ -294,7 +326,7 @@ exports.syncGmail = async (integration, userId) => {
 
   const suppliers        = await getSuppliers(userId);
   const existingInvoices = await getExistingInvoices(userId);
-  let added = 0;
+  let added = 0, errors = 0;
 
   for (const msg of messages) {
     try {
@@ -319,12 +351,13 @@ exports.syncGmail = async (integration, userId) => {
         if (result) { added++; existingInvoices.push(result); }
       }
     } catch (err) {
+      errors++;
       console.error(`[sync:gmail] msg ${msg.id}:`, err.message);
       logSyncEvent(integration.id, userId, 'download_failed', { source_file: `msg:${msg.id}`, error_message: err.message });
     }
   }
 
-  return added;
+  return { added, filesFound: messages.length, errors };
 };
 
 // ─── Green Invoice (חשבונית ירוקה) sync ─────────────────────────────────────

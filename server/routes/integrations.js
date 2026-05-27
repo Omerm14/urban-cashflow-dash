@@ -200,20 +200,20 @@ exports.resync = async (req, res) => {
   const resetIntegration = { ...integration, last_sync: null };
 
   try {
-    let added = 0;
-    if (integration.type === 'google_drive')     added = await sync.syncGoogleDrive(resetIntegration, req.user.id);
-    else if (integration.type === 'gmail')        added = await sync.syncGmail(resetIntegration, req.user.id);
-    else if (integration.type === 'green_invoice') added = await sync.syncGreenInvoice(resetIntegration, req.user.id);
+    let result = { added: 0, filesFound: 0, errors: 0 };
+    if (integration.type === 'google_drive')      result = await sync.syncGoogleDrive(resetIntegration, req.user.id);
+    else if (integration.type === 'gmail')         result = await sync.syncGmail(resetIntegration, req.user.id);
+    else if (integration.type === 'green_invoice') result.added = await sync.syncGreenInvoice(resetIntegration, req.user.id);
 
     await supabase.from('integrations').update({
       last_sync:     new Date().toISOString(),
-      sync_count:    (integration.sync_count || 0) + added,
+      sync_count:    (integration.sync_count || 0) + result.added,
       status:        'connected',
       error_message: null,
       error_count:   0,
     }).eq('id', integration.id);
 
-    res.json({ ok: true, added });
+    res.json({ ok: true, ...result });
   } catch (err) {
     console.error('[resync] error:', err.message);
     await supabase.from('integrations').update({
@@ -301,20 +301,20 @@ exports.triggerSync = async (req, res) => {
   if (error || !integration) return res.status(404).json({ error: 'Integration not found' });
 
   try {
-    let added = 0;
-    if (integration.type === 'google_drive')      added = await sync.syncGoogleDrive(integration, req.user.id);
-    else if (integration.type === 'gmail')         added = await sync.syncGmail(integration, req.user.id);
-    else if (integration.type === 'green_invoice') added = await sync.syncGreenInvoice(integration, req.user.id);
+    let result = { added: 0, filesFound: 0, errors: 0 };
+    if (integration.type === 'google_drive')      result = await sync.syncGoogleDrive(integration, req.user.id);
+    else if (integration.type === 'gmail')         result = await sync.syncGmail(integration, req.user.id);
+    else if (integration.type === 'green_invoice') result.added = await sync.syncGreenInvoice(integration, req.user.id);
 
     await supabase.from('integrations').update({
       last_sync:     new Date().toISOString(),
-      sync_count:    (integration.sync_count || 0) + added,
+      sync_count:    (integration.sync_count || 0) + result.added,
       status:        'connected',
       error_message: null,
       error_count:   0,
     }).eq('id', integration.id);
 
-    res.json({ ok: true, added });
+    res.json({ ok: true, ...result });
   } catch (err) {
     console.error('[integrations] sync error:', err.message);
     await supabase.from('integrations').update({
