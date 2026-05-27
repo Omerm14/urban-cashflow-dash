@@ -19,95 +19,198 @@ const apiFetch = async (path, opts = {}) => {
   return json;
 };
 
-// ─── Static config per integration type ─────────────────────────────────────
+// ─── Brand SVG icons ─────────────────────────────────────────────────────────
 
-const SOURCE_CONFIG = {
+const GoogleDriveIcon = ({ size = 28 }) => (
+  <svg width={size} height={size} viewBox="0 0 87.3 78" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path d="M6.6 66.85l3.85 6.65c.8 1.4 1.95 2.5 3.3 3.3L27.5 53H0c0 1.55.4 3.1 1.2 4.5z" fill="#0066da"/>
+    <path d="M43.65 25L29.9 0C28.55.8 27.4 1.9 26.6 3.3L1.2 48.5A9 9 0 000 53h27.5z" fill="#00ac47"/>
+    <path d="M73.55 76.8c1.35-.8 2.5-1.9 3.3-3.3l1.6-2.75L86.1 57.5c.8-1.4 1.2-2.95 1.2-4.5H59.8l5.85 12.2z" fill="#ea4335"/>
+    <path d="M43.65 25L57.4 0c-1.35-.8-2.9-1.2-4.5-1.2H34.4c-1.6 0-3.15.45-4.5 1.2z" fill="#00832d"/>
+    <path d="M59.8 53H27.5L13.75 76.8c1.35.8 2.9 1.2 4.5 1.2h50.8c1.6 0 3.15-.45 4.5-1.2z" fill="#2684fc"/>
+    <path d="M73.4 26.5l-12.6-21.85C60 3.25 58.85 2.15 57.5 1.35L43.65 25 59.8 53h27.45c0-1.55-.4-3.1-1.2-4.5z" fill="#ffba00"/>
+  </svg>
+);
+
+const GmailIcon = ({ size = 28 }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+    <path d="M24 5.457v13.909c0 .904-.732 1.636-1.636 1.636h-3.819V11.73L12 16.64l-6.545-4.91v9.273H1.636A1.636 1.636 0 010 19.366V5.457c0-2.023 2.309-3.178 3.927-1.964L5.455 4.64 12 9.548l6.545-4.91 1.528-1.145C21.69 2.28 24 3.434 24 5.457z" fill="#EA4335"/>
+  </svg>
+);
+
+const GreenInvoiceIcon = ({ size = 28 }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z" fill="#34d399"/>
+  </svg>
+);
+
+const WhatsAppIcon = ({ size = 28 }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path fillRule="evenodd" clipRule="evenodd" d="M12 2C6.477 2 2 6.477 2 12c0 1.89.525 3.658 1.438 5.168L2 22l4.978-1.304A9.96 9.96 0 0012 22c5.523 0 10-4.477 10-10S17.523 2 12 2zm-2.63 5.8c-.21-.49-.432-.5-.63-.508L8.19 7.28c-.2 0-.52.075-.792.375-.27.3-1.032 1.008-1.032 2.457s1.056 2.85 1.204 3.048c.147.198 2.04 3.245 5.01 4.42 2.478.978 2.98.784 3.517.735.537-.05 1.73-.707 1.974-1.39.245-.683.245-1.27.172-1.39-.073-.122-.27-.197-.567-.344-.298-.148-1.73-.854-1.998-.952-.27-.098-.467-.148-.664.148-.197.296-.763.952-.935 1.149-.172.197-.344.222-.641.074-.298-.148-1.258-.463-2.396-1.48-.885-.79-1.483-1.764-1.655-2.062-.173-.297-.018-.457.13-.605.132-.132.297-.344.445-.516.148-.172.197-.296.296-.493.099-.197.05-.37-.025-.518-.074-.148-.656-1.617-.906-2.209z" fill="#25D366"/>
+  </svg>
+);
+
+const ICONS = {
+  google_drive:  GoogleDriveIcon,
+  gmail:         GmailIcon,
+  green_invoice: GreenInvoiceIcon,
+  whatsapp:      WhatsAppIcon,
+};
+
+// ─── Provider config ──────────────────────────────────────────────────────────
+
+const PROVIDERS = {
   google_drive: {
     label:       "Google Drive",
-    icon:        "📁",
-    description: "Sync invoice PDFs and images from your Drive folders automatically.",
+    description: "Automatically pull invoice PDFs and images from a Drive folder.",
     color:       "#4285f4",
+    accent:      "rgba(66,133,244,0.12)",
+    authType:    "oauth",
   },
   gmail: {
     label:       "Gmail",
-    icon:        "✉️",
-    description: "Extract invoice attachments from your Gmail labels.",
+    description: "Extract invoice attachments from Gmail labels.",
     color:       "#ea4335",
+    accent:      "rgba(234,67,53,0.12)",
+    authType:    "oauth",
   },
   green_invoice: {
-    label:       "Green Invoice",
-    icon:        "🟢",
-    description: "Import invoices directly from your חשבונית ירוקה account.",
+    label:       "חשבונית ירוקה",
+    description: "Import documents directly from your Green Invoice account.",
     color:       "#34d399",
+    accent:      "rgba(52,211,153,0.12)",
+    authType:    "apikey",
   },
   whatsapp: {
     label:       "WhatsApp Business",
-    icon:        "💬",
-    description: "Receive invoice images and PDFs sent by vendors on WhatsApp.",
+    description: "Receive invoice images and PDFs from vendors via WhatsApp.",
     color:       "#25d366",
+    accent:      "rgba(37,211,102,0.12)",
+    authType:    "webhook",
   },
 };
 
 const FREQ_OPTIONS = [
-  { label: "Every hour",  value: 60  },
-  { label: "Every 4h",   value: 240 },
+  { label: "Every hour",  value: 60   },
+  { label: "Every 4h",   value: 240  },
   { label: "Once a day", value: 1440 },
 ];
 
-// ─── Status badge ─────────────────────────────────────────────────────────────
+// ─── Shared UI atoms ──────────────────────────────────────────────────────────
 
-function StatusBadge({ status }) {
-  const styles = {
-    connected:    { bg: "#052e16", color: "#4ade80", dot: "#4ade80", label: "Connected" },
-    disconnected: { bg: "#0d1626", color: "#475569", dot: "#334155", label: "Disconnected" },
-    error:        { bg: "#2d0a0a", color: "#f87171", dot: "#f87171", label: "Error" },
+const StatusPill = ({ status }) => {
+  const map = {
+    connected:    { label: "Connected",    color: "#4ade80", bg: "#052e16" },
+    disconnected: { label: "Disconnected", color: "#475569", bg: "#0d1626" },
+    error:        { label: "Error",        color: "#f87171", bg: "#2d0a0a" },
   };
-  const s = styles[status] || styles.disconnected;
+  const s = map[status] || map.disconnected;
   return (
-    <span style={{ display:"inline-flex", alignItems:"center", gap:5, padding:"3px 10px", borderRadius:20,
-      background:s.bg, color:s.color, fontSize:11, fontWeight:700, letterSpacing:".4px" }}>
-      <span style={{ width:5, height:5, borderRadius:"50%", background:s.dot }} />
+    <span style={{
+      display: "inline-flex", alignItems: "center", gap: 5,
+      padding: "3px 10px", borderRadius: 20,
+      background: s.bg, color: s.color, fontSize: 11, fontWeight: 700, letterSpacing: ".4px",
+    }}>
+      <span style={{ width: 5, height: 5, borderRadius: "50%", background: s.color, opacity: .9 }} />
       {s.label}
     </span>
   );
+};
+
+const Btn = ({ children, onClick, disabled, variant = "primary", style: extra = {} }) => {
+  const v = {
+    primary:   { background: "linear-gradient(135deg,#6366f1,#a78bfa)", color: "#fff", border: "none" },
+    secondary: { background: "#131c2e", color: "#94a3b8", border: "1px solid #1e2d45" },
+    danger:    { background: "#1a0606", color: "#f87171", border: "1px solid #7f1d1d" },
+  }[variant];
+  return (
+    <button onClick={onClick} disabled={disabled} style={{
+      padding: "8px 18px", borderRadius: 10,
+      fontFamily: "inherit", fontSize: 13, fontWeight: 600,
+      cursor: disabled ? "not-allowed" : "pointer",
+      opacity: disabled ? .6 : 1,
+      transition: "opacity .15s",
+      ...v, ...extra,
+    }}>
+      {children}
+    </button>
+  );
+};
+
+// ─── Folder picker with path search ──────────────────────────────────────────
+
+function FolderPicker({ folders, value, onChange }) {
+  const [search, setSearch] = useState("");
+  const filtered = (folders || []).filter(f =>
+    f.path.toLowerCase().includes(search.toLowerCase())
+  );
+  const selected = folders?.find(f => f.id === value);
+
+  return (
+    <div>
+      <input
+        type="text"
+        className="input"
+        placeholder="Search folders by path…"
+        value={search}
+        onChange={e => setSearch(e.target.value)}
+        style={{ marginBottom: 6, fontSize: 12 }}
+      />
+      <select
+        className="input"
+        value={value}
+        onChange={e => onChange(e.target.value)}
+        style={{ fontSize: 12 }}
+        size={Math.min(filtered.length + 1, 7)}
+      >
+        <option value="">— Sync all files in My Drive —</option>
+        {filtered.map(f => (
+          <option key={f.id} value={f.id}>{f.path}</option>
+        ))}
+      </select>
+      {selected && (
+        <div style={{ marginTop: 6, fontSize: 11, color: "#4ade80" }}>
+          ✓ {selected.path}
+        </div>
+      )}
+    </div>
+  );
 }
 
-// ─── Sync event timeline ─────────────────────────────────────────────────────
+// ─── Sync event timeline ──────────────────────────────────────────────────────
 
 function EventTimeline({ integrationId }) {
   const [events, setEvents] = useState(null);
-  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     apiFetch(`/api/integrations/${integrationId}/events`)
       .then(d => setEvents(d.events))
-      .catch(() => setEvents([]))
-      .finally(() => setLoading(false));
+      .catch(() => setEvents([]));
   }, [integrationId]);
 
-  const icon = type => ({
-    saved:          { icon: "✓", color: "#4ade80" },
-    dedup_skipped:  { icon: "⊘", color: "#94a3b8" },
-    ocr_failed:     { icon: "✕", color: "#f87171" },
-    download_failed:{ icon: "↯", color: "#fb923c" },
-  }[type] || { icon: "·", color: "#475569" });
+  const iconFor = type => ({
+    saved:           { ch: "✓", color: "#4ade80" },
+    dedup_skipped:   { ch: "⊘", color: "#94a3b8" },
+    ocr_failed:      { ch: "✕", color: "#f87171" },
+    download_failed: { ch: "↯", color: "#fb923c" },
+  }[type] || { ch: "·", color: "#475569" });
 
-  if (loading) return <div style={{ color:"#475569", fontSize:12, padding:"8px 0" }}>Loading history…</div>;
-  if (!events?.length) return <div style={{ color:"#475569", fontSize:12, padding:"8px 0" }}>No sync events yet.</div>;
+  if (!events) return <div style={{ color: "#475569", fontSize: 12 }}>Loading…</div>;
+  if (!events.length) return <div style={{ color: "#475569", fontSize: 12 }}>No sync events yet.</div>;
 
   return (
-    <div style={{ display:"flex", flexDirection:"column", gap:4, maxHeight:220, overflowY:"auto" }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: 5, maxHeight: 200, overflowY: "auto" }}>
       {events.map(ev => {
-        const { icon: ic, color } = icon(ev.event_type);
-        const ts = new Date(ev.created_at).toLocaleString("en-GB", { day:"2-digit", month:"short", hour:"2-digit", minute:"2-digit" });
+        const { ch, color } = iconFor(ev.event_type);
+        const ts = new Date(ev.created_at).toLocaleString("en-GB", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" });
         return (
-          <div key={ev.id} style={{ display:"flex", gap:10, alignItems:"flex-start", fontSize:12 }}>
-            <span style={{ color, fontWeight:700, flexShrink:0, marginTop:1, fontSize:11 }}>{ic}</span>
-            <div style={{ flex:1, minWidth:0 }}>
-              <span style={{ color:"#94a3b8" }}>{ev.source_file || ev.event_type}</span>
-              {ev.error_message && <div style={{ color:"#f87171", fontSize:11 }}>{ev.error_message}</div>}
+          <div key={ev.id} style={{ display: "flex", gap: 10, alignItems: "flex-start", fontSize: 12 }}>
+            <span style={{ color, fontWeight: 700, flexShrink: 0, fontSize: 11 }}>{ch}</span>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <span style={{ color: "#94a3b8" }}>{ev.source_file || ev.event_type}</span>
+              {ev.error_message && <div style={{ color: "#f87171", fontSize: 11 }}>{ev.error_message}</div>}
             </div>
-            <span style={{ color:"#334155", flexShrink:0, fontSize:11 }}>{ts}</span>
+            <span style={{ color: "#334155", flexShrink: 0, fontSize: 11 }}>{ts}</span>
           </div>
         );
       })}
@@ -115,13 +218,13 @@ function EventTimeline({ integrationId }) {
   );
 }
 
-// ─── Green Invoice modal ─────────────────────────────────────────────────────
+// ─── Green Invoice modal ──────────────────────────────────────────────────────
 
 function GreenInvoiceModal({ onClose, onSave }) {
-  const [apiKey, setApiKey] = useState("");
+  const [apiKey,    setApiKey]    = useState("");
   const [apiSecret, setApiSecret] = useState("");
-  const [saving, setSaving] = useState(false);
-  const [err, setErr] = useState(null);
+  const [saving,    setSaving]    = useState(false);
+  const [err,       setErr]       = useState(null);
 
   const save = async () => {
     if (!apiKey || !apiSecret) return setErr("Both fields are required");
@@ -135,40 +238,43 @@ function GreenInvoiceModal({ onClose, onSave }) {
 
   return (
     <div className="modal-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
-      <div className="modal" style={{ maxWidth:400 }}>
-        <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:20 }}>
-          <div style={{ fontWeight:700, fontSize:16, color:"#f1f5f9" }}>🟢 Connect Green Invoice</div>
-          <button onClick={onClose} style={{ width:30, height:30, borderRadius:8, background:"#131c2e", border:"1px solid #1e2d45", color:"#64748b", cursor:"pointer", fontSize:14 }}>✕</button>
+      <div className="modal" style={{ maxWidth: 420 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <GreenInvoiceIcon size={24} />
+            <span style={{ fontWeight: 700, fontSize: 16, color: "#f1f5f9" }}>Connect Green Invoice</span>
+          </div>
+          <button onClick={onClose} style={{ width: 30, height: 30, borderRadius: 8, background: "#131c2e", border: "1px solid #1e2d45", color: "#64748b", cursor: "pointer", fontSize: 14 }}>✕</button>
         </div>
-        <p style={{ fontSize:13, color:"#64748b", marginBottom:18 }}>
-          Enter your Green Invoice API credentials. Find them in your account settings at greeninvoice.co.il.
+        <p style={{ fontSize: 13, color: "#64748b", marginBottom: 18 }}>
+          Enter your API credentials from greeninvoice.co.il → Account Settings → API.
         </p>
-        {[["API Key", apiKey, setApiKey], ["API Secret", apiSecret, setApiSecret]].map(([label, val, setter]) => (
-          <div key={label} style={{ marginBottom:14 }}>
-            <div style={{ fontSize:11, fontWeight:600, color:"#475569", marginBottom:6, textTransform:"uppercase", letterSpacing:".5px" }}>{label}</div>
+        {[["API Key (מזהה)", apiKey, setApiKey], ["API Secret (סיסמה)", apiSecret, setApiSecret]].map(([label, val, setter]) => (
+          <div key={label} style={{ marginBottom: 14 }}>
+            <div style={{ fontSize: 11, fontWeight: 600, color: "#475569", marginBottom: 6, textTransform: "uppercase", letterSpacing: ".5px" }}>{label}</div>
             <input type="text" value={val} className="input" onChange={e => setter(e.target.value)} />
           </div>
         ))}
-        {err && <div style={{ color:"#f87171", fontSize:12, marginBottom:12 }}>{err}</div>}
-        <div style={{ display:"flex", gap:10, justifyContent:"flex-end" }}>
-          <button onClick={onClose} style={{ padding:"9px 18px", background:"#131c2e", border:"1px solid #1e2d45", borderRadius:10, color:"#64748b", cursor:"pointer", fontFamily:"inherit", fontSize:13 }}>Cancel</button>
-          <button onClick={save} disabled={saving} style={{ padding:"9px 20px", background:"linear-gradient(135deg,#34d399,#059669)", border:"none", borderRadius:10, color:"#fff", fontWeight:700, cursor:"pointer", fontFamily:"inherit", fontSize:13 }}>
+        {err && <div style={{ color: "#f87171", fontSize: 12, marginBottom: 12 }}>{err}</div>}
+        <div style={{ display: "flex", gap: 10, justifyContent: "flex-end" }}>
+          <Btn variant="secondary" onClick={onClose}>Cancel</Btn>
+          <Btn onClick={save} disabled={saving} style={{ background: "linear-gradient(135deg,#34d399,#059669)" }}>
             {saving ? "Connecting…" : "Connect"}
-          </button>
+          </Btn>
         </div>
       </div>
     </div>
   );
 }
 
-// ─── WhatsApp modal ──────────────────────────────────────────────────────────
+// ─── WhatsApp modal ───────────────────────────────────────────────────────────
 
 function WhatsAppModal({ onClose, onSave }) {
-  const [apiToken, setApiToken] = useState("");
+  const [apiToken,      setApiToken]      = useState("");
   const [phoneNumberId, setPhoneNumberId] = useState("");
   const [webhookSecret, setWebhookSecret] = useState("");
-  const [saving, setSaving] = useState(false);
-  const [err, setErr] = useState(null);
+  const [saving,        setSaving]        = useState(false);
+  const [err,           setErr]           = useState(null);
   const webhookUrl = `${window.location.origin}/api/webhook/whatsapp`;
 
   const save = async () => {
@@ -186,87 +292,112 @@ function WhatsAppModal({ onClose, onSave }) {
 
   return (
     <div className="modal-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
-      <div className="modal" style={{ maxWidth:460 }}>
-        <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:20 }}>
-          <div style={{ fontWeight:700, fontSize:16, color:"#f1f5f9" }}>💬 Connect WhatsApp Business</div>
-          <button onClick={onClose} style={{ width:30, height:30, borderRadius:8, background:"#131c2e", border:"1px solid #1e2d45", color:"#64748b", cursor:"pointer", fontSize:14 }}>✕</button>
+      <div className="modal" style={{ maxWidth: 460 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <WhatsAppIcon size={24} />
+            <span style={{ fontWeight: 700, fontSize: 16, color: "#f1f5f9" }}>Connect WhatsApp Business</span>
+          </div>
+          <button onClick={onClose} style={{ width: 30, height: 30, borderRadius: 8, background: "#131c2e", border: "1px solid #1e2d45", color: "#64748b", cursor: "pointer", fontSize: 14 }}>✕</button>
         </div>
-        <p style={{ fontSize:13, color:"#64748b", marginBottom:16 }}>
-          Enter your WhatsApp Business API credentials from the Meta for Developers console.
-        </p>
-
-        <div style={{ marginBottom:16, background:"#0d1626", borderRadius:10, padding:"12px 14px", border:"1px solid #1e2d45" }}>
-          <div style={{ fontSize:11, fontWeight:600, color:"#475569", marginBottom:6, textTransform:"uppercase", letterSpacing:".5px" }}>Webhook URL (paste into Meta console)</div>
-          <div style={{ display:"flex", gap:8, alignItems:"center" }}>
-            <code style={{ fontSize:11, color:"#a78bfa", flex:1, wordBreak:"break-all" }}>{webhookUrl}</code>
+        <div style={{ marginBottom: 18, background: "#0a1628", borderRadius: 10, padding: "12px 14px", border: "1px solid #1e2d45" }}>
+          <div style={{ fontSize: 11, fontWeight: 600, color: "#475569", marginBottom: 6, textTransform: "uppercase", letterSpacing: ".5px" }}>Your Webhook URL</div>
+          <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+            <code style={{ fontSize: 11, color: "#a78bfa", flex: 1, wordBreak: "break-all" }}>{webhookUrl}</code>
             <button onClick={() => navigator.clipboard.writeText(webhookUrl)}
-              style={{ padding:"4px 10px", background:"#1e2d45", border:"1px solid #334155", borderRadius:6, color:"#94a3b8", cursor:"pointer", fontSize:11, fontFamily:"inherit", flexShrink:0 }}>
+              style={{ padding: "4px 10px", background: "#1e2d45", border: "1px solid #334155", borderRadius: 6, color: "#94a3b8", cursor: "pointer", fontSize: 11, fontFamily: "inherit", flexShrink: 0 }}>
               Copy
             </button>
           </div>
         </div>
-
         {[
-          ["Permanent Access Token", apiToken, setApiToken, "From Meta → WhatsApp → API Setup"],
-          ["Phone Number ID", phoneNumberId, setPhoneNumberId, "From Meta → WhatsApp → API Setup"],
-          ["Webhook Verify Token / Secret", webhookSecret, setWebhookSecret, "You create this — paste same value in Meta console"],
+          ["Permanent Access Token", apiToken,      setApiToken,      "Meta → WhatsApp → API Setup"],
+          ["Phone Number ID",        phoneNumberId, setPhoneNumberId, "Meta → WhatsApp → API Setup"],
+          ["Webhook Verify Token",   webhookSecret, setWebhookSecret, "Create any random string — paste same value in Meta console"],
         ].map(([label, val, setter, hint]) => (
-          <div key={label} style={{ marginBottom:14 }}>
-            <div style={{ fontSize:11, fontWeight:600, color:"#475569", marginBottom:4, textTransform:"uppercase", letterSpacing:".5px" }}>{label}</div>
-            {hint && <div style={{ fontSize:11, color:"#334155", marginBottom:5 }}>{hint}</div>}
+          <div key={label} style={{ marginBottom: 14 }}>
+            <div style={{ fontSize: 11, fontWeight: 600, color: "#475569", marginBottom: 2, textTransform: "uppercase", letterSpacing: ".5px" }}>{label}</div>
+            {hint && <div style={{ fontSize: 11, color: "#334155", marginBottom: 5 }}>{hint}</div>}
             <input type="text" value={val} className="input" onChange={e => setter(e.target.value)} />
           </div>
         ))}
-
-        {err && <div style={{ color:"#f87171", fontSize:12, marginBottom:12 }}>{err}</div>}
-        <div style={{ display:"flex", gap:10, justifyContent:"flex-end" }}>
-          <button onClick={onClose} style={{ padding:"9px 18px", background:"#131c2e", border:"1px solid #1e2d45", borderRadius:10, color:"#64748b", cursor:"pointer", fontFamily:"inherit", fontSize:13 }}>Cancel</button>
-          <button onClick={save} disabled={saving} style={{ padding:"9px 20px", background:"linear-gradient(135deg,#25d366,#128c7e)", border:"none", borderRadius:10, color:"#fff", fontWeight:700, cursor:"pointer", fontFamily:"inherit", fontSize:13 }}>
+        {err && <div style={{ color: "#f87171", fontSize: 12, marginBottom: 12 }}>{err}</div>}
+        <div style={{ display: "flex", gap: 10, justifyContent: "flex-end" }}>
+          <Btn variant="secondary" onClick={onClose}>Cancel</Btn>
+          <Btn onClick={save} disabled={saving} style={{ background: "linear-gradient(135deg,#25d366,#128c7e)" }}>
             {saving ? "Connecting…" : "Connect"}
-          </button>
+          </Btn>
         </div>
       </div>
     </div>
   );
 }
 
-// ─── Integration card ────────────────────────────────────────────────────────
+// ─── Integration card ─────────────────────────────────────────────────────────
 
-function IntegrationCard({ type, integration, onRefresh, showToast }) {
-  const cfg           = SOURCE_CONFIG[type];
-  const connected     = integration?.status === "connected";
-  const hasError      = integration?.status === "error";
-  const [syncing, setSyncing]         = useState(false);
-  const [resyncing, setResyncing]     = useState(false);
-  const [expanded, setExpanded]       = useState(false);
-  const [showHistory, setShowHistory] = useState(false);
-  const [folders, setFolders]         = useState(null);
-  const [labels, setLabels]           = useState(null);
+function IntegrationCard({ type, integration, onRefresh, showToast, onConnectModal }) {
+  const cfg      = PROVIDERS[type];
+  const Icon     = ICONS[type];
+  const status   = integration?.status || "disconnected";
+  const connected = status === "connected";
+  const hasError  = status === "error";
+
+  const [syncing,       setSyncing]       = useState(false);
+  const [resyncing,     setResyncing]     = useState(false);
+  const [configOpen,    setConfigOpen]    = useState(false);
+  const [historyOpen,   setHistoryOpen]   = useState(false);
+
+  const [folders,        setFolders]        = useState(null);
+  const [foldersLoading, setFoldersLoading] = useState(false);
+  const [labels,         setLabels]         = useState(null);
+  const [labelsLoading,  setLabelsLoading]  = useState(false);
+
   const [selectedFolder, setSelectedFolder] = useState(integration?.config?.folder_id || "");
   const [selectedLabels, setSelectedLabels] = useState(integration?.config?.label_ids || []);
-  const [autoSync, setAutoSync]       = useState(integration?.auto_sync_enabled || false);
-  const [syncFreq, setSyncFreq]       = useState(integration?.sync_frequency_min || 60);
-  const [savingConfig, setSavingConfig] = useState(false);
+  const [autoSync,       setAutoSync]       = useState(integration?.auto_sync_enabled  || false);
+  const [syncFreq,       setSyncFreq]       = useState(integration?.sync_frequency_min || 60);
+  const [savingConfig,   setSavingConfig]   = useState(false);
 
   const lastSync = integration?.last_sync
-    ? new Date(integration.last_sync).toLocaleString("en-GB", { day:"2-digit", month:"short", hour:"2-digit", minute:"2-digit" })
+    ? new Date(integration.last_sync).toLocaleString("en-GB", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })
     : "Never";
 
   const loadFolders = useCallback(async () => {
-    if (folders !== null) return;
+    if (folders !== null || foldersLoading) return;
+    setFoldersLoading(true);
     try { setFolders((await apiFetch("/api/integrations/google/folders")).folders); }
     catch { setFolders([]); }
-  }, [folders]);
+    finally { setFoldersLoading(false); }
+  }, [folders, foldersLoading]);
+
+  const reloadFolders = async () => {
+    setFolders(null);
+    setFoldersLoading(true);
+    try { setFolders((await apiFetch("/api/integrations/google/folders")).folders); }
+    catch { setFolders([]); }
+    finally { setFoldersLoading(false); }
+  };
 
   const loadLabels = useCallback(async () => {
-    if (labels !== null) return;
+    if (labels !== null || labelsLoading) return;
+    setLabelsLoading(true);
     try { setLabels((await apiFetch("/api/integrations/google/labels")).labels); }
     catch { setLabels([]); }
-  }, [labels]);
+    finally { setLabelsLoading(false); }
+  }, [labels, labelsLoading]);
 
-  const handleExpand = () => {
-    setExpanded(e => !e);
-    if (!expanded) {
+  const reloadLabels = async () => {
+    setLabels(null);
+    setLabelsLoading(true);
+    try { setLabels((await apiFetch("/api/integrations/google/labels")).labels); }
+    catch { setLabels([]); }
+    finally { setLabelsLoading(false); }
+  };
+
+  const openConfig = () => {
+    const next = !configOpen;
+    setConfigOpen(next);
+    if (next) {
       if (type === "google_drive") loadFolders();
       if (type === "gmail")        loadLabels();
     }
@@ -283,39 +414,39 @@ function IntegrationCard({ type, integration, onRefresh, showToast }) {
         method: "PATCH",
         body: { auto_sync_enabled: autoSync, sync_frequency_min: syncFreq },
       });
-      showToast("✓ Settings saved", true);
+      showToast("Settings saved", true);
+      setConfigOpen(false);
       onRefresh();
     } catch (e) { showToast(e.message, false); }
     finally { setSavingConfig(false); }
   };
 
   const handleSync = async (isResync = false) => {
-    if (isResync) {
-      if (!confirm("This will re-process all historical files and may add duplicates if any slipped through. Continue?")) return;
-      setResyncing(true);
-    } else {
-      setSyncing(true);
-    }
+    if (isResync && !confirm("Re-process all historical files? May create duplicates if some slipped through.")) return;
+    isResync ? setResyncing(true) : setSyncing(true);
     try {
-      const endpoint = isResync ? `/api/integrations/${integration.id}/resync` : `/api/integrations/${integration.id}/sync`;
-      const { added } = await apiFetch(endpoint, { method: "POST" });
-      showToast(`✓ ${added} new invoice${added !== 1 ? "s" : ""} added from ${cfg.label}`, true);
+      const ep = isResync
+        ? `/api/integrations/${integration.id}/resync`
+        : `/api/integrations/${integration.id}/sync`;
+      const { added } = await apiFetch(ep, { method: "POST" });
+      showToast(`${added} new invoice${added !== 1 ? "s" : ""} added from ${cfg.label}`, true);
       onRefresh();
     } catch (e) { showToast(e.message, false); }
     finally { setSyncing(false); setResyncing(false); }
   };
 
   const handleConnect = async () => {
-    if (type === "green_invoice" || type === "whatsapp") return; // handled by parent modal
+    if (cfg.authType !== "oauth") { onConnectModal(type); return; }
     try {
-      const returnUrl = window.location.origin;
-      const { url } = await apiFetch(`/api/integrations/google/auth-url?type=${type}&returnUrl=${encodeURIComponent(returnUrl)}`);
+      const { url } = await apiFetch(
+        `/api/integrations/google/auth-url?type=${type}&returnUrl=${encodeURIComponent(window.location.origin)}`
+      );
       window.location.href = url;
     } catch (e) { showToast(e.message, false); }
   };
 
   const handleDisconnect = async () => {
-    if (!confirm(`Disconnect ${cfg.label}? Existing invoices are not deleted.`)) return;
+    if (!confirm(`Disconnect ${cfg.label}? Existing invoices are kept.`)) return;
     try {
       await apiFetch(`/api/integrations/${integration.id}`, { method: "DELETE" });
       showToast(`${cfg.label} disconnected`, true);
@@ -327,183 +458,219 @@ function IntegrationCard({ type, integration, onRefresh, showToast }) {
     prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
   );
 
-  const cardBorder = syncing || resyncing ? `1px solid ${cfg.color}55` : hasError ? "1px solid #7f1d1d" : "1px solid #111d2e";
+  const isActive    = syncing || resyncing;
+  const cardBorder  = isActive ? `1px solid ${cfg.color}55` : hasError ? "1px solid #7f1d1d" : "1px solid #111d2e";
 
   return (
-    <div className="card" style={{ border:cardBorder, transition:"border-color .3s", position:"relative",
-      ...(syncing || resyncing ? { boxShadow:`0 0 20px ${cfg.color}15` } : {}) }}>
+    <div className="card" style={{
+      border: cardBorder, transition: "border-color .3s, box-shadow .3s",
+      position: "relative", padding: 0, overflow: "hidden",
+      ...(isActive ? { boxShadow: `0 0 24px ${cfg.color}18` } : {}),
+    }}>
 
-      {/* Sync progress pulse */}
-      {(syncing || resyncing) && (
-        <div style={{ position:"absolute", top:0, left:0, right:0, height:2, borderRadius:"10px 10px 0 0",
-          background:`linear-gradient(90deg, transparent, ${cfg.color}, transparent)`,
-          animation:"shimmer 1.5s infinite" }} />
+      {/* Sync progress bar */}
+      {isActive && (
+        <div style={{
+          position: "absolute", top: 0, left: 0, right: 0, height: 2,
+          background: `linear-gradient(90deg, transparent, ${cfg.color}, transparent)`,
+          animation: "shimmer 1.5s infinite",
+        }} />
       )}
 
-      {/* Header */}
-      <div style={{ display:"flex", alignItems:"center", gap:12, marginBottom:14 }}>
-        <div style={{ width:42, height:42, borderRadius:12, background:`${cfg.color}22`, display:"flex", alignItems:"center", justifyContent:"center", fontSize:20, flexShrink:0 }}>
-          {cfg.icon}
-        </div>
-        <div style={{ flex:1, minWidth:0 }}>
-          <div style={{ fontWeight:700, fontSize:15, color:"#f1f5f9" }}>{cfg.label}</div>
-          <div style={{ fontSize:12, color:"#475569", marginTop:1 }}>{cfg.description}</div>
-        </div>
-        <StatusBadge status={integration?.status || "disconnected"} />
-      </div>
+      {/* Card body */}
+      <div style={{ padding: "22px 22px 0" }}>
 
-      {/* Error message */}
-      {hasError && integration?.error_message && (
-        <div style={{ background:"#2d0a0a", border:"1px solid #7f1d1d", borderRadius:8, padding:"10px 12px", marginBottom:14, fontSize:12, color:"#f87171" }}>
-          ⚠ {integration.error_message}
-          {(type === "google_drive" || type === "gmail") && (
-            <button onClick={handleConnect} style={{ marginLeft:10, color:"#a78bfa", background:"none", border:"none", cursor:"pointer", fontSize:12, fontFamily:"inherit", textDecoration:"underline" }}>
-              Re-authorize
-            </button>
+        {/* Header */}
+        <div style={{ display: "flex", alignItems: "flex-start", gap: 14, marginBottom: 16 }}>
+          <div style={{
+            width: 52, height: 52, borderRadius: 14, flexShrink: 0,
+            background: cfg.accent, boxShadow: `0 0 0 1px ${cfg.color}22`,
+            display: "flex", alignItems: "center", justifyContent: "center",
+          }}>
+            <Icon size={26} />
+          </div>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontWeight: 700, fontSize: 15, color: "#f1f5f9", marginBottom: 3 }}>{cfg.label}</div>
+            <div style={{ fontSize: 12, color: "#475569", lineHeight: 1.5 }}>{cfg.description}</div>
+          </div>
+          <StatusPill status={status} />
+        </div>
+
+        {/* Error banner */}
+        {hasError && integration?.error_message && (
+          <div style={{
+            background: "#2d0a0a", border: "1px solid #7f1d1d", borderRadius: 8,
+            padding: "10px 12px", marginBottom: 14, fontSize: 12, color: "#f87171",
+            display: "flex", gap: 8, alignItems: "flex-start",
+          }}>
+            <span style={{ flexShrink: 0 }}>⚠</span>
+            <div style={{ flex: 1 }}>
+              {integration.error_message}
+              {cfg.authType === "oauth" && (
+                <button onClick={handleConnect}
+                  style={{ marginLeft: 8, color: "#a78bfa", background: "none", border: "none", cursor: "pointer", fontSize: 12, fontFamily: "inherit", textDecoration: "underline" }}>
+                  Re-authorize
+                </button>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Stats */}
+        {connected && (
+          <div style={{ display: "flex", gap: 24, marginBottom: 16, fontSize: 12 }}>
+            <div>
+              <div style={{ color: "#334155", marginBottom: 2 }}>Last sync</div>
+              <div style={{ color: "#94a3b8", fontWeight: 600 }}>{lastSync}</div>
+            </div>
+            <div>
+              <div style={{ color: "#334155", marginBottom: 2 }}>Invoices synced</div>
+              <div style={{ color: "#94a3b8", fontWeight: 600 }}>{integration?.sync_count || 0}</div>
+            </div>
+          </div>
+        )}
+
+        {/* Actions */}
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap", paddingBottom: connected ? 16 : 22 }}>
+          {!connected ? (
+            <Btn onClick={handleConnect} style={{ background: `linear-gradient(135deg,${cfg.color},${cfg.color}cc)`, boxShadow: `0 4px 16px ${cfg.color}30` }}>
+              Connect
+            </Btn>
+          ) : (
+            <>
+              <Btn onClick={() => handleSync(false)} disabled={isActive}>
+                {syncing ? "Syncing…" : "Sync Now"}
+              </Btn>
+              <Btn variant="secondary" onClick={openConfig} style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                <span style={{ fontSize: 14 }}>⚙</span> {configOpen ? "Close" : "Settings"}
+              </Btn>
+              <Btn variant="danger" onClick={handleDisconnect}>Disconnect</Btn>
+            </>
           )}
         </div>
-      )}
-
-      {/* Stats */}
-      {connected && (
-        <div style={{ display:"flex", gap:20, marginBottom:14, fontSize:12, color:"#475569" }}>
-          <span>Last sync: <strong style={{ color:"#94a3b8" }}>{lastSync}</strong></span>
-          <span>Invoices synced: <strong style={{ color:"#94a3b8" }}>{integration?.sync_count || 0}</strong></span>
-        </div>
-      )}
-
-      {/* Action buttons */}
-      <div style={{ display:"flex", gap:8, flexWrap:"wrap", marginBottom: connected ? 12 : 0 }}>
-        {!connected ? (
-          <button onClick={handleConnect}
-            style={{ padding:"9px 20px", background:`linear-gradient(135deg,${cfg.color},${cfg.color}cc)`, border:"none",
-              borderRadius:10, color:"#fff", fontWeight:700, cursor:"pointer", fontFamily:"inherit", fontSize:13, boxShadow:`0 4px 15px ${cfg.color}33` }}>
-            Connect
-          </button>
-        ) : (
-          <>
-            <button onClick={() => handleSync(false)} disabled={syncing || resyncing}
-              style={{ padding:"8px 18px", background:"#6366f1", border:"none", borderRadius:10, color:"#fff", fontWeight:700, cursor:"pointer", fontFamily:"inherit", fontSize:13, opacity: syncing ? .7 : 1 }}>
-              {syncing ? "Syncing…" : "Sync Now"}
-            </button>
-            <button onClick={handleExpand}
-              style={{ padding:"8px 14px", background:"#131c2e", border:"1px solid #1e2d45", borderRadius:10, color:"#64748b", cursor:"pointer", fontFamily:"inherit", fontSize:13 }}>
-              {expanded ? "▲ Settings" : "▼ Settings"}
-            </button>
-            <button onClick={handleDisconnect}
-              style={{ padding:"8px 14px", background:"#2d0a0a", border:"1px solid #7f1d1d", borderRadius:10, color:"#f87171", cursor:"pointer", fontFamily:"inherit", fontSize:13 }}>
-              Disconnect
-            </button>
-          </>
-        )}
       </div>
 
-      {/* Expandable settings */}
-      {connected && expanded && (
-        <div style={{ borderTop:"1px solid #111d2e", paddingTop:14, marginTop:4 }}>
+      {/* Settings panel */}
+      {connected && configOpen && (
+        <div style={{ borderTop: "1px solid #111d2e", padding: "18px 22px 0" }}>
 
-          {/* Google Drive folder picker */}
+          {/* Drive folder picker */}
           {type === "google_drive" && (
-            <div style={{ marginBottom:14 }}>
-              <div style={{ fontSize:11, fontWeight:600, color:"#475569", marginBottom:6, textTransform:"uppercase", letterSpacing:".5px" }}>Sync from folder</div>
-              {folders === null ? (
-                <div style={{ color:"#475569", fontSize:12 }}>Loading folders…</div>
+            <div style={{ marginBottom: 18 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
+                <div style={{ fontSize: 11, fontWeight: 600, color: "#475569", textTransform: "uppercase", letterSpacing: ".5px" }}>Sync folder</div>
+                <button onClick={reloadFolders} disabled={foldersLoading} title="Refresh"
+                  style={{ background: "none", border: "none", color: "#334155", cursor: "pointer", fontSize: 14, padding: 0 }}>↺</button>
+              </div>
+              {foldersLoading ? (
+                <div style={{ color: "#475569", fontSize: 12 }}>Loading folders…</div>
               ) : (
-                <select value={selectedFolder} className="input" onChange={e => setSelectedFolder(e.target.value)}>
-                  <option value="">— All files in Drive —</option>
-                  {folders.map(f => <option key={f.id} value={f.id}>{f.name}</option>)}
-                </select>
+                <FolderPicker folders={folders} value={selectedFolder} onChange={setSelectedFolder} />
               )}
             </div>
           )}
 
           {/* Gmail label picker */}
           {type === "gmail" && (
-            <div style={{ marginBottom:14 }}>
-              <div style={{ fontSize:11, fontWeight:600, color:"#475569", marginBottom:6, textTransform:"uppercase", letterSpacing:".5px" }}>Sync from labels</div>
-              {labels === null ? (
-                <div style={{ color:"#475569", fontSize:12 }}>Loading labels…</div>
-              ) : labels.length === 0 ? (
-                <div style={{ color:"#475569", fontSize:12 }}>No custom labels found.</div>
+            <div style={{ marginBottom: 18 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
+                <div style={{ fontSize: 11, fontWeight: 600, color: "#475569", textTransform: "uppercase", letterSpacing: ".5px" }}>Labels to scan</div>
+                <button onClick={reloadLabels} disabled={labelsLoading} title="Refresh"
+                  style={{ background: "none", border: "none", color: "#334155", cursor: "pointer", fontSize: 14, padding: 0 }}>↺</button>
+              </div>
+              {labelsLoading ? (
+                <div style={{ color: "#475569", fontSize: 12 }}>Loading labels…</div>
+              ) : !labels?.length ? (
+                <div style={{ color: "#475569", fontSize: 12 }}>No custom labels found.</div>
               ) : (
-                <div style={{ display:"flex", flexWrap:"wrap", gap:6 }}>
-                  {labels.map(l => (
-                    <label key={l.id} style={{ display:"flex", alignItems:"center", gap:5, cursor:"pointer",
-                      padding:"4px 10px", borderRadius:20, fontSize:12,
-                      background: selectedLabels.includes(l.id) ? "#6366f122" : "#0d1626",
-                      border: `1px solid ${selectedLabels.includes(l.id) ? "#6366f1" : "#1e2d45"}`,
-                      color: selectedLabels.includes(l.id) ? "#a78bfa" : "#64748b" }}>
-                      <input type="checkbox" checked={selectedLabels.includes(l.id)} onChange={() => toggleLabel(l.id)}
-                        style={{ accentColor:"#6366f1", width:12, height:12 }} />
-                      {l.name}
-                    </label>
-                  ))}
-                </div>
+                <>
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                    {labels.map(l => (
+                      <label key={l.id} style={{
+                        display: "flex", alignItems: "center", gap: 5, cursor: "pointer",
+                        padding: "5px 12px", borderRadius: 20, fontSize: 12,
+                        background: selectedLabels.includes(l.id) ? "#6366f122" : "#0d1626",
+                        border: `1px solid ${selectedLabels.includes(l.id) ? "#6366f1" : "#1e2d45"}`,
+                        color: selectedLabels.includes(l.id) ? "#a78bfa" : "#64748b",
+                        transition: "all .15s",
+                      }}>
+                        <input type="checkbox" checked={selectedLabels.includes(l.id)} onChange={() => toggleLabel(l.id)}
+                          style={{ accentColor: "#6366f1", width: 12, height: 12 }} />
+                        {l.name}
+                      </label>
+                    ))}
+                  </div>
+                  {selectedLabels.length > 0 && (
+                    <div style={{ marginTop: 6, fontSize: 11, color: "#4ade80" }}>
+                      ✓ {selectedLabels.length} label{selectedLabels.length !== 1 ? "s" : ""} selected
+                    </div>
+                  )}
+                </>
               )}
             </div>
           )}
 
-          {/* WhatsApp webhook URL */}
+          {/* WhatsApp webhook info */}
           {type === "whatsapp" && (
-            <div style={{ marginBottom:14 }}>
-              <div style={{ fontSize:11, fontWeight:600, color:"#475569", marginBottom:6, textTransform:"uppercase", letterSpacing:".5px" }}>Webhook URL</div>
-              <div style={{ display:"flex", gap:8, alignItems:"center", background:"#0d1626", borderRadius:8, padding:"8px 12px", border:"1px solid #1e2d45" }}>
-                <code style={{ fontSize:11, color:"#a78bfa", flex:1, wordBreak:"break-all" }}>
+            <div style={{ marginBottom: 18 }}>
+              <div style={{ fontSize: 11, fontWeight: 600, color: "#475569", marginBottom: 6, textTransform: "uppercase", letterSpacing: ".5px" }}>Webhook URL</div>
+              <div style={{ display: "flex", gap: 8, alignItems: "center", background: "#0a1628", borderRadius: 8, padding: "8px 12px", border: "1px solid #1e2d45" }}>
+                <code style={{ fontSize: 11, color: "#a78bfa", flex: 1, wordBreak: "break-all" }}>
                   {window.location.origin}/api/webhook/whatsapp
                 </code>
                 <button onClick={() => navigator.clipboard.writeText(`${window.location.origin}/api/webhook/whatsapp`)}
-                  style={{ padding:"3px 10px", background:"#1e2d45", border:"none", borderRadius:6, color:"#94a3b8", cursor:"pointer", fontSize:11, fontFamily:"inherit" }}>
+                  style={{ padding: "3px 10px", background: "#1e2d45", border: "none", borderRadius: 6, color: "#94a3b8", cursor: "pointer", fontSize: 11, fontFamily: "inherit" }}>
                   Copy
                 </button>
               </div>
-              <div style={{ fontSize:11, color:"#334155", marginTop:6 }}>Phone Number ID: {integration?.config?.phone_number_id || "—"}</div>
+              {integration?.config?.phone_number_id && (
+                <div style={{ fontSize: 11, color: "#334155", marginTop: 6 }}>Phone ID: {integration.config.phone_number_id}</div>
+              )}
             </div>
           )}
 
-          {/* Auto-sync settings */}
-          <div style={{ marginBottom:14 }}>
-            <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:8 }}>
-              <label style={{ display:"flex", alignItems:"center", gap:8, cursor:"pointer", fontSize:13, color:"#94a3b8" }}>
-                <input type="checkbox" checked={autoSync} onChange={e => setAutoSync(e.target.checked)}
-                  style={{ accentColor:"#6366f1", width:14, height:14 }} />
-                Auto-sync enabled
-              </label>
-            </div>
+          {/* Auto-sync */}
+          <div style={{ marginBottom: 18 }}>
+            <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", fontSize: 13, color: "#94a3b8", marginBottom: 8 }}>
+              <input type="checkbox" checked={autoSync} onChange={e => setAutoSync(e.target.checked)}
+                style={{ accentColor: "#6366f1", width: 14, height: 14 }} />
+              Auto-sync enabled
+            </label>
             {autoSync && (
-              <div style={{ display:"flex", alignItems:"center", gap:10 }}>
-                <div style={{ fontSize:12, color:"#475569" }}>Frequency:</div>
-                <select value={syncFreq} onChange={e => setSyncFreq(Number(e.target.value))} className="input" style={{ width:"auto", fontSize:12, padding:"5px 10px" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                <span style={{ fontSize: 12, color: "#475569" }}>Frequency:</span>
+                <select value={syncFreq} onChange={e => setSyncFreq(Number(e.target.value))}
+                  className="input" style={{ width: "auto", fontSize: 12, padding: "5px 10px" }}>
                   {FREQ_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
                 </select>
               </div>
             )}
           </div>
 
-          {/* Save + Resync row */}
-          <div style={{ display:"flex", gap:8, alignItems:"center" }}>
-            <button onClick={saveConfig} disabled={savingConfig}
-              style={{ padding:"8px 18px", background:"linear-gradient(135deg,#6366f1,#a78bfa)", border:"none", borderRadius:10, color:"#fff", fontWeight:700, cursor:"pointer", fontFamily:"inherit", fontSize:13 }}>
+          {/* Save + Resync */}
+          <div style={{ display: "flex", gap: 8, paddingBottom: 18 }}>
+            <Btn onClick={saveConfig} disabled={savingConfig}>
               {savingConfig ? "Saving…" : "Save Settings"}
-            </button>
+            </Btn>
             {type !== "whatsapp" && (
-              <button onClick={() => handleSync(true)} disabled={syncing || resyncing}
-                style={{ padding:"8px 14px", background:"#0d1626", border:"1px solid #1e2d45", borderRadius:10, color:"#64748b", cursor:"pointer", fontFamily:"inherit", fontSize:12 }}>
+              <Btn variant="secondary" onClick={() => handleSync(true)} disabled={isActive} style={{ fontSize: 12 }}>
                 {resyncing ? "Resyncing…" : "↺ Resync All"}
-              </button>
+              </Btn>
             )}
           </div>
         </div>
       )}
 
-      {/* Sync history toggle */}
+      {/* Sync history */}
       {connected && (
-        <div style={{ marginTop:12, borderTop:"1px solid #0d1626", paddingTop:10 }}>
-          <button onClick={() => setShowHistory(h => !h)}
-            style={{ background:"none", border:"none", color:"#334155", cursor:"pointer", fontFamily:"inherit", fontSize:12, padding:0 }}>
-            {showHistory ? "▲ Hide" : "▼ Sync history"}
+        <div style={{ borderTop: "1px solid #0d1626", padding: "10px 22px 14px" }}>
+          <button onClick={() => setHistoryOpen(h => !h)}
+            style={{ background: "none", border: "none", color: "#334155", cursor: "pointer", fontFamily: "inherit", fontSize: 12, padding: 0, display: "flex", alignItems: "center", gap: 5 }}>
+            <span style={{ fontSize: 10 }}>{historyOpen ? "▲" : "▼"}</span>
+            Sync history
           </button>
-          {showHistory && (
-            <div style={{ marginTop:10 }}>
+          {historyOpen && (
+            <div style={{ marginTop: 10 }}>
               <EventTimeline integrationId={integration.id} />
             </div>
           )}
@@ -513,13 +680,13 @@ function IntegrationCard({ type, integration, onRefresh, showToast }) {
   );
 }
 
-// ─── Main page ───────────────────────────────────────────────────────────────
+// ─── Main page ────────────────────────────────────────────────────────────────
 
 export default function IntegrationsPage({ oauthResult, onClearOAuthResult }) {
-  const [integrations, setIntegrations] = useState([]);
-  const [loading, setLoading]           = useState(true);
-  const [toast, setToast]               = useState(null);
-  const [showGreenModal, setShowGreenModal]   = useState(false);
+  const [integrations,      setIntegrations]      = useState([]);
+  const [loading,           setLoading]           = useState(true);
+  const [toast,             setToast]             = useState(null);
+  const [showGreenModal,    setShowGreenModal]    = useState(false);
   const [showWhatsAppModal, setShowWhatsAppModal] = useState(false);
 
   const showToast = useCallback((text, ok) => {
@@ -537,11 +704,13 @@ export default function IntegrationsPage({ oauthResult, onClearOAuthResult }) {
 
   useEffect(() => { load(); }, [load]);
 
-  // Show OAuth result toast on mount (passed from App via URL param)
   useEffect(() => {
     if (!oauthResult) return;
     if (oauthResult.connected) {
-      showToast(`✓ ${SOURCE_CONFIG[oauthResult.connected]?.label || oauthResult.connected} connected successfully`, true);
+      showToast(
+        `${PROVIDERS[oauthResult.connected]?.label || oauthResult.connected} connected — open Settings to pick a folder or label.`,
+        true
+      );
     } else if (oauthResult.error) {
       showToast(`Connection failed: ${oauthResult.error}`, false);
     }
@@ -549,95 +718,67 @@ export default function IntegrationsPage({ oauthResult, onClearOAuthResult }) {
   }, [oauthResult, showToast, onClearOAuthResult]);
 
   const getIntegration = type => integrations.find(i => i.type === type);
+  const hasAnyError    = integrations.some(i => i.status === "error");
 
-  const handleConnectClick = type => {
-    if (type === "green_invoice") return setShowGreenModal(true);
-    if (type === "whatsapp")      return setShowWhatsAppModal(true);
-    // Google types handled inside the card
+  const handleConnectModal = type => {
+    if (type === "green_invoice") setShowGreenModal(true);
+    if (type === "whatsapp")      setShowWhatsAppModal(true);
   };
 
-  const hasAnyError = integrations.some(i => i.status === "error");
-
   if (loading) return (
-    <div style={{ color:"#475569", padding:"60px 0", textAlign:"center", fontSize:14 }}>Loading integrations…</div>
+    <div style={{ color: "#475569", padding: "60px 0", textAlign: "center", fontSize: 14 }}>
+      Loading integrations…
+    </div>
   );
 
   return (
     <div>
-      {/* Page header */}
-      <div style={{ marginBottom:32 }}>
-        <div style={{ fontWeight:800, fontSize:22, color:"#f1f5f9", marginBottom:6 }}>Auto-Sync Integrations</div>
-        <div style={{ fontSize:14, color:"#475569" }}>
-          Connect your invoice sources and let Cashflow automatically pull in new invoices — no manual uploads needed.
+      <div style={{ marginBottom: 28 }}>
+        <div style={{ fontWeight: 800, fontSize: 22, color: "#f1f5f9", marginBottom: 6 }}>Auto-Sync Integrations</div>
+        <div style={{ fontSize: 14, color: "#475569" }}>
+          Connect your invoice sources. Cashflow will automatically pull in new invoices — no manual uploads needed.
         </div>
         {hasAnyError && (
-          <div style={{ marginTop:12, padding:"10px 16px", background:"#2d0a0a", border:"1px solid #7f1d1d", borderRadius:10, fontSize:13, color:"#f87171" }}>
-            ⚠ One or more integrations have errors. Expand the card to re-authorize.
+          <div style={{ marginTop: 14, padding: "10px 16px", background: "#2d0a0a", border: "1px solid #7f1d1d", borderRadius: 10, fontSize: 13, color: "#f87171" }}>
+            ⚠ One or more integrations have errors — expand the card to re-authorize.
           </div>
         )}
       </div>
 
-      {/* Toast */}
       {toast && (
-        <div style={{ marginBottom:20, padding:"10px 16px", borderRadius:10, fontSize:13, animation:"fadeIn .3s",
+        <div style={{
+          marginBottom: 20, padding: "10px 16px", borderRadius: 10, fontSize: 13, animation: "fadeIn .3s",
           background: toast.ok ? "#052e16" : "#2d0a0a",
           border:     `1px solid ${toast.ok ? "#166534" : "#7f1d1d"}`,
-          color:      toast.ok ? "#4ade80" : "#f87171" }}>
-          {toast.text}
+          color:      toast.ok ? "#4ade80" : "#f87171",
+        }}>
+          {toast.ok ? "✓ " : "✕ "}{toast.text}
         </div>
       )}
 
-      {/* Integration cards grid */}
-      <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill, minmax(340px, 1fr))", gap:20 }}>
-        {Object.keys(SOURCE_CONFIG).map(type => {
-          const integration = getIntegration(type);
-          const connected   = integration?.status === "connected";
-          return (
-            <div key={type}>
-              {/* Show connect button outside card for disconnected non-Google types */}
-              {!connected && (type === "green_invoice" || type === "whatsapp") ? (
-                <div className="card" style={{ border:"1px solid #111d2e" }}>
-                  <div style={{ display:"flex", alignItems:"center", gap:12, marginBottom:14 }}>
-                    <div style={{ width:42, height:42, borderRadius:12, background:`${SOURCE_CONFIG[type].color}22`, display:"flex", alignItems:"center", justifyContent:"center", fontSize:20 }}>
-                      {SOURCE_CONFIG[type].icon}
-                    </div>
-                    <div style={{ flex:1 }}>
-                      <div style={{ fontWeight:700, fontSize:15, color:"#f1f5f9" }}>{SOURCE_CONFIG[type].label}</div>
-                      <div style={{ fontSize:12, color:"#475569", marginTop:1 }}>{SOURCE_CONFIG[type].description}</div>
-                    </div>
-                    <StatusBadge status="disconnected" />
-                  </div>
-                  <button onClick={() => handleConnectClick(type)}
-                    style={{ padding:"9px 20px", background:`linear-gradient(135deg,${SOURCE_CONFIG[type].color},${SOURCE_CONFIG[type].color}cc)`,
-                      border:"none", borderRadius:10, color:"#fff", fontWeight:700, cursor:"pointer", fontFamily:"inherit", fontSize:13,
-                      boxShadow:`0 4px 15px ${SOURCE_CONFIG[type].color}33` }}>
-                    Connect
-                  </button>
-                </div>
-              ) : (
-                <IntegrationCard
-                  type={type}
-                  integration={integration}
-                  onRefresh={load}
-                  showToast={showToast}
-                />
-              )}
-            </div>
-          );
-        })}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(360px, 1fr))", gap: 20 }}>
+        {Object.keys(PROVIDERS).map(type => (
+          <IntegrationCard
+            key={type}
+            type={type}
+            integration={getIntegration(type)}
+            onRefresh={load}
+            showToast={showToast}
+            onConnectModal={handleConnectModal}
+          />
+        ))}
       </div>
 
-      {/* Modals */}
       {showGreenModal && (
         <GreenInvoiceModal
           onClose={() => setShowGreenModal(false)}
-          onSave={() => { setShowGreenModal(false); load(); showToast("✓ Green Invoice connected", true); }}
+          onSave={() => { setShowGreenModal(false); load(); showToast("Green Invoice connected", true); }}
         />
       )}
       {showWhatsAppModal && (
         <WhatsAppModal
           onClose={() => setShowWhatsAppModal(false)}
-          onSave={() => { setShowWhatsAppModal(false); load(); showToast("✓ WhatsApp Business connected", true); }}
+          onSave={() => { setShowWhatsAppModal(false); load(); showToast("WhatsApp Business connected", true); }}
         />
       )}
     </div>

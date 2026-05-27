@@ -255,12 +255,14 @@ exports.syncGmail = async (integration, userId) => {
     ? Math.floor(new Date(integration.last_sync).getTime() / 1000)
     : null;
 
-  const labelIds   = integration.config?.label_ids || [];
-  const labelQuery = labelIds.length ? `label:${labelIds.join(' OR label:')}` : '';
-  const q = ['has:attachment', lastSync ? `after:${lastSync}` : null, labelQuery || null].filter(Boolean).join(' ');
+  const labelIds = integration.config?.label_ids || [];
+  const q = ['has:attachment', lastSync ? `after:${lastSync}` : null].filter(Boolean).join(' ');
 
   const { data: { messages = [] } } = await gmail.users.messages.list({
-    userId: 'me', q, maxResults: 50,
+    userId:   'me',
+    q,
+    ...(labelIds.length ? { labelIds } : {}),
+    maxResults: 50,
   });
 
   console.log(`[sync:gmail] ${messages.length} message(s) for user ${userId}`);

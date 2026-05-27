@@ -121,11 +121,30 @@ exports.googleFolders = async (req, res) => {
     const drive = google.drive({ version: 'v3', auth });
     const { data: { files = [] } } = await drive.files.list({
       q:        "mimeType='application/vnd.google-apps.folder' and trashed=false",
-      fields:   'files(id,name)',
-      pageSize: 100,
+      fields:   'files(id,name,parents)',
+      pageSize: 200,
       orderBy:  'name',
     });
-    res.json({ folders: files });
+
+    // Build id→name map then compute full path for each folder
+    const nameMap = {};
+    files.forEach(f => { nameMap[f.id] = f.name; });
+
+    const buildPath = folder => {
+      const parts = [folder.name];
+      let parentId = folder.parents?.[0];
+      for (let i = 0; i < 4 && parentId && nameMap[parentId]; i++) {
+        parts.unshift(nameMap[parentId]);
+        parentId = files.find(f => f.id === parentId)?.parents?.[0];
+      }
+      return parts.join(' › ');
+    };
+
+    const folders = files
+      .map(f => ({ id: f.id, name: f.name, path: buildPath(f) }))
+      .sort((a, b) => a.path.localeCompare(b.path));
+
+    res.json({ folders });
   } catch (err) {
     console.error('[folders]', err.message);
     res.status(500).json({ error: err.message });
