@@ -48,7 +48,7 @@ export default function App() {
     suppliers, invoices, computed, dupeIds, monthlyData, allNames, color, maxTotal, kpis, loading,
     addInvoice, updateInvoice, deleteInvoice, bulkMarkPaid, bulkDelete,
     addSupplier, updateSupplier, deleteSupplier,
-    getSupplier,
+    getSupplier, refreshInvoices,
   } = useInvoiceData();
 
   const handleUpload = useCallback(async e => {
@@ -230,6 +230,7 @@ export default function App() {
           <IntegrationsPage
             oauthResult={oauthResult}
             onClearOAuthResult={() => setOAuthResult(null)}
+            onInvoicesRefresh={refreshInvoices}
           />
         )}
       </div>

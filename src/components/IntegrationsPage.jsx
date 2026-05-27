@@ -434,7 +434,7 @@ function WhatsAppModal({ onClose, onSave }) {
 
 // ─── Integration card ─────────────────────────────────────────────────────────
 
-function IntegrationCard({ type, integration, onRefresh, showToast, onConnectModal }) {
+function IntegrationCard({ type, integration, onRefresh, onInvoicesRefresh, showToast, onConnectModal }) {
   const cfg      = PROVIDERS[type];
   const Icon     = ICONS[type];
   const status   = integration?.status || "disconnected";
@@ -530,6 +530,7 @@ function IntegrationCard({ type, integration, onRefresh, showToast, onConnectMod
       }
       showToast(msg, added > 0);
       onRefresh();
+      if (added > 0) onInvoicesRefresh?.();
     } catch (e) { showToast(e.message, false); }
     finally { setSyncing(false); setResyncing(false); }
   };
@@ -845,7 +846,7 @@ function IntegrationCard({ type, integration, onRefresh, showToast, onConnectMod
 
 // ─── Main page ────────────────────────────────────────────────────────────────
 
-export default function IntegrationsPage({ oauthResult, onClearOAuthResult }) {
+export default function IntegrationsPage({ oauthResult, onClearOAuthResult, onInvoicesRefresh }) {
   const [integrations,      setIntegrations]      = useState([]);
   const [loading,           setLoading]           = useState(true);
   const [toast,             setToast]             = useState(null);
@@ -926,6 +927,7 @@ export default function IntegrationsPage({ oauthResult, onClearOAuthResult }) {
             type={type}
             integration={getIntegration(type)}
             onRefresh={load}
+            onInvoicesRefresh={onInvoicesRefresh}
             showToast={showToast}
             onConnectModal={handleConnectModal}
           />

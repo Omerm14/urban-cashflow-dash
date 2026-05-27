@@ -77,6 +77,12 @@ export const useInvoiceData = () => {
     setSuppliers(p => p.filter(s => s.id !== id));
   }, []);
 
+  const refreshInvoices = useCallback(async () => {
+    if (!user) return;
+    const { data, error } = await supabase.from('invoices').select('*').eq('user_id', user.id).order('created_at');
+    if (!error) setInvoices(data ?? []);
+  }, [user]);
+
   const getSupplier = useCallback(name => matchSupplier(name, suppliers), [suppliers]);
 
   const computed = useMemo(() => {
@@ -134,6 +140,6 @@ export const useInvoiceData = () => {
     suppliers, invoices, computed, dupeIds, monthlyData, allNames, color, maxTotal, kpis, loading,
     addInvoice, updateInvoice, deleteInvoice, bulkMarkPaid, bulkDelete,
     addSupplier, updateSupplier, deleteSupplier,
-    getSupplier,
+    getSupplier, refreshInvoices,
   };
 };
