@@ -174,7 +174,7 @@ const getSuppliers = async userId => {
 const getExistingInvoices = async userId => {
   const { data } = await supabase
     .from('invoices')
-    .select('supplier,invoice_no,amount,invoice_date')
+    .select('supplier,invoice_no,amount,invoice_date,source_file')
     .eq('user_id', userId);
   return data || [];
 };
@@ -272,9 +272,15 @@ exports.syncGoogleDrive = async (integration, userId) => {
 
   const suppliers        = await getSuppliers(userId);
   const existingInvoices = await getExistingInvoices(userId);
+  const seenFiles = new Set(existingInvoices.map(i => i.source_file?.toLowerCase()).filter(Boolean));
   let added = 0, errors = 0;
 
   for (const file of files) {
+    if (seenFiles.has(file.name.toLowerCase())) {
+      console.log(`[sync:drive] skipping already-imported file: ${file.name}`);
+      logSyncEvent(integration.id, userId, 'dedup_skipped', { source_file: file.name });
+      continue;
+    }
     try {
       const resp   = await drive.files.get({ fileId: file.id, alt: 'media' }, { responseType: 'arraybuffer' });
       const buffer = Buffer.from(resp.data);
@@ -282,7 +288,7 @@ exports.syncGoogleDrive = async (integration, userId) => {
         buffer, file.name, file.mimeType, userId, suppliers, existingInvoices,
         integration.id, 'google_drive', { folder_id: folderId, drive_file_id: file.id },
       );
-      if (result) { added++; existingInvoices.push(result); }
+      if (result) { added++; existingInvoices.push(result); seenFiles.add(file.name.toLowerCase()); }
     } catch (err) {
       errors++;
       console.error(`[sync:drive] ${file.name}:`, err.message);

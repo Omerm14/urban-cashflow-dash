@@ -144,8 +144,12 @@ function DriveNavigator({ selectedFolder, selectedFolderName, onSelect }) {
   const [stack,    setStack]    = useState([{ id: "root", name: "My Drive" }]);
   const [children, setChildren] = useState([]);
   const [loading,  setLoading]  = useState(false);
+  const [search,   setSearch]   = useState("");
 
   const current = stack[stack.length - 1];
+  const filtered = search.trim()
+    ? children.filter(f => f.name.toLowerCase().includes(search.toLowerCase()))
+    : children;
 
   const fetchChildren = useCallback(async id => {
     setLoading(true);
@@ -194,6 +198,18 @@ function DriveNavigator({ selectedFolder, selectedFolderName, onSelect }) {
         ))}
       </div>
 
+      {/* Search */}
+      <input
+        value={search}
+        onChange={e => setSearch(e.target.value)}
+        placeholder="Search folders…"
+        style={{
+          width: "100%", boxSizing: "border-box", marginBottom: 8,
+          padding: "6px 10px", borderRadius: 7, border: "1px solid #1e2d45",
+          background: "#0d1626", color: "#cbd5e1", fontSize: 12, fontFamily: "inherit", outline: "none",
+        }}
+      />
+
       {/* Folder list */}
       <div style={{
         border: "1px solid #1e2d45", borderRadius: 10, overflow: "hidden",
@@ -224,10 +240,12 @@ function DriveNavigator({ selectedFolder, selectedFolderName, onSelect }) {
 
         {loading ? (
           <div style={{ padding: "14px 12px", color: "#475569", fontSize: 12 }}>Loading…</div>
-        ) : !children.length ? (
-          <div style={{ padding: "14px 12px", color: "#334155", fontSize: 12 }}>No subfolders</div>
+        ) : !filtered.length ? (
+          <div style={{ padding: "14px 12px", color: "#334155", fontSize: 12 }}>
+            {search ? "No folders match" : "No subfolders"}
+          </div>
         ) : (
-          children.map(f => (
+          filtered.map(f => (
             <div key={f.id} style={{
               display: "flex", alignItems: "center", justifyContent: "space-between",
               padding: "8px 12px", borderBottom: "1px solid #0d1626",
@@ -267,10 +285,19 @@ function DriveNavigator({ selectedFolder, selectedFolderName, onSelect }) {
         )}
       </div>
 
-      {/* Confirmation */}
+      {/* Confirmation + remove */}
       {selectedLabel && (
-        <div style={{ marginTop: 8, fontSize: 11, color: "#4ade80" }}>
-          ✓ Syncing: {selectedLabel}
+        <div style={{ marginTop: 8, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          <span style={{ fontSize: 11, color: "#4ade80" }}>✓ Syncing: {selectedLabel}</span>
+          <button
+            onClick={() => onSelect("", "")}
+            style={{
+              background: "none", border: "none", cursor: "pointer",
+              fontSize: 11, color: "#64748b", fontFamily: "inherit", padding: "0 2px",
+            }}
+          >
+            ✕ Remove
+          </button>
         </div>
       )}
     </div>
