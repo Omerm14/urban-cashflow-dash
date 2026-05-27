@@ -30,8 +30,10 @@ const extractFromBuffer = async (buffer, mediaType, userId) => {
     output_tokens: msg.usage.output_tokens,
   }).then(({ error }) => { if (error) console.error('usage log:', error.message); });
 
-  const text = msg.content.map(b => b.text || '').join('').replace(/```json|```/g, '').trim();
-  return JSON.parse(text);
+  const text  = msg.content.map(b => b.text || '').join('').trim();
+  const match = text.match(/\{[\s\S]*\}/);
+  if (!match) throw new Error(`No JSON in Claude response: ${text.slice(0, 120)}`);
+  return JSON.parse(match[0]);
 };
 
 // ─── Date / due-date helpers (mirror of src/utils/dates.js) ─────────────────
