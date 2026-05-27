@@ -199,19 +199,34 @@ const makeOAuth2 = credentials => {
   return c;
 };
 
+// ─── Lookback helper ─────────────────────────────────────────────────────────
+
+const computeCutoff = (lastSync, lookbackDays) => {
+  if (lookbackDays === -1) return null;                                    // all time
+  if (lookbackDays > 0) {
+    const cutoff = new Date(Date.now() - lookbackDays * 86_400_000);
+    if (!lastSync || new Date(lastSync) < cutoff) return cutoff.toISOString();
+    return new Date(lastSync).toISOString();
+  }
+  return lastSync ? new Date(lastSync).toISOString() : null;              // since last_sync
+};
+
 // ─── Google Drive sync ───────────────────────────────────────────────────────
 
 exports.syncGoogleDrive = async (integration, userId) => {
   const auth  = makeOAuth2({ ...integration.credentials, _userId: userId, _type: 'google_drive' });
   const drive = google.drive({ version: 'v3', auth });
 
-  const folderId  = integration.config?.folder_id;
-  const lastSync  = integration.last_sync ? new Date(integration.last_sync).toISOString() : null;
+  const folderId   = integration.config?.folder_id;
+  const lookback   = integration.config?.lookback_days ?? 0;
+  const cutoffISO  = computeCutoff(integration.last_sync, lookback);
+
+  console.log(`[sync:drive] cutoff=${cutoffISO || 'none'} lookback=${lookback} user=${userId}`);
 
   const conditions = [
     folderId ? `'${folderId}' in parents` : null,
     "(mimeType='application/pdf' or mimeType contains 'image/')",
-    lastSync ? `modifiedTime > '${lastSync}'` : null,
+    cutoffISO ? `modifiedTime > '${cutoffISO}'` : null,
     'trashed = false',
   ].filter(Boolean).join(' and ');
 
@@ -251,9 +266,9 @@ exports.syncGmail = async (integration, userId) => {
   const auth  = makeOAuth2({ ...integration.credentials, _userId: userId, _type: 'gmail' });
   const gmail = google.gmail({ version: 'v1', auth });
 
-  const lastSync = integration.last_sync
-    ? Math.floor(new Date(integration.last_sync).getTime() / 1000)
-    : null;
+  const lookback   = integration.config?.lookback_days ?? 0;
+  const cutoffISO  = computeCutoff(integration.last_sync, lookback);
+  const lastSync   = cutoffISO ? Math.floor(new Date(cutoffISO).getTime() / 1000) : null;
 
   const labelNames = integration.config?.label_names || [];
   const fromFilter = integration.config?.filters?.from    || '';

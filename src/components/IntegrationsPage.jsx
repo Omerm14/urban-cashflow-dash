@@ -454,6 +454,7 @@ function IntegrationCard({ type, integration, onRefresh, showToast, onConnectMod
   const [selectedLabels,     setSelectedLabels]     = useState(integration?.config?.label_ids   || []);
   const [fromFilter,         setFromFilter]         = useState(integration?.config?.filters?.from    || "");
   const [subjFilter,         setSubjFilter]         = useState(integration?.config?.filters?.subject || "");
+  const [lookbackDays,       setLookbackDays]       = useState(integration?.config?.lookback_days ?? 0);
   const [autoSync,           setAutoSync]           = useState(integration?.auto_sync_enabled  || false);
   const [syncFreq,           setSyncFreq]           = useState(integration?.sync_frequency_min || 60);
   const [savingConfig,       setSavingConfig]       = useState(false);
@@ -490,12 +491,13 @@ function IntegrationCard({ type, integration, onRefresh, showToast, onConnectMod
     setSavingConfig(true);
     try {
       const config = type === "google_drive"
-        ? { folder_id: selectedFolder, folder_name: selectedFolderName }
+        ? { folder_id: selectedFolder, folder_name: selectedFolderName, lookback_days: lookbackDays }
         : type === "gmail"
         ? {
-            label_ids:   selectedLabels,
-            label_names: selectedLabels.map(id => labels?.find(l => l.id === id)?.name).filter(Boolean),
-            filters:     { from: fromFilter, subject: subjFilter },
+            label_ids:    selectedLabels,
+            label_names:  selectedLabels.map(id => labels?.find(l => l.id === id)?.name).filter(Boolean),
+            filters:      { from: fromFilter, subject: subjFilter },
+            lookback_days: lookbackDays,
           }
         : integration?.config || {};
       await apiFetch(`/api/integrations/${integration.id}/config`, { method: "PATCH", body: { config } });
@@ -749,6 +751,39 @@ function IntegrationCard({ type, integration, onRefresh, showToast, onConnectMod
             </div>
           )}
 
+          {/* Lookback window (Drive + Gmail only) */}
+          {type !== "whatsapp" && type !== "green_invoice" && (
+            <div style={{ marginBottom: 18 }}>
+              <div style={{ fontSize: 11, fontWeight: 600, color: "#475569", textTransform: "uppercase", letterSpacing: ".5px", marginBottom: 8 }}>
+                How far back to search
+              </div>
+              <select
+                value={lookbackDays}
+                onChange={e => setLookbackDays(Number(e.target.value))}
+                className="input"
+                style={{ fontSize: 12, padding: "6px 10px" }}
+              >
+                <option value={0}>Since last sync (smart — default)</option>
+                <option value={7}>Last 7 days</option>
+                <option value={30}>Last 30 days</option>
+                <option value={90}>Last 3 months</option>
+                <option value={180}>Last 6 months</option>
+                <option value={365}>Last year</option>
+                <option value={-1}>All time (may be slow)</option>
+              </select>
+              {lookbackDays === -1 && (
+                <div style={{ marginTop: 6, fontSize: 11, color: "#fb923c" }}>
+                  ⚠ All-time scan can be slow for large {type === "gmail" ? "inboxes" : "drives"}.
+                </div>
+              )}
+              {lookbackDays === 0 && (
+                <div style={{ marginTop: 6, fontSize: 11, color: "#475569" }}>
+                  Only new items since the last successful sync are checked. Use "Resync All" below to re-scan from the beginning.
+                </div>
+              )}
+            </div>
+          )}
+
           {/* Auto-sync */}
           <div style={{ marginBottom: 18 }}>
             <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", fontSize: 13, color: "#94a3b8", marginBottom: 8 }}>
@@ -774,7 +809,7 @@ function IntegrationCard({ type, integration, onRefresh, showToast, onConnectMod
             </Btn>
             {type !== "whatsapp" && (
               <Btn variant="secondary" onClick={() => handleSync(true)} disabled={isActive} style={{ fontSize: 12 }}>
-                {resyncing ? "Resyncing…" : "↺ Resync All"}
+                {resyncing ? "Resyncing…" : "↺ Resync All (from beginning)"}
               </Btn>
             )}
           </div>
