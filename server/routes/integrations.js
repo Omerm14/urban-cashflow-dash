@@ -175,14 +175,21 @@ exports.listEvents = async (req, res) => {
     .maybeSingle();
   if (!integration) return res.status(404).json({ error: 'Integration not found' });
 
-  const { data, error } = await supabase
-    .from('sync_events')
-    .select('id,event_type,source_file,invoice_id,error_message,created_at')
-    .eq('integration_id', req.params.id)
-    .order('created_at', { ascending: false })
-    .limit(50);
-  if (error) return res.status(500).json({ error: error.message });
-  res.json({ events: data || [] });
+  const [eventsResult, countResult] = await Promise.all([
+    supabase
+      .from('sync_events')
+      .select('id,event_type,source_file,invoice_id,error_message,created_at')
+      .eq('integration_id', req.params.id)
+      .order('created_at', { ascending: false })
+      .limit(50),
+    supabase
+      .from('sync_events')
+      .select('id', { count: 'exact', head: true })
+      .eq('integration_id', req.params.id)
+      .eq('event_type', 'saved'),
+  ]);
+  if (eventsResult.error) return res.status(500).json({ error: eventsResult.error.message });
+  res.json({ events: eventsResult.data || [], totalSaved: countResult.count || 0 });
 };
 
 // POST /api/integrations/:id/resync  — clear last_sync and trigger full resync
@@ -288,6 +295,53 @@ exports.updateAutoSync = async (req, res) => {
     .eq('user_id', req.user.id);
   if (error) return res.status(500).json({ error: error.message });
   res.json({ ok: true });
+};
+
+// GET /api/notifications — last 20 sync_events across all integrations for this user
+exports.listNotifications = async (req, res) => {
+  try {
+    const { data, error } = await supabase
+      .from('sync_events')
+      .select('id,event_type,source_file,invoice_id,error_message,created_at,integration_id,integrations(type)')
+      .eq('user_id', req.user.id)
+      .order('created_at', { ascending: false })
+      .limit(20);
+    if (error) return res.status(500).json({ error: error.message });
+    const notifications = (data || []).map(ev => ({
+      id:               ev.id,
+      event_type:       ev.event_type,
+      source_file:      ev.source_file,
+      invoice_id:       ev.invoice_id,
+      error_message:    ev.error_message,
+      created_at:       ev.created_at,
+      integration_type: ev.integrations?.type || null,
+    }));
+    res.json({ notifications });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+// GET /api/invoices/:id/attachment-url — returns a short-lived signed URL for the original file
+exports.getAttachmentUrl = async (req, res) => {
+  try {
+    const { data: invoice, error } = await supabase
+      .from('invoices')
+      .select('attachment_path')
+      .eq('id', req.params.id)
+      .eq('user_id', req.user.id)
+      .maybeSingle();
+    if (error) return res.status(500).json({ error: error.message });
+    if (!invoice?.attachment_path) return res.status(404).json({ error: 'No attachment for this invoice' });
+
+    const { data: signed, error: signErr } = await supabase.storage
+      .from('invoice-attachments')
+      .createSignedUrl(invoice.attachment_path, 3600);
+    if (signErr) return res.status(500).json({ error: signErr.message });
+    res.json({ url: signed.signedUrl });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 };
 
 // POST /api/integrations/:id/sync

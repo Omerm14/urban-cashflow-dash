@@ -306,14 +306,15 @@ function DriveNavigator({ selectedFolder, selectedFolderName, onSelect }) {
 
 // ─── Sync event timeline ──────────────────────────────────────────────────────
 
-function EventTimeline({ integrationId }) {
-  const [events, setEvents] = useState(null);
+function EventTimeline({ integrationId, refreshTrigger }) {
+  const [events,     setEvents]     = useState(null);
+  const [totalSaved, setTotalSaved] = useState(0);
 
   useEffect(() => {
     apiFetch(`/api/integrations/${integrationId}/events`)
-      .then(d => setEvents(d.events))
+      .then(d => { setEvents(d.events); setTotalSaved(d.totalSaved || 0); })
       .catch(() => setEvents([]));
-  }, [integrationId]);
+  }, [integrationId, refreshTrigger]);
 
   const iconFor = type => ({
     saved:           { ch: "✓", color: "#4ade80" },
@@ -326,21 +327,28 @@ function EventTimeline({ integrationId }) {
   if (!events.length) return <div style={{ color: "#475569", fontSize: 12 }}>No sync events yet.</div>;
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 5, maxHeight: 200, overflowY: "auto" }}>
-      {events.map(ev => {
-        const { ch, color } = iconFor(ev.event_type);
-        const ts = new Date(ev.created_at).toLocaleString("en-GB", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" });
-        return (
-          <div key={ev.id} style={{ display: "flex", gap: 10, alignItems: "flex-start", fontSize: 12 }}>
-            <span style={{ color, fontWeight: 700, flexShrink: 0, fontSize: 11 }}>{ch}</span>
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <span style={{ color: "#94a3b8" }}>{ev.source_file || ev.event_type}</span>
-              {ev.error_message && <div style={{ color: "#f87171", fontSize: 11 }}>{ev.error_message}</div>}
+    <div>
+      {totalSaved > 0 && (
+        <div style={{ fontSize: 11, color: "#475569", marginBottom: 8 }}>
+          {totalSaved} invoice{totalSaved !== 1 ? "s" : ""} synced in total
+        </div>
+      )}
+      <div style={{ display: "flex", flexDirection: "column", gap: 5, maxHeight: 200, overflowY: "auto" }}>
+        {events.map(ev => {
+          const { ch, color } = iconFor(ev.event_type);
+          const ts = new Date(ev.created_at).toLocaleString("en-GB", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" });
+          return (
+            <div key={ev.id} style={{ display: "flex", gap: 10, alignItems: "flex-start", fontSize: 12 }}>
+              <span style={{ color, fontWeight: 700, flexShrink: 0, fontSize: 11 }}>{ch}</span>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <span style={{ color: "#94a3b8" }}>{ev.source_file || ev.event_type}</span>
+                {ev.error_message && <div style={{ color: "#f87171", fontSize: 11 }}>{ev.error_message}</div>}
+              </div>
+              <span style={{ color: "#334155", flexShrink: 0, fontSize: 11 }}>{ts}</span>
             </div>
-            <span style={{ color: "#334155", flexShrink: 0, fontSize: 11 }}>{ts}</span>
-          </div>
-        );
-      })}
+          );
+        })}
+      </div>
     </div>
   );
 }
@@ -462,17 +470,18 @@ function WhatsAppModal({ onClose, onSave }) {
 
 // ─── Integration card ─────────────────────────────────────────────────────────
 
-function IntegrationCard({ type, integration, onRefresh, onInvoicesRefresh, showToast, onConnectModal }) {
+function IntegrationCard({ type, integration, onRefresh, onInvoicesRefresh, onNotificationsRefresh, showToast, onConnectModal }) {
   const cfg      = PROVIDERS[type];
   const Icon     = ICONS[type];
   const status   = integration?.status || "disconnected";
   const connected = status === "connected";
   const hasError  = status === "error";
 
-  const [syncing,       setSyncing]       = useState(false);
-  const [resyncing,     setResyncing]     = useState(false);
-  const [configOpen,    setConfigOpen]    = useState(false);
-  const [historyOpen,   setHistoryOpen]   = useState(false);
+  const [syncing,          setSyncing]          = useState(false);
+  const [resyncing,        setResyncing]        = useState(false);
+  const [configOpen,       setConfigOpen]       = useState(false);
+  const [historyOpen,      setHistoryOpen]      = useState(false);
+  const [eventsRefreshKey, setEventsRefreshKey] = useState(0);
 
   const [labels,         setLabels]         = useState(null);
   const [labelsLoading,  setLabelsLoading]  = useState(false);
@@ -558,7 +567,10 @@ function IntegrationCard({ type, integration, onRefresh, onInvoicesRefresh, show
       }
       showToast(msg, added > 0);
       onRefresh();
+      setEventsRefreshKey(k => k + 1);
+      setHistoryOpen(true);
       if (added > 0) onInvoicesRefresh?.();
+      if (added > 0) onNotificationsRefresh?.();
     } catch (e) { showToast(e.message, false); }
     finally { setSyncing(false); setResyncing(false); }
   };
@@ -863,7 +875,7 @@ function IntegrationCard({ type, integration, onRefresh, onInvoicesRefresh, show
           </button>
           {historyOpen && (
             <div style={{ marginTop: 10 }}>
-              <EventTimeline integrationId={integration.id} />
+              <EventTimeline integrationId={integration.id} refreshTrigger={eventsRefreshKey} />
             </div>
           )}
         </div>
@@ -874,7 +886,7 @@ function IntegrationCard({ type, integration, onRefresh, onInvoicesRefresh, show
 
 // ─── Main page ────────────────────────────────────────────────────────────────
 
-export default function IntegrationsPage({ oauthResult, onClearOAuthResult, onInvoicesRefresh }) {
+export default function IntegrationsPage({ oauthResult, onClearOAuthResult, onInvoicesRefresh, onNotificationsRefresh }) {
   const [integrations,      setIntegrations]      = useState([]);
   const [loading,           setLoading]           = useState(true);
   const [toast,             setToast]             = useState(null);
@@ -956,6 +968,7 @@ export default function IntegrationsPage({ oauthResult, onClearOAuthResult, onIn
             integration={getIntegration(type)}
             onRefresh={load}
             onInvoicesRefresh={onInvoicesRefresh}
+            onNotificationsRefresh={onNotificationsRefresh}
             showToast={showToast}
             onConnectModal={handleConnectModal}
           />

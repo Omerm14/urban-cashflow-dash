@@ -3,11 +3,11 @@ import { toYM } from "../utils/dates";
 import InvoicesTable from "./InvoicesTable";
 import InvoicesGroupedView from "./InvoicesGroupedView";
 
-export default function InvoicesView({ computed, dupeIds, updateInvoice, deleteInvoice, bulkMarkPaid, bulkDelete, setEditInvoice, color }) {
-  const [selectedIds, setSelectedIds]   = useState(new Set());
-  const [viewMode,    setViewMode]      = useState("grouped");
+export default function InvoicesView({ computed, dupeIds, updateInvoice, deleteInvoice, bulkMarkPaid, bulkDelete, setEditInvoice, color, onViewAttachment }) {
+  const [selectedIds,   setSelectedIds]   = useState(new Set());
+  const [viewMode,      setViewMode]      = useState("grouped");
   const [selectedMonth, setSelectedMonth] = useState(() => toYM(new Date()));
-  const [sortField,   setSortField]     = useState("invoiceDate");
+  const [sortField,     setSortField]     = useState("invoiceDate");
 
   const toggleSelect = useCallback(id => {
     setSelectedIds(prev => {
@@ -116,6 +116,7 @@ export default function InvoicesView({ computed, dupeIds, updateInvoice, deleteI
             updateInvoice={updateInvoice} deleteInvoice={deleteInvoice}
             setEditInvoice={setEditInvoice} color={color}
             selectedIds={selectedIds} onToggleSelect={toggleSelect} onToggleAll={toggleAll}
+            onViewAttachment={onViewAttachment}
           />
         : <InvoicesGroupedView
             computed={computed} dupeIds={dupeIds}

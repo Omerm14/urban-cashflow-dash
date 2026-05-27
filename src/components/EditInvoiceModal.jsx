@@ -1,7 +1,7 @@
 import { calcDueDate } from "../utils/dates";
 import { STATUS } from "../constants";
 
-export default function EditInvoiceModal({ editInvoice, setEditInvoice, suppliers, addInvoice, updateInvoice, getSupplier }) {
+export default function EditInvoiceModal({ editInvoice, setEditInvoice, suppliers, addInvoice, updateInvoice, getSupplier, onViewAttachment }) {
   const close = () => setEditInvoice(null);
   const save  = async () => {
     const { id, ...fields } = editInvoice;
@@ -81,6 +81,15 @@ export default function EditInvoiceModal({ editInvoice, setEditInvoice, supplier
               )}
               {editInvoice.sync_source_meta?.filename && (
                 <span>File: <strong style={{ color:"#94a3b8" }}>{editInvoice.sync_source_meta.filename}</strong></span>
+              )}
+              {editInvoice.attachment_path && onViewAttachment && (
+                <span style={{ marginTop:2 }}>
+                  <button
+                    style={{ background:"none", border:"none", cursor:"pointer", padding:0, fontFamily:"inherit", fontSize:12, color:"#6366f1", textDecoration:"underline" }}
+                    onClick={() => { close(); onViewAttachment(editInvoice); }}>
+                    📎 View original file
+                  </button>
+                </span>
               )}
             </div>
           </div>

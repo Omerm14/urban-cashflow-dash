@@ -1,4 +1,4 @@
-export default function NavBar({ view, setView, suppliersCount, onSuppliersClick, user, onSignOut, integrationError }) {
+export default function NavBar({ view, setView, suppliersCount, onSuppliersClick, user, onSignOut, integrationError, unreadCount, onBellClick }) {
   const isAdmin = user?.email && import.meta.env.VITE_ADMIN_EMAIL && user.email === import.meta.env.VITE_ADMIN_EMAIL;
   const views = isAdmin
     ? ["dashboard","invoices","calendar","integrations","admin"]
@@ -21,6 +21,17 @@ export default function NavBar({ view, setView, suppliersCount, onSuppliersClick
           </button>
         ))}
         <div style={{ marginLeft:"auto", display:"flex", alignItems:"center", gap:10 }}>
+          <button onClick={onBellClick}
+            style={{ position:"relative", padding:"8px 10px", background:"transparent", border:"1px solid #1e2d45", borderRadius:8, color:"#64748b", cursor:"pointer", fontSize:14, transition:"all .2s", fontFamily:"inherit" }}
+            onMouseEnter={e => { e.currentTarget.style.borderColor="#334155"; e.currentTarget.style.color="#94a3b8"; }}
+            onMouseLeave={e => { e.currentTarget.style.borderColor="#1e2d45"; e.currentTarget.style.color="#64748b"; }}>
+            🔔
+            {unreadCount > 0 && (
+              <span style={{ position:"absolute", top:4, right:4, minWidth:14, height:14, borderRadius:7, background:"#f87171", border:"2px solid #0a1120", display:"flex", alignItems:"center", justifyContent:"center", fontSize:9, fontWeight:700, color:"#fff", lineHeight:1, padding:"0 2px" }}>
+                {unreadCount > 9 ? "9+" : unreadCount}
+              </span>
+            )}
+          </button>
           <button onClick={onSuppliersClick}
             style={{ padding:"8px 14px", background:"transparent", border:"1px solid #1e2d45", borderRadius:8, color:"#64748b", cursor:"pointer", fontSize:12, fontWeight:500, transition:"all .2s", fontFamily:"inherit" }}
             onMouseEnter={e => { e.target.style.borderColor="#334155"; e.target.style.color="#94a3b8"; }}

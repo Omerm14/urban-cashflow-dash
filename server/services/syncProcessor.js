@@ -160,6 +160,22 @@ const processFile = async (buffer, filename, mediaType, userId, suppliers, exist
     logSyncEvent(integrationId, userId, 'ocr_failed', { source_file: filename, file_hash: fileHash, error_message: error.message });
     return null;
   }
+  // Upload original file to Supabase Storage for later preview
+  try {
+    const ext = filename.split('.').pop().toLowerCase() || 'bin';
+    const storagePath = `${userId}/${data.id}.${ext}`;
+    const { error: storageErr } = await supabase.storage
+      .from('invoice-attachments')
+      .upload(storagePath, buffer, { contentType: mediaType, upsert: false });
+    if (!storageErr) {
+      await supabase.from('invoices').update({ attachment_path: storagePath }).eq('id', data.id);
+      data.attachment_path = storagePath;
+    } else {
+      console.warn(`[sync] storage upload skipped for ${filename}:`, storageErr.message);
+    }
+  } catch (storageUploadErr) {
+    console.warn(`[sync] storage upload failed for ${filename}:`, storageUploadErr.message);
+  }
   logSyncEvent(integrationId, userId, 'saved', { source_file: filename, file_hash: fileHash, invoice_id: data.id });
   return data;
 };

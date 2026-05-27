@@ -3,7 +3,7 @@ import { currency, fmt } from "../utils/dates";
 import { statusStyle } from "../utils/invoice";
 import { STATUS } from "../constants";
 
-export default function InvoicesTable({ computed, dupeIds, updateInvoice, deleteInvoice, setEditInvoice, color, selectedIds, onToggleSelect, onToggleAll }) {
+export default function InvoicesTable({ computed, dupeIds, updateInvoice, deleteInvoice, setEditInvoice, color, selectedIds, onToggleSelect, onToggleAll, onViewAttachment }) {
   const allIds = computed.map(i => i.id);
   const allSelected = allIds.length > 0 && allIds.every(id => selectedIds.has(id));
   const someSelected = !allSelected && allIds.some(id => selectedIds.has(id));
@@ -94,6 +94,10 @@ export default function InvoicesTable({ computed, dupeIds, updateInvoice, delete
                 </td>
                 <td style={{ padding:"13px 18px" }}>
                   <div style={{ display:"flex", gap:6, justifyContent:"flex-end" }}>
+                    {inv.attachment_path && (
+                      <button className="action-btn" style={{ background:"#131c2e", color:"#6366f1" }}
+                        title="View original file" onClick={() => onViewAttachment?.(inv)}>📎</button>
+                    )}
                     {inv.status !== STATUS.PAID && (
                       <button className="action-btn" style={{ background:"#052e16", color:"#4ade80" }}
                         onClick={() => updateInvoice(inv.id, { status: STATUS.PAID })}>✓ Paid</button>
