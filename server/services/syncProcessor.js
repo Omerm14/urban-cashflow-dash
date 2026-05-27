@@ -11,15 +11,15 @@ const EXTRACT_PROMPT = `Extract data from this invoice or statement. The "suppli
 
 const extractFromBuffer = async (buffer, mediaType, userId) => {
   const b64 = buffer.toString('base64');
+  const mediaBlock = mediaType === 'application/pdf'
+    ? { type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: b64 } }
+    : { type: 'image',    source: { type: 'base64', media_type: mediaType,          data: b64 } };
   const msg = await client.messages.create({
     model:      'claude-sonnet-4-6',
     max_tokens: 1000,
     messages: [{
       role: 'user',
-      content: [
-        { type: 'image', source: { type: 'base64', media_type: mediaType, data: b64 } },
-        { type: 'text',  text: EXTRACT_PROMPT },
-      ],
+      content: [mediaBlock, { type: 'text', text: EXTRACT_PROMPT }],
     }],
   });
 
@@ -334,9 +334,16 @@ exports.syncGmail = async (integration, userId) => {
         userId: 'me', id: msg.id, format: 'full',
       });
 
-      const parts = (message.payload?.parts || []).filter(p =>
-        p.filename && (p.mimeType === 'application/pdf' || p.mimeType.startsWith('image/'))
-      );
+      const collectParts = payload => {
+        const result = [];
+        const walk = p => {
+          if (p.filename && (p.mimeType === 'application/pdf' || p.mimeType.startsWith('image/'))) result.push(p);
+          (p.parts || []).forEach(walk);
+        };
+        walk(payload || {});
+        return result;
+      };
+      const parts = collectParts(message.payload);
 
       for (const part of parts) {
         if (!part.body?.attachmentId) continue;
