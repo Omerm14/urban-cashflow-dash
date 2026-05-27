@@ -14,8 +14,9 @@ const apiFetch = async (path, opts = {}) => {
     },
     body: opts.body ? JSON.stringify(opts.body) : undefined,
   });
-  const json = await res.json();
-  if (!res.ok) throw new Error(json.error || `HTTP ${res.status}`);
+  let json;
+  try { json = await res.json(); } catch { json = {}; }
+  if (!res.ok) throw new Error(json.error || `Server error (${res.status}) — please try again`);
   return json;
 };
 

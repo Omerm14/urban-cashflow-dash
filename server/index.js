@@ -49,5 +49,11 @@ app.post('/api/webhook/whatsapp', webhook.handleWhatsApp);
 // Cron (secured by CRON_SECRET header)
 app.get('/api/cron/sync', require('./routes/cron').runSync);
 
+// eslint-disable-next-line no-unused-vars
+app.use((err, req, res, next) => {
+  console.error('[express]', err.message);
+  if (!res.headersSent) res.status(500).json({ error: err.message || 'Internal server error' });
+});
+
 const PORT = process.env.PORT || 3001;
 app.listen(PORT, () => console.log(`API server → http://localhost:${PORT}`));
