@@ -255,14 +255,24 @@ exports.syncGmail = async (integration, userId) => {
     ? Math.floor(new Date(integration.last_sync).getTime() / 1000)
     : null;
 
-  const labelIds = integration.config?.label_ids || [];
-  const q = ['has:attachment', lastSync ? `after:${lastSync}` : null].filter(Boolean).join(' ');
+  const labelNames = integration.config?.label_names || [];
+  const fromFilter = integration.config?.filters?.from    || '';
+  const subjFilter = integration.config?.filters?.subject || '';
 
+  const parts = ['has:attachment'];
+  if (lastSync)              parts.push(`after:${lastSync}`);
+  if (fromFilter)            parts.push(`from:${fromFilter}`);
+  if (subjFilter)            parts.push(`subject:${subjFilter}`);
+  if (labelNames.length === 1) {
+    parts.push(`label:${labelNames[0]}`);
+  } else if (labelNames.length > 1) {
+    parts.push(`{${labelNames.map(n => `label:${n}`).join(' ')}}`);
+  }
+  const q = parts.join(' ');
+
+  console.log(`[sync:gmail] query: ${q}`);
   const { data: { messages = [] } } = await gmail.users.messages.list({
-    userId:   'me',
-    q,
-    ...(labelIds.length ? { labelIds } : {}),
-    maxResults: 50,
+    userId: 'me', q, maxResults: 100,
   });
 
   console.log(`[sync:gmail] ${messages.length} message(s) for user ${userId}`);

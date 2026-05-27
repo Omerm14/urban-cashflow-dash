@@ -137,40 +137,139 @@ const Btn = ({ children, onClick, disabled, variant = "primary", style: extra = 
   );
 };
 
-// ─── Folder picker with path search ──────────────────────────────────────────
+// ─── Drive folder navigator (breadcrumb tree) ────────────────────────────────
 
-function FolderPicker({ folders, value, onChange }) {
-  const [search, setSearch] = useState("");
-  const filtered = (folders || []).filter(f =>
-    f.path.toLowerCase().includes(search.toLowerCase())
-  );
-  const selected = folders?.find(f => f.id === value);
+function DriveNavigator({ selectedFolder, selectedFolderName, onSelect }) {
+  const [stack,    setStack]    = useState([{ id: "root", name: "My Drive" }]);
+  const [children, setChildren] = useState([]);
+  const [loading,  setLoading]  = useState(false);
+
+  const current = stack[stack.length - 1];
+
+  const fetchChildren = useCallback(async id => {
+    setLoading(true);
+    try {
+      const { folders } = await apiFetch(`/api/integrations/google/folders?parent=${id}`);
+      setChildren(folders || []);
+    } catch { setChildren([]); }
+    finally { setLoading(false); }
+  }, []);
+
+  useEffect(() => { fetchChildren(current.id); }, [current.id, fetchChildren]);
+
+  const navigateInto = folder => {
+    setStack(s => [...s, { id: folder.id, name: folder.name }]);
+  };
+
+  const navigateTo = idx => {
+    setStack(s => s.slice(0, idx + 1));
+  };
+
+  const isSelected = id => selectedFolder === id;
+  const selectedLabel = selectedFolder
+    ? (selectedFolderName || "Selected folder")
+    : null;
 
   return (
     <div>
-      <input
-        type="text"
-        className="input"
-        placeholder="Search folders by path…"
-        value={search}
-        onChange={e => setSearch(e.target.value)}
-        style={{ marginBottom: 6, fontSize: 12 }}
-      />
-      <select
-        className="input"
-        value={value}
-        onChange={e => onChange(e.target.value)}
-        style={{ fontSize: 12 }}
-        size={Math.min(filtered.length + 1, 7)}
-      >
-        <option value="">— Sync all files in My Drive —</option>
-        {filtered.map(f => (
-          <option key={f.id} value={f.id}>{f.path}</option>
+      {/* Breadcrumbs */}
+      <div style={{ display: "flex", alignItems: "center", flexWrap: "wrap", gap: 4, marginBottom: 10 }}>
+        {stack.map((crumb, i) => (
+          <span key={crumb.id} style={{ display: "flex", alignItems: "center", gap: 4 }}>
+            {i > 0 && <span style={{ color: "#334155", fontSize: 11 }}>›</span>}
+            <button
+              onClick={() => navigateTo(i)}
+              style={{
+                background: "none", border: "none", cursor: i < stack.length - 1 ? "pointer" : "default",
+                color: i < stack.length - 1 ? "#6366f1" : "#f1f5f9",
+                fontSize: 12, fontWeight: i === stack.length - 1 ? 700 : 400,
+                fontFamily: "inherit", padding: "2px 4px", borderRadius: 4,
+                textDecoration: i < stack.length - 1 ? "underline" : "none",
+              }}
+            >
+              {crumb.name}
+            </button>
+          </span>
         ))}
-      </select>
-      {selected && (
-        <div style={{ marginTop: 6, fontSize: 11, color: "#4ade80" }}>
-          ✓ {selected.path}
+      </div>
+
+      {/* Folder list */}
+      <div style={{
+        border: "1px solid #1e2d45", borderRadius: 10, overflow: "hidden",
+        maxHeight: 220, overflowY: "auto",
+      }}>
+        {/* "Sync all in current folder" row */}
+        <div style={{
+          display: "flex", alignItems: "center", justifyContent: "space-between",
+          padding: "8px 12px", borderBottom: "1px solid #0d1626",
+          background: isSelected(current.id === "root" ? "" : current.id) ? "#6366f111" : "transparent",
+        }}>
+          <span style={{ fontSize: 12, color: "#64748b", fontStyle: "italic" }}>
+            {current.id === "root" ? "Sync all of My Drive" : `Sync all in "${current.name}"`}
+          </span>
+          <button
+            onClick={() => onSelect(current.id === "root" ? "" : current.id, current.id === "root" ? "" : current.name)}
+            style={{
+              padding: "3px 12px", borderRadius: 6, fontSize: 11, fontFamily: "inherit", fontWeight: 600,
+              cursor: "pointer",
+              background: isSelected(current.id === "root" ? "" : current.id) ? "#6366f1" : "#1e2d45",
+              color:      isSelected(current.id === "root" ? "" : current.id) ? "#fff"    : "#94a3b8",
+              border: "none",
+            }}
+          >
+            {isSelected(current.id === "root" ? "" : current.id) ? "✓ Selected" : "Select"}
+          </button>
+        </div>
+
+        {loading ? (
+          <div style={{ padding: "14px 12px", color: "#475569", fontSize: 12 }}>Loading…</div>
+        ) : !children.length ? (
+          <div style={{ padding: "14px 12px", color: "#334155", fontSize: 12 }}>No subfolders</div>
+        ) : (
+          children.map(f => (
+            <div key={f.id} style={{
+              display: "flex", alignItems: "center", justifyContent: "space-between",
+              padding: "8px 12px", borderBottom: "1px solid #0d1626",
+              background: isSelected(f.id) ? "#6366f111" : "transparent",
+            }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0 }}>
+                <span style={{ color: "#4285f4", fontSize: 14, flexShrink: 0 }}>📁</span>
+                <span style={{ fontSize: 12, color: "#cbd5e1", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                  {f.name}
+                </span>
+              </div>
+              <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
+                <button
+                  onClick={() => onSelect(f.id, f.name)}
+                  style={{
+                    padding: "3px 10px", borderRadius: 6, fontSize: 11, fontFamily: "inherit", fontWeight: 600,
+                    cursor: "pointer",
+                    background: isSelected(f.id) ? "#6366f1" : "#1e2d45",
+                    color:      isSelected(f.id) ? "#fff"    : "#94a3b8",
+                    border: "none",
+                  }}
+                >
+                  {isSelected(f.id) ? "✓" : "Select"}
+                </button>
+                <button
+                  onClick={() => navigateInto(f)}
+                  style={{
+                    padding: "3px 10px", borderRadius: 6, fontSize: 11, fontFamily: "inherit",
+                    cursor: "pointer", background: "#0d1626", color: "#475569", border: "1px solid #1e2d45",
+                  }}
+                >
+                  Open ▶
+                </button>
+              </div>
+            </div>
+          ))
+        )}
+      </div>
+
+      {/* Confirmation */}
+      {selectedLabel && (
+        <div style={{ marginTop: 8, fontSize: 11, color: "#4ade80" }}>
+          ✓ Syncing: {selectedLabel}
         </div>
       )}
     </div>
@@ -347,36 +446,21 @@ function IntegrationCard({ type, integration, onRefresh, showToast, onConnectMod
   const [configOpen,    setConfigOpen]    = useState(false);
   const [historyOpen,   setHistoryOpen]   = useState(false);
 
-  const [folders,        setFolders]        = useState(null);
-  const [foldersLoading, setFoldersLoading] = useState(false);
   const [labels,         setLabels]         = useState(null);
   const [labelsLoading,  setLabelsLoading]  = useState(false);
 
-  const [selectedFolder, setSelectedFolder] = useState(integration?.config?.folder_id || "");
-  const [selectedLabels, setSelectedLabels] = useState(integration?.config?.label_ids || []);
-  const [autoSync,       setAutoSync]       = useState(integration?.auto_sync_enabled  || false);
-  const [syncFreq,       setSyncFreq]       = useState(integration?.sync_frequency_min || 60);
-  const [savingConfig,   setSavingConfig]   = useState(false);
+  const [selectedFolder,     setSelectedFolder]     = useState(integration?.config?.folder_id   || "");
+  const [selectedFolderName, setSelectedFolderName] = useState(integration?.config?.folder_name || "");
+  const [selectedLabels,     setSelectedLabels]     = useState(integration?.config?.label_ids   || []);
+  const [fromFilter,         setFromFilter]         = useState(integration?.config?.filters?.from    || "");
+  const [subjFilter,         setSubjFilter]         = useState(integration?.config?.filters?.subject || "");
+  const [autoSync,           setAutoSync]           = useState(integration?.auto_sync_enabled  || false);
+  const [syncFreq,           setSyncFreq]           = useState(integration?.sync_frequency_min || 60);
+  const [savingConfig,       setSavingConfig]       = useState(false);
 
   const lastSync = integration?.last_sync
     ? new Date(integration.last_sync).toLocaleString("en-GB", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })
     : "Never";
-
-  const loadFolders = useCallback(async () => {
-    if (folders !== null || foldersLoading) return;
-    setFoldersLoading(true);
-    try { setFolders((await apiFetch("/api/integrations/google/folders")).folders); }
-    catch { setFolders([]); }
-    finally { setFoldersLoading(false); }
-  }, [folders, foldersLoading]);
-
-  const reloadFolders = async () => {
-    setFolders(null);
-    setFoldersLoading(true);
-    try { setFolders((await apiFetch("/api/integrations/google/folders")).folders); }
-    catch { setFolders([]); }
-    finally { setFoldersLoading(false); }
-  };
 
   const loadLabels = useCallback(async () => {
     if (labels !== null || labelsLoading) return;
@@ -398,17 +482,22 @@ function IntegrationCard({ type, integration, onRefresh, showToast, onConnectMod
     const next = !configOpen;
     setConfigOpen(next);
     if (next) {
-      if (type === "google_drive") loadFolders();
-      if (type === "gmail")        loadLabels();
+      if (type === "gmail") loadLabels();
     }
   };
 
   const saveConfig = async () => {
     setSavingConfig(true);
     try {
-      const config = type === "google_drive" ? { folder_id: selectedFolder }
-                   : type === "gmail"        ? { label_ids: selectedLabels }
-                   : integration?.config || {};
+      const config = type === "google_drive"
+        ? { folder_id: selectedFolder, folder_name: selectedFolderName }
+        : type === "gmail"
+        ? {
+            label_ids:   selectedLabels,
+            label_names: selectedLabels.map(id => labels?.find(l => l.id === id)?.name).filter(Boolean),
+            filters:     { from: fromFilter, subject: subjFilter },
+          }
+        : integration?.config || {};
       await apiFetch(`/api/integrations/${integration.id}/config`, { method: "PATCH", body: { config } });
       await apiFetch(`/api/integrations/${integration.id}/auto-sync`, {
         method: "PATCH",
@@ -554,19 +643,17 @@ function IntegrationCard({ type, integration, onRefresh, showToast, onConnectMod
       {connected && configOpen && (
         <div style={{ borderTop: "1px solid #111d2e", padding: "18px 22px 0" }}>
 
-          {/* Drive folder picker */}
+          {/* Drive folder navigator */}
           {type === "google_drive" && (
             <div style={{ marginBottom: 18 }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
-                <div style={{ fontSize: 11, fontWeight: 600, color: "#475569", textTransform: "uppercase", letterSpacing: ".5px" }}>Sync folder</div>
-                <button onClick={reloadFolders} disabled={foldersLoading} title="Refresh"
-                  style={{ background: "none", border: "none", color: "#334155", cursor: "pointer", fontSize: 14, padding: 0 }}>↺</button>
+              <div style={{ fontSize: 11, fontWeight: 600, color: "#475569", textTransform: "uppercase", letterSpacing: ".5px", marginBottom: 10 }}>
+                Sync folder
               </div>
-              {foldersLoading ? (
-                <div style={{ color: "#475569", fontSize: 12 }}>Loading folders…</div>
-              ) : (
-                <FolderPicker folders={folders} value={selectedFolder} onChange={setSelectedFolder} />
-              )}
+              <DriveNavigator
+                selectedFolder={selectedFolder}
+                selectedFolderName={selectedFolderName || (selectedFolder ? "Selected folder" : "")}
+                onSelect={(id, name) => { setSelectedFolder(id); setSelectedFolderName(name || ""); }}
+              />
             </div>
           )}
 
@@ -602,11 +689,44 @@ function IntegrationCard({ type, integration, onRefresh, showToast, onConnectMod
                   </div>
                   {selectedLabels.length > 0 && (
                     <div style={{ marginTop: 6, fontSize: 11, color: "#4ade80" }}>
-                      ✓ {selectedLabels.length} label{selectedLabels.length !== 1 ? "s" : ""} selected
+                      ✓ {selectedLabels.length} label{selectedLabels.length !== 1 ? "s" : ""} selected (OR logic)
                     </div>
                   )}
                 </>
               )}
+            </div>
+          )}
+
+          {/* Gmail additional filters */}
+          {type === "gmail" && (
+            <div style={{ marginBottom: 18 }}>
+              <div style={{ fontSize: 11, fontWeight: 600, color: "#475569", textTransform: "uppercase", letterSpacing: ".5px", marginBottom: 10 }}>
+                Additional filters
+              </div>
+              <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                <div>
+                  <div style={{ fontSize: 11, color: "#475569", marginBottom: 4 }}>Sender (from:)</div>
+                  <input
+                    type="text"
+                    className="input"
+                    placeholder="e.g. invoices@vendor.com or @vendor.co.il"
+                    value={fromFilter}
+                    onChange={e => setFromFilter(e.target.value)}
+                    style={{ fontSize: 12 }}
+                  />
+                </div>
+                <div>
+                  <div style={{ fontSize: 11, color: "#475569", marginBottom: 4 }}>Subject contains</div>
+                  <input
+                    type="text"
+                    className="input"
+                    placeholder="e.g. invoice or חשבונית"
+                    value={subjFilter}
+                    onChange={e => setSubjFilter(e.target.value)}
+                    style={{ fontSize: 12 }}
+                  />
+                </div>
+              </div>
             </div>
           )}
 

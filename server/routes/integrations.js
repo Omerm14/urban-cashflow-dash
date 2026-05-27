@@ -119,32 +119,23 @@ exports.googleFolders = async (req, res) => {
   try {
     const auth  = makeOAuth2WithCreds(integration.credentials);
     const drive = google.drive({ version: 'v3', auth });
-    const { data: { files = [] } } = await drive.files.list({
-      q:        "mimeType='application/vnd.google-apps.folder' and trashed=false",
-      fields:   'files(id,name,parents)',
+
+    const parent = req.query.parent || 'root';
+
+    const { data: { files: folders = [] } } = await drive.files.list({
+      q:        `'${parent}' in parents and mimeType='application/vnd.google-apps.folder' and trashed=false`,
+      fields:   'files(id,name)',
       pageSize: 200,
       orderBy:  'name',
     });
 
-    // Build id→name map then compute full path for each folder
-    const nameMap = {};
-    files.forEach(f => { nameMap[f.id] = f.name; });
+    let currentName = 'My Drive';
+    if (parent !== 'root') {
+      const { data } = await drive.files.get({ fileId: parent, fields: 'name' });
+      currentName = data.name;
+    }
 
-    const buildPath = folder => {
-      const parts = [folder.name];
-      let parentId = folder.parents?.[0];
-      for (let i = 0; i < 4 && parentId && nameMap[parentId]; i++) {
-        parts.unshift(nameMap[parentId]);
-        parentId = files.find(f => f.id === parentId)?.parents?.[0];
-      }
-      return parts.join(' › ');
-    };
-
-    const folders = files
-      .map(f => ({ id: f.id, name: f.name, path: buildPath(f) }))
-      .sort((a, b) => a.path.localeCompare(b.path));
-
-    res.json({ folders });
+    res.json({ folders, currentName });
   } catch (err) {
     console.error('[folders]', err.message);
     res.status(500).json({ error: err.message });
