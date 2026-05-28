@@ -3,7 +3,7 @@ import { currency, fmt } from "../utils/dates";
 import { statusStyle } from "../utils/invoice";
 import { STATUS } from "../constants";
 
-export default function InvoicesTable({ computed, dupeIds, updateInvoice, deleteInvoice, setEditInvoice, color, selectedIds, onToggleSelect, onToggleAll }) {
+export default function InvoicesTable({ computed, dupeIds, updateInvoice, deleteInvoice, setEditInvoice, color, selectedIds, onToggleSelect, onToggleAll, onViewAttachment }) {
   const allIds = computed.map(i => i.id);
   const allSelected = allIds.length > 0 && allIds.every(id => selectedIds.has(id));
   const someSelected = !allSelected && allIds.some(id => selectedIds.has(id));
@@ -27,14 +27,14 @@ export default function InvoicesTable({ computed, dupeIds, updateInvoice, delete
                 style={{ accentColor:"#6366f1", cursor:"pointer", width:14, height:14 }}
               />
             </th>
-            {["Invoice #","Supplier","Date","Amount","Due Date","Status",""].map(h => (
+            {["Invoice #","Supplier","Date","Amount","Due Date","Status","Source",""].map(h => (
               <th key={h} style={{ padding:"14px 18px", textAlign:"left", fontSize:10, fontWeight:700, color:"#334155", textTransform:"uppercase", letterSpacing:"1px" }}>{h}</th>
             ))}
           </tr>
         </thead>
         <tbody>
           {computed.length === 0 && (
-            <tr><td colSpan={8} style={{ padding:"60px 0", textAlign:"center", color:"#334155" }}>
+            <tr><td colSpan={9} style={{ padding:"60px 0", textAlign:"center", color:"#334155" }}>
               <div style={{ fontSize:36, marginBottom:10 }}>🧾</div>
               <div>No invoices yet — upload some above</div>
             </td></tr>
@@ -78,7 +78,26 @@ export default function InvoicesTable({ computed, dupeIds, updateInvoice, delete
                   </span>
                 </td>
                 <td style={{ padding:"13px 18px" }}>
+                  {inv.sync_source ? (
+                    <span title={`Synced from ${inv.sync_source.replace("_"," ")} on ${inv.sync_timestamp ? new Date(inv.sync_timestamp).toLocaleDateString() : "—"}`}
+                      style={{ fontSize:11, color:"#475569", display:"flex", alignItems:"center", gap:4 }}>
+                      {{ google_drive:"📁", gmail:"✉️", whatsapp:"💬", green_invoice:"🟢" }[inv.sync_source] || "🔗"}
+                      {inv.sync_source === "google_drive" ? "Drive"
+                       : inv.sync_source === "gmail"        ? "Gmail"
+                       : inv.sync_source === "whatsapp"     ? "WA"
+                       : inv.sync_source === "green_invoice"? "GI"
+                       : inv.sync_source}
+                    </span>
+                  ) : (
+                    <span style={{ fontSize:11, color:"#334155" }}>Manual</span>
+                  )}
+                </td>
+                <td style={{ padding:"13px 18px" }}>
                   <div style={{ display:"flex", gap:6, justifyContent:"flex-end" }}>
+                    {inv.attachment_path && (
+                      <button className="action-btn" style={{ background:"#131c2e", color:"#6366f1" }}
+                        title="View original file" onClick={() => onViewAttachment?.(inv)}>📎</button>
+                    )}
                     {inv.status !== STATUS.PAID && (
                       <button className="action-btn" style={{ background:"#052e16", color:"#4ade80" }}
                         onClick={() => updateInvoice(inv.id, { status: STATUS.PAID })}>✓ Paid</button>
