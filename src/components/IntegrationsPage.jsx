@@ -916,7 +916,10 @@ export default function IntegrationsPage({ oauthResult, onClearOAuthResult, onIn
         true
       );
     } else if (oauthResult.error) {
-      showToast(`Connection failed: ${oauthResult.error}`, false);
+      const msg = oauthResult.error === 'access_denied'
+        ? "Access denied — your Google account hasn't been approved for this app yet. Contact your administrator to request access."
+        : `Connection failed: ${oauthResult.error}`;
+      showToast(msg, false);
     }
     onClearOAuthResult();
   }, [oauthResult, showToast, onClearOAuthResult]);
