@@ -15,7 +15,22 @@ module.exports = async (req, res) => {
       const translatePrompt = `You are a transliteration assistant. The following is an Israeli company name written in English. Transliterate/translate it to Hebrew as it appears on Israeli business documents. Return ONLY valid JSON: {"hebrew":"<Hebrew company name>"}. No markdown, no explanation.\n\nCompany name: ${text}`;
       messageContent = [{ type: 'text', text: translatePrompt }];
     } else {
-      const prompt = `Extract data from this invoice or statement. The "supplier" is the company that ISSUED this document and is owed payment — the seller/creditor whose name appears in the document header or letterhead. Do NOT return the recipient or buyer name. All dates on this document follow Israeli format: DD/MM/YYYY or DD/MM/YY (day first, then month, then year). A two-digit year means 20YY — for example "14/04/26" means 14 April 2026, not 2014. Return ONLY valid JSON: {"supplier":"<issuer company name>","invoiceNo":"<invoice number>","invoiceDate":"<YYYY-MM-DD>","amount":<total amount as number>}. No markdown, no explanation.`;
+      const prompt = `Extract invoice data from this document.
+
+SUPPLIER — the company that ISSUED this invoice (they are owed money):
+• Their name is in the document's own letterhead/header at the TOP of the page, usually near their ח.פ. (company registration number) or ע.מ. (VAT number).
+• Use the LEGAL registered company name — not a brand name, product line, or trade name.
+• The fields "לכבוד", "שם לקוח", "נמען", "עבור" contain the BUYER/RECIPIENT — do NOT use any name from these fields as the supplier.
+
+INVOICE DATE — Israeli format is DD/MM/YYYY or DD/MM/YY (day first, then month, then year):
+• "14/04/26" → 2026-04-14   "04/01/2025" → 2025-01-04   "31/12/24" → 2024-12-31
+• Convert to ISO format YYYY-MM-DD in your output.
+
+INVOICE NUMBER: the number next to חשבונית מס׳ / מספר חשבונית / Invoice No.
+AMOUNT: the final total (סה"כ לתשלום / Total) as a positive number.
+
+Return ONLY valid JSON — no markdown, no explanation:
+{"supplier":"<legal company name from letterhead>","invoiceNo":"<invoice number>","invoiceDate":"<YYYY-MM-DD>","amount":<positive number>}`;
       messageContent = text
         ? [{ type: 'text', text: `${prompt}\n\n${text}` }]
         : [
