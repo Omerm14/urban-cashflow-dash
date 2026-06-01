@@ -436,6 +436,18 @@ exports.triggerSync = async (req, res) => {
   }
 };
 
+// POST /api/sync-jobs/:jobId/cancel — hard-stop a running or pending job
+exports.cancelSyncJob = async (req, res) => {
+  const { error } = await supabase
+    .from('sync_jobs')
+    .update({ status: 'cancelled', updated_at: new Date().toISOString() })
+    .eq('id', req.params.jobId)
+    .eq('user_id', req.user.id)
+    .in('status', ['pending', 'running']);
+  if (error) return res.status(500).json({ error: error.message });
+  res.json({ ok: true });
+};
+
 // POST /api/sync-jobs/:jobId/process — process next batch; called by frontend polling
 exports.processSyncJob = async (req, res) => {
   const { data: job, error } = await supabase
@@ -446,8 +458,8 @@ exports.processSyncJob = async (req, res) => {
     .single();
   if (error || !job) return res.status(404).json({ error: 'Sync job not found' });
 
-  if (job.status === 'done' || job.status === 'error') {
-    return res.json({ done: true, cursor: job.cursor, totalFiles: job.total_files, added: job.added, errors: job.errors, filesAdded: [] });
+  if (job.status === 'done' || job.status === 'error' || job.status === 'cancelled') {
+    return res.json({ done: true, cancelled: job.status === 'cancelled', cursor: job.cursor, totalFiles: job.total_files, added: job.added, errors: job.errors, filesAdded: [] });
   }
 
   // Prevent double-processing: skip if another call is actively running this job

@@ -61,7 +61,7 @@ export default function App() {
 
   const { notifications, unreadCount, markAllRead, refresh: refreshNotifications } = useNotifications();
 
-  const { jobs: syncJobs, startSync, clearJob: clearSyncJob, activeJob: activeSyncJob } = useSyncJob({
+  const { jobs: syncJobs, startSync, clearJob: clearSyncJob, cancelSync, activeJob: activeSyncJob } = useSyncJob({
     onBatchDone: appendInvoices,
     onJobDone:   () => refreshNotifications(),
   });
@@ -334,6 +334,7 @@ export default function App() {
             onInvoicesRefresh={refreshInvoices}
             onNotificationsRefresh={refreshNotifications}
             onStartSync={startSync}
+            onCancelSync={cancelSync}
             syncJobs={syncJobs}
           />
         )}
@@ -366,9 +367,9 @@ export default function App() {
                 }} />
               </div>
             </div>
-            <button onClick={() => clearSyncJob(activeSyncJob.integrationId)}
-              style={{ background: "none", border: "none", color: "#475569", cursor: "pointer", fontSize: 13, fontFamily: "inherit", flexShrink: 0 }}>
-              Hide
+            <button onClick={() => cancelSync(activeSyncJob.integrationId)}
+              style={{ padding: "4px 12px", background: "#2d0a0a", border: "1px solid #7f1d1d", color: "#f87171", borderRadius: 6, cursor: "pointer", fontSize: 12, fontFamily: "inherit", flexShrink: 0 }}>
+              Stop
             </button>
           </div>
         </div>
