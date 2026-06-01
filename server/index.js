@@ -40,6 +40,7 @@ app.post('/api/integrations/whatsapp',              auth, integrations.connectWh
 app.patch('/api/integrations/:id/config',           auth, integrations.updateConfig);
 app.patch('/api/integrations/:id/auto-sync',        auth, integrations.updateAutoSync);
 app.post('/api/integrations/:id/sync',              auth, integrations.triggerSync);
+app.post('/api/sync-jobs/:jobId/process',           auth, integrations.processSyncJob);
 app.get('/api/notifications',                       auth, integrations.listNotifications);
 app.get('/api/invoices/:id/attachment-url',          auth, integrations.getAttachmentUrl);
 

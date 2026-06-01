@@ -206,10 +206,24 @@ exports.resync = async (req, res) => {
   await supabase.from('integrations').update({ last_sync: null }).eq('id', integration.id);
   const resetIntegration = { ...integration, last_sync: null };
 
+  if (integration.type === 'google_drive') {
+    try {
+      const result = await createDriveSyncJob(resetIntegration, req.user.id);
+      return res.json({ ok: true, ...result });
+    } catch (err) {
+      console.error('[resync] discover error:', err.message);
+      await supabase.from('integrations').update({
+        status: 'error', error_message: err.message,
+        error_count: (integration.error_count || 0) + 1,
+        last_error_at: new Date().toISOString(),
+      }).eq('id', integration.id);
+      return res.status(500).json({ error: err.message });
+    }
+  }
+
   try {
     let result = { added: 0, filesFound: 0, errors: 0 };
-    if (integration.type === 'google_drive')      result = await sync.syncGoogleDrive(resetIntegration, req.user.id);
-    else if (integration.type === 'gmail')         result = await sync.syncGmail(resetIntegration, req.user.id);
+    if (integration.type === 'gmail')              result = await sync.syncGmail(resetIntegration, req.user.id);
     else if (integration.type === 'green_invoice') result.added = await sync.syncGreenInvoice(resetIntegration, req.user.id);
 
     await supabase.from('integrations').update({
@@ -345,7 +359,27 @@ exports.getAttachmentUrl = async (req, res) => {
   }
 };
 
-// POST /api/integrations/:id/sync
+// Shared: discover Drive files and create a sync_job. Returns { jobId, totalFiles, filesFound }.
+const createDriveSyncJob = async (integration, userId) => {
+  const { files, filesFound } = await sync.discoverGoogleDriveFiles(integration, userId);
+  if (!files.length) return { jobId: null, totalFiles: 0, filesFound };
+
+  const { data: job, error: jobErr } = await supabase
+    .from('sync_jobs')
+    .insert({
+      integration_id: integration.id,
+      user_id:        userId,
+      status:         'pending',
+      file_list:      files,
+      total_files:    files.length,
+    })
+    .select()
+    .single();
+  if (jobErr) throw jobErr;
+  return { jobId: job.id, totalFiles: files.length, filesFound };
+};
+
+// POST /api/integrations/:id/sync  — returns immediately with a jobId for Drive
 exports.triggerSync = async (req, res) => {
   const { data: integration, error } = await supabase
     .from('integrations')
@@ -355,10 +389,24 @@ exports.triggerSync = async (req, res) => {
     .single();
   if (error || !integration) return res.status(404).json({ error: 'Integration not found' });
 
+  if (integration.type === 'google_drive') {
+    try {
+      const result = await createDriveSyncJob(integration, req.user.id);
+      return res.json({ ok: true, ...result });
+    } catch (err) {
+      console.error('[integrations] sync discover error:', err.message);
+      await supabase.from('integrations').update({
+        status: 'error', error_message: err.message,
+        error_count: (integration.error_count || 0) + 1,
+        last_error_at: new Date().toISOString(),
+      }).eq('id', integration.id);
+      return res.status(500).json({ error: err.message });
+    }
+  }
+
   try {
     let result = { added: 0, filesFound: 0, errors: 0 };
-    if (integration.type === 'google_drive')      result = await sync.syncGoogleDrive(integration, req.user.id);
-    else if (integration.type === 'gmail')         result = await sync.syncGmail(integration, req.user.id);
+    if (integration.type === 'gmail')              result = await sync.syncGmail(integration, req.user.id);
     else if (integration.type === 'green_invoice') result.added = await sync.syncGreenInvoice(integration, req.user.id);
 
     await supabase.from('integrations').update({
@@ -369,7 +417,7 @@ exports.triggerSync = async (req, res) => {
       error_count:   0,
     }).eq('id', integration.id);
 
-    res.json({ ok: true, ...result });
+    res.json({ ok: true, jobId: null, ...result });
   } catch (err) {
     console.error('[integrations] sync error:', err.message);
     await supabase.from('integrations').update({
@@ -380,4 +428,66 @@ exports.triggerSync = async (req, res) => {
     }).eq('id', integration.id);
     res.status(500).json({ error: err.message });
   }
+};
+
+// POST /api/sync-jobs/:jobId/process — process next batch; called by frontend polling
+exports.processSyncJob = async (req, res) => {
+  const { data: job, error } = await supabase
+    .from('sync_jobs')
+    .select('*')
+    .eq('id', req.params.jobId)
+    .eq('user_id', req.user.id)
+    .single();
+  if (error || !job) return res.status(404).json({ error: 'Sync job not found' });
+
+  if (job.status === 'done' || job.status === 'error') {
+    return res.json({ done: true, cursor: job.cursor, totalFiles: job.total_files, added: job.added, errors: job.errors, filesAdded: [] });
+  }
+
+  // Prevent double-processing: skip if another call is actively running this job
+  if (job.status === 'running' && (Date.now() - new Date(job.updated_at).getTime()) < 30000) {
+    return res.json({ done: false, cursor: job.cursor, totalFiles: job.total_files, added: job.added, errors: job.errors, filesAdded: [] });
+  }
+
+  await supabase.from('sync_jobs').update({ status: 'running', updated_at: new Date().toISOString() }).eq('id', job.id);
+
+  const BATCH_SIZE = 3;
+  const batch = (job.file_list || []).slice(job.cursor, job.cursor + BATCH_SIZE);
+
+  const { data: integration } = await supabase.from('integrations').select('*').eq('id', job.integration_id).single();
+  if (!integration) {
+    await supabase.from('sync_jobs').update({ status: 'error', error_message: 'Integration not found' }).eq('id', job.id);
+    return res.status(404).json({ error: 'Integration not found' });
+  }
+
+  let batchRes = { results: [], errors: 0 };
+  try {
+    batchRes = await sync.processGoogleDriveFileBatch(integration, job.user_id, batch);
+  } catch (err) {
+    console.error('[sync-jobs] batch error:', err.message);
+    batchRes.errors = batch.length;
+  }
+
+  const newCursor = job.cursor + batch.length;
+  const newAdded  = job.added  + batchRes.results.length;
+  const newErrors = job.errors + batchRes.errors;
+  const done      = newCursor >= job.total_files;
+
+  await supabase.from('sync_jobs').update({
+    cursor: newCursor, added: newAdded, errors: newErrors,
+    status: done ? 'done' : 'running',
+    updated_at: new Date().toISOString(),
+  }).eq('id', job.id);
+
+  if (done) {
+    await supabase.from('integrations').update({
+      last_sync:     new Date().toISOString(),
+      sync_count:    (integration.sync_count || 0) + newAdded,
+      status:        'connected',
+      error_message: null,
+      error_count:   0,
+    }).eq('id', integration.id);
+  }
+
+  res.json({ done, cursor: newCursor, totalFiles: job.total_files, added: newAdded, errors: newErrors, filesAdded: batchRes.results });
 };
