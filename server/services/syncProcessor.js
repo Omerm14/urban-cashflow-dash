@@ -3,24 +3,20 @@ const { google } = require('googleapis');
 const crypto     = require('crypto');
 const supabase   = require('../lib/supabase');
 const { jsonrepair } = require('jsonrepair');
-const pdfParse   = require('pdf-parse');
 
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
-// Haiku for cheap text-mode extraction; Sonnet vision for scanned PDFs and images
-const MODEL_TEXT   = 'claude-haiku-4-5-20251001';
-const MODEL_VISION = 'claude-sonnet-4-6';
+const MODEL = 'claude-sonnet-4-6';
 
 // ─── Extraction prompts ───────────────────────────────────────────────────────
 
-// Vision: single image or image attachment
-const EXTRACT_PROMPT = `Extract data from this invoice or statement. The "supplier" is the company that ISSUED this document and is owed payment — the seller/creditor whose name appears in the document header or letterhead. Do NOT return the recipient or buyer name. All dates on this document follow Israeli format: DD/MM/YYYY or DD/MM/YY (day first, then month, then year). A two-digit year means 20YY — for example "14/04/26" means 14 April 2026, not 2014. For credit notes (זיכוי / credit note / refund): use "type":"credit". Return ONLY valid JSON: {"supplier":"<issuer company name>","invoiceNo":"<invoice number>","invoiceDate":"<YYYY-MM-DD>","amount":<total amount as positive number>,"type":"invoice"}. No markdown, no explanation.`;
+const CREDIT_RULE = `Only use "type":"credit" if the document is explicitly titled as a credit note — the document header/title says חשבונית זיכוי, מסמך זיכוי, or Credit Note. Do NOT use "type":"credit" for regular invoices that mention refunds or adjustments in line items. Default is "type":"invoice".`;
 
-// Vision: multi-page PDF sent as document (scanned / no embedded text)
-const EXTRACT_MULTI_PROMPT = `Extract ALL invoices from this PDF. Each page may be a separate invoice. The "supplier" is the company that ISSUED the document — the seller/creditor. Do NOT return the recipient or buyer name. All dates follow Israeli format: DD/MM/YYYY or DD/MM/YY (day first). A two-digit year means 20YY. For credit notes (זיכוי / credit note / refund): use "type":"credit". Return ONLY a valid JSON array — one object per invoice page, skipping pages that contain no invoice: [{"supplier":"<issuer company name>","invoiceNo":"<invoice number>","invoiceDate":"<YYYY-MM-DD>","amount":<total amount as positive number>,"type":"invoice"}]. No markdown, no explanation.`;
+// Single image (JPG, PNG, WhatsApp attachment)
+const EXTRACT_PROMPT = `Extract data from this invoice or statement. The "supplier" is the company that ISSUED this document and is owed payment — the seller/creditor whose name appears in the document header or letterhead. Do NOT return the recipient or buyer name. All dates on this document follow Israeli format: DD/MM/YYYY or DD/MM/YY (day first, then month, then year). A two-digit year means 20YY — for example "14/04/26" means 14 April 2026, not 2014. ${CREDIT_RULE} Return ONLY valid JSON: {"supplier":"<issuer company name>","invoiceNo":"<invoice number>","invoiceDate":"<YYYY-MM-DD>","amount":<total amount as positive number>,"type":"invoice"}. No markdown, no explanation.`;
 
-// Text: PDF text layer extracted by pdf-parse (cheap — no vision needed)
-const EXTRACT_TEXT_PROMPT = `The following is raw text extracted from a PDF invoice file. Extract ALL invoices from the text (each section may be a separate invoice). The "supplier" is the company that ISSUED the document — the seller/creditor. Do NOT return the recipient or buyer name. All dates follow Israeli format: DD/MM/YYYY or DD/MM/YY (day first). A two-digit year means 20YY — for example "14/04/26" means 14 April 2026. For credit notes (זיכוי / credit note / refund): use "type":"credit". Return ONLY a valid JSON array — one object per invoice, skipping sections with no invoice data: [{"supplier":"<issuer company name>","invoiceNo":"<invoice number>","invoiceDate":"<YYYY-MM-DD>","amount":<total amount as positive number>,"type":"invoice"}]. No markdown, no explanation.\n\nPDF TEXT:\n`;
+// Multi-page PDF sent as document
+const EXTRACT_MULTI_PROMPT = `Extract ALL invoices from this PDF. Each page may be a separate invoice. The "supplier" is the company that ISSUED the document — the seller/creditor. Do NOT return the recipient or buyer name. All dates follow Israeli format: DD/MM/YYYY or DD/MM/YY (day first). A two-digit year means 20YY. ${CREDIT_RULE} Return ONLY a valid JSON array — one object per invoice page, skipping pages that contain no invoice: [{"supplier":"<issuer company name>","invoiceNo":"<invoice number>","invoiceDate":"<YYYY-MM-DD>","amount":<total amount as positive number>,"type":"invoice"}]. No markdown, no explanation.`;
 
 // Robust JSON extraction: strip markdown fences, repair malformed JSON (e.g. unescaped Hebrew
 // quotes like בע"מ), find first JSON structure. jsonrepair handles unescaped quotes, trailing
@@ -42,47 +38,24 @@ const extractJson = (text, wantArray) => {
 };
 
 // Returns an array of extracted invoice objects (one element for images, one+ for multi-page PDFs).
-// Strategy: text-based PDFs → cheap Haiku text mode; scanned PDFs + images → Sonnet vision.
 const extractFromBuffer = async (buffer, mediaType, userId) => {
   const isPdf = mediaType === 'application/pdf';
-  let model, messages;
+  const b64   = buffer.toString('base64');
 
-  if (isPdf) {
-    // Try extracting the embedded text layer first (works for accounting-software PDFs)
-    let pdfText = '';
-    try {
-      const pdfData = await pdfParse(buffer);
-      pdfText = (pdfData.text || '').trim();
-    } catch (e) {
-      console.warn('[sync] pdf-parse failed, falling back to vision:', e.message);
-    }
+  const messages = [{
+    role: 'user',
+    content: isPdf
+      ? [
+          { type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: b64 } },
+          { type: 'text', text: EXTRACT_MULTI_PROMPT },
+        ]
+      : [
+          { type: 'image', source: { type: 'base64', media_type: mediaType, data: b64 } },
+          { type: 'text', text: EXTRACT_PROMPT },
+        ],
+  }];
 
-    if (pdfText.length > 50) {
-      // Text-based PDF → Haiku text mode (no image tokens = ~10-20x cheaper)
-      console.log(`[sync] text PDF (${pdfText.length} chars) → Haiku text mode`);
-      model    = MODEL_TEXT;
-      messages = [{ role: 'user', content: EXTRACT_TEXT_PROMPT + pdfText }];
-    } else {
-      // Scanned PDF → Sonnet vision
-      console.log('[sync] scanned PDF → Sonnet vision');
-      model    = MODEL_VISION;
-      const b64 = buffer.toString('base64');
-      messages = [{ role: 'user', content: [
-        { type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: b64 } },
-        { type: 'text', text: EXTRACT_MULTI_PROMPT },
-      ]}];
-    }
-  } else {
-    // Image (JPG, PNG, etc.) → Sonnet vision
-    model    = MODEL_VISION;
-    const b64 = buffer.toString('base64');
-    messages = [{ role: 'user', content: [
-      { type: 'image', source: { type: 'base64', media_type: mediaType, data: b64 } },
-      { type: 'text', text: EXTRACT_PROMPT },
-    ]}];
-  }
-
-  const msg = await client.messages.create({ model, max_tokens: isPdf ? 4096 : 1000, messages });
+  const msg = await client.messages.create({ model: MODEL, max_tokens: isPdf ? 4096 : 1000, messages });
 
   supabase.from('api_calls').insert({
     user_id:       userId,
