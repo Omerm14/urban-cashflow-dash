@@ -10,13 +10,46 @@ const MODEL = 'claude-sonnet-4-6';
 
 // ─── Extraction prompts ───────────────────────────────────────────────────────
 
-const CREDIT_RULE = `Only use "type":"credit" if the document is explicitly titled as a credit note — the document header/title says חשבונית זיכוי, מסמך זיכוי, or Credit Note. Do NOT use "type":"credit" for regular invoices that mention refunds or adjustments in line items. Default is "type":"invoice".`;
+const SUPPLIER_RULE = `SUPPLIER — the company that ISSUED this invoice (they are owed money):
+• Their name is in the document's own letterhead/header at the TOP of the page, usually near their ח.פ. (company registration number) or ע.מ. (VAT number).
+• Use the LEGAL registered company name — not a brand name, product line, or trade name.
+• The fields "לכבוד", "שם לקוח", "נמען", "עבור" contain the BUYER/RECIPIENT — do NOT use any name from these fields as the supplier.`;
+
+const DATE_RULE = `INVOICE DATE — Israeli format is DD/MM/YYYY or DD/MM/YY (day first, then month, then year):
+• "14/04/26" → 2026-04-14   "04/01/2025" → 2025-01-04   "31/12/24" → 2024-12-31
+• Convert to ISO format YYYY-MM-DD in your output.`;
+
+const CREDIT_RULE = `TYPE — use "credit" ONLY if the document title/header explicitly says חשבונית זיכוי, מסמך זיכוי, or Credit Note. Regular invoices that mention a refund in a line item are still "invoice". Default: "invoice".`;
 
 // Single image (JPG, PNG, WhatsApp attachment)
-const EXTRACT_PROMPT = `Extract data from this invoice or statement. The "supplier" is the company that ISSUED this document and is owed payment — the seller/creditor whose name appears in the document header or letterhead. Do NOT return the recipient or buyer name. All dates on this document follow Israeli format: DD/MM/YYYY or DD/MM/YY (day first, then month, then year). A two-digit year means 20YY — for example "14/04/26" means 14 April 2026, not 2014. ${CREDIT_RULE} Return ONLY valid JSON: {"supplier":"<issuer company name>","invoiceNo":"<invoice number>","invoiceDate":"<YYYY-MM-DD>","amount":<total amount as positive number>,"type":"invoice"}. No markdown, no explanation.`;
+const EXTRACT_PROMPT = `Extract invoice data from this document.
+
+${SUPPLIER_RULE}
+
+${DATE_RULE}
+
+INVOICE NUMBER: the number next to חשבונית מס׳ / מספר חשבונית / Invoice No.
+AMOUNT: the final total (סה"כ לתשלום / Total) as a positive number.
+
+${CREDIT_RULE}
+
+Return ONLY valid JSON — no markdown, no explanation:
+{"supplier":"<legal company name from letterhead>","invoiceNo":"<invoice number>","invoiceDate":"<YYYY-MM-DD>","amount":<positive number>,"type":"invoice"}`;
 
 // Multi-page PDF sent as document
-const EXTRACT_MULTI_PROMPT = `Extract ALL invoices from this PDF. Each page may be a separate invoice. The "supplier" is the company that ISSUED the document — the seller/creditor. Do NOT return the recipient or buyer name. All dates follow Israeli format: DD/MM/YYYY or DD/MM/YY (day first). A two-digit year means 20YY. ${CREDIT_RULE} Return ONLY a valid JSON array — one object per invoice page, skipping pages that contain no invoice: [{"supplier":"<issuer company name>","invoiceNo":"<invoice number>","invoiceDate":"<YYYY-MM-DD>","amount":<total amount as positive number>,"type":"invoice"}]. No markdown, no explanation.`;
+const EXTRACT_MULTI_PROMPT = `Extract ALL invoice data from this PDF. Each page may be a separate invoice.
+
+${SUPPLIER_RULE}
+
+${DATE_RULE}
+
+INVOICE NUMBER: the number next to חשבונית מס׳ / מספר חשבונית / Invoice No.
+AMOUNT: the final total (סה"כ לתשלום / Total) as a positive number.
+
+${CREDIT_RULE}
+
+Return ONLY a valid JSON array — one object per invoice page, skip non-invoice pages, no markdown, no explanation:
+[{"supplier":"<legal company name from letterhead>","invoiceNo":"<invoice number>","invoiceDate":"<YYYY-MM-DD>","amount":<positive number>,"type":"invoice"}]`;
 
 // Robust JSON extraction: strip markdown fences, repair malformed JSON (e.g. unescaped Hebrew
 // quotes like בע"מ), find first JSON structure. jsonrepair handles unescaped quotes, trailing

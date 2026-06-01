@@ -73,8 +73,21 @@ export const useSyncJob = ({ onBatchDone, onJobDone } = {}) => {
     setJobs(prev => { const next = { ...prev }; delete next[integrationId]; return next; });
   }, []);
 
+  const cancelSync = useCallback(async (integrationId) => {
+    const job = jobs[integrationId];
+    // Mark done locally immediately so polling stops
+    setJobs(prev => prev[integrationId]
+      ? { ...prev, [integrationId]: { ...prev[integrationId], done: true, cancelled: true } }
+      : prev
+    );
+    // Tell the server to mark the DB row cancelled (fire-and-forget)
+    if (job?.jobId) {
+      apiFetch(`/api/sync-jobs/${job.jobId}/cancel`).catch(() => {});
+    }
+  }, [jobs]);
+
   // Aggregated status of the "most active" job for the global bar
   const activeJob = Object.values(jobs).find(j => j && !j.done && !j.error && j.jobId) || null;
 
-  return { jobs, startSync, clearJob, activeJob };
+  return { jobs, startSync, clearJob, cancelSync, activeJob };
 };

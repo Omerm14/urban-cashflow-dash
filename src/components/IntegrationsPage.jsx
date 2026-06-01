@@ -470,7 +470,7 @@ function WhatsAppModal({ onClose, onSave }) {
 
 // ─── Integration card ─────────────────────────────────────────────────────────
 
-function IntegrationCard({ type, integration, onRefresh, onInvoicesRefresh, onNotificationsRefresh, showToast, onConnectModal, onStartSync, activeSyncJob }) {
+function IntegrationCard({ type, integration, onRefresh, onInvoicesRefresh, onNotificationsRefresh, showToast, onConnectModal, onStartSync, onCancelSync, activeSyncJob }) {
   const cfg       = PROVIDERS[type];
   const Icon      = ICONS[type];
   const status    = integration?.status || "disconnected";
@@ -736,6 +736,11 @@ function IntegrationCard({ type, integration, onRefresh, onInvoicesRefresh, onNo
                   : syncDone ? "✓ Done"
                   : "Sync Now"}
               </Btn>
+              {isJobSyncing && (
+                <Btn variant="danger" onClick={() => onCancelSync?.(integration.id)} style={{ padding: "0 14px" }}>
+                  Stop
+                </Btn>
+              )}
               <Btn variant="secondary" onClick={openConfig} style={{ display: "flex", alignItems: "center", gap: 6 }}>
                 <span style={{ fontSize: 14 }}>⚙</span> {configOpen ? "Close" : "Settings"}
               </Btn>
@@ -941,7 +946,7 @@ function IntegrationCard({ type, integration, onRefresh, onInvoicesRefresh, onNo
 
 // ─── Main page ────────────────────────────────────────────────────────────────
 
-export default function IntegrationsPage({ oauthResult, onClearOAuthResult, onInvoicesRefresh, onNotificationsRefresh, onStartSync, syncJobs }) {
+export default function IntegrationsPage({ oauthResult, onClearOAuthResult, onInvoicesRefresh, onNotificationsRefresh, onStartSync, onCancelSync, syncJobs }) {
   const [integrations,      setIntegrations]      = useState([]);
   const [loading,           setLoading]           = useState(true);
   const [toast,             setToast]             = useState(null);
@@ -1033,6 +1038,7 @@ export default function IntegrationsPage({ oauthResult, onClearOAuthResult, onIn
               showToast={showToast}
               onConnectModal={handleConnectModal}
               onStartSync={onStartSync}
+              onCancelSync={onCancelSync}
               activeSyncJob={activeSyncJob}
             />
           );
