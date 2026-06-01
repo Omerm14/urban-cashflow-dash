@@ -3,7 +3,7 @@ const { google } = require('googleapis');
 const crypto     = require('crypto');
 const supabase   = require('../lib/supabase');
 const { jsonrepair } = require('jsonrepair');
-const { PDFDocument } = require('pdf-lib');
+const { PDFDocument, degrees } = require('pdf-lib');
 
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
@@ -24,8 +24,27 @@ const DATE_RULE = `INVOICE DATE — Israeli format is DD/MM/YYYY or DD/MM/YY (da
 
 const CREDIT_RULE = `TYPE — use "credit" ONLY if the document title/header explicitly says חשבונית זיכוי, מסמך זיכוי, or Credit Note. Regular invoices that mention a refund in a line item are still "invoice". Default: "invoice".`;
 
-// Single image (JPG, PNG, WhatsApp attachment)
+// Used for all pages (single images, single-page PDFs, and each split page of a multi-page PDF).
+// Includes a "rotation" field so upside-down pages can be detected and corrected automatically.
 const EXTRACT_PROMPT = `Extract invoice data from this document.
+
+${SUPPLIER_RULE}
+
+${DATE_RULE}
+
+INVOICE NUMBER: the number next to חשבונית מס׳ / מספר חשבונית / Invoice No.
+AMOUNT: the final total (סה"כ לתשלום / Total) as a positive number.
+
+${CREDIT_RULE}
+
+ROTATION: Set "rotation" to 180 if the document appears upside down (all text is inverted and you must mentally flip it to read). Set to 0 if the document is normally oriented.
+
+Return ONLY valid JSON — no markdown, no explanation:
+{"supplier":"<legal company name from letterhead>","invoiceNo":"<invoice number>","invoiceDate":"<YYYY-MM-DD>","amount":<positive number>,"type":"invoice","rotation":0}`;
+
+// Prompt used for the corrected re-extract after rotation — identical but without the rotation field
+// so we don't get into a loop if Claude is confused about orientation a second time.
+const EXTRACT_PROMPT_CORRECTED = `Extract invoice data from this document. The page orientation has been corrected — it is now right-side up.
 
 ${SUPPLIER_RULE}
 
@@ -60,26 +79,43 @@ const extractJson = (text, wantArray) => {
   throw new Error(`No valid JSON in Claude response: ${clean.slice(0, 120)}`);
 };
 
-// Send a single-page PDF buffer to Claude and return one extracted invoice object.
-const extractOnePage = async (pageBuffer, userId) => {
-  const b64 = pageBuffer.toString('base64');
+// Call Claude on a single-page PDF buffer with the given prompt text.
+const callClaude = async (b64, promptText, userId) => {
   const msg = await client.messages.create({
     model: MODEL,
     max_tokens: 1000,
-    messages: [{
-      role: 'user',
-      content: [
-        { type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: b64 } },
-        { type: 'text', text: EXTRACT_PROMPT },
-      ],
-    }],
+    messages: [{ role: 'user', content: [
+      { type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: b64 } },
+      { type: 'text', text: promptText },
+    ]}],
   });
   supabase.from('api_calls').insert({
     user_id: userId, model: msg.model,
     input_tokens: msg.usage.input_tokens, output_tokens: msg.usage.output_tokens,
   }).then(({ error }) => { if (error) console.error('usage log:', error.message); });
-  const text = msg.content.map(b => b.text || '').join('').trim();
-  return extractJson(text, false);
+  return msg.content.map(b => b.text || '').join('').trim();
+};
+
+// Send a single-page PDF buffer to Claude. Detects upside-down pages and automatically
+// corrects them by applying a 180° rotation then re-extracting.
+const extractOnePage = async (pageBuffer, userId) => {
+  const b64 = pageBuffer.toString('base64');
+  const text = await callClaude(b64, EXTRACT_PROMPT, userId);
+  const result = extractJson(text, false);
+
+  if (result.rotation === 180) {
+    console.log('[sync] upside-down page detected — correcting rotation and re-extracting');
+    // Apply 180° rotation to the page so Claude sees it right-side up on the second pass
+    const doc = await PDFDocument.load(pageBuffer);
+    const page = doc.getPage(0);
+    page.setRotation(degrees(180));
+    const correctedBuffer = Buffer.from(await doc.save());
+    const correctedB64 = correctedBuffer.toString('base64');
+    const correctedText = await callClaude(correctedB64, EXTRACT_PROMPT_CORRECTED, userId);
+    return extractJson(correctedText, false);
+  }
+
+  return result;
 };
 
 // Returns an array of extracted invoice objects.
