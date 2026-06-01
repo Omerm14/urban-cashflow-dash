@@ -102,11 +102,13 @@ const matchSupplier = (name, suppliers) => {
   return bestScore >= Math.ceil(words.length / 2) && bestScore > secondBest ? best : null;
 };
 
-const isDuplicate = (candidate, existing) => existing.some(inv => {
+// strict=true disables fuzzyMatch — used for same-PDF batch dedup so multiple
+// invoices with identical supplier/amount/date (e.g. recurring) aren't wrongly skipped
+const isDuplicate = (candidate, existing, strict = false) => existing.some(inv => {
   const sameSup    = normSup(inv.supplier)  === normSup(candidate.supplier);
   const exactMatch = sameSup && inv.invoice_no && candidate.invoice_no &&
                      inv.invoice_no.trim() === candidate.invoice_no.trim();
-  const fuzzyMatch = sameSup &&
+  const fuzzyMatch = !strict && sameSup &&
                      Number(inv.amount) === Number(candidate.amount) &&
                      inv.invoice_date   === candidate.invoice_date;
   return exactMatch || fuzzyMatch;
@@ -163,7 +165,9 @@ const processFile = async (buffer, filename, mediaType, userId, suppliers, exist
       sync_timestamp:   new Date().toISOString(),
     };
 
-    if (isDuplicate(candidate, [...existingInvoices, ...results])) {
+    // Check DB with fuzzy matching; check same-PDF batch with exact-only to allow
+    // multiple pages with same supplier/amount/date (e.g. recurring monthly invoices)
+    if (isDuplicate(candidate, existingInvoices) || isDuplicate(candidate, results, true)) {
       console.log(`[sync] duplicate skipped: ${pageLabel}`);
       logSyncEvent(integrationId, userId, 'dedup_skipped', { source_file: pageLabel, file_hash: fileHash });
       continue;
