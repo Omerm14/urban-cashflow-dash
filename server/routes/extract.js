@@ -18,9 +18,11 @@ module.exports = async (req, res) => {
       const prompt = `Extract invoice data from this document.
 
 SUPPLIER — the company that ISSUED this invoice (they are owed money):
-• Their name is in the document's own letterhead/header at the TOP of the page, usually near their ח.פ. (company registration number) or ע.מ. (VAT number).
-• Use the LEGAL registered company name — not a brand name, product line, or trade name.
+• The most reliable way to identify them: find the ח.פ. (company registration number) or ע.מ. (VAT number) printed on the document — the company name printed beside or near that number IS the supplier.
+• For upside-down scanned pages: the letterhead (company name + ח.פ./ע.מ.) will appear at the BOTTOM of the rendered image. Look there.
+• PRODUCT BRANDS ARE NOT SUPPLIERS: Israeli invoices list purchased items (dairy, poultry, produce, beverages, etc.) with brand names like גליל, תנובה, שטראוס, עלית, and many others. These are the products being sold, NOT the issuer of the invoice. Never extract a food product brand, item description, or packaging text as the supplier.
 • The fields "לכבוד", "שם לקוח", "נמען", "עבור" contain the BUYER/RECIPIENT — do NOT use any name from these fields as the supplier.
+• Use the LEGAL registered company name as it appears next to ח.פ./ע.מ. — not a trade name or product line.
 
 INVOICE DATE — Israeli format is DD/MM/YYYY or DD/MM/YY (day first, then month, then year):
 • "14/04/26" → 2026-04-14   "04/01/2025" → 2025-01-04   "31/12/24" → 2024-12-31

@@ -3,6 +3,7 @@ const { google } = require('googleapis');
 const crypto     = require('crypto');
 const supabase   = require('../lib/supabase');
 const { jsonrepair } = require('jsonrepair');
+const { PDFDocument } = require('pdf-lib');
 
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
@@ -11,9 +12,11 @@ const MODEL = 'claude-sonnet-4-6';
 // ─── Extraction prompts ───────────────────────────────────────────────────────
 
 const SUPPLIER_RULE = `SUPPLIER — the company that ISSUED this invoice (they are owed money):
-• Their name is in the document's own letterhead/header at the TOP of the page, usually near their ח.פ. (company registration number) or ע.מ. (VAT number).
-• Use the LEGAL registered company name — not a brand name, product line, or trade name.
-• The fields "לכבוד", "שם לקוח", "נמען", "עבור" contain the BUYER/RECIPIENT — do NOT use any name from these fields as the supplier.`;
+• The most reliable way to identify them: find the ח.פ. (company registration number) or ע.מ. (VAT number) printed on the document — the company name printed beside or near that number IS the supplier. The ח.פ./ע.מ. appears in the company's own letterhead, not in the line-items section.
+• For upside-down scanned pages: the letterhead (company name + ח.פ./ע.מ.) will appear at the BOTTOM of the rendered image. Look there.
+• PRODUCT BRANDS ARE NOT SUPPLIERS: Israeli invoices list purchased items (dairy, poultry, produce, beverages, etc.) with brand names like גליל, תנובה, שטראוס, עלית, and many others. These are the products being sold, NOT the issuer of the invoice. Never extract a food product brand, item description, or packaging text as the supplier.
+• The fields "לכבוד", "שם לקוח", "נמען", "עבור" contain the BUYER/RECIPIENT — do NOT use any name from these fields as the supplier.
+• Use the LEGAL registered company name as it appears next to ח.פ./ע.מ. — not a trade name or product line.`;
 
 const DATE_RULE = `INVOICE DATE — Israeli format is DD/MM/YYYY or DD/MM/YY (day first, then month, then year):
 • "14/04/26" → 2026-04-14   "04/01/2025" → 2025-01-04   "31/12/24" → 2024-12-31
@@ -36,24 +39,7 @@ ${CREDIT_RULE}
 Return ONLY valid JSON — no markdown, no explanation:
 {"supplier":"<legal company name from letterhead>","invoiceNo":"<invoice number>","invoiceDate":"<YYYY-MM-DD>","amount":<positive number>,"type":"invoice"}`;
 
-// Multi-page PDF sent as document
-const EXTRACT_MULTI_PROMPT = `Extract ALL invoice data from this PDF. Each page is a SEPARATE, INDEPENDENT invoice from a DIFFERENT supplier.
-
-IMPORTANT — PAGE INDEPENDENCE: Each page was scanned from a different physical document. Do NOT carry over the supplier name, invoice number, or any other field from one page to another. Identify each page completely on its own.
-
-IMPORTANT — ROTATED SCANS: Some pages may be upside down or rotated (scanned in the wrong orientation). Read the text regardless of orientation. The company letterhead and ח.פ./ע.מ. number may appear at the bottom of the rendered page if the scan is upside down — still use them to identify the supplier.
-
-${SUPPLIER_RULE}
-
-${DATE_RULE}
-
-INVOICE NUMBER: the number next to חשבונית מס׳ / מספר חשבונית / Invoice No.
-AMOUNT: the final total (סה"כ לתשלום / Total) as a positive number.
-
-${CREDIT_RULE}
-
-Return ONLY a valid JSON array — one object per invoice page, skip non-invoice pages, no markdown, no explanation:
-[{"supplier":"<legal company name from letterhead>","invoiceNo":"<invoice number>","invoiceDate":"<YYYY-MM-DD>","amount":<positive number>,"type":"invoice"}]`;
+// (EXTRACT_MULTI_PROMPT removed — multi-page PDFs are now split page-by-page before sending)
 
 // Robust JSON extraction: strip markdown fences, repair malformed JSON (e.g. unescaped Hebrew
 // quotes like בע"מ), find first JSON structure. jsonrepair handles unescaped quotes, trailing
@@ -74,36 +60,74 @@ const extractJson = (text, wantArray) => {
   throw new Error(`No valid JSON in Claude response: ${clean.slice(0, 120)}`);
 };
 
-// Returns an array of extracted invoice objects (one element for images, one+ for multi-page PDFs).
-const extractFromBuffer = async (buffer, mediaType, userId) => {
-  const isPdf = mediaType === 'application/pdf';
-  const b64   = buffer.toString('base64');
-
-  const messages = [{
-    role: 'user',
-    content: isPdf
-      ? [
-          { type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: b64 } },
-          { type: 'text', text: EXTRACT_MULTI_PROMPT },
-        ]
-      : [
-          { type: 'image', source: { type: 'base64', media_type: mediaType, data: b64 } },
-          { type: 'text', text: EXTRACT_PROMPT },
-        ],
-  }];
-
-  const msg = await client.messages.create({ model: MODEL, max_tokens: isPdf ? 4096 : 1000, messages });
-
+// Send a single-page PDF buffer to Claude and return one extracted invoice object.
+const extractOnePage = async (pageBuffer, userId) => {
+  const b64 = pageBuffer.toString('base64');
+  const msg = await client.messages.create({
+    model: MODEL,
+    max_tokens: 1000,
+    messages: [{
+      role: 'user',
+      content: [
+        { type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: b64 } },
+        { type: 'text', text: EXTRACT_PROMPT },
+      ],
+    }],
+  });
   supabase.from('api_calls').insert({
-    user_id:       userId,
-    model:         msg.model,
-    input_tokens:  msg.usage.input_tokens,
-    output_tokens: msg.usage.output_tokens,
+    user_id: userId, model: msg.model,
+    input_tokens: msg.usage.input_tokens, output_tokens: msg.usage.output_tokens,
   }).then(({ error }) => { if (error) console.error('usage log:', error.message); });
+  const text = msg.content.map(b => b.text || '').join('').trim();
+  return extractJson(text, false);
+};
 
-  const text   = msg.content.map(b => b.text || '').join('').trim();
-  const parsed = extractJson(text, true); // always wantArray — processFile handles single-item arrays
-  return Array.isArray(parsed) ? parsed : [parsed];
+// Returns an array of extracted invoice objects.
+// Multi-page PDFs are split page-by-page so each Claude call sees exactly one invoice,
+// preventing cross-page supplier confusion and upside-down scan misidentification.
+const extractFromBuffer = async (buffer, mediaType, userId) => {
+  if (mediaType !== 'application/pdf') {
+    // Image (JPG, PNG, etc.)
+    const b64 = buffer.toString('base64');
+    const msg = await client.messages.create({
+      model: MODEL, max_tokens: 1000,
+      messages: [{ role: 'user', content: [
+        { type: 'image', source: { type: 'base64', media_type: mediaType, data: b64 } },
+        { type: 'text', text: EXTRACT_PROMPT },
+      ]}],
+    });
+    supabase.from('api_calls').insert({
+      user_id: userId, model: msg.model,
+      input_tokens: msg.usage.input_tokens, output_tokens: msg.usage.output_tokens,
+    }).then(({ error }) => { if (error) console.error('usage log:', error.message); });
+    const text = msg.content.map(b => b.text || '').join('').trim();
+    return [extractJson(text, false)];
+  }
+
+  // PDF: split into individual pages so each Claude call sees exactly one invoice
+  const srcDoc = await PDFDocument.load(buffer);
+  const pageCount = srcDoc.getPageCount();
+
+  if (pageCount === 1) {
+    const result = await extractOnePage(buffer, userId);
+    return [result];
+  }
+
+  const results = [];
+  for (let i = 0; i < pageCount; i++) {
+    try {
+      const singleDoc = await PDFDocument.create();
+      const [copied] = await singleDoc.copyPages(srcDoc, [i]);
+      singleDoc.addPage(copied);
+      const pageBuffer = Buffer.from(await singleDoc.save());
+      const extracted = await extractOnePage(pageBuffer, userId);
+      results.push(extracted);
+      console.log(`[sync] PDF page ${i + 1}/${pageCount} → supplier: ${extracted.supplier}`);
+    } catch (err) {
+      console.warn(`[sync] PDF page ${i + 1}/${pageCount} extraction failed:`, err.message);
+    }
+  }
+  return results;
 };
 
 // ─── Date / due-date helpers (mirror of src/utils/dates.js) ─────────────────
