@@ -2,6 +2,7 @@ const Anthropic = require('@anthropic-ai/sdk');
 const { google } = require('googleapis');
 const crypto     = require('crypto');
 const supabase   = require('../lib/supabase');
+const { jsonrepair } = require('jsonrepair');
 
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
@@ -11,17 +12,19 @@ const EXTRACT_PROMPT = `Extract data from this invoice or statement. The "suppli
 
 const EXTRACT_MULTI_PROMPT = `Extract ALL invoices from this PDF. Each page may be a separate invoice. The "supplier" is the company that ISSUED the document — the seller/creditor. Do NOT return the recipient or buyer name. All dates follow Israeli format: DD/MM/YYYY or DD/MM/YY (day first). A two-digit year means 20YY. Return ONLY a valid JSON array — one object per invoice page, skipping pages that contain no invoice: [{"supplier":"<issuer company name>","invoiceNo":"<invoice number>","invoiceDate":"<YYYY-MM-DD>","amount":<total amount as number>}]. No markdown, no explanation.`;
 
-// Robust JSON extraction: strip markdown fences, trailing prose, find first JSON structure
+// Robust JSON extraction: strip markdown fences, repair malformed JSON (e.g. unescaped Hebrew
+// quotes like בע"מ), find first JSON structure. jsonrepair handles unescaped quotes, trailing
+// commas, and other common LLM JSON issues.
 const extractJson = (text, wantArray) => {
   const clean = text.replace(/```json\s*/gi, '').replace(/```/g, '').trim();
   if (wantArray) {
     const arr = clean.match(/\[[\s\S]*\]/);
-    if (arr) { try { return JSON.parse(arr[0]); } catch { /* fall through */ } }
+    if (arr) { try { return JSON.parse(jsonrepair(arr[0])); } catch { /* fall through */ } }
   }
   const obj = clean.match(/\{[\s\S]*\}/);
   if (obj) {
     try {
-      const parsed = JSON.parse(obj[0]);
+      const parsed = JSON.parse(jsonrepair(obj[0]));
       return wantArray ? [parsed] : parsed;
     } catch { /* fall through */ }
   }
@@ -37,7 +40,7 @@ const extractFromBuffer = async (buffer, mediaType, userId) => {
     : { type: 'image',    source: { type: 'base64', media_type: mediaType,          data: b64 } };
 
   const msg = await client.messages.create({
-    model:      'claude-sonnet-4-6',
+    model:      'claude-haiku-4-5-20251001',
     max_tokens: isPdf ? 4096 : 1000,
     messages: [{ role: 'user', content: [mediaBlock, { type: 'text', text: isPdf ? EXTRACT_MULTI_PROMPT : EXTRACT_PROMPT }] }],
   });
@@ -174,9 +177,11 @@ const processFile = async (buffer, filename, mediaType, userId, suppliers, exist
       sync_timestamp:   new Date().toISOString(),
     };
 
-    // Check DB with fuzzy matching; check same-PDF batch with exact-only to allow
-    // multiple pages with same supplier/amount/date (e.g. recurring monthly invoices)
-    if (isDuplicate(candidate, existingInvoices) || isDuplicate(candidate, results, true)) {
+    // Check DB with fuzzy matching; check same-PDF batch strictly (exact invoice_no) when
+    // invoice_no is present so recurring invoices with same supplier/amount aren't skipped.
+    // When invoice_no is absent, fall back to fuzzy for same-batch to catch duplicate pages.
+    const inBatchStrict = Boolean(candidate.invoice_no);
+    if (isDuplicate(candidate, existingInvoices) || isDuplicate(candidate, results, inBatchStrict)) {
       console.log(`[sync] duplicate skipped: ${pageLabel}`);
       logSyncEvent(integrationId, userId, 'dedup_skipped', { source_file: pageLabel, file_hash: fileHash });
       continue;

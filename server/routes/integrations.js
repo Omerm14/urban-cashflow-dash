@@ -361,6 +361,12 @@ exports.getAttachmentUrl = async (req, res) => {
 
 // Shared: discover Drive files and create a sync_job. Returns { jobId, totalFiles, filesFound }.
 const createDriveSyncJob = async (integration, userId) => {
+  // Cancel any active job for this integration to prevent double-processing
+  await supabase.from('sync_jobs')
+    .update({ status: 'cancelled' })
+    .eq('integration_id', integration.id)
+    .in('status', ['pending', 'running']);
+
   const { files, filesFound } = await sync.discoverGoogleDriveFiles(integration, userId);
   if (!files.length) return { jobId: null, totalFiles: 0, filesFound };
 
