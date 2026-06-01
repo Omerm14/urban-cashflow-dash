@@ -20,7 +20,7 @@ const extractFromBuffer = async (buffer, mediaType, userId) => {
     : { type: 'image',    source: { type: 'base64', media_type: mediaType,          data: b64 } };
 
   const msg = await client.messages.create({
-    model:      'claude-sonnet-4-6',
+    model:      'claude-haiku-4-5-20251001',
     max_tokens: isPdf ? 4096 : 1000,
     messages: [{ role: 'user', content: [mediaBlock, { type: 'text', text: isPdf ? EXTRACT_MULTI_PROMPT : EXTRACT_PROMPT }] }],
   });
