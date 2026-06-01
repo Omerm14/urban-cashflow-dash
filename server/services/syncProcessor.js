@@ -34,6 +34,7 @@ AMOUNT: the final total (סה"כ לתשלום / Total) as a positive number.
 
 ${CREDIT_RULE}
 
+If you cannot read a field clearly, use an empty string "" for text or 0 for amount — do NOT explain or apologise.
 Return ONLY valid JSON — no markdown, no explanation:
 {"supplier":"<legal company name from letterhead>","invoiceNo":"<invoice number>","invoiceDate":"<YYYY-MM-DD>","amount":<positive number>,"type":"invoice"}`;
 
@@ -53,6 +54,7 @@ AMOUNT: the final total (סה"כ לתשלום / Total) as a positive number.
 
 ${CREDIT_RULE}
 
+If you cannot read a field clearly, use an empty string "" for text or 0 for amount — do NOT explain or apologise.
 Return ONLY a valid JSON array — one object per invoice page, skip non-invoice pages, no markdown, no explanation:
 [{"supplier":"<legal company name from letterhead>","invoiceNo":"<invoice number>","invoiceDate":"<YYYY-MM-DD>","amount":<positive number>,"type":"invoice"}]`;
 

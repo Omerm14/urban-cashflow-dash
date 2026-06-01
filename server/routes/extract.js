@@ -1,5 +1,6 @@
 const Anthropic = require('@anthropic-ai/sdk');
 const supabase  = require('../lib/supabase');
+const { jsonrepair } = require('jsonrepair');
 
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
@@ -30,6 +31,7 @@ INVOICE DATE — Israeli format is DD/MM/YYYY or DD/MM/YY (day first, then month
 INVOICE NUMBER: the number next to חשבונית מס׳ / מספר חשבונית / Invoice No.
 AMOUNT: the final total (סה"כ לתשלום / Total) as a positive number.
 
+If you cannot read a field clearly, use an empty string "" for text or 0 for amount — do NOT explain or apologise.
 Return ONLY valid JSON — no markdown, no explanation:
 {"supplier":"<legal company name from letterhead>","invoiceNo":"<invoice number>","invoiceDate":"<YYYY-MM-DD>","amount":<positive number>}`;
       messageContent = text
@@ -54,8 +56,11 @@ Return ONLY valid JSON — no markdown, no explanation:
       output_tokens: msg.usage.output_tokens,
     }).then(({ error }) => { if (error) console.error('Usage insert error:', error.message) });
 
-    const responseText = msg.content.map(b => b.text || '').join('').replace(/```json|```/g, '').trim();
-    const parsed = JSON.parse(responseText);
+    const responseText = msg.content.map(b => b.text || '').join('').trim();
+    const clean = responseText.replace(/```json\s*/gi, '').replace(/```/g, '').trim();
+    const objMatch = clean.match(/\{[\s\S]*\}/);
+    if (!objMatch) throw new Error(`No JSON in response: ${clean.slice(0, 120)}`);
+    const parsed = JSON.parse(jsonrepair(objMatch[0]));
     console.log('[extract] raw result:', JSON.stringify(parsed));
     res.json({ result: parsed });
   } catch (err) {
