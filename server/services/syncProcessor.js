@@ -37,7 +37,11 @@ Return ONLY valid JSON — no markdown, no explanation:
 {"supplier":"<legal company name from letterhead>","invoiceNo":"<invoice number>","invoiceDate":"<YYYY-MM-DD>","amount":<positive number>,"type":"invoice"}`;
 
 // Multi-page PDF sent as document
-const EXTRACT_MULTI_PROMPT = `Extract ALL invoice data from this PDF. Each page may be a separate invoice.
+const EXTRACT_MULTI_PROMPT = `Extract ALL invoice data from this PDF. Each page is a SEPARATE, INDEPENDENT invoice from a DIFFERENT supplier.
+
+IMPORTANT — PAGE INDEPENDENCE: Each page was scanned from a different physical document. Do NOT carry over the supplier name, invoice number, or any other field from one page to another. Identify each page completely on its own.
+
+IMPORTANT — ROTATED SCANS: Some pages may be upside down or rotated (scanned in the wrong orientation). Read the text regardless of orientation. The company letterhead and ח.פ./ע.מ. number may appear at the bottom of the rendered page if the scan is upside down — still use them to identify the supplier.
 
 ${SUPPLIER_RULE}
 
@@ -139,14 +143,26 @@ const STOP     = new Set(['בע"מ', 'בעמ', 'ובע"מ']);
 const matchSupplier = (name, suppliers) => {
   if (!name || !suppliers?.length) return null;
   const n = norm(name);
+
+  // 1. Exact match
   let hit = suppliers.find(s => norm(s.name) === n);
   if (hit) return hit;
-  hit = suppliers.find(s => {
+
+  // 2. Substring match — one name contains the other (no ratio gate so that short
+  //    stored names like "ארגל" match longer extracted names like "ארגל אקספרס").
+  //    When multiple suppliers match, pick the one with the longest name (most specific).
+  const subMatches = suppliers.filter(s => {
     const sn = norm(s.name);
-    const ratio = Math.min(n.length, sn.length) / Math.max(n.length, sn.length);
-    return ratio >= 0.6 && (n.includes(sn) || sn.includes(n));
+    return n.includes(sn) || sn.includes(n);
   });
-  if (hit) return hit;
+  if (subMatches.length === 1) return subMatches[0];
+  if (subMatches.length > 1) {
+    return subMatches.reduce((best, s) =>
+      norm(s.name).length > norm(best.name).length ? s : best
+    );
+  }
+
+  // 3. Word-overlap scoring
   const words = n.split(/\s+/).filter(w => w.length > 2 && !STOP.has(w));
   if (!words.length) return null;
   let best = null, bestScore = 0, secondBest = 0;

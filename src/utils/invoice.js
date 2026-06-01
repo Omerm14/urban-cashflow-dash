@@ -25,21 +25,30 @@ export const matchSupplier = (name, suppliers) => {
   if (!name || !suppliers?.length) return null;
   const n = norm(name);
 
-  // 1. exact match (quote-normalised)
+  // 1. Exact match (quote-normalised)
   let hit = suppliers.find(s => norm(s.name) === n);
   if (hit) { console.log('[match]', name, '→', hit.name, '(exact)'); return hit; }
 
-  // 2. substring match — require ≥60% length ratio to avoid short-name false positives
-  hit = suppliers.find(s => {
-    const sn = norm(s.name);
-    const ratio = Math.min(n.length, sn.length) / Math.max(n.length, sn.length);
-    return ratio >= 0.6 && (n.includes(sn) || sn.includes(n));
-  });
-  if (hit) { console.log('[match]', name, '→', hit.name, '(substring)'); return hit; }
-
-  // 3. word-overlap — exclude generic business-entity suffix so that בע"מ
-  //    (in any quote encoding) never drives a match on its own
+  // 2. Substring match — one name contains the other (no ratio gate so that short
+  //    stored names like "ארגל" match longer extracted names like "ארגל אקספרס").
+  //    When multiple suppliers match, pick the one with the longest name (most specific).
   const STOP = new Set(['בע"מ', 'בעמ', 'ובע"מ']);
+  const subMatches = suppliers.filter(s => {
+    const sn = norm(s.name);
+    return n.includes(sn) || sn.includes(n);
+  });
+  if (subMatches.length === 1) {
+    console.log('[match]', name, '→', subMatches[0].name, '(substring)');
+    return subMatches[0];
+  }
+  if (subMatches.length > 1) {
+    const best = subMatches.reduce((b, s) => norm(s.name).length > norm(b.name).length ? s : b);
+    console.log('[match]', name, '→', best.name, '(substring-longest)');
+    return best;
+  }
+
+  // 3. Word-overlap — exclude generic business-entity suffix so that בע"מ
+  //    (in any quote encoding) never drives a match on its own
   const words = n.split(/\s+/).filter(w => w.length > 2 && !STOP.has(w));
   if (!words.length) { console.log('[match]', name, '→ null (no meaningful words)'); return null; }
 
