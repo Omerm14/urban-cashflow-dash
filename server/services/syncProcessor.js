@@ -1,16 +1,26 @@
-const Anthropic = require('@anthropic-ai/sdk');
+const Anthropic  = require('@anthropic-ai/sdk');
 const { google } = require('googleapis');
 const crypto     = require('crypto');
 const supabase   = require('../lib/supabase');
 const { jsonrepair } = require('jsonrepair');
+const pdfParse   = require('pdf-parse');
 
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
-// ─── Extraction ──────────────────────────────────────────────────────────────
+// Haiku for cheap text-mode extraction; Sonnet vision for scanned PDFs and images
+const MODEL_TEXT   = 'claude-haiku-4-5-20251001';
+const MODEL_VISION = 'claude-sonnet-4-6';
 
-const EXTRACT_PROMPT = `Extract data from this invoice or statement. The "supplier" is the company that ISSUED this document and is owed payment — the seller/creditor whose name appears in the document header or letterhead. Do NOT return the recipient or buyer name. All dates on this document follow Israeli format: DD/MM/YYYY or DD/MM/YY (day first, then month, then year). A two-digit year means 20YY — for example "14/04/26" means 14 April 2026, not 2014. Return ONLY valid JSON: {"supplier":"<issuer company name>","invoiceNo":"<invoice number>","invoiceDate":"<YYYY-MM-DD>","amount":<total amount as number>}. No markdown, no explanation.`;
+// ─── Extraction prompts ───────────────────────────────────────────────────────
 
-const EXTRACT_MULTI_PROMPT = `Extract ALL invoices from this PDF. Each page may be a separate invoice. The "supplier" is the company that ISSUED the document — the seller/creditor. Do NOT return the recipient or buyer name. All dates follow Israeli format: DD/MM/YYYY or DD/MM/YY (day first). A two-digit year means 20YY. Return ONLY a valid JSON array — one object per invoice page, skipping pages that contain no invoice: [{"supplier":"<issuer company name>","invoiceNo":"<invoice number>","invoiceDate":"<YYYY-MM-DD>","amount":<total amount as number>}]. No markdown, no explanation.`;
+// Vision: single image or image attachment
+const EXTRACT_PROMPT = `Extract data from this invoice or statement. The "supplier" is the company that ISSUED this document and is owed payment — the seller/creditor whose name appears in the document header or letterhead. Do NOT return the recipient or buyer name. All dates on this document follow Israeli format: DD/MM/YYYY or DD/MM/YY (day first, then month, then year). A two-digit year means 20YY — for example "14/04/26" means 14 April 2026, not 2014. For credit notes (זיכוי / credit note / refund): use "type":"credit". Return ONLY valid JSON: {"supplier":"<issuer company name>","invoiceNo":"<invoice number>","invoiceDate":"<YYYY-MM-DD>","amount":<total amount as positive number>,"type":"invoice"}. No markdown, no explanation.`;
+
+// Vision: multi-page PDF sent as document (scanned / no embedded text)
+const EXTRACT_MULTI_PROMPT = `Extract ALL invoices from this PDF. Each page may be a separate invoice. The "supplier" is the company that ISSUED the document — the seller/creditor. Do NOT return the recipient or buyer name. All dates follow Israeli format: DD/MM/YYYY or DD/MM/YY (day first). A two-digit year means 20YY. For credit notes (זיכוי / credit note / refund): use "type":"credit". Return ONLY a valid JSON array — one object per invoice page, skipping pages that contain no invoice: [{"supplier":"<issuer company name>","invoiceNo":"<invoice number>","invoiceDate":"<YYYY-MM-DD>","amount":<total amount as positive number>,"type":"invoice"}]. No markdown, no explanation.`;
+
+// Text: PDF text layer extracted by pdf-parse (cheap — no vision needed)
+const EXTRACT_TEXT_PROMPT = `The following is raw text extracted from a PDF invoice file. Extract ALL invoices from the text (each section may be a separate invoice). The "supplier" is the company that ISSUED the document — the seller/creditor. Do NOT return the recipient or buyer name. All dates follow Israeli format: DD/MM/YYYY or DD/MM/YY (day first). A two-digit year means 20YY — for example "14/04/26" means 14 April 2026. For credit notes (זיכוי / credit note / refund): use "type":"credit". Return ONLY a valid JSON array — one object per invoice, skipping sections with no invoice data: [{"supplier":"<issuer company name>","invoiceNo":"<invoice number>","invoiceDate":"<YYYY-MM-DD>","amount":<total amount as positive number>,"type":"invoice"}]. No markdown, no explanation.\n\nPDF TEXT:\n`;
 
 // Robust JSON extraction: strip markdown fences, repair malformed JSON (e.g. unescaped Hebrew
 // quotes like בע"מ), find first JSON structure. jsonrepair handles unescaped quotes, trailing
@@ -31,19 +41,48 @@ const extractJson = (text, wantArray) => {
   throw new Error(`No valid JSON in Claude response: ${clean.slice(0, 120)}`);
 };
 
-// Returns an array of extracted invoice objects (one element for images, one+ for multi-page PDFs)
+// Returns an array of extracted invoice objects (one element for images, one+ for multi-page PDFs).
+// Strategy: text-based PDFs → cheap Haiku text mode; scanned PDFs + images → Sonnet vision.
 const extractFromBuffer = async (buffer, mediaType, userId) => {
   const isPdf = mediaType === 'application/pdf';
-  const b64   = buffer.toString('base64');
-  const mediaBlock = isPdf
-    ? { type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: b64 } }
-    : { type: 'image',    source: { type: 'base64', media_type: mediaType,          data: b64 } };
+  let model, messages;
 
-  const msg = await client.messages.create({
-    model:      'claude-haiku-4-5-20251001',
-    max_tokens: isPdf ? 4096 : 1000,
-    messages: [{ role: 'user', content: [mediaBlock, { type: 'text', text: isPdf ? EXTRACT_MULTI_PROMPT : EXTRACT_PROMPT }] }],
-  });
+  if (isPdf) {
+    // Try extracting the embedded text layer first (works for accounting-software PDFs)
+    let pdfText = '';
+    try {
+      const pdfData = await pdfParse(buffer);
+      pdfText = (pdfData.text || '').trim();
+    } catch (e) {
+      console.warn('[sync] pdf-parse failed, falling back to vision:', e.message);
+    }
+
+    if (pdfText.length > 50) {
+      // Text-based PDF → Haiku text mode (no image tokens = ~10-20x cheaper)
+      console.log(`[sync] text PDF (${pdfText.length} chars) → Haiku text mode`);
+      model    = MODEL_TEXT;
+      messages = [{ role: 'user', content: EXTRACT_TEXT_PROMPT + pdfText }];
+    } else {
+      // Scanned PDF → Sonnet vision
+      console.log('[sync] scanned PDF → Sonnet vision');
+      model    = MODEL_VISION;
+      const b64 = buffer.toString('base64');
+      messages = [{ role: 'user', content: [
+        { type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: b64 } },
+        { type: 'text', text: EXTRACT_MULTI_PROMPT },
+      ]}];
+    }
+  } else {
+    // Image (JPG, PNG, etc.) → Sonnet vision
+    model    = MODEL_VISION;
+    const b64 = buffer.toString('base64');
+    messages = [{ role: 'user', content: [
+      { type: 'image', source: { type: 'base64', media_type: mediaType, data: b64 } },
+      { type: 'text', text: EXTRACT_PROMPT },
+    ]}];
+  }
+
+  const msg = await client.messages.create({ model, max_tokens: isPdf ? 4096 : 1000, messages });
 
   supabase.from('api_calls').insert({
     user_id:       userId,
@@ -52,8 +91,8 @@ const extractFromBuffer = async (buffer, mediaType, userId) => {
     output_tokens: msg.usage.output_tokens,
   }).then(({ error }) => { if (error) console.error('usage log:', error.message); });
 
-  const text = msg.content.map(b => b.text || '').join('').trim();
-  const parsed = extractJson(text, isPdf);
+  const text   = msg.content.map(b => b.text || '').join('').trim();
+  const parsed = extractJson(text, true); // always wantArray — processFile handles single-item arrays
   return Array.isArray(parsed) ? parsed : [parsed];
 };
 
@@ -162,14 +201,18 @@ const processFile = async (buffer, filename, mediaType, userId, suppliers, exist
     const sup         = matchSupplier(extracted.supplier, suppliers);
     const dueDate     = sup ? calcDueDate(invoiceDate, sup.terms) : null;
 
+    const isCredit  = extracted.type === 'credit';
+    const rawAmount = Math.abs(Number(extracted.amount)) || 0;
+
     const candidate = {
       user_id:          userId,
       supplier:         sup?.name || extracted.supplier || '',
       invoice_no:       extracted.invoiceNo  || '',
       invoice_date:     invoiceDate,
-      amount:           Number(extracted.amount) || 0,
-      due_date:         dueDate || '',
-      status:           'Unpaid',
+      amount:           isCredit ? -rawAmount : rawAmount,
+      due_date:         isCredit ? '' : (dueDate || ''),
+      status:           isCredit ? 'Credit' : 'Unpaid',
+      invoice_type:     isCredit ? 'credit' : 'invoice',
       notes:            '',
       source_file:      pageLabel,
       sync_source:      syncSource,

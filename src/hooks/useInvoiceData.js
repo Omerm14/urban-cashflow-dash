@@ -100,7 +100,7 @@ export const useInvoiceData = () => {
       const sup = matchSupplier(inv.supplier, suppliers);
       const due = inv.due_date || inv.dueDate || (calcDueDate(inv.invoice_date || inv.invoiceDate, sup)?.toISOString().split("T")[0] ?? null);
       let status = inv.status;
-      if (status !== STATUS.PAID && due && new Date(due) < today) status = STATUS.OVERDUE;
+      if (status !== STATUS.PAID && status !== STATUS.CREDIT && due && new Date(due) < today) status = STATUS.OVERDUE;
       return {
         ...inv,
         // normalise snake_case DB fields → camelCase for UI
