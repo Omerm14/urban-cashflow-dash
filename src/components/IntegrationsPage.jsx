@@ -470,26 +470,38 @@ function WhatsAppModal({ onClose, onSave }) {
 
 // ─── Integration card ─────────────────────────────────────────────────────────
 
-function IntegrationCard({ type, integration, onRefresh, onInvoicesRefresh, onNotificationsRefresh, showToast, onConnectModal }) {
-  const cfg      = PROVIDERS[type];
-  const Icon     = ICONS[type];
-  const status   = integration?.status || "disconnected";
+function IntegrationCard({ type, integration, onRefresh, onInvoicesRefresh, onNotificationsRefresh, showToast, onConnectModal, onStartSync, activeSyncJob }) {
+  const cfg       = PROVIDERS[type];
+  const Icon      = ICONS[type];
+  const status    = integration?.status || "disconnected";
   const connected = status === "connected";
   const hasError  = status === "error";
 
-  const [syncing,          setSyncing]          = useState(false);
+  // Job-based sync state (Drive) — reflects the useSyncJob hook state from App.jsx
+  const isJobSyncing = activeSyncJob && !activeSyncJob.done && !activeSyncJob.error;
+  const jobProgress  = activeSyncJob?.totalFiles
+    ? Math.round((activeSyncJob.cursor / activeSyncJob.totalFiles) * 100)
+    : 0;
+
   const [resyncing,        setResyncing]        = useState(false);
-  const [syncElapsed,      setSyncElapsed]      = useState(0);
+  const [discovering,      setDiscovering]      = useState(false);  // waiting for /sync response
   const [syncDone,         setSyncDone]         = useState(false);
   const [configOpen,       setConfigOpen]       = useState(false);
   const [historyOpen,      setHistoryOpen]      = useState(false);
   const [eventsRefreshKey, setEventsRefreshKey] = useState(0);
 
+  // When job finishes, flash green and refresh
   useEffect(() => {
-    if (!syncing) { setSyncElapsed(0); return; }
-    const t = setInterval(() => setSyncElapsed(s => s + 1), 1000);
-    return () => clearInterval(t);
-  }, [syncing]);
+    if (activeSyncJob?.done && !syncDone) {
+      setSyncDone(true);
+      setTimeout(() => setSyncDone(false), 3000);
+      onRefresh();
+      setEventsRefreshKey(k => k + 1);
+      setHistoryOpen(true);
+      if (activeSyncJob.added > 0) onInvoicesRefresh?.();
+      onNotificationsRefresh?.();
+    }
+  }, [activeSyncJob?.done]);
 
   const [labels,         setLabels]         = useState(null);
   const [labelsLoading,  setLabelsLoading]  = useState(false);
@@ -559,30 +571,43 @@ function IntegrationCard({ type, integration, onRefresh, onInvoicesRefresh, onNo
 
   const handleSync = async (isResync = false) => {
     if (isResync && !confirm("Re-process all historical files? May create duplicates if some slipped through.")) return;
-    isResync ? setResyncing(true) : setSyncing(true);
+    const ep = isResync
+      ? `/api/integrations/${integration.id}/resync`
+      : `/api/integrations/${integration.id}/sync`;
+
+    isResync ? setResyncing(true) : setDiscovering(true);
     try {
-      const ep = isResync
-        ? `/api/integrations/${integration.id}/resync`
-        : `/api/integrations/${integration.id}/sync`;
-      const { added, filesFound, errors } = await apiFetch(ep, { method: "POST" });
-      let msg;
-      if (filesFound === 0 || filesFound == null) {
-        msg = `No files found — try setting a longer lookback window in Settings`;
-      } else if (added === 0) {
-        msg = `Found ${filesFound} file${filesFound !== 1 ? "s" : ""} but none were new${errors > 0 ? ` (${errors} failed extraction)` : " (all already imported)"}`;
+      // For Drive this returns { jobId, totalFiles, filesFound } quickly.
+      // For Gmail/GreenInvoice it returns { jobId: null, added, filesFound, errors }.
+      const res = type === "google_drive"
+        ? await onStartSync(integration.id, ep)
+        : await apiFetch(ep, { method: "POST" });
+
+      if (res.jobId) {
+        // Drive: job started, useSyncJob will poll and update activeSyncJob
+        if (res.totalFiles === 0) {
+          const msg = res.filesFound === 0
+            ? "No files found — try a longer lookback window in Settings"
+            : `All ${res.filesFound} file${res.filesFound !== 1 ? "s" : ""} already imported`;
+          showToast(msg, false);
+        }
+        // Progress shown via activeSyncJob / global bottom bar
       } else {
-        msg = `${added} new invoice${added !== 1 ? "s" : ""} added from ${cfg.label}`;
+        // Gmail / Green Invoice: result already complete
+        const { added = 0, filesFound = 0, errors = 0 } = res;
+        let msg;
+        if (filesFound === 0 || filesFound == null) msg = "No files found — try a longer lookback window in Settings";
+        else if (added === 0) msg = `Found ${filesFound} file${filesFound !== 1 ? "s" : ""} but none were new${errors > 0 ? ` (${errors} failed)` : " (all already imported)"}`;
+        else msg = `${added} new invoice${added !== 1 ? "s" : ""} added from ${cfg.label}`;
+        showToast(msg, added > 0);
+        if (added > 0) { setSyncDone(true); setTimeout(() => setSyncDone(false), 3000); onInvoicesRefresh?.(); }
+        onRefresh();
+        setEventsRefreshKey(k => k + 1);
+        setHistoryOpen(true);
+        onNotificationsRefresh?.();
       }
-      showToast(msg, added > 0);
-      setSyncDone(true);
-      setTimeout(() => setSyncDone(false), 3000);
-      onRefresh();
-      setEventsRefreshKey(k => k + 1);
-      setHistoryOpen(true);
-      if (added > 0) onInvoicesRefresh?.();
-      onNotificationsRefresh?.();
     } catch (e) { showToast(e.message, false); }
-    finally { setSyncing(false); setResyncing(false); }
+    finally { setDiscovering(false); setResyncing(false); }
   };
 
   const handleConnect = async () => {
@@ -608,8 +633,8 @@ function IntegrationCard({ type, integration, onRefresh, onInvoicesRefresh, onNo
     prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
   );
 
-  const isActive    = syncing || resyncing;
-  const cardBorder  = isActive ? `1px solid ${cfg.color}55` : hasError ? "1px solid #7f1d1d" : "1px solid #111d2e";
+  const isActive   = discovering || resyncing || isJobSyncing;
+  const cardBorder = isActive ? `1px solid ${cfg.color}55` : hasError ? "1px solid #7f1d1d" : "1px solid #111d2e";
 
   return (
     <div className="card" style={{
@@ -618,17 +643,28 @@ function IntegrationCard({ type, integration, onRefresh, onInvoicesRefresh, onNo
       ...(isActive ? { boxShadow: `0 0 24px ${cfg.color}18` } : {}),
     }}>
 
-      {/* Sync progress bar */}
+      {/* Sync progress bar — deterministic for job-based, shimmer for blocking */}
       {(isActive || syncDone) && (
         <div style={{
           position: "absolute", top: 0, left: 0, right: 0, height: 3,
-          background: syncDone
-            ? "#4ade80"
-            : `linear-gradient(90deg, transparent, ${cfg.color}, transparent)`,
-          backgroundSize: "200% 100%",
-          animation: syncDone ? "none" : "shimmer 1.5s infinite",
+          background: syncDone ? "#4ade80" : "transparent",
           transition: "background 0.4s ease",
-        }} />
+        }}>
+          {!syncDone && isJobSyncing && (
+            <div style={{
+              height: "100%", background: cfg.color, borderRadius: 2,
+              width: `${jobProgress}%`, transition: "width 0.6s ease",
+            }} />
+          )}
+          {!syncDone && (discovering || resyncing) && (
+            <div style={{
+              position: "absolute", inset: 0,
+              background: `linear-gradient(90deg, transparent, ${cfg.color}, transparent)`,
+              backgroundSize: "200% 100%",
+              animation: "shimmer 1.5s infinite",
+            }} />
+          )}
+        </div>
       )}
 
       {/* Card body */}
@@ -694,9 +730,11 @@ function IntegrationCard({ type, integration, onRefresh, onInvoicesRefresh, onNo
             <>
               <Btn onClick={() => handleSync(false)} disabled={isActive}
                 style={syncDone ? { background:"#052e16", color:"#4ade80", borderColor:"#166534" } : {}}>
-                {syncing
-                  ? `Syncing…${syncElapsed >= 5 ? ` ${syncElapsed}s` : ""}`
-                  : syncDone ? "✓ Done" : "Sync Now"}
+                {discovering ? "Finding files…"
+                  : isJobSyncing ? `File ${Math.min(activeSyncJob.cursor, activeSyncJob.totalFiles)} / ${activeSyncJob.totalFiles}`
+                  : resyncing ? "Re-syncing…"
+                  : syncDone ? "✓ Done"
+                  : "Sync Now"}
               </Btn>
               <Btn variant="secondary" onClick={openConfig} style={{ display: "flex", alignItems: "center", gap: 6 }}>
                 <span style={{ fontSize: 14 }}>⚙</span> {configOpen ? "Close" : "Settings"}
@@ -903,7 +941,7 @@ function IntegrationCard({ type, integration, onRefresh, onInvoicesRefresh, onNo
 
 // ─── Main page ────────────────────────────────────────────────────────────────
 
-export default function IntegrationsPage({ oauthResult, onClearOAuthResult, onInvoicesRefresh, onNotificationsRefresh }) {
+export default function IntegrationsPage({ oauthResult, onClearOAuthResult, onInvoicesRefresh, onNotificationsRefresh, onStartSync, syncJobs }) {
   const [integrations,      setIntegrations]      = useState([]);
   const [loading,           setLoading]           = useState(true);
   const [toast,             setToast]             = useState(null);
@@ -981,18 +1019,24 @@ export default function IntegrationsPage({ oauthResult, onClearOAuthResult, onIn
       )}
 
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(360px, 1fr))", gap: 20 }}>
-        {Object.keys(PROVIDERS).map(type => (
-          <IntegrationCard
-            key={type}
-            type={type}
-            integration={getIntegration(type)}
-            onRefresh={load}
-            onInvoicesRefresh={onInvoicesRefresh}
-            onNotificationsRefresh={onNotificationsRefresh}
-            showToast={showToast}
-            onConnectModal={handleConnectModal}
-          />
-        ))}
+        {Object.keys(PROVIDERS).map(type => {
+          const intg = getIntegration(type);
+          const activeSyncJob = intg ? (syncJobs?.[intg.id] || null) : null;
+          return (
+            <IntegrationCard
+              key={type}
+              type={type}
+              integration={intg}
+              onRefresh={load}
+              onInvoicesRefresh={onInvoicesRefresh}
+              onNotificationsRefresh={onNotificationsRefresh}
+              showToast={showToast}
+              onConnectModal={handleConnectModal}
+              onStartSync={onStartSync}
+              activeSyncJob={activeSyncJob}
+            />
+          );
+        })}
       </div>
 
       {showGreenModal && (

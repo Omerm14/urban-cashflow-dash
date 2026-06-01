@@ -83,6 +83,15 @@ export const useInvoiceData = () => {
     if (!error) setInvoices(data ?? []);
   }, [user]);
 
+  // Append new invoices from a sync batch without re-fetching everything
+  const appendInvoices = useCallback(newInvoices => {
+    setInvoices(prev => {
+      const existingIds = new Set(prev.map(i => i.id));
+      const fresh = newInvoices.filter(i => !existingIds.has(i.id));
+      return fresh.length ? [...prev, ...fresh] : prev;
+    });
+  }, []);
+
   const getSupplier = useCallback(name => matchSupplier(name, suppliers), [suppliers]);
 
   const computed = useMemo(() => {
@@ -140,6 +149,6 @@ export const useInvoiceData = () => {
     suppliers, invoices, computed, dupeIds, monthlyData, allNames, color, maxTotal, kpis, loading,
     addInvoice, updateInvoice, deleteInvoice, bulkMarkPaid, bulkDelete,
     addSupplier, updateSupplier, deleteSupplier,
-    getSupplier, refreshInvoices,
+    getSupplier, refreshInvoices, appendInvoices,
   };
 };

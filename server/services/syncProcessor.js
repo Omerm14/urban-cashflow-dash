@@ -11,6 +11,23 @@ const EXTRACT_PROMPT = `Extract data from this invoice or statement. The "suppli
 
 const EXTRACT_MULTI_PROMPT = `Extract ALL invoices from this PDF. Each page may be a separate invoice. The "supplier" is the company that ISSUED the document — the seller/creditor. Do NOT return the recipient or buyer name. All dates follow Israeli format: DD/MM/YYYY or DD/MM/YY (day first). A two-digit year means 20YY. Return ONLY a valid JSON array — one object per invoice page, skipping pages that contain no invoice: [{"supplier":"<issuer company name>","invoiceNo":"<invoice number>","invoiceDate":"<YYYY-MM-DD>","amount":<total amount as number>}]. No markdown, no explanation.`;
 
+// Robust JSON extraction: strip markdown fences, trailing prose, find first JSON structure
+const extractJson = (text, wantArray) => {
+  const clean = text.replace(/```json\s*/gi, '').replace(/```/g, '').trim();
+  if (wantArray) {
+    const arr = clean.match(/\[[\s\S]*\]/);
+    if (arr) { try { return JSON.parse(arr[0]); } catch { /* fall through */ } }
+  }
+  const obj = clean.match(/\{[\s\S]*\}/);
+  if (obj) {
+    try {
+      const parsed = JSON.parse(obj[0]);
+      return wantArray ? [parsed] : parsed;
+    } catch { /* fall through */ }
+  }
+  throw new Error(`No valid JSON in Claude response: ${clean.slice(0, 120)}`);
+};
+
 // Returns an array of extracted invoice objects (one element for images, one+ for multi-page PDFs)
 const extractFromBuffer = async (buffer, mediaType, userId) => {
   const isPdf = mediaType === 'application/pdf';
@@ -20,7 +37,7 @@ const extractFromBuffer = async (buffer, mediaType, userId) => {
     : { type: 'image',    source: { type: 'base64', media_type: mediaType,          data: b64 } };
 
   const msg = await client.messages.create({
-    model:      'claude-haiku-4-5-20251001',
+    model:      'claude-sonnet-4-6',
     max_tokens: isPdf ? 4096 : 1000,
     messages: [{ role: 'user', content: [mediaBlock, { type: 'text', text: isPdf ? EXTRACT_MULTI_PROMPT : EXTRACT_PROMPT }] }],
   });
@@ -33,16 +50,8 @@ const extractFromBuffer = async (buffer, mediaType, userId) => {
   }).then(({ error }) => { if (error) console.error('usage log:', error.message); });
 
   const text = msg.content.map(b => b.text || '').join('').trim();
-  if (isPdf) {
-    const match = text.match(/\[[\s\S]*\]/) || text.match(/\{[\s\S]*\}/);
-    if (!match) throw new Error(`No JSON in Claude response: ${text.slice(0, 120)}`);
-    const parsed = JSON.parse(match[0]);
-    return Array.isArray(parsed) ? parsed : [parsed];
-  } else {
-    const match = text.match(/\{[\s\S]*\}/);
-    if (!match) throw new Error(`No JSON in Claude response: ${text.slice(0, 120)}`);
-    return [JSON.parse(match[0])];
-  }
+  const parsed = extractJson(text, isPdf);
+  return Array.isArray(parsed) ? parsed : [parsed];
 };
 
 // ─── Date / due-date helpers (mirror of src/utils/dates.js) ─────────────────
@@ -494,6 +503,81 @@ exports.syncGreenInvoice = async (integration, userId) => {
   }
 
   return added;
+};
+
+// ─── Chunked Drive sync helpers (used by job-based background sync) ──────────
+
+// Step 1: discover which files need processing (fast — no downloads, no Claude calls)
+exports.discoverGoogleDriveFiles = async (integration, userId) => {
+  const auth  = makeOAuth2({ ...integration.credentials, _userId: userId, _type: 'google_drive' });
+  const drive = google.drive({ version: 'v3', auth });
+
+  const folderId  = integration.config?.folder_id;
+  const lookback  = integration.config?.lookback_days ?? 0;
+  const cutoffISO = computeCutoff(integration.last_sync, lookback);
+
+  let folderCond = null;
+  if (folderId) {
+    const allFolderIds = await collectFolderTree(drive, folderId);
+    folderCond = `(${allFolderIds.map(id => `'${id}' in parents`).join(' or ')})`;
+  }
+
+  const conditions = [
+    folderCond,
+    "(mimeType='application/pdf' or mimeType contains 'image/')",
+    cutoffISO ? `modifiedTime > '${cutoffISO}'` : null,
+    'trashed = false',
+  ].filter(Boolean).join(' and ');
+
+  const { data: { files = [] } } = await drive.files.list({
+    q:        conditions,
+    fields:   'files(id,name,mimeType)',
+    pageSize: 50,
+  });
+
+  const existingInvoices = await getExistingInvoices(userId);
+  const baseFilename = s => s?.replace(/\s*\(page \d+\)$/i, '').trim().toLowerCase() || '';
+  const seenFiles = new Set(existingInvoices.map(i => baseFilename(i.source_file)).filter(Boolean));
+
+  const filesToProcess = files.filter(file => {
+    if (seenFiles.has(file.name.toLowerCase())) {
+      logSyncEvent(integration.id, userId, 'dedup_skipped', { source_file: file.name });
+      return false;
+    }
+    return true;
+  });
+
+  return { files: filesToProcess, filesFound: files.length };
+};
+
+// Step 2: download + extract a batch of already-discovered files
+exports.processGoogleDriveFileBatch = async (integration, userId, files) => {
+  const auth  = makeOAuth2({ ...integration.credentials, _userId: userId, _type: 'google_drive' });
+  const drive = google.drive({ version: 'v3', auth });
+  const suppliers        = await getSuppliers(userId);
+  const existingInvoices = await getExistingInvoices(userId);
+  const folderId         = integration.config?.folder_id;
+
+  const results = [];
+  let errors = 0;
+
+  await Promise.all(files.map(async file => {
+    try {
+      const resp   = await drive.files.get({ fileId: file.id, alt: 'media' }, { responseType: 'arraybuffer' });
+      const buffer = Buffer.from(resp.data);
+      const invs   = await processFile(
+        buffer, file.name, file.mimeType, userId, suppliers, existingInvoices,
+        integration.id, 'google_drive', { folder_id: folderId, drive_file_id: file.id },
+      );
+      for (const inv of invs) { results.push(inv); existingInvoices.push(inv); }
+    } catch (err) {
+      errors++;
+      console.error(`[sync:drive:batch] ${file.name}:`, err.message);
+      logSyncEvent(integration.id, userId, 'download_failed', { source_file: file.name, error_message: err.message });
+    }
+  }));
+
+  return { results, errors };
 };
 
 // ─── WhatsApp Business sync ──────────────────────────────────────────────────

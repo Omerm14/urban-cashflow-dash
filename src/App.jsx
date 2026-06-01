@@ -2,6 +2,7 @@ import { useState, useRef, useCallback, useEffect } from "react";
 import { useAuth }            from "./contexts/AuthContext";
 import { useInvoiceData }     from "./hooks/useInvoiceData";
 import { useNotifications }   from "./hooks/useNotifications";
+import { useSyncJob }         from "./hooks/useSyncJob";
 import LoginPage              from "./pages/LoginPage";
 import AdminPage              from "./pages/AdminPage";
 import NavBar                 from "./components/NavBar";
@@ -55,10 +56,15 @@ export default function App() {
     suppliers, invoices, computed, dupeIds, monthlyData, allNames, color, maxTotal, kpis, loading,
     addInvoice, updateInvoice, deleteInvoice, bulkMarkPaid, bulkDelete,
     addSupplier, updateSupplier, deleteSupplier,
-    getSupplier, refreshInvoices,
+    getSupplier, refreshInvoices, appendInvoices,
   } = useInvoiceData();
 
   const { notifications, unreadCount, markAllRead, refresh: refreshNotifications } = useNotifications();
+
+  const { jobs: syncJobs, startSync, clearJob: clearSyncJob, activeJob: activeSyncJob } = useSyncJob({
+    onBatchDone: appendInvoices,
+    onJobDone:   () => refreshNotifications(),
+  });
 
   const handleViewAttachment = useCallback(async inv => {
     setLoadingPreview(true);
@@ -327,12 +333,46 @@ export default function App() {
             onClearOAuthResult={() => setOAuthResult(null)}
             onInvoicesRefresh={refreshInvoices}
             onNotificationsRefresh={refreshNotifications}
+            onStartSync={startSync}
+            syncJobs={syncJobs}
           />
         )}
       </div>
 
       {editInvoice   && <EditInvoiceModal editInvoice={editInvoice} setEditInvoice={setEditInvoice} suppliers={suppliers} addInvoice={addInvoice} updateInvoice={updateInvoice} getSupplier={getSupplier} onViewAttachment={handleViewAttachment} />}
       {showSuppliers && <SuppliersModal suppliers={suppliers} addSupplier={addSupplier} updateSupplier={updateSupplier} deleteSupplier={deleteSupplier} editSupplier={editSupplier} setEditSupplier={setEditSupplier} onClose={() => setShowSuppliers(false)} />}
+
+      {/* Global sync status bar — visible from any tab while Drive sync is in progress */}
+      {activeSyncJob && (
+        <div style={{
+          position: "fixed", bottom: 0, left: 0, right: 0, zIndex: 60,
+          background: "#0d1626", borderTop: "1px solid #1e2d45",
+          padding: "0 24px",
+        }}>
+          <div style={{ maxWidth: 1140, margin: "0 auto", display: "flex", alignItems: "center", gap: 14, height: 44 }}>
+            <div style={{ width: 14, height: 14, borderRadius: "50%", border: "2px solid #6366f1", borderTopColor: "transparent", animation: "spin 0.8s linear infinite", flexShrink: 0 }} />
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
+                <span style={{ fontSize: 12, color: "#94a3b8" }}>
+                  Syncing Drive… file {Math.min(activeSyncJob.cursor, activeSyncJob.totalFiles)} / {activeSyncJob.totalFiles}
+                  {activeSyncJob.added > 0 && <span style={{ color: "#4ade80", marginLeft: 8 }}>· {activeSyncJob.added} invoice{activeSyncJob.added !== 1 ? "s" : ""} added</span>}
+                </span>
+              </div>
+              <div style={{ height: 3, background: "#131c2e", borderRadius: 2, overflow: "hidden" }}>
+                <div style={{
+                  height: "100%", borderRadius: 2, background: "#6366f1",
+                  width: `${activeSyncJob.totalFiles ? Math.round(activeSyncJob.cursor / activeSyncJob.totalFiles * 100) : 0}%`,
+                  transition: "width 0.5s ease",
+                }} />
+              </div>
+            </div>
+            <button onClick={() => clearSyncJob(activeSyncJob.integrationId)}
+              style={{ background: "none", border: "none", color: "#475569", cursor: "pointer", fontSize: 13, fontFamily: "inherit", flexShrink: 0 }}>
+              Hide
+            </button>
+          </div>
+        </div>
+      )}
 
       {loadingPreview && (
         <div style={{ position:"fixed", inset:0, background:"#00000060", display:"flex", alignItems:"center", justifyContent:"center", zIndex:100 }}>
