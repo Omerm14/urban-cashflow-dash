@@ -9,18 +9,20 @@ const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
 const EXTRACT_PROMPT = `Extract data from this invoice or statement. The "supplier" is the company that ISSUED this document and is owed payment — the seller/creditor whose name appears in the document header or letterhead. Do NOT return the recipient or buyer name. All dates on this document follow Israeli format: DD/MM/YYYY or DD/MM/YY (day first, then month, then year). A two-digit year means 20YY — for example "14/04/26" means 14 April 2026, not 2014. Return ONLY valid JSON: {"supplier":"<issuer company name>","invoiceNo":"<invoice number>","invoiceDate":"<YYYY-MM-DD>","amount":<total amount as number>}. No markdown, no explanation.`;
 
+const EXTRACT_MULTI_PROMPT = `Extract ALL invoices from this PDF. Each page may be a separate invoice. The "supplier" is the company that ISSUED the document — the seller/creditor. Do NOT return the recipient or buyer name. All dates follow Israeli format: DD/MM/YYYY or DD/MM/YY (day first). A two-digit year means 20YY. Return ONLY a valid JSON array — one object per invoice page, skipping pages that contain no invoice: [{"supplier":"<issuer company name>","invoiceNo":"<invoice number>","invoiceDate":"<YYYY-MM-DD>","amount":<total amount as number>}]. No markdown, no explanation.`;
+
+// Returns an array of extracted invoice objects (one element for images, one+ for multi-page PDFs)
 const extractFromBuffer = async (buffer, mediaType, userId) => {
-  const b64 = buffer.toString('base64');
-  const mediaBlock = mediaType === 'application/pdf'
+  const isPdf = mediaType === 'application/pdf';
+  const b64   = buffer.toString('base64');
+  const mediaBlock = isPdf
     ? { type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: b64 } }
     : { type: 'image',    source: { type: 'base64', media_type: mediaType,          data: b64 } };
+
   const msg = await client.messages.create({
     model:      'claude-sonnet-4-6',
-    max_tokens: 1000,
-    messages: [{
-      role: 'user',
-      content: [mediaBlock, { type: 'text', text: EXTRACT_PROMPT }],
-    }],
+    max_tokens: isPdf ? 4096 : 1000,
+    messages: [{ role: 'user', content: [mediaBlock, { type: 'text', text: isPdf ? EXTRACT_MULTI_PROMPT : EXTRACT_PROMPT }] }],
   });
 
   supabase.from('api_calls').insert({
@@ -30,10 +32,17 @@ const extractFromBuffer = async (buffer, mediaType, userId) => {
     output_tokens: msg.usage.output_tokens,
   }).then(({ error }) => { if (error) console.error('usage log:', error.message); });
 
-  const text  = msg.content.map(b => b.text || '').join('').trim();
-  const match = text.match(/\{[\s\S]*\}/);
-  if (!match) throw new Error(`No JSON in Claude response: ${text.slice(0, 120)}`);
-  return JSON.parse(match[0]);
+  const text = msg.content.map(b => b.text || '').join('').trim();
+  if (isPdf) {
+    const match = text.match(/\[[\s\S]*\]/) || text.match(/\{[\s\S]*\}/);
+    if (!match) throw new Error(`No JSON in Claude response: ${text.slice(0, 120)}`);
+    const parsed = JSON.parse(match[0]);
+    return Array.isArray(parsed) ? parsed : [parsed];
+  } else {
+    const match = text.match(/\{[\s\S]*\}/);
+    if (!match) throw new Error(`No JSON in Claude response: ${text.slice(0, 120)}`);
+    return [JSON.parse(match[0])];
+  }
 };
 
 // ─── Date / due-date helpers (mirror of src/utils/dates.js) ─────────────────
@@ -93,11 +102,13 @@ const matchSupplier = (name, suppliers) => {
   return bestScore >= Math.ceil(words.length / 2) && bestScore > secondBest ? best : null;
 };
 
-const isDuplicate = (candidate, existing) => existing.some(inv => {
+// strict=true disables fuzzyMatch — used for same-PDF batch dedup so multiple
+// invoices with identical supplier/amount/date (e.g. recurring) aren't wrongly skipped
+const isDuplicate = (candidate, existing, strict = false) => existing.some(inv => {
   const sameSup    = normSup(inv.supplier)  === normSup(candidate.supplier);
   const exactMatch = sameSup && inv.invoice_no && candidate.invoice_no &&
                      inv.invoice_no.trim() === candidate.invoice_no.trim();
-  const fuzzyMatch = sameSup &&
+  const fuzzyMatch = !strict && sameSup &&
                      Number(inv.amount) === Number(candidate.amount) &&
                      inv.invoice_date   === candidate.invoice_date;
   return exactMatch || fuzzyMatch;
@@ -118,66 +129,79 @@ const logSyncEvent = (integrationId, userId, eventType, fields = {}) => {
 
 const md5 = buf => crypto.createHash('md5').update(buf).digest('hex');
 
+// Returns an array of saved invoice records (may be empty, may have multiple for multi-page PDFs)
 const processFile = async (buffer, filename, mediaType, userId, suppliers, existingInvoices, integrationId, syncSource, syncMeta = {}) => {
   const fileHash = md5(buffer);
-  let extracted;
+  let extractedList;
   try {
-    extracted = await extractFromBuffer(buffer, mediaType, userId);
+    extractedList = await extractFromBuffer(buffer, mediaType, userId);
   } catch (err) {
     console.error(`[sync] extract failed for ${filename}:`, err.message);
     logSyncEvent(integrationId, userId, 'ocr_failed', { source_file: filename, file_hash: fileHash, error_message: err.message });
-    return null;
+    return [];
   }
 
-  const invoiceDate = correctSwappedDate(extracted.invoiceDate) || extracted.invoiceDate || '';
-  const sup         = matchSupplier(extracted.supplier, suppliers);
-  const dueDate     = sup ? calcDueDate(invoiceDate, sup.terms) : null;
+  const results = [];
 
-  const candidate = {
-    user_id:          userId,
-    supplier:         sup?.name || extracted.supplier || '',
-    invoice_no:       extracted.invoiceNo  || '',
-    invoice_date:     invoiceDate,
-    amount:           Number(extracted.amount) || 0,
-    due_date:         dueDate || '',
-    status:           'Unpaid',
-    notes:            '',
-    source_file:      filename,
-    sync_source:      syncSource,
-    sync_source_meta: { ...syncMeta, filename },
-    sync_timestamp:   new Date().toISOString(),
-  };
+  for (const [i, extracted] of extractedList.entries()) {
+    const pageLabel = extractedList.length > 1 ? `${filename} (page ${i + 1})` : filename;
 
-  if (isDuplicate(candidate, existingInvoices)) {
-    console.log(`[sync] duplicate skipped: ${filename}`);
-    logSyncEvent(integrationId, userId, 'dedup_skipped', { source_file: filename, file_hash: fileHash });
-    return null;
-  }
+    const invoiceDate = correctSwappedDate(extracted.invoiceDate) || extracted.invoiceDate || '';
+    const sup         = matchSupplier(extracted.supplier, suppliers);
+    const dueDate     = sup ? calcDueDate(invoiceDate, sup.terms) : null;
 
-  const { data, error } = await supabase.from('invoices').insert(candidate).select().single();
-  if (error) {
-    console.error(`[sync] save failed for ${filename}:`, error.message);
-    logSyncEvent(integrationId, userId, 'ocr_failed', { source_file: filename, file_hash: fileHash, error_message: error.message });
-    return null;
-  }
-  // Upload original file to Supabase Storage for later preview
-  try {
-    const ext = filename.split('.').pop().toLowerCase() || 'bin';
-    const storagePath = `${userId}/${data.id}.${ext}`;
-    const { error: storageErr } = await supabase.storage
-      .from('invoice-attachments')
-      .upload(storagePath, buffer, { contentType: mediaType, upsert: false });
-    if (!storageErr) {
-      await supabase.from('invoices').update({ attachment_path: storagePath }).eq('id', data.id);
-      data.attachment_path = storagePath;
-    } else {
-      console.warn(`[sync] storage upload skipped for ${filename}:`, storageErr.message);
+    const candidate = {
+      user_id:          userId,
+      supplier:         sup?.name || extracted.supplier || '',
+      invoice_no:       extracted.invoiceNo  || '',
+      invoice_date:     invoiceDate,
+      amount:           Number(extracted.amount) || 0,
+      due_date:         dueDate || '',
+      status:           'Unpaid',
+      notes:            '',
+      source_file:      pageLabel,
+      sync_source:      syncSource,
+      sync_source_meta: { ...syncMeta, filename: pageLabel },
+      sync_timestamp:   new Date().toISOString(),
+    };
+
+    // Check DB with fuzzy matching; check same-PDF batch with exact-only to allow
+    // multiple pages with same supplier/amount/date (e.g. recurring monthly invoices)
+    if (isDuplicate(candidate, existingInvoices) || isDuplicate(candidate, results, true)) {
+      console.log(`[sync] duplicate skipped: ${pageLabel}`);
+      logSyncEvent(integrationId, userId, 'dedup_skipped', { source_file: pageLabel, file_hash: fileHash });
+      continue;
     }
-  } catch (storageUploadErr) {
-    console.warn(`[sync] storage upload failed for ${filename}:`, storageUploadErr.message);
+
+    const { data, error } = await supabase.from('invoices').insert(candidate).select().single();
+    if (error) {
+      console.error(`[sync] save failed for ${pageLabel}:`, error.message);
+      logSyncEvent(integrationId, userId, 'ocr_failed', { source_file: pageLabel, file_hash: fileHash, error_message: error.message });
+      continue;
+    }
+
+    // Upload original file to Supabase Storage for later preview
+    try {
+      const ext = filename.split('.').pop().toLowerCase() || 'bin';
+      const storagePath = `${userId}/${data.id}.${ext}`;
+      const { error: storageErr } = await supabase.storage
+        .from('invoice-attachments')
+        .upload(storagePath, buffer, { contentType: mediaType, upsert: false });
+      if (!storageErr) {
+        await supabase.from('invoices').update({ attachment_path: storagePath }).eq('id', data.id);
+        data.attachment_path = storagePath;
+      } else {
+        console.warn(`[sync] storage upload skipped for ${pageLabel}:`, storageErr.message);
+      }
+    } catch (storageUploadErr) {
+      console.warn(`[sync] storage upload failed for ${pageLabel}:`, storageUploadErr.message);
+    }
+
+    logSyncEvent(integrationId, userId, 'saved', { source_file: pageLabel, file_hash: fileHash, invoice_id: data.id });
+    results.push(data);
   }
-  logSyncEvent(integrationId, userId, 'saved', { source_file: filename, file_hash: fileHash, invoice_id: data.id });
-  return data;
+
+  return results;
 };
 
 // ─── Shared DB helpers ───────────────────────────────────────────────────────
@@ -300,11 +324,12 @@ exports.syncGoogleDrive = async (integration, userId) => {
     try {
       const resp   = await drive.files.get({ fileId: file.id, alt: 'media' }, { responseType: 'arraybuffer' });
       const buffer = Buffer.from(resp.data);
-      const result = await processFile(
+      const results = await processFile(
         buffer, file.name, file.mimeType, userId, suppliers, existingInvoices,
         integration.id, 'google_drive', { folder_id: folderId, drive_file_id: file.id },
       );
-      if (result) { added++; existingInvoices.push(result); seenFiles.add(file.name.toLowerCase()); }
+      for (const inv of results) { added++; existingInvoices.push(inv); }
+      if (results.length) seenFiles.add(file.name.toLowerCase());
     } catch (err) {
       errors++;
       console.error(`[sync:drive] ${file.name}:`, err.message);
@@ -375,11 +400,11 @@ exports.syncGmail = async (integration, userId) => {
           userId: 'me', messageId: msg.id, id: part.body.attachmentId,
         });
         const buffer = Buffer.from(att.data, 'base64url');
-        const result = await processFile(
+        const results = await processFile(
           buffer, part.filename, part.mimeType, userId, suppliers, existingInvoices,
           integration.id, 'gmail', { message_id: msg.id, thread_id: message.threadId },
         );
-        if (result) { added++; existingInvoices.push(result); }
+        for (const inv of results) { added++; existingInvoices.push(inv); }
       }
     } catch (err) {
       errors++;
