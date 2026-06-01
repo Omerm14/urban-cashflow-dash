@@ -254,8 +254,6 @@ export default function App() {
           ) : (
             <div style={{ maxHeight:360, overflowY:"auto" }}>
               {notifications.map(n => {
-                const icons = { saved:"✓", ocr_failed:"✕", download_failed:"↯", dedup_skipped:"⊘" };
-                const colors = { saved:"#4ade80", ocr_failed:"#f87171", download_failed:"#fb923c", dedup_skipped:"#475569" };
                 const srcLabel = n.integration_type
                   ? { google_drive:"Drive", gmail:"Gmail", whatsapp:"WhatsApp", green_invoice:"GreenInv" }[n.integration_type] || n.integration_type
                   : "Manual";
@@ -266,14 +264,18 @@ export default function App() {
                   if (sec < 86400) return `${Math.floor(sec/3600)}h ago`;
                   return `${Math.floor(sec/86400)}d ago`;
                 })();
+                const isSummary = n.type === "sync_summary";
+                const icon  = isSummary ? "✓" : { ocr_failed:"✕", download_failed:"↯" }[n.event_type] || "·";
+                const color = isSummary ? "#4ade80" : { ocr_failed:"#f87171", download_failed:"#fb923c" }[n.event_type] || "#94a3b8";
+                const label = isSummary
+                  ? `${n.count} new invoice${n.count !== 1 ? "s" : ""} synced`
+                  : (n.source_file || n.event_type);
                 return (
                   <div key={n.id} style={{ display:"flex", gap:10, padding:"10px 16px", borderBottom:"1px solid #0d1626", alignItems:"flex-start" }}>
-                    <span style={{ color: colors[n.event_type] || "#475569", fontWeight:700, fontSize:11, flexShrink:0, marginTop:2 }}>
-                      {icons[n.event_type] || "·"}
-                    </span>
+                    <span style={{ color, fontWeight:700, fontSize:11, flexShrink:0, marginTop:2 }}>{icon}</span>
                     <div style={{ flex:1, minWidth:0 }}>
-                      <div style={{ fontSize:12, color:"#94a3b8", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>
-                        {n.source_file || n.event_type}
+                      <div style={{ fontSize:12, color: isSummary ? "#e2e8f0" : "#94a3b8", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>
+                        {label}
                       </div>
                       {n.error_message && <div style={{ fontSize:11, color:"#f87171", marginTop:2 }}>{n.error_message}</div>}
                     </div>

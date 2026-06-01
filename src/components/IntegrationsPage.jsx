@@ -479,9 +479,17 @@ function IntegrationCard({ type, integration, onRefresh, onInvoicesRefresh, onNo
 
   const [syncing,          setSyncing]          = useState(false);
   const [resyncing,        setResyncing]        = useState(false);
+  const [syncElapsed,      setSyncElapsed]      = useState(0);
+  const [syncDone,         setSyncDone]         = useState(false);
   const [configOpen,       setConfigOpen]       = useState(false);
   const [historyOpen,      setHistoryOpen]      = useState(false);
   const [eventsRefreshKey, setEventsRefreshKey] = useState(0);
+
+  useEffect(() => {
+    if (!syncing) { setSyncElapsed(0); return; }
+    const t = setInterval(() => setSyncElapsed(s => s + 1), 1000);
+    return () => clearInterval(t);
+  }, [syncing]);
 
   const [labels,         setLabels]         = useState(null);
   const [labelsLoading,  setLabelsLoading]  = useState(false);
@@ -566,11 +574,13 @@ function IntegrationCard({ type, integration, onRefresh, onInvoicesRefresh, onNo
         msg = `${added} new invoice${added !== 1 ? "s" : ""} added from ${cfg.label}`;
       }
       showToast(msg, added > 0);
+      setSyncDone(true);
+      setTimeout(() => setSyncDone(false), 3000);
       onRefresh();
       setEventsRefreshKey(k => k + 1);
       setHistoryOpen(true);
       if (added > 0) onInvoicesRefresh?.();
-      if (added > 0) onNotificationsRefresh?.();
+      onNotificationsRefresh?.();
     } catch (e) { showToast(e.message, false); }
     finally { setSyncing(false); setResyncing(false); }
   };
@@ -609,11 +619,15 @@ function IntegrationCard({ type, integration, onRefresh, onInvoicesRefresh, onNo
     }}>
 
       {/* Sync progress bar */}
-      {isActive && (
+      {(isActive || syncDone) && (
         <div style={{
-          position: "absolute", top: 0, left: 0, right: 0, height: 2,
-          background: `linear-gradient(90deg, transparent, ${cfg.color}, transparent)`,
-          animation: "shimmer 1.5s infinite",
+          position: "absolute", top: 0, left: 0, right: 0, height: 3,
+          background: syncDone
+            ? "#4ade80"
+            : `linear-gradient(90deg, transparent, ${cfg.color}, transparent)`,
+          backgroundSize: "200% 100%",
+          animation: syncDone ? "none" : "shimmer 1.5s infinite",
+          transition: "background 0.4s ease",
         }} />
       )}
 
@@ -678,8 +692,11 @@ function IntegrationCard({ type, integration, onRefresh, onInvoicesRefresh, onNo
             </Btn>
           ) : (
             <>
-              <Btn onClick={() => handleSync(false)} disabled={isActive}>
-                {syncing ? "Syncing…" : "Sync Now"}
+              <Btn onClick={() => handleSync(false)} disabled={isActive}
+                style={syncDone ? { background:"#052e16", color:"#4ade80", borderColor:"#166534" } : {}}>
+                {syncing
+                  ? `Syncing…${syncElapsed >= 5 ? ` ${syncElapsed}s` : ""}`
+                  : syncDone ? "✓ Done" : "Sync Now"}
               </Btn>
               <Btn variant="secondary" onClick={openConfig} style={{ display: "flex", alignItems: "center", gap: 6 }}>
                 <span style={{ fontSize: 14 }}>⚙</span> {configOpen ? "Close" : "Settings"}
