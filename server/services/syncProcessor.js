@@ -20,7 +20,7 @@ const extractFromBuffer = async (buffer, mediaType, userId) => {
     : { type: 'image',    source: { type: 'base64', media_type: mediaType,          data: b64 } };
 
   const msg = await client.messages.create({
-    model:      'claude-sonnet-4-6',
+    model:      'claude-haiku-4-5-20251001',
     max_tokens: isPdf ? 4096 : 1000,
     messages: [{ role: 'user', content: [mediaBlock, { type: 'text', text: isPdf ? EXTRACT_MULTI_PROMPT : EXTRACT_PROMPT }] }],
   });
@@ -312,28 +312,45 @@ exports.syncGoogleDrive = async (integration, userId) => {
 
   const suppliers        = await getSuppliers(userId);
   const existingInvoices = await getExistingInvoices(userId);
-  const seenFiles = new Set(existingInvoices.map(i => i.source_file?.toLowerCase()).filter(Boolean));
+  // Strip "(page N)" suffix so multi-page PDFs are recognised as already-imported
+  // whether they were saved with old code ("file.pdf") or new ("file.pdf (page 1)")
+  const baseFilename = s => s?.replace(/\s*\(page \d+\)$/i, '').trim().toLowerCase() || '';
+  const seenFiles = new Set(existingInvoices.map(i => baseFilename(i.source_file)).filter(Boolean));
   let added = 0, errors = 0;
 
-  for (const file of files) {
+  // Process files in parallel batches to avoid sequential Claude API bottleneck
+  const CONCURRENCY = 3;
+  const filesToProcess = files.filter(file => {
     if (seenFiles.has(file.name.toLowerCase())) {
       console.log(`[sync:drive] skipping already-imported file: ${file.name}`);
       logSyncEvent(integration.id, userId, 'dedup_skipped', { source_file: file.name });
-      continue;
+      return false;
     }
-    try {
-      const resp   = await drive.files.get({ fileId: file.id, alt: 'media' }, { responseType: 'arraybuffer' });
-      const buffer = Buffer.from(resp.data);
-      const results = await processFile(
-        buffer, file.name, file.mimeType, userId, suppliers, existingInvoices,
-        integration.id, 'google_drive', { folder_id: folderId, drive_file_id: file.id },
-      );
+    return true;
+  });
+
+  for (let i = 0; i < filesToProcess.length; i += CONCURRENCY) {
+    const batch = filesToProcess.slice(i, i + CONCURRENCY);
+    const batchResults = await Promise.all(batch.map(async file => {
+      try {
+        const resp   = await drive.files.get({ fileId: file.id, alt: 'media' }, { responseType: 'arraybuffer' });
+        const buffer = Buffer.from(resp.data);
+        const results = await processFile(
+          buffer, file.name, file.mimeType, userId, suppliers, existingInvoices,
+          integration.id, 'google_drive', { folder_id: folderId, drive_file_id: file.id },
+        );
+        return { file, results };
+      } catch (err) {
+        errors++;
+        console.error(`[sync:drive] ${file.name}:`, err.message);
+        logSyncEvent(integration.id, userId, 'download_failed', { source_file: file.name, error_message: err.message });
+        return { file, results: [] };
+      }
+    }));
+
+    for (const { file, results } of batchResults) {
       for (const inv of results) { added++; existingInvoices.push(inv); }
       if (results.length) seenFiles.add(file.name.toLowerCase());
-    } catch (err) {
-      errors++;
-      console.error(`[sync:drive] ${file.name}:`, err.message);
-      logSyncEvent(integration.id, userId, 'download_failed', { source_file: file.name, error_message: err.message });
     }
   }
 

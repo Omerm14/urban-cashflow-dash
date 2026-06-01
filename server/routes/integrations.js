@@ -304,8 +304,9 @@ exports.listNotifications = async (req, res) => {
       .from('sync_events')
       .select('id,event_type,source_file,invoice_id,error_message,created_at,integration_id,integrations(type)')
       .eq('user_id', req.user.id)
+      .neq('event_type', 'dedup_skipped')
       .order('created_at', { ascending: false })
-      .limit(20);
+      .limit(50);
     if (error) return res.status(500).json({ error: error.message });
     const notifications = (data || []).map(ev => ({
       id:               ev.id,
