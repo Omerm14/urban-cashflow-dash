@@ -3,7 +3,7 @@ import { toYM } from "../utils/dates";
 import InvoicesTable from "./InvoicesTable";
 import InvoicesGroupedView from "./InvoicesGroupedView";
 
-export default function InvoicesView({ computed, dupeIds, updateInvoice, deleteInvoice, bulkMarkPaid, bulkDelete, setEditInvoice, color, onViewAttachment }) {
+export default function InvoicesView({ computed, dupeIds, updateInvoice, deleteInvoice, bulkMarkPaid, bulkMarkUnpaid, bulkDelete, setEditInvoice, color, onViewAttachment }) {
   const [selectedIds,   setSelectedIds]   = useState(new Set());
   const [viewMode,      setViewMode]      = useState("grouped");
   const [selectedMonth, setSelectedMonth] = useState(() => toYM(new Date()));
@@ -38,6 +38,12 @@ export default function InvoicesView({ computed, dupeIds, updateInvoice, deleteI
     await bulkMarkPaid(ids);
     clearSelection();
   }, [selectedIds, bulkMarkPaid, clearSelection]);
+
+  const handleBulkUnpaid = useCallback(async () => {
+    const ids = [...selectedIds];
+    await bulkMarkUnpaid(ids);
+    clearSelection();
+  }, [selectedIds, bulkMarkUnpaid, clearSelection]);
 
   const handleBulkDelete = useCallback(async () => {
     const ids = [...selectedIds];
@@ -98,6 +104,12 @@ export default function InvoicesView({ computed, dupeIds, updateInvoice, deleteI
           </button>
           <button
             className="action-btn"
+            style={{ background:"#1e1b40", color:"#a78bfa", padding:"6px 14px", fontSize:12 }}
+            onClick={handleBulkUnpaid}>
+            ↻ Mark as Unpaid
+          </button>
+          <button
+            className="action-btn"
             style={{ background:"#2d0a0a", color:"#f87171", padding:"6px 14px", fontSize:12 }}
             onClick={handleBulkDelete}>
             ✕ Delete
@@ -125,6 +137,7 @@ export default function InvoicesView({ computed, dupeIds, updateInvoice, deleteI
             selectedIds={selectedIds} onToggleSelect={toggleSelect} onToggleAll={toggleAll}
             selectedMonth={selectedMonth} onMonthChange={setSelectedMonth}
             sortField={sortField}
+            onViewAttachment={onViewAttachment}
           />
       }
     </div>
