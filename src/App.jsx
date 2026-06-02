@@ -54,7 +54,7 @@ export default function App() {
 
   const {
     suppliers, invoices, computed, dupeIds, monthlyData, allNames, color, maxTotal, kpis, loading,
-    addInvoice, updateInvoice, deleteInvoice, bulkMarkPaid, bulkDelete,
+    addInvoice, updateInvoice, deleteInvoice, bulkMarkPaid, bulkMarkUnpaid, bulkDelete,
     addSupplier, updateSupplier, deleteSupplier,
     getSupplier, refreshInvoices, appendInvoices,
   } = useInvoiceData();
@@ -324,7 +324,7 @@ export default function App() {
         )}
 
         {view === "dashboard"    && <Dashboard  kpis={kpis} monthlyData={monthlyData} allNames={allNames} color={color} maxTotal={maxTotal} />}
-        {view === "invoices"     && <InvoicesView computed={computed} dupeIds={dupeIds} updateInvoice={updateInvoice} deleteInvoice={deleteInvoice} bulkMarkPaid={bulkMarkPaid} bulkDelete={bulkDelete} setEditInvoice={setEditInvoice} color={color} onViewAttachment={handleViewAttachment} />}
+        {view === "invoices"     && <InvoicesView computed={computed} dupeIds={dupeIds} updateInvoice={updateInvoice} deleteInvoice={deleteInvoice} bulkMarkPaid={bulkMarkPaid} bulkMarkUnpaid={bulkMarkUnpaid} bulkDelete={bulkDelete} setEditInvoice={setEditInvoice} color={color} onViewAttachment={handleViewAttachment} />}
         {view === "calendar"     && <CalendarView computed={computed} calMonth={calMonth} setCalMonth={setCalMonth} color={color} />}
         {view === "admin"        && <AdminPage />}
         {view === "integrations" && (

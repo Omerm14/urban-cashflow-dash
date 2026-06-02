@@ -15,7 +15,7 @@ function nextMonth(ym) {
   return toYM(d);
 }
 
-function SupplierCard({ supplier, invoices, dupeIds, updateInvoice, deleteInvoice, setEditInvoice, color, selectedIds, onToggleSelect, onToggleAll, sortField }) {
+function SupplierCard({ supplier, invoices, dupeIds, updateInvoice, deleteInvoice, setEditInvoice, color, selectedIds, onToggleSelect, onToggleAll, sortField, onViewAttachment }) {
   const sorted = [...invoices].sort((a, b) => {
     if (sortField === "amount") return Number(b.amount) - Number(a.amount);
     const af = a[sortField] ?? "", bf = b[sortField] ?? "";
@@ -82,6 +82,10 @@ function SupplierCard({ supplier, invoices, dupeIds, updateInvoice, deleteInvoic
                 {!dupeIds.has(inv.id) && <td />}
                 <td style={{ padding:"10px 18px 10px 6px" }}>
                   <div style={{ display:"flex", gap:5, justifyContent:"flex-end" }}>
+                    {inv.attachment_path && (
+                      <button className="action-btn" style={{ background:"#131c2e", color:"#6366f1", fontSize:11 }}
+                        title="View original file" onClick={() => onViewAttachment?.(inv)}>📎</button>
+                    )}
                     {inv.status !== STATUS.PAID && (
                       <button className="action-btn" style={{ background:"#052e16", color:"#4ade80", fontSize:11 }}
                         onClick={() => updateInvoice(inv.id, { status: STATUS.PAID })}>✓ Paid</button>
@@ -116,7 +120,7 @@ function SupplierCard({ supplier, invoices, dupeIds, updateInvoice, deleteInvoic
   );
 }
 
-export default function InvoicesGroupedView({ computed, dupeIds, updateInvoice, deleteInvoice, setEditInvoice, color, selectedIds, onToggleSelect, onToggleAll, selectedMonth, onMonthChange, sortField }) {
+export default function InvoicesGroupedView({ computed, dupeIds, updateInvoice, deleteInvoice, setEditInvoice, color, selectedIds, onToggleSelect, onToggleAll, selectedMonth, onMonthChange, sortField, onViewAttachment }) {
   const monthInvoices = computed.filter(inv => inv.dueDate && inv.dueDate.startsWith(selectedMonth));
   const monthTotal = monthInvoices.reduce((s, i) => s + Number(i.amount), 0);
 
@@ -181,6 +185,7 @@ export default function InvoicesGroupedView({ computed, dupeIds, updateInvoice, 
           onToggleSelect={onToggleSelect}
           onToggleAll={onToggleAll}
           sortField={sortField}
+          onViewAttachment={onViewAttachment}
         />
       ))}
     </div>
