@@ -80,20 +80,17 @@ const extractFromBuffer = async (buffer, mediaType, userId) => {
   const isPdf = mediaType === 'application/pdf';
   const b64   = buffer.toString('base64');
 
+  // Static extraction prompt → system block with cache_control so it can be reused as a cached
+  // prefix across the many calls a bulk sync makes. Only the per-file document/image varies.
+  const system = [{ type: 'text', text: isPdf ? EXTRACT_MULTI_PROMPT : EXTRACT_PROMPT, cache_control: { type: 'ephemeral' } }];
   const messages = [{
     role: 'user',
     content: isPdf
-      ? [
-          { type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: b64 } },
-          { type: 'text', text: EXTRACT_MULTI_PROMPT },
-        ]
-      : [
-          { type: 'image', source: { type: 'base64', media_type: mediaType, data: b64 } },
-          { type: 'text', text: EXTRACT_PROMPT },
-        ],
+      ? [{ type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: b64 } }]
+      : [{ type: 'image', source: { type: 'base64', media_type: mediaType, data: b64 } }],
   }];
 
-  const msg = await client.messages.create({ model: MODEL, max_tokens: isPdf ? 4096 : 1000, messages });
+  const msg = await client.messages.create({ model: MODEL, max_tokens: isPdf ? 4096 : 1000, system, messages });
 
   supabase.from('api_calls').insert({
     user_id:       userId,

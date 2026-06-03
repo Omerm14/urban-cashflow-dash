@@ -1,9 +1,23 @@
 const auth     = require('../middleware/auth')
 const supabase = require('../lib/supabase')
 
-// Cost per 1M tokens (claude-haiku-4-5): $0.80 input, $4.00 output
-const INPUT_COST  = 0.80 / 1_000_000
-const OUTPUT_COST = 4.00 / 1_000_000
+// Cost per 1M tokens, by model [input, output] in USD. The app runs claude-sonnet-4-6
+// for invoice extraction; other models may appear on the shared API key. Cost is computed
+// per row from the model recorded on each api_calls entry so the estimate matches reality.
+const PRICING = {
+  'claude-sonnet-4-6': { input: 3.00, output: 15.00 },
+  'claude-haiku-4-5':  { input: 1.00, output: 5.00 },
+}
+const DEFAULT_PRICING = PRICING['claude-sonnet-4-6']
+
+// Match by prefix so dated snapshots (e.g. claude-sonnet-4-6-20250101) resolve correctly.
+const priceFor = model =>
+  PRICING[Object.keys(PRICING).find(k => (model || '').startsWith(k))] || DEFAULT_PRICING
+
+const costOf = (model, input, output) => {
+  const p = priceFor(model)
+  return (input * p.input + output * p.output) / 1_000_000
+}
 
 module.exports = [auth, async (req, res) => {
   if (req.user.email !== process.env.ADMIN_EMAIL) {
@@ -30,23 +44,25 @@ module.exports = [auth, async (req, res) => {
 
     // Aggregate by user
     const byUserMap = {}
-    let totalCalls = 0, totalInput = 0, totalOutput = 0
+    let totalCalls = 0, totalInput = 0, totalOutput = 0, totalCost = 0
 
     calls.forEach(c => {
       const email = emailMap[c.user_id] || c.user_id || 'unknown'
-      if (!byUserMap[email]) byUserMap[email] = { email, calls: 0, inputTokens: 0, outputTokens: 0 }
+      if (!byUserMap[email]) byUserMap[email] = { email, calls: 0, inputTokens: 0, outputTokens: 0, estimatedCostUSD: 0 }
+      const input  = c.input_tokens  || 0
+      const output = c.output_tokens || 0
+      const cost   = costOf(c.model, input, output)
       byUserMap[email].calls++
-      byUserMap[email].inputTokens  += c.input_tokens  || 0
-      byUserMap[email].outputTokens += c.output_tokens || 0
+      byUserMap[email].inputTokens  += input
+      byUserMap[email].outputTokens += output
+      byUserMap[email].estimatedCostUSD += cost
       totalCalls++
-      totalInput  += c.input_tokens  || 0
-      totalOutput += c.output_tokens || 0
+      totalInput  += input
+      totalOutput += output
+      totalCost   += cost
     })
 
-    const byUser = Object.values(byUserMap).map(u => ({
-      ...u,
-      estimatedCostUSD: u.inputTokens * INPUT_COST + u.outputTokens * OUTPUT_COST,
-    })).sort((a, b) => b.calls - a.calls)
+    const byUser = Object.values(byUserMap).sort((a, b) => b.calls - a.calls)
 
     // Build daily timeline (last 30 days)
     const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
@@ -64,7 +80,7 @@ module.exports = [auth, async (req, res) => {
         calls: totalCalls,
         inputTokens: totalInput,
         outputTokens: totalOutput,
-        estimatedCostUSD: totalInput * INPUT_COST + totalOutput * OUTPUT_COST,
+        estimatedCostUSD: totalCost,
       },
       byUser,
       timeline,
