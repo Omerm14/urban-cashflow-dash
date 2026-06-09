@@ -1,5 +1,6 @@
 const { google } = require('googleapis');
 const supabase   = require('../lib/supabase');
+const storage    = require('../lib/storage');
 const sync       = require('../services/syncProcessor');
 
 const SCOPES = {
@@ -224,7 +225,7 @@ exports.resync = async (req, res) => {
   try {
     let result = { added: 0, filesFound: 0, errors: 0 };
     if (integration.type === 'gmail')              result = await sync.syncGmail(resetIntegration, req.user.id);
-    else if (integration.type === 'green_invoice') result.added = await sync.syncGreenInvoice(resetIntegration, req.user.id);
+    else if (integration.type === 'green_invoice') result = await sync.syncGreenInvoice(resetIntegration, req.user.id);
 
     await supabase.from('integrations').update({
       last_sync:     new Date().toISOString(),
@@ -342,18 +343,15 @@ exports.getAttachmentUrl = async (req, res) => {
   try {
     const { data: invoice, error } = await supabase
       .from('invoices')
-      .select('attachment_path')
+      .select('attachment_path, attachment_backend')
       .eq('id', req.params.id)
       .eq('user_id', req.user.id)
       .maybeSingle();
     if (error) return res.status(500).json({ error: error.message });
     if (!invoice?.attachment_path) return res.status(404).json({ error: 'No attachment for this invoice' });
 
-    const { data: signed, error: signErr } = await supabase.storage
-      .from('invoice-attachments')
-      .createSignedUrl(invoice.attachment_path, 3600);
-    if (signErr) return res.status(500).json({ error: signErr.message });
-    res.json({ url: signed.signedUrl });
+    const url = await storage.getSignedReadUrl(invoice.attachment_path, invoice.attachment_backend || 'supabase', 3600);
+    res.json({ url });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -413,7 +411,7 @@ exports.triggerSync = async (req, res) => {
   try {
     let result = { added: 0, filesFound: 0, errors: 0 };
     if (integration.type === 'gmail')              result = await sync.syncGmail(integration, req.user.id);
-    else if (integration.type === 'green_invoice') result.added = await sync.syncGreenInvoice(integration, req.user.id);
+    else if (integration.type === 'green_invoice') result = await sync.syncGreenInvoice(integration, req.user.id);
 
     await supabase.from('integrations').update({
       last_sync:     new Date().toISOString(),
