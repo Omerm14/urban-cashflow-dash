@@ -15,7 +15,11 @@ exports.verifyWhatsApp = (req, res) => {
   const token     = req.query['hub.verify_token'];
   const challenge = req.query['hub.challenge'];
 
-  if (mode === 'subscribe' && token === process.env.WHATSAPP_VERIFY_TOKEN) {
+  const expected = process.env.WHATSAPP_VERIFY_TOKEN || '';
+  const a = Buffer.from(`${token || ''}`);
+  const b = Buffer.from(expected);
+  const tokenOk = expected && a.length === b.length && crypto.timingSafeEqual(a, b);
+  if (mode === 'subscribe' && tokenOk) {
     return res.status(200).send(challenge);
   }
   res.status(403).json({ error: 'Forbidden' });
