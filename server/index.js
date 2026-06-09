@@ -45,6 +45,12 @@ app.post('/api/sync-jobs/:jobId/cancel',            auth, integrations.cancelSyn
 app.get('/api/notifications',                       auth, integrations.listNotifications);
 app.get('/api/invoices/:id/attachment-url',          auth, integrations.getAttachmentUrl);
 
+// Invoice mutations that also touch object storage
+const invoices = require('./routes/invoices');
+app.delete('/api/invoices/:id',           auth, invoices.remove);
+app.post('/api/invoices/bulk-delete',     auth, invoices.bulkRemove);
+app.post('/api/attachments/presign',      auth, invoices.presignUpload);
+
 // WhatsApp webhook (no auth — verified by HMAC signature)
 const webhook = require('./routes/webhook');
 app.get('/api/webhook/whatsapp',  webhook.verifyWhatsApp);
@@ -52,6 +58,7 @@ app.post('/api/webhook/whatsapp', webhook.handleWhatsApp);
 
 // Cron (secured by CRON_SECRET header)
 app.get('/api/cron/sync', require('./routes/cron').runSync);
+app.get('/api/cron/gc',   require('./routes/gc').runGc);
 
 // eslint-disable-next-line no-unused-vars
 app.use((err, req, res, next) => {
