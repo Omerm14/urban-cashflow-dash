@@ -39,9 +39,18 @@ export const useInvoiceData = () => {
     setInvoices(p => p.map(i => i.id === id ? { ...i, ...patch } : i));
   }, []);
 
+  // Deletes go through the API so the original file in object storage is removed
+  // alongside the row (the browser has no delete credentials for R2).
   const deleteInvoice = useCallback(async id => {
-    const { error } = await supabase.from('invoices').delete().eq('id', id);
-    if (error) { console.error('deleteInvoice:', error.message); throw error; }
+    const { data: { session } } = await supabase.auth.getSession();
+    const res = await fetch(`/api/invoices/${id}`, {
+      method: 'DELETE',
+      headers: { Authorization: `Bearer ${session?.access_token}` },
+    });
+    if (!res.ok) {
+      const { error } = await res.json().catch(() => ({}));
+      console.error('deleteInvoice:', error); throw new Error(error || 'Delete failed');
+    }
     setInvoices(p => p.filter(i => i.id !== id));
   }, []);
 
@@ -58,8 +67,16 @@ export const useInvoiceData = () => {
   }, []);
 
   const bulkDelete = useCallback(async ids => {
-    const { error } = await supabase.from('invoices').delete().in('id', ids);
-    if (error) { console.error('bulkDelete:', error.message); throw error; }
+    const { data: { session } } = await supabase.auth.getSession();
+    const res = await fetch('/api/invoices/bulk-delete', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session?.access_token}` },
+      body: JSON.stringify({ ids }),
+    });
+    if (!res.ok) {
+      const { error } = await res.json().catch(() => ({}));
+      console.error('bulkDelete:', error); throw new Error(error || 'Bulk delete failed');
+    }
     setInvoices(p => p.filter(i => !ids.includes(i.id)));
   }, []);
 

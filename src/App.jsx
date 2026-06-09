@@ -19,6 +19,49 @@ import { calcDueDate, toYM, correctSwappedDate }                           from 
 import { STATUS }                                    from "./constants";
 import { supabase }                                  from "./lib/supabase";
 
+// SHA-256 hex of a file — used to name attachment objects so repeat uploads
+// (including every page of one PDF) dedup to a single stored original.
+const sha256Hex = async file => {
+  const digest = await crypto.subtle.digest('SHA-256', await file.arrayBuffer());
+  return Array.from(new Uint8Array(digest)).map(b => b.toString(16).padStart(2, '0')).join('');
+};
+
+// Store the original file in the active backend and return attachment columns.
+// Asks the API which backend is active: 'r2' → presigned PUT direct to R2;
+// otherwise (or on any presign hiccup) → Supabase Storage via the SDK as before.
+const uploadOriginal = async (file, userId, accessToken) => {
+  const ext = (file.name.split('.').pop() || 'bin').toLowerCase();
+  let fileHash = null;
+  try { fileHash = await sha256Hex(file); } catch { /* hashing is best-effort */ }
+
+  let presign = { backend: 'supabase' };
+  try {
+    const res = await fetch('/api/attachments/presign', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${accessToken}` },
+      body: JSON.stringify({ filename: file.name, contentType: file.type, fileHash }),
+    });
+    if (res.ok) presign = await res.json();
+  } catch { /* fall back to Supabase direct upload */ }
+
+  if (presign.backend === 'r2' && presign.uploadUrl) {
+    const put = await fetch(presign.uploadUrl, {
+      method: 'PUT',
+      headers: { 'Content-Type': file.type || 'application/octet-stream' },
+      body: file,
+    });
+    if (!put.ok) throw new Error(`upload failed (${put.status})`);
+    return { attachment_path: presign.key, attachment_backend: 'r2', file_hash: fileHash, attachment_status: 'present' };
+  }
+
+  const key = `${userId}/${fileHash || `${Date.now()}-${Math.random().toString(36).slice(2)}`}.${ext}`;
+  const { error } = await supabase.storage
+    .from('invoice-attachments')
+    .upload(key, file, { contentType: file.type, upsert: true });
+  if (error) throw new Error(error.message);
+  return { attachment_path: key, attachment_backend: 'supabase', file_hash: fileHash, attachment_status: 'present' };
+};
+
 export default function App() {
   const { user, loading: authLoading, signOut } = useAuth();
 
@@ -128,16 +171,19 @@ export default function App() {
           const hebrew = await translateSupplierName(ex.supplier);
           if (hebrew) sup = getSupplier(hebrew) || null;
         }
-        const due = calcDueDate(invoiceDate, sup);
+        const isCredit  = ex.type === "credit";
+        const rawAmount = Math.abs(Number(ex.amount)) || 0;
+        const due       = isCredit ? null : calcDueDate(invoiceDate, sup);
         return {
           file,
           candidate: {
             supplier:     sup?.name || ex.supplier || "",
             invoice_no:   ex.invoiceNo   || "",
             invoice_date: invoiceDate,
-            amount:       Number(ex.amount) || 0,
-            due_date:     due ? due.toISOString().split("T")[0] : "",
-            status:       STATUS.UNPAID,
+            amount:       isCredit ? -rawAmount : rawAmount,
+            due_date:     isCredit ? "" : (due ? due.toISOString().split("T")[0] : ""),
+            status:       isCredit ? STATUS.CREDIT : STATUS.UNPAID,
+            invoice_type: isCredit ? "credit" : "invoice",
             notes:        "",
             source_file:  file.name,
           },
@@ -166,23 +212,22 @@ export default function App() {
     const toAdd = candidates.filter((_, i) => !dupeSet.has(`__new_${i}`));
     const contentDupeCount = candidates.length - toAdd.length;
 
-    // Add non-duplicate candidates (upload original file to storage first)
-    let added = 0;
+    // Add non-duplicate candidates (store original file first so it's openable)
+    const { data: { session: uploadSession } } = await supabase.auth.getSession();
+    let added = 0, attachmentIssues = 0;
     await Promise.allSettled(
       toAdd.map(async ({ file, candidate }) => {
         try {
-          // Upload original file to Supabase Storage for later preview
-          let attachmentPath = null;
+          let attachment;
           try {
-            const ext = file.name.split('.').pop().toLowerCase() || 'bin';
-            const storagePath = `${user.id}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
-            const { error: storErr } = await supabase.storage
-              .from('invoice-attachments')
-              .upload(storagePath, file, { contentType: file.type, upsert: false });
-            if (!storErr) attachmentPath = storagePath;
-          } catch { /* storage upload is best-effort */ }
-
-          await addInvoice({ ...candidate, ...(attachmentPath ? { attachment_path: attachmentPath } : {}) });
+            attachment = await uploadOriginal(file, user.id, uploadSession?.access_token);
+          } catch (upErr) {
+            // Keep the invoice but flag the missing original for repair.
+            console.warn(`attachment upload failed for ${file.name}:`, upErr.message);
+            attachment = { attachment_status: 'missing' };
+            attachmentIssues++;
+          }
+          await addInvoice({ ...candidate, ...attachment });
           added++;
         } catch (err) {
           errors.push(`${file.name}: ${err.message}`);
@@ -195,8 +240,9 @@ export default function App() {
     if (added) parts.push(`${added} added`);
     if (fileSkipped.length) parts.push(`${fileSkipped.length} already uploaded`);
     if (contentDupeCount) parts.push(`${contentDupeCount} already exist`);
+    if (attachmentIssues) parts.push(`${attachmentIssues} saved without file`);
     if (errors.length) parts.push(`${errors.length} failed: ${errors[0]}`);
-    const hasIssue = fileSkipped.length || contentDupeCount || errors.length;
+    const hasIssue = fileSkipped.length || contentDupeCount || attachmentIssues || errors.length;
     setExtractMsg({ text: (added && !hasIssue ? "✓ " : "") + (parts.join(" · ") || "nothing to add"), ok: !hasIssue && added > 0 });
     setTimeout(() => setExtractMsg(null), 5000);
     e.target.value = "";
