@@ -98,6 +98,21 @@ exports.deleteAttachment = async (key, backend) => {
   if (error) throw new Error(error.message);
 };
 
+// Byte size of an object in a specific backend, or null if it doesn't exist.
+// Used to verify a migrated copy matches the source before deleting the source.
+exports.objectSize = async (key, backend) => {
+  if (backend === 'r2') {
+    const { HeadObjectCommand } = require('@aws-sdk/client-s3');
+    try {
+      const out = await r2Client().send(new HeadObjectCommand({ Bucket: r2Bucket(), Key: key }));
+      return Number(out.ContentLength);
+    } catch { return null; }
+  }
+  // Supabase has no cheap stat; the migrator already holds the source buffer, so
+  // this path is unused there.
+  return null;
+};
+
 // List every object key in the active backend. Used by the orphan GC job.
 exports.listAllKeys = async () => {
   const backend = activeBackend();

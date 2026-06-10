@@ -54,6 +54,7 @@ app.post('/api/webhook/whatsapp', webhook.handleWhatsApp);
 // Cron (secured by CRON_SECRET header)
 app.get('/api/cron/sync', require('../server/routes/cron').runSync);
 app.get('/api/cron/gc',   require('../server/routes/gc').runGc);
+app.get('/api/cron/migrate', require('../server/routes/migrate').runMigrate);
 
 // eslint-disable-next-line no-unused-vars
 app.use((err, req, res, next) => {
