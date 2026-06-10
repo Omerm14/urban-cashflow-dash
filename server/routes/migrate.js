@@ -6,7 +6,11 @@
 //
 // Guarded by CRON_SECRET (header `Authorization: Bearer <secret>` or `?key=`).
 //   ?dryRun=1        report how many remain, change nothing
-//   ?limit=20        rows to process this call (default 20, max 50)
+//   ?limit=N         max rows to fetch as candidates (default 100, max 200)
+//
+// Each call is time-bounded: it processes files until ~45s elapse, then returns
+// progress and stops, so it never exceeds the serverless timeout. Just re-invoke
+// until `remaining` is 0.
 const crypto   = require('crypto');
 const supabase = require('../lib/supabase');
 const storage  = require('../lib/storage');
@@ -33,7 +37,9 @@ exports.runMigrate = async (req, res) => {
     return res.status(400).json({ error: 'STORAGE_BACKEND is not r2 — nothing to migrate to' });
   }
   const dryRun = req.query.dryRun === '1' || req.query.dryRun === 'true';
-  const limit  = Math.min(Math.max(Number(req.query.limit) || 20, 1), 50);
+  const limit  = Math.min(Math.max(Number(req.query.limit) || 100, 1), 200);
+  // Time budget per invocation — stays under the 60s function cap with headroom.
+  const BUDGET_MS = 45000;
 
   try {
     // How many still live on Supabase (the work remaining).
@@ -44,7 +50,7 @@ exports.runMigrate = async (req, res) => {
       .not('attachment_path', 'is', null);
     if (cErr) return res.status(500).json({ error: cErr.message });
 
-    if (dryRun) return res.json({ dryRun: true, remaining: remaining || 0, batchSize: limit });
+    if (dryRun) return res.json({ dryRun: true, remaining: remaining || 0 });
 
     const { data: rows, error } = await supabase
       .from('invoices')
@@ -55,9 +61,16 @@ exports.runMigrate = async (req, res) => {
       .limit(limit);
     if (error) return res.status(500).json({ error: error.message });
 
-    let migrated = 0, failed = 0;
+    // Stop processing well before the serverless timeout and return progress, so
+    // the endpoint never 504s regardless of file sizes / network speed. The
+    // caller just re-invokes until `remaining` is 0 (the job is resumable).
+    const deadline = Date.now() + BUDGET_MS;
+
+    let migrated = 0, failed = 0, processed = 0;
     const errors = [];
     for (const row of rows) {
+      if (Date.now() >= deadline) break;
+      processed++;
       const key = row.attachment_path;
       try {
         // Download the original from Supabase.
@@ -87,8 +100,8 @@ exports.runMigrate = async (req, res) => {
     }
 
     const remainingAfter = Math.max((remaining || 0) - migrated, 0);
-    console.log(`[migrate] processed=${rows.length} migrated=${migrated} failed=${failed} remaining=${remainingAfter}`);
-    res.json({ ok: true, processed: rows.length, migrated, failed, remaining: remainingAfter, errors });
+    console.log(`[migrate] processed=${processed} migrated=${migrated} failed=${failed} remaining=${remainingAfter}`);
+    res.json({ ok: true, processed, migrated, failed, remaining: remainingAfter, errors });
   } catch (err) {
     console.error('[migrate] error:', err.message);
     res.status(500).json({ error: err.message });
