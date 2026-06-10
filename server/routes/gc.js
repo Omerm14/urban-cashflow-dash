@@ -10,8 +10,12 @@ const storage  = require('../lib/storage');
 const secretOk = (req) => {
   const secret = process.env.CRON_SECRET;
   if (!secret) return false;
-  const provided = (req.headers.authorization || '').replace(/^Bearer\s+/, '');
-  const a = Buffer.from(provided);
+  // Accept the secret from the Authorization header (cron services) OR a `key`
+  // query param (so the endpoint can be triggered by simply opening a URL in a
+  // browser — no terminal / header-setting tool required).
+  const provided = (req.headers.authorization || '').replace(/^Bearer\s+/, '')
+    || req.query.key || req.query.secret || '';
+  const a = Buffer.from(`${provided}`);
   const b = Buffer.from(`${secret}`);
   return a.length === b.length && crypto.timingSafeEqual(a, b);
 };
@@ -21,12 +25,16 @@ exports.runGc = async (req, res) => {
   const dryRun = req.query.dryRun === '1' || req.query.dryRun === 'true';
 
   try {
-    // Every key a live invoice references in the active backend.
+    // Every key any live invoice references. We intentionally do NOT filter by
+    // attachment_backend here: the referenced-set is used only to protect files
+    // from deletion, so being conservative (treat a path as referenced no matter
+    // which backend the row records) can never delete a file a live invoice
+    // points to. It also means this endpoint works before migration 007 adds the
+    // attachment_backend column.
     const backend = storage.activeBackend();
     const { data: rows, error } = await supabase
       .from('invoices')
       .select('attachment_path')
-      .eq('attachment_backend', backend)
       .not('attachment_path', 'is', null);
     if (error) return res.status(500).json({ error: error.message });
     const referenced = new Set((rows || []).map(r => r.attachment_path));
