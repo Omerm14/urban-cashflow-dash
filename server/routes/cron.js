@@ -33,10 +33,11 @@ exports.runSync = async (req, res) => {
 
   const results = await Promise.allSettled(due.map(async integration => {
     try {
+      // All sync fns return { added, filesFound, errors }; destructure `added`.
       let added = 0;
-      if (integration.type === 'google_drive')      added = await sync.syncGoogleDrive(integration, integration.user_id);
-      else if (integration.type === 'gmail')         added = await sync.syncGmail(integration, integration.user_id);
-      else if (integration.type === 'green_invoice') added = await sync.syncGreenInvoice(integration, integration.user_id);
+      if (integration.type === 'google_drive')      ({ added } = await sync.syncGoogleDrive(integration, integration.user_id));
+      else if (integration.type === 'gmail')         ({ added } = await sync.syncGmail(integration, integration.user_id));
+      else if (integration.type === 'green_invoice') ({ added } = await sync.syncGreenInvoice(integration, integration.user_id));
 
       await supabase.from('integrations').update({
         last_sync:     new Date().toISOString(),

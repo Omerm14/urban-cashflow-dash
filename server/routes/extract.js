@@ -1,63 +1,23 @@
-const Anthropic = require('@anthropic-ai/sdk');
-const supabase  = require('../lib/supabase');
-
-const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+// POST /api/extract — manual single-page OCR for the browser upload flow.
+// All prompts / JSON parsing live in lib/extraction.js so this path stays in
+// lockstep with the integration sync path (same supplier/date/credit rules).
+const extraction = require('../lib/extraction');
 
 module.exports = async (req, res) => {
-  const { b64, mediaType = 'image/jpeg', text } = req.body;
+  const { b64, mediaType = 'image/jpeg', text, mode } = req.body;
   if (!b64 && !text) return res.status(400).json({ error: 'Missing image or text data' });
 
   try {
-    const { mode } = req.body;
-
-    let messageContent;
+    let result;
     if (mode === 'translate') {
-      const translatePrompt = `You are a transliteration assistant. The following is an Israeli company name written in English. Transliterate/translate it to Hebrew as it appears on Israeli business documents. Return ONLY valid JSON: {"hebrew":"<Hebrew company name>"}. No markdown, no explanation.\n\nCompany name: ${text}`;
-      messageContent = [{ type: 'text', text: translatePrompt }];
+      result = await extraction.translate(text, req.user.id);
+    } else if (b64) {
+      result = await extraction.extractFromImageB64(b64, mediaType, req.user.id);
     } else {
-      const prompt = `Extract invoice data from this document.
-
-SUPPLIER — the company that ISSUED this invoice (they are owed money):
-• The most reliable identifier: find the ח.פ. (company registration number) or ע.מ. (VAT number) on the document — the company name printed beside that number IS the supplier. This works regardless of page orientation.
-• PRODUCT BRANDS ARE NOT SUPPLIERS: invoices list purchased products with brand names (e.g. גליל, תנובה, שטראוס, עלית). These are products being sold, NOT the invoice issuer. Never use a food/product brand or line-item description as the supplier.
-• The fields "לכבוד", "שם לקוח", "נמען", "עבור" contain the BUYER — do NOT use any name from these fields as the supplier.
-• Use the LEGAL registered company name as it appears next to ח.פ./ע.מ. — not a trade name or product line.
-
-INVOICE DATE — Israeli format is DD/MM/YYYY or DD/MM/YY (day first, then month, then year):
-• "14/04/26" → 2026-04-14   "04/01/2025" → 2025-01-04   "31/12/24" → 2024-12-31
-• Convert to ISO format YYYY-MM-DD in your output.
-
-INVOICE NUMBER: the number next to חשבונית מס׳ / מספר חשבונית / Invoice No.
-AMOUNT: the final total (סה"כ לתשלום / Total) as a positive number.
-
-Return ONLY valid JSON — no markdown, no explanation:
-{"supplier":"<legal company name from letterhead>","invoiceNo":"<invoice number>","invoiceDate":"<YYYY-MM-DD>","amount":<positive number>}`;
-      messageContent = text
-        ? [{ type: 'text', text: `${prompt}\n\n${text}` }]
-        : [
-            { type: 'image', source: { type: 'base64', media_type: mediaType, data: b64 } },
-            { type: 'text',  text: prompt },
-          ];
+      result = await extraction.extractFromText(text, req.user.id);
     }
-
-    const msg = await client.messages.create({
-      model:      'claude-sonnet-4-6',
-      max_tokens: 1000,
-      messages: [{ role: 'user', content: messageContent }],
-    });
-
-    // fire-and-forget: log usage to Supabase without blocking response
-    supabase.from('api_calls').insert({
-      user_id:       req.user.id,
-      model:         msg.model,
-      input_tokens:  msg.usage.input_tokens,
-      output_tokens: msg.usage.output_tokens,
-    }).then(({ error }) => { if (error) console.error('Usage insert error:', error.message) });
-
-    const responseText = msg.content.map(b => b.text || '').join('').replace(/```json|```/g, '').trim();
-    const parsed = JSON.parse(responseText);
-    console.log('[extract] raw result:', JSON.stringify(parsed));
-    res.json({ result: parsed });
+    console.log('[extract] raw result:', JSON.stringify(result));
+    res.json({ result });
   } catch (err) {
     console.error('Extract error:', err.message);
     const friendly = err.error?.error?.message || err.message;

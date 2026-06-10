@@ -1,111 +1,8 @@
-const Anthropic  = require('@anthropic-ai/sdk');
 const { google } = require('googleapis');
 const crypto     = require('crypto');
 const supabase   = require('../lib/supabase');
-const { jsonrepair } = require('jsonrepair');
-
-const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
-
-const MODEL = 'claude-sonnet-4-6';
-
-// ─── Extraction prompts ───────────────────────────────────────────────────────
-
-const SUPPLIER_RULE = `SUPPLIER — the company that ISSUED this invoice (they are owed money):
-• The most reliable identifier: find the ח.פ. (company registration number) or ע.מ. (VAT number) on the document — the company name printed beside that number IS the supplier. This works regardless of page orientation.
-• PRODUCT BRANDS ARE NOT SUPPLIERS: invoices list purchased products with brand names (e.g. גליל, תנובה, שטראוס, עלית). These are products being sold, NOT the invoice issuer. Never use a food/product brand or line-item description as the supplier.
-• The fields "לכבוד", "שם לקוח", "נמען", "עבור" contain the BUYER — do NOT use any name from these fields as the supplier.
-• Use the LEGAL registered company name as it appears next to ח.פ./ע.מ. — not a trade name or product line.`;
-
-const DATE_RULE = `INVOICE DATE — Israeli format is DD/MM/YYYY or DD/MM/YY (day first, then month, then year):
-• "14/04/26" → 2026-04-14   "04/01/2025" → 2025-01-04   "31/12/24" → 2024-12-31
-• Convert to ISO format YYYY-MM-DD in your output.`;
-
-const CREDIT_RULE = `TYPE — use "credit" ONLY if the document title/header explicitly says חשבונית זיכוי, מסמך זיכוי, or Credit Note. Regular invoices that mention a refund in a line item are still "invoice". Default: "invoice".`;
-
-// Single image (JPG, PNG, WhatsApp attachment)
-const EXTRACT_PROMPT = `Extract invoice data from this document.
-
-${SUPPLIER_RULE}
-
-${DATE_RULE}
-
-INVOICE NUMBER: the number next to חשבונית מס׳ / מספר חשבונית / Invoice No.
-AMOUNT: the final total (סה"כ לתשלום / Total) as a positive number.
-
-${CREDIT_RULE}
-
-Return ONLY valid JSON — no markdown, no explanation:
-{"supplier":"<legal company name from letterhead>","invoiceNo":"<invoice number>","invoiceDate":"<YYYY-MM-DD>","amount":<positive number>,"type":"invoice"}`;
-
-// Multi-page PDF sent as document
-const EXTRACT_MULTI_PROMPT = `Extract ALL invoice data from this PDF. Each page is a SEPARATE, INDEPENDENT invoice from a DIFFERENT supplier.
-
-IMPORTANT — PAGE INDEPENDENCE: Each page was scanned from a different physical document. Do NOT carry over the supplier name, invoice number, or any other field from one page to another. Identify each page completely on its own.
-
-IMPORTANT — ROTATED SCANS: Some pages may be upside down or rotated (scanned in the wrong orientation). Read the text regardless of orientation. The company letterhead and ח.פ./ע.מ. number may appear at the bottom of the rendered page if the scan is upside down — still use them to identify the supplier.
-
-${SUPPLIER_RULE}
-
-${DATE_RULE}
-
-INVOICE NUMBER: the number next to חשבונית מס׳ / מספר חשבונית / Invoice No.
-AMOUNT: the final total (סה"כ לתשלום / Total) as a positive number.
-
-${CREDIT_RULE}
-
-Return ONLY a valid JSON array — one object per invoice page, skip non-invoice pages, no markdown, no explanation:
-[{"supplier":"<legal company name from letterhead>","invoiceNo":"<invoice number>","invoiceDate":"<YYYY-MM-DD>","amount":<positive number>,"type":"invoice"}]`;
-
-// Robust JSON extraction: strip markdown fences, repair malformed JSON (e.g. unescaped Hebrew
-// quotes like בע"מ), find first JSON structure. jsonrepair handles unescaped quotes, trailing
-// commas, and other common LLM JSON issues.
-const extractJson = (text, wantArray) => {
-  const clean = text.replace(/```json\s*/gi, '').replace(/```/g, '').trim();
-  if (wantArray) {
-    const arr = clean.match(/\[[\s\S]*\]/);
-    if (arr) { try { return JSON.parse(jsonrepair(arr[0])); } catch { /* fall through */ } }
-  }
-  const obj = clean.match(/\{[\s\S]*\}/);
-  if (obj) {
-    try {
-      const parsed = JSON.parse(jsonrepair(obj[0]));
-      return wantArray ? [parsed] : parsed;
-    } catch { /* fall through */ }
-  }
-  throw new Error(`No valid JSON in Claude response: ${clean.slice(0, 120)}`);
-};
-
-// Returns an array of extracted invoice objects (one element for images, one+ for multi-page PDFs).
-const extractFromBuffer = async (buffer, mediaType, userId) => {
-  const isPdf = mediaType === 'application/pdf';
-  const b64   = buffer.toString('base64');
-
-  const messages = [{
-    role: 'user',
-    content: isPdf
-      ? [
-          { type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: b64 } },
-          { type: 'text', text: EXTRACT_MULTI_PROMPT },
-        ]
-      : [
-          { type: 'image', source: { type: 'base64', media_type: mediaType, data: b64 } },
-          { type: 'text', text: EXTRACT_PROMPT },
-        ],
-  }];
-
-  const msg = await client.messages.create({ model: MODEL, max_tokens: isPdf ? 4096 : 1000, messages });
-
-  supabase.from('api_calls').insert({
-    user_id:       userId,
-    model:         msg.model,
-    input_tokens:  msg.usage.input_tokens,
-    output_tokens: msg.usage.output_tokens,
-  }).then(({ error }) => { if (error) console.error('usage log:', error.message); });
-
-  const text   = msg.content.map(b => b.text || '').join('').trim();
-  const parsed = extractJson(text, true); // always wantArray — processFile handles single-item arrays
-  return Array.isArray(parsed) ? parsed : [parsed];
-};
+const storage    = require('../lib/storage');
+const { extractFromBuffer } = require('../lib/extraction');
 
 // ─── Date / due-date helpers (mirror of src/utils/dates.js) ─────────────────
 
@@ -253,28 +150,37 @@ const processFile = async (buffer, filename, mediaType, userId, suppliers, exist
       continue;
     }
 
-    const { data, error } = await supabase.from('invoices').insert(candidate).select().single();
+    // Insert the row first (status 'pending' until the file is confirmed stored),
+    // so a storage failure leaves a flagged, repairable row rather than an
+    // orphaned blob or a silent loss.
+    const { data, error } = await supabase
+      .from('invoices')
+      .insert({ ...candidate, file_hash: fileHash, attachment_status: 'pending' })
+      .select().single();
     if (error) {
       console.error(`[sync] save failed for ${pageLabel}:`, error.message);
       logSyncEvent(integrationId, userId, 'ocr_failed', { source_file: pageLabel, file_hash: fileHash, error_message: error.message });
       continue;
     }
 
-    // Upload original file to Supabase Storage for later preview
+    // Store the original file (verbatim — no compression) in the active backend.
     try {
-      const ext = filename.split('.').pop().toLowerCase() || 'bin';
-      const storagePath = `${userId}/${data.id}.${ext}`;
-      const { error: storageErr } = await supabase.storage
-        .from('invoice-attachments')
-        .upload(storagePath, buffer, { contentType: mediaType, upsert: false });
-      if (!storageErr) {
-        await supabase.from('invoices').update({ attachment_path: storagePath }).eq('id', data.id);
-        data.attachment_path = storagePath;
-      } else {
-        console.warn(`[sync] storage upload skipped for ${pageLabel}:`, storageErr.message);
-      }
-    } catch (storageUploadErr) {
-      console.warn(`[sync] storage upload failed for ${pageLabel}:`, storageUploadErr.message);
+      const ext  = filename.split('.').pop().toLowerCase() || 'bin';
+      const key  = `${userId}/${data.id}.${ext}`;
+      const { key: storedKey, backend } = await storage.putAttachment({ key, body: buffer, contentType: mediaType });
+      await supabase.from('invoices')
+        .update({ attachment_path: storedKey, attachment_backend: backend, attachment_status: 'present' })
+        .eq('id', data.id);
+      data.attachment_path    = storedKey;
+      data.attachment_backend = backend;
+      data.attachment_status  = 'present';
+    } catch (storageErr) {
+      // Surface the failure instead of swallowing it — the row is openable-less
+      // and flagged 'missing' so it can be retried by the repair tooling.
+      console.error(`[sync] storage upload failed for ${pageLabel}:`, storageErr.message);
+      await supabase.from('invoices').update({ attachment_status: 'missing' }).eq('id', data.id);
+      data.attachment_status = 'missing';
+      logSyncEvent(integrationId, userId, 'attachment_failed', { source_file: pageLabel, file_hash: fileHash, invoice_id: data.id, error_message: storageErr.message });
     }
 
     logSyncEvent(integrationId, userId, 'saved', { source_file: pageLabel, file_hash: fileHash, invoice_id: data.id });
@@ -573,7 +479,7 @@ exports.syncGreenInvoice = async (integration, userId) => {
     }
   }
 
-  return added;
+  return { added, filesFound: items.length, errors: 0 };
 };
 
 // ─── Chunked Drive sync helpers (used by job-based background sync) ──────────
