@@ -64,9 +64,16 @@ BEGIN
 END $$;
 
 -- ─── 4. Row-Level Security ───────────────────────────────────────────────────
--- Helper: (re)create an owner-scoped policy idempotently.
+-- Drop both the old policy names (present on the live DB) and the new names so
+-- the migration is fully idempotent regardless of which state the DB is in.
+
 -- invoices — full CRUD for the owning user (frontend reads/writes directly).
 ALTER TABLE invoices ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "users see own invoices (ALL)"          ON invoices;
+DROP POLICY IF EXISTS "users can update own invoices (UPDATE)" ON invoices;
+DROP POLICY IF EXISTS "users can delete own invoices (DELETE)" ON invoices;
+DROP POLICY IF EXISTS "users can select own invoices (SELECT)" ON invoices;
+DROP POLICY IF EXISTS "users can insert own invoices (INSERT)" ON invoices;
 DROP POLICY IF EXISTS "invoices_select_own" ON invoices;
 DROP POLICY IF EXISTS "invoices_insert_own" ON invoices;
 DROP POLICY IF EXISTS "invoices_update_own" ON invoices;
@@ -78,6 +85,11 @@ CREATE POLICY "invoices_delete_own" ON invoices FOR DELETE TO authenticated USIN
 
 -- suppliers — full CRUD for the owning user (frontend reads/writes directly).
 ALTER TABLE suppliers ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "users see own suppliers (ALL)"          ON suppliers;
+DROP POLICY IF EXISTS "users can update own suppliers (UPDATE)" ON suppliers;
+DROP POLICY IF EXISTS "users can delete own suppliers (DELETE)" ON suppliers;
+DROP POLICY IF EXISTS "users can select own suppliers (SELECT)" ON suppliers;
+DROP POLICY IF EXISTS "users can insert own suppliers (INSERT)" ON suppliers;
 DROP POLICY IF EXISTS "suppliers_select_own" ON suppliers;
 DROP POLICY IF EXISTS "suppliers_insert_own" ON suppliers;
 DROP POLICY IF EXISTS "suppliers_update_own" ON suppliers;
@@ -90,6 +102,7 @@ CREATE POLICY "suppliers_delete_own" ON suppliers FOR DELETE TO authenticated US
 -- api_calls — server-only (written/read via service-role). Enable RLS with NO
 -- authenticated policy → denies all direct client access, allows service role.
 ALTER TABLE api_calls ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "users see own calls (SELECT)" ON api_calls;
 
 -- Server-mediated, user-owned tables: enable RLS + read-own policy as defence in
 -- depth. The backend (service role) bypasses these; the frontend never queries
