@@ -15,7 +15,7 @@ function CountUp({ to, duration = 1200 }) {
       if (i >= steps) { setV(to); clearInterval(id); }
     }, ms);
     return () => clearInterval(id);
-  }, [to]);
+  }, [to, duration]);
   return <>{currency(v)}</>;
 }
 
@@ -39,8 +39,7 @@ export default function Dashboard({ kpis, monthlyData, allNames, color, maxTotal
         {stats.map(s => (
           <div key={s.key}
             className={`card stat-card ${s.cls}`}
-            onClick={() => s.pulse && onPayMonth ? onPayMonth(s.key) : undefined}
-            style={s.pulse ? { animationName:"redPulse", animationDuration:"2.2s", animationIterationCount:"infinite", cursor:"pointer" } : {}}>
+            style={s.pulse ? { animationName:"redPulse", animationDuration:"2.2s", animationIterationCount:"infinite" } : {}}>
             <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start" }}>
               <span className="stat-lbl">{s.label}</span>
               <span style={{ fontSize:18, opacity:.45 }}>{s.ico}</span>

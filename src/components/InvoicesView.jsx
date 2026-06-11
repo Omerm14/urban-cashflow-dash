@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { toYM, currency, fmtMonth } from "../utils/dates";
 import InvoicesTable from "./InvoicesTable";
 import InvoicesGroupedView from "./InvoicesGroupedView";
@@ -19,27 +19,35 @@ export default function InvoicesView({ computed, dupeIds, updateInvoice, deleteI
   const [successMsg,    setSuccessMsg]    = useState("");
   const [nextMoHint,    setNextMoHint]    = useState(null);
 
+  // Refs so effects always see the latest values without re-registering
+  const computedRef      = useRef(computed);
+  const selectedMonthRef = useRef(selectedMonth);
+  const selectedIdsRef   = useRef(selectedIds);
+  useEffect(() => { computedRef.current      = computed;      }, [computed]);
+  useEffect(() => { selectedMonthRef.current = selectedMonth; }, [selectedMonth]);
+  useEffect(() => { selectedIdsRef.current   = selectedIds;   }, [selectedIds]);
+
   // Pre-select invoices when navigating from dashboard CTA
   useEffect(() => {
     if (!preSelMonth) return;
-    const monthInvs = computed.filter(inv => inv.dueDate && inv.dueDate.startsWith(preSelMonth) && inv.status !== "paid");
+    const monthInvs = computedRef.current.filter(inv => inv.dueDate && inv.dueDate.startsWith(preSelMonth) && inv.status !== "paid");
     setSelectedMonth(preSelMonth);
     setViewMode("grouped");
     setSelectedIds(new Set(monthInvs.map(i => i.id)));
     onClearPreSel?.();
-  }, [preSelMonth]); // eslint-disable-line
+  }, [preSelMonth]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Keyboard shortcuts: A = select all visible, P = pay, Esc = clear
   useEffect(() => {
     const handler = e => {
       if (e.target.tagName === "INPUT" || e.target.tagName === "SELECT" || e.target.tagName === "TEXTAREA") return;
       if (e.key === "a" || e.key === "A") {
-        const visibleIds = computed
-          .filter(inv => inv.dueDate && inv.dueDate.startsWith(selectedMonth) && inv.status !== "paid")
+        const visibleIds = computedRef.current
+          .filter(inv => inv.dueDate && inv.dueDate.startsWith(selectedMonthRef.current) && inv.status !== "paid")
           .map(i => i.id);
         setSelectedIds(new Set(visibleIds));
       } else if (e.key === "p" || e.key === "P") {
-        if (selectedIds.size > 0) setShowPayModal(true);
+        if (selectedIdsRef.current.size > 0) setShowPayModal(true);
       } else if (e.key === "Escape") {
         setSelectedIds(new Set());
         setShowPayModal(false);
@@ -48,7 +56,7 @@ export default function InvoicesView({ computed, dupeIds, updateInvoice, deleteI
     };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
-  }, [computed, selectedMonth, selectedIds]);
+  }, []); // registered once; reads latest values via refs
 
   const toggleSelect = useCallback(id => {
     setSelectedIds(prev => {
