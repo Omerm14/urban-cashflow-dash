@@ -1,21 +1,47 @@
-import { useRef, useEffect } from "react";
+import { useState, useRef, useEffect } from "react";
 import { currency, fmt, fmtMonth, toYM } from "../utils/dates";
-import { statusStyle } from "../utils/invoice";
 import { STATUS } from "../constants";
 
 function prevMonth(ym) {
   const [y, m] = ym.split("-").map(Number);
-  const d = new Date(y, m - 2, 1);
-  return toYM(d);
+  return toYM(new Date(y, m - 2, 1));
 }
 
 function nextMonth(ym) {
   const [y, m] = ym.split("-").map(Number);
-  const d = new Date(y, m, 1);
-  return toYM(d);
+  return toYM(new Date(y, m, 1));
 }
 
-function SupplierCard({ supplier, invoices, dupeIds, updateInvoice, deleteInvoice, setEditInvoice, color, selectedIds, onToggleSelect, onToggleAll, sortField, onViewAttachment }) {
+function statusBadge(status) {
+  const map = {
+    [STATUS.UNPAID]:  "badge-unpaid",
+    [STATUS.PAID]:    "badge-paid",
+    [STATUS.OVERDUE]: "badge-overdue",
+    [STATUS.CREDIT]:  "badge-credit",
+  };
+  const dots = {
+    [STATUS.UNPAID]:  "● ",
+    [STATUS.PAID]:    "✓ ",
+    [STATUS.OVERDUE]: "! ",
+    [STATUS.CREDIT]:  "↩ ",
+  };
+  return { cls: map[status] || "badge-unpaid", dot: dots[status] || "● " };
+}
+
+function urgencyStyle(dueDate) {
+  if (!dueDate) return {};
+  const today = new Date(); today.setHours(0, 0, 0, 0);
+  const due = new Date(dueDate); due.setHours(0, 0, 0, 0);
+  const days = Math.round((due - today) / 86400000);
+  if (days < 0) return { color:"var(--red)", fontWeight:700 };
+  if (days <= 7) return { color:"var(--amber)", fontWeight:600 };
+  return {};
+}
+
+
+function SupplierCard({ supplier, invoices, dupeIds, updateInvoice, deleteInvoice, setEditInvoice, color, selectedIds, onToggleSelect, onToggleAll, sortField, onViewAttachment, onPayGroup }) {
+  const [hov, setHov] = useState(false);
+
   const sorted = [...invoices].sort((a, b) => {
     if (sortField === "amount") return Number(b.amount) - Number(a.amount);
     const af = a[sortField] ?? "", bf = b[sortField] ?? "";
@@ -34,95 +60,95 @@ function SupplierCard({ supplier, invoices, dupeIds, updateInvoice, deleteInvoic
   }, [someSelected]);
 
   return (
-    <div className="card" style={{ overflow:"hidden", marginBottom:16 }}>
-      {/* Card header */}
-      <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"14px 18px", borderBottom:"1px solid #111d2e" }}>
-        <div style={{ display:"flex", alignItems:"center", gap:10 }}>
-          <div style={{ width:32, height:32, borderRadius:9, background:`${c}22`, display:"flex", alignItems:"center", justifyContent:"center", fontSize:14, fontWeight:700, color:c, flexShrink:0 }}>
-            {supplier.charAt(0)}
-          </div>
-          <span style={{ fontWeight:600, fontSize:14, color:"#e2e8f0" }}>{supplier}</span>
-          <span style={{ fontSize:11, color:"#475569", background:"#0d1626", border:"1px solid #1e2d45", borderRadius:5, padding:"2px 7px" }}>
-            {invoices.length} invoice{invoices.length !== 1 ? "s" : ""}
-          </span>
+    <div className="sup-group" onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)}>
+      <div className="sup-hdr">
+        <input
+          type="checkbox"
+          checked={allSelected}
+          ref={selectAllRef}
+          onChange={() => onToggleAll(cardIds)}
+          style={{ accentColor:"var(--purple)", cursor:"pointer", width:15, height:15, flexShrink:0 }}
+        />
+        <div style={{ width:34, height:34, borderRadius:"50%", background:c, display:"flex", alignItems:"center", justifyContent:"center", fontSize:14, fontWeight:700, color:"#fff", flexShrink:0 }}>
+          {supplier.charAt(0)}
         </div>
-        <div style={{ fontWeight:700, fontSize:15, color:"#e2e8f0" }}>{currency(total)}</div>
+        <span style={{ fontWeight:700, flex:1, fontSize:14 }}>{supplier}</span>
+        {hov && (
+          <button className="btn btn-primary btn-sm" style={{ borderRadius:50, fontSize:12 }}
+            onClick={e => { e.stopPropagation(); onPayGroup(cardIds); }}>
+            ⚡ Pay group
+          </button>
+        )}
+        <span style={{ fontSize:12, color:"var(--t3)", background:"var(--surf2)", padding:"2px 8px", borderRadius:10, fontWeight:600 }}>
+          {invoices.length} invoice{invoices.length !== 1 ? "s" : ""}
+        </span>
+        <span style={{ fontWeight:800, marginLeft:12, whiteSpace:"nowrap" }}>{currency(total)}</span>
       </div>
 
-      {/* Invoice rows */}
-      <table style={{ width:"100%", borderCollapse:"collapse", fontSize:12 }}>
-        <tbody>
-          {sorted.map(inv => {
-            const ss = statusStyle(inv.status);
-            const isSelected = selectedIds.has(inv.id);
-            return (
-              <tr key={inv.id} className="row-hover" style={{ borderTop:"1px solid #0d1626", transition:"background .15s", background: isSelected ? "#0d1a2e" : undefined }}>
-                <td style={{ padding:"10px 14px 10px 18px", width:36 }}>
-                  <input
-                    type="checkbox"
-                    checked={isSelected}
-                    onChange={() => onToggleSelect(inv.id)}
-                    style={{ accentColor:"#6366f1", cursor:"pointer", width:13, height:13 }}
-                  />
-                </td>
-                <td style={{ padding:"10px 12px", color:"#475569", fontFamily:"monospace", fontSize:11, whiteSpace:"nowrap" }}>{inv.invoiceNo || "—"}</td>
-                <td style={{ padding:"10px 12px", color:"#475569", whiteSpace:"nowrap" }}>{fmt(inv.invoiceDate)}</td>
-                <td style={{ padding:"10px 12px", fontWeight:700, color:"#e2e8f0", whiteSpace:"nowrap" }}>{currency(inv.amount)}</td>
-                <td style={{ padding:"10px 12px" }}>
-                  <span className="tag" style={{ background:ss.bg, color:ss.color }}>
-                    <span style={{ width:5, height:5, borderRadius:"50%", background:ss.dot, marginRight:5, display:"inline-block" }} />
-                    {inv.status}
-                  </span>
-                </td>
-                {dupeIds.has(inv.id) && (
-                  <td style={{ padding:"10px 6px" }}>
-                    <span style={{ fontSize:10, fontWeight:700, color:"#fb923c" }}>⚠ DUP</span>
-                  </td>
-                )}
-                {!dupeIds.has(inv.id) && <td />}
-                <td style={{ padding:"10px 18px 10px 6px" }}>
-                  <div style={{ display:"flex", gap:5, justifyContent:"flex-end" }}>
-                    {inv.attachment_path && (
-                      <button className="action-btn" style={{ background:"#131c2e", color:"#6366f1", fontSize:11 }}
-                        title="View original file" onClick={() => onViewAttachment?.(inv)}>📎</button>
-                    )}
-                    {inv.status !== STATUS.PAID && (
-                      <button className="action-btn" style={{ background:"#052e16", color:"#4ade80", fontSize:11 }}
-                        onClick={() => updateInvoice(inv.id, { status: STATUS.PAID })}>✓ Paid</button>
-                    )}
-                    <button className="action-btn" style={{ background:"#131c2e", color:"#64748b", fontSize:11 }}
-                      onClick={() => setEditInvoice({...inv})}>Edit</button>
-                    <button className="action-btn" style={{ background:"#2d0a0a", color:"#f87171", fontSize:11 }}
-                      onClick={() => { if (confirm("Delete this invoice?")) deleteInvoice(inv.id); }}>✕</button>
-                  </div>
-                </td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
+      {sorted.map(inv => {
+        const isSelected = selectedIds.has(inv.id);
+        const { cls, dot } = statusBadge(inv.status);
+        const isPaid = inv.status === STATUS.PAID;
+        const urgStyle = isPaid ? {} : urgencyStyle(inv.dueDate);
+        return (
+          <div key={inv.id} className={`sup-row${isSelected ? " sel" : ""}`}>
+            <input
+              type="checkbox"
+              checked={isSelected}
+              onChange={() => onToggleSelect(inv.id)}
+              style={{ accentColor:"var(--purple)", cursor:"pointer", width:15, height:15 }}
+            />
+            <span style={{ color:"var(--t3)", fontSize:12, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap", fontFamily:"monospace" }}>
+              {inv.invoiceNo || "—"}
+              {dupeIds.has(inv.id) && <span style={{ color:"var(--amber)", marginLeft:4, fontSize:10 }}> ⚠ DUP</span>}
+            </span>
+            <span style={{ color:"var(--t2)", fontSize:12 }}>{fmt(inv.invoiceDate)}</span>
+            <span style={{ fontWeight:700 }}>{currency(inv.amount)}</span>
+            <span className={`badge ${cls}`}>{dot}{inv.status}</span>
+            <span style={{ fontSize:12, ...urgStyle }}>
+              {inv.dueDate
+                ? fmt(inv.dueDate)
+                : <span style={{ color:"var(--amber)", fontSize:11, cursor:"pointer" }} onClick={() => setEditInvoice({...inv})}>⚠ Fix</span>
+              }
+            </span>
+            <div style={{ display:"flex", gap:5, justifyContent:"flex-end" }}>
+              {inv.attachment_path && (
+                <button className="btn btn-ghost btn-sm" title="View file" onClick={() => onViewAttachment?.(inv)}>📎</button>
+              )}
+              {!isPaid && (
+                <button className="btn btn-success btn-sm" onClick={() => updateInvoice(inv.id, { status: STATUS.PAID })}>✓ Paid</button>
+              )}
+              <button className="btn btn-ghost btn-sm" onClick={() => setEditInvoice({...inv})}>Edit</button>
+              <button className="btn btn-danger btn-sm" onClick={() => { if (confirm("Delete this invoice?")) deleteInvoice(inv.id); }}>×</button>
+            </div>
+          </div>
+        );
+      })}
 
-      {/* Card footer */}
-      <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"10px 18px", borderTop:"1px solid #0d1626", background:"#080e1a" }}>
-        <label style={{ display:"flex", alignItems:"center", gap:7, cursor:"pointer", fontSize:11, color:"#475569" }}>
+      <div style={{ padding:"7px 20px", borderTop:"1px solid rgba(255,255,255,.04)", display:"flex", justifyContent:"space-between", fontSize:12, color:"var(--t3)" }}>
+        <label style={{ display:"flex", alignItems:"center", gap:7, cursor:"pointer" }}>
           <input
-            ref={selectAllRef}
             type="checkbox"
             checked={allSelected}
             onChange={() => onToggleAll(cardIds)}
-            style={{ accentColor:"#6366f1", cursor:"pointer", width:13, height:13 }}
+            style={{ accentColor:"var(--purple)", cursor:"pointer", width:13, height:13 }}
           />
           Select all in card
         </label>
-        <span style={{ fontSize:12, color:"#475569" }}>Total: <strong style={{ color:"#94a3b8" }}>{currency(total)}</strong></span>
+        <span>Total: <strong style={{ color:"var(--t2)" }}>{currency(total)}</strong></span>
       </div>
     </div>
   );
 }
 
-export default function InvoicesGroupedView({ computed, dupeIds, updateInvoice, deleteInvoice, setEditInvoice, color, selectedIds, onToggleSelect, onToggleAll, selectedMonth, onMonthChange, sortField, onViewAttachment }) {
+export default function InvoicesGroupedView({ computed, dupeIds, updateInvoice, deleteInvoice, setEditInvoice, color, selectedIds, onToggleSelect, onToggleAll, selectedMonth, onMonthChange, sortField, onViewAttachment, onSelectAll }) {
   const monthInvoices = computed.filter(inv => inv.dueDate && inv.dueDate.startsWith(selectedMonth));
   const monthTotal = monthInvoices.reduce((s, i) => s + Number(i.amount), 0);
+  const unpaidInMonth = monthInvoices.filter(i => i.status !== STATUS.PAID);
+  const paidCount = monthInvoices.length - unpaidInMonth.length;
+  const totalCount = monthInvoices.length;
+  const allPaid = totalCount > 0 && paidCount === totalCount;
+  const progress = totalCount > 0 ? Math.round((paidCount / totalCount) * 100) : 0;
 
   const groups = Object.entries(
     monthInvoices.reduce((acc, inv) => {
@@ -131,47 +157,76 @@ export default function InvoicesGroupedView({ computed, dupeIds, updateInvoice, 
     }, {})
   ).sort(([a], [b]) => a.localeCompare(b));
 
+  const kbdStyle = { background:"var(--surf2)", border:"1px solid var(--bdr2)", borderRadius:4, padding:"1px 6px", fontFamily:"inherit", fontSize:10 };
+
   return (
     <div>
       {/* Month navigation */}
-      <div style={{ display:"flex", alignItems:"center", gap:12, marginBottom:20, padding:"12px 18px", background:"#0d1626", borderRadius:10, border:"1px solid #1e2d45" }}>
-        <button
-          onClick={() => onMonthChange(prevMonth(selectedMonth))}
-          style={{ background:"#131c2e", border:"1px solid #1e2d45", color:"#94a3b8", borderRadius:6, padding:"5px 12px", cursor:"pointer", fontSize:14, fontWeight:600 }}>
-          ‹
-        </button>
-        <span style={{ fontWeight:700, fontSize:15, color:"#e2e8f0", flex:1, textAlign:"center" }}>
-          {fmtMonth(selectedMonth)}
-        </span>
-        <button
-          onClick={() => onMonthChange(nextMonth(selectedMonth))}
-          style={{ background:"#131c2e", border:"1px solid #1e2d45", color:"#94a3b8", borderRadius:6, padding:"5px 12px", cursor:"pointer", fontSize:14, fontWeight:600 }}>
-          ›
-        </button>
+      <div className="month-nav">
+        <button className="btn btn-ghost btn-sm" onClick={() => onMonthChange(prevMonth(selectedMonth))}>‹</button>
+        <span style={{ fontWeight:700, fontSize:16 }}>{fmtMonth(selectedMonth)}</span>
+        <button className="btn btn-ghost btn-sm" onClick={() => onMonthChange(nextMonth(selectedMonth))}>›</button>
       </div>
 
-      {/* Month total banner */}
-      <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between",
-        padding:"14px 20px", marginBottom:20, borderRadius:10,
-        background:"#0d1626", border:"1px solid #1e2d45" }}>
-        <span style={{ fontSize:12, color:"#475569", fontWeight:600, textTransform:"uppercase", letterSpacing:"1px" }}>
-          Total due in {fmtMonth(selectedMonth)}
+      {/* Progress bar */}
+      {totalCount > 0 && (
+        <div style={{ marginBottom:10 }}>
+          <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:5 }}>
+            <span style={{ fontSize:11, color:"var(--t3)" }}>{paidCount} of {totalCount} invoices paid</span>
+            <span style={{ fontSize:12, fontWeight:700, background:"var(--grad)", WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent" }}>{progress}%</span>
+          </div>
+          <div className="prog-track"><div className="prog-fill" style={{ width:`${progress}%` }}/></div>
+        </div>
+      )}
+
+      {/* Month total banner + select-all shortcut */}
+      <div className="total-bar">
+        <span style={{ fontSize:12, fontWeight:600, color:"var(--t3)", textTransform:"uppercase", letterSpacing:".04em" }}>
+          Total due in {fmtMonth(selectedMonth).toUpperCase()}
         </span>
-        <span style={{ fontSize:20, fontWeight:700, color:"#e2e8f0" }}>
-          {currency(monthTotal)}
-        </span>
+        <div style={{ display:"flex", alignItems:"center", gap:12 }}>
+          {unpaidInMonth.length > 0 && onSelectAll && (
+            <button className="btn btn-ghost btn-sm" onClick={() => onSelectAll(unpaidInMonth.map(i => i.id))}>
+              Select all ({unpaidInMonth.length}) →
+            </button>
+          )}
+          <span style={{ fontWeight:800, fontSize:20 }}>{currency(monthTotal)}</span>
+        </div>
       </div>
+
+      {/* Keyboard shortcut hint */}
+      {unpaidInMonth.length > 0 && (
+        <div style={{ display:"flex", gap:16, marginBottom:14, fontSize:11, color:"var(--t3)" }}>
+          <span><kbd style={kbdStyle}>A</kbd> select all</span>
+          <span><kbd style={kbdStyle}>P</kbd> pay</span>
+          <span><kbd style={kbdStyle}>Esc</kbd> clear</span>
+        </div>
+      )}
+
+      {/* All-done celebration */}
+      {allPaid && (
+        <div style={{ textAlign:"center", padding:"52px 0", animation:"scaleIn .4s cubic-bezier(.16,1,.3,1)" }}>
+          <div style={{ fontSize:52, marginBottom:14 }}>🎉</div>
+          <div style={{ fontWeight:800, fontSize:22, marginBottom:6 }}>All done for {fmtMonth(selectedMonth)}!</div>
+          <div style={{ color:"var(--t3)", fontSize:14, marginBottom:22 }}>
+            All {totalCount} invoice{totalCount !== 1 ? "s" : ""} have been paid.
+          </div>
+          <button className="btn btn-primary" onClick={() => onMonthChange(nextMonth(selectedMonth))}>
+            Next month →
+          </button>
+        </div>
+      )}
 
       {/* Empty state */}
-      {groups.length === 0 && (
-        <div style={{ textAlign:"center", padding:"60px 0", color:"#334155" }}>
+      {!allPaid && groups.length === 0 && (
+        <div style={{ textAlign:"center", padding:"60px 0", color:"var(--t3)" }}>
           <div style={{ fontSize:36, marginBottom:10 }}>📅</div>
           <div style={{ fontSize:14 }}>No invoices due in {fmtMonth(selectedMonth)}</div>
         </div>
       )}
 
       {/* Supplier cards */}
-      {groups.map(([supplier, invoices]) => (
+      {!allPaid && groups.map(([supplier, invoices]) => (
         <SupplierCard
           key={supplier}
           supplier={supplier}
@@ -186,6 +241,7 @@ export default function InvoicesGroupedView({ computed, dupeIds, updateInvoice, 
           onToggleAll={onToggleAll}
           sortField={sortField}
           onViewAttachment={onViewAttachment}
+          onPayGroup={ids => onSelectAll && onSelectAll(ids)}
         />
       ))}
     </div>

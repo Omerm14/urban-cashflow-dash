@@ -1,7 +1,16 @@
 import { useRef, useEffect } from "react";
 import { currency, fmt } from "../utils/dates";
-import { statusStyle } from "../utils/invoice";
 import { STATUS } from "../constants";
+
+function statusBadge(status) {
+  const map = {
+    [STATUS.UNPAID]:  { cls:"badge-unpaid",  dot:"● " },
+    [STATUS.PAID]:    { cls:"badge-paid",    dot:"✓ " },
+    [STATUS.OVERDUE]: { cls:"badge-overdue", dot:"! " },
+    [STATUS.CREDIT]:  { cls:"badge-credit",  dot:"↩ " },
+  };
+  return map[status] || map[STATUS.UNPAID];
+}
 
 export default function InvoicesTable({ computed, dupeIds, updateInvoice, deleteInvoice, setEditInvoice, color, selectedIds, onToggleSelect, onToggleAll, onViewAttachment }) {
   const allIds = computed.map(i => i.id);
@@ -14,97 +23,86 @@ export default function InvoicesTable({ computed, dupeIds, updateInvoice, delete
   }, [someSelected]);
 
   return (
-    <div className="card" style={{ overflow:"hidden" }}>
-      <table style={{ width:"100%", borderCollapse:"collapse", fontSize:13 }}>
+    <div className="card" style={{ padding:0, overflow:"hidden" }}>
+      <table className="itbl">
         <thead>
-          <tr style={{ borderBottom:"1px solid #111d2e" }}>
-            <th style={{ padding:"14px 14px 14px 18px", width:36 }}>
+          <tr>
+            <th style={{ width:44, padding:"10px 14px 10px 18px" }}>
               <input
                 ref={selectAllRef}
                 type="checkbox"
                 checked={allSelected}
                 onChange={() => onToggleAll(allIds)}
-                style={{ accentColor:"#6366f1", cursor:"pointer", width:14, height:14 }}
+                style={{ accentColor:"var(--purple)", cursor:"pointer", width:14, height:14 }}
               />
             </th>
             {["Invoice #","Supplier","Date","Amount","Due Date","Status","Source",""].map(h => (
-              <th key={h} style={{ padding:"14px 18px", textAlign:"left", fontSize:10, fontWeight:700, color:"#334155", textTransform:"uppercase", letterSpacing:"1px" }}>{h}</th>
+              <th key={h}>{h}</th>
             ))}
           </tr>
         </thead>
         <tbody>
           {computed.length === 0 && (
-            <tr><td colSpan={9} style={{ padding:"60px 0", textAlign:"center", color:"#334155" }}>
+            <tr><td colSpan={9} style={{ padding:"60px 0", textAlign:"center", color:"var(--t3)" }}>
               <div style={{ fontSize:36, marginBottom:10 }}>🧾</div>
               <div>No invoices yet — upload some above</div>
             </td></tr>
           )}
           {computed.map(inv => {
-            const ss = statusStyle(inv.status);
             const isSelected = selectedIds.has(inv.id);
+            const { cls, dot } = statusBadge(inv.status);
             return (
-              <tr key={inv.id} className="row-hover" style={{ borderTop:"1px solid #0d1626", transition:"background .15s", background: isSelected ? "#0d1a2e" : undefined }}>
+              <tr key={inv.id} className={isSelected ? "sel" : ""}>
                 <td style={{ padding:"13px 14px 13px 18px" }}>
                   <input
                     type="checkbox"
                     checked={isSelected}
                     onChange={() => onToggleSelect(inv.id)}
-                    style={{ accentColor:"#6366f1", cursor:"pointer", width:14, height:14 }}
+                    style={{ accentColor:"var(--purple)", cursor:"pointer", width:14, height:14 }}
                   />
                 </td>
-                <td style={{ padding:"13px 18px", color:"#475569", fontFamily:"monospace", fontSize:12 }}>{inv.invoiceNo}</td>
-                <td style={{ padding:"13px 18px" }}>
+                <td style={{ color:"var(--t3)", fontFamily:"monospace", fontSize:12 }}>{inv.invoiceNo}</td>
+                <td>
                   <div style={{ display:"flex", alignItems:"center", gap:9 }}>
-                    <div style={{ width:28, height:28, borderRadius:8, background:`${color(inv.supplier)}22`, display:"flex", alignItems:"center", justifyContent:"center", fontSize:12, fontWeight:700, color:color(inv.supplier), flexShrink:0 }}>
+                    <div style={{ width:28, height:28, borderRadius:"50%", background:color(inv.supplier), display:"flex", alignItems:"center", justifyContent:"center", fontSize:12, fontWeight:700, color:"#fff", flexShrink:0 }}>
                       {inv.supplier.charAt(0)}
                     </div>
                     <div>
                       <span style={{ fontWeight:500, fontSize:13 }}>{inv.supplier}</span>
-                      {dupeIds.has(inv.id) && <div style={{ fontSize:10, fontWeight:700, color:"#fb923c", letterSpacing:".4px", marginTop:1 }}>⚠ POSSIBLE DUPLICATE</div>}
+                      {dupeIds.has(inv.id) && <div style={{ fontSize:10, fontWeight:700, color:"var(--amber)", marginTop:1 }}>⚠ POSSIBLE DUPLICATE</div>}
                     </div>
                   </div>
                 </td>
-                <td style={{ padding:"13px 18px", color:"#475569" }}>{fmt(inv.invoiceDate)}</td>
-                <td style={{ padding:"13px 18px", fontWeight:700, fontSize:14, color:"#e2e8f0" }}>{currency(inv.amount)}</td>
-                <td style={{ padding:"13px 18px" }}>
+                <td style={{ color:"var(--t2)" }}>{fmt(inv.invoiceDate)}</td>
+                <td style={{ fontWeight:700, fontSize:14 }}>{currency(inv.amount)}</td>
+                <td>
                   {inv.dueDate
-                    ? <span style={{ color:"#64748b" }}>{fmt(inv.dueDate)}</span>
-                    : <span style={{ color:"#fb923c", fontSize:11, fontWeight:600, cursor:"pointer" }} onClick={() => setEditInvoice({...inv})}>⚠ Fix supplier</span>}
+                    ? <span style={{ color:"var(--t2)" }}>{fmt(inv.dueDate)}</span>
+                    : <span style={{ color:"var(--amber)", fontSize:11, fontWeight:600, cursor:"pointer" }} onClick={() => setEditInvoice({...inv})}>⚠ Fix supplier</span>}
                 </td>
-                <td style={{ padding:"13px 18px" }}>
-                  <span className="tag" style={{ background:ss.bg, color:ss.color }}>
-                    <span style={{ width:5, height:5, borderRadius:"50%", background:ss.dot, marginRight:6, display:"inline-block" }} />
-                    {inv.status}
-                  </span>
+                <td>
+                  <span className={`badge ${cls}`}>{dot}{inv.status}</span>
                 </td>
-                <td style={{ padding:"13px 18px" }}>
+                <td>
                   {inv.sync_source ? (
-                    <span title={`Synced from ${inv.sync_source.replace("_"," ")} on ${inv.sync_timestamp ? new Date(inv.sync_timestamp).toLocaleDateString() : "—"}`}
-                      style={{ fontSize:11, color:"#475569", display:"flex", alignItems:"center", gap:4 }}>
+                    <span style={{ fontSize:11, color:"var(--t3)", display:"flex", alignItems:"center", gap:4 }}>
                       {{ google_drive:"📁", gmail:"✉️", whatsapp:"💬", green_invoice:"🟢" }[inv.sync_source] || "🔗"}
-                      {inv.sync_source === "google_drive" ? "Drive"
-                       : inv.sync_source === "gmail"        ? "Gmail"
-                       : inv.sync_source === "whatsapp"     ? "WA"
-                       : inv.sync_source === "green_invoice"? "GI"
-                       : inv.sync_source}
+                      {inv.sync_source === "google_drive" ? "Drive" : inv.sync_source === "gmail" ? "Gmail" : inv.sync_source === "whatsapp" ? "WA" : inv.sync_source === "green_invoice" ? "GI" : inv.sync_source}
                     </span>
                   ) : (
-                    <span style={{ fontSize:11, color:"#334155" }}>Manual</span>
+                    <span style={{ fontSize:11, color:"var(--t3)" }}>Manual</span>
                   )}
                 </td>
-                <td style={{ padding:"13px 18px" }}>
+                <td>
                   <div style={{ display:"flex", gap:6, justifyContent:"flex-end" }}>
                     {inv.attachment_path && (
-                      <button className="action-btn" style={{ background:"#131c2e", color:"#6366f1" }}
-                        title="View original file" onClick={() => onViewAttachment?.(inv)}>📎</button>
+                      <button className="btn btn-ghost btn-sm" title="View original file" onClick={() => onViewAttachment?.(inv)}>📎</button>
                     )}
                     {inv.status !== STATUS.PAID && (
-                      <button className="action-btn" style={{ background:"#052e16", color:"#4ade80" }}
-                        onClick={() => updateInvoice(inv.id, { status: STATUS.PAID })}>✓ Paid</button>
+                      <button className="btn btn-success btn-sm" onClick={() => updateInvoice(inv.id, { status: STATUS.PAID })}>✓ Paid</button>
                     )}
-                    <button className="action-btn" style={{ background:"#131c2e", color:"#64748b" }} onClick={() => setEditInvoice({...inv})}>Edit</button>
-                    <button className="action-btn" style={{ background:"#2d0a0a", color:"#f87171" }}
-                      onClick={() => { if (confirm("Delete this invoice?")) deleteInvoice(inv.id); }}>✕</button>
+                    <button className="btn btn-ghost btn-sm" onClick={() => setEditInvoice({...inv})}>Edit</button>
+                    <button className="btn btn-danger btn-sm" onClick={() => { if (confirm("Delete this invoice?")) deleteInvoice(inv.id); }}>✕</button>
                   </div>
                 </td>
               </tr>
@@ -112,8 +110,8 @@ export default function InvoicesTable({ computed, dupeIds, updateInvoice, delete
           })}
         </tbody>
       </table>
-      <div style={{ padding:"14px 18px", borderTop:"1px solid #0d1626" }}>
-        <button className="action-btn" style={{ background:"#131c2e", color:"#64748b", padding:"8px 16px" }}
+      <div style={{ padding:"14px 18px", borderTop:"1px solid rgba(255,255,255,.04)" }}>
+        <button className="btn btn-ghost btn-sm"
           onClick={() => setEditInvoice({ id:null, supplier:"", invoiceNo:"", invoiceDate:"", amount:"", dueDate:"", status:STATUS.UNPAID, notes:"" })}>
           + Add Manually
         </button>
