@@ -1,59 +1,92 @@
+import { useState } from "react";
+
+const TERM_FILTERS = ["all", "shotef_plus(75)", "shotef_plus(45)", "shotef_plus(30)", "shotef_plus(10)", "shotef", "immediate", "custom"];
+
 export default function SuppliersModal({ suppliers, addSupplier, updateSupplier, deleteSupplier, editSupplier, setEditSupplier, onClose }) {
+  const [filterTerm, setFilterTerm] = useState("all");
+
+  const filtered = filterTerm === "all" ? suppliers : suppliers.filter(s => s.terms === filterTerm);
+  const activeCounts = TERM_FILTERS.map(t => ({ t, count: t === "all" ? suppliers.length : suppliers.filter(s => s.terms === t).length }));
+
   return (
-    <div className="modal-overlay" onClick={e => e.target===e.currentTarget && onClose()}>
-      <div className="modal" style={{ width:580, maxHeight:"85vh", overflowY:"auto" }}>
-        <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:6 }}>
+    <div className="overlay" onClick={e => e.target === e.currentTarget && onClose()}>
+      <div className="modal" style={{ width:600 }}>
+        {/* Header */}
+        <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:18 }}>
           <div>
-            <div style={{ fontWeight:700, fontSize:17, color:"#f1f5f9" }}>Suppliers</div>
-            <div style={{ fontSize:12, color:"#475569", marginTop:2 }}>Manage payment terms</div>
+            <div style={{ fontWeight:800, fontSize:20 }}>Suppliers</div>
+            <div style={{ fontSize:13, color:"var(--t2)", marginTop:3 }}>
+              Manage payment terms · {suppliers.length} supplier{suppliers.length !== 1 ? "s" : ""}
+            </div>
           </div>
-          <button onClick={onClose} style={{ width:32, height:32, borderRadius:8, background:"#131c2e", border:"1px solid #1e2d45", color:"#64748b", cursor:"pointer", fontSize:16, display:"flex", alignItems:"center", justifyContent:"center" }}>✕</button>
+          <button onClick={onClose} style={{ background:"none", border:"none", color:"var(--t3)", cursor:"pointer", fontSize:24, lineHeight:1 }}>×</button>
         </div>
-        <div style={{ background:"#0d1626", borderRadius:10, padding:"10px 14px", marginBottom:16, fontSize:12, color:"#475569", marginTop:14 }}>
-          Terms: <code style={{color:"#a78bfa",fontSize:11}}>shotef</code> · <code style={{color:"#a78bfa",fontSize:11}}>shotef_plus(30)</code> · <code style={{color:"#a78bfa",fontSize:11}}>immediate</code> · <code style={{color:"#a78bfa",fontSize:11}}>custom</code>
+
+        {/* Filter pills */}
+        <div style={{ display:"flex", gap:6, marginBottom:16, flexWrap:"wrap" }}>
+          {activeCounts.filter(({ count }) => count > 0 || filterTerm === "all").map(({ t, count }) => (
+            <button
+              key={t}
+              onClick={() => setFilterTerm(t)}
+              style={{
+                padding:"3px 12px", borderRadius:20, border:`1px solid ${filterTerm === t ? "var(--purple)" : "var(--bdr)"}`,
+                background: filterTerm === t ? "rgba(139,92,246,.1)" : "transparent",
+                color: filterTerm === t ? "var(--purple)" : "var(--t3)",
+                cursor:"pointer", fontSize:12, fontWeight:600, fontFamily:"inherit", transition:"all .15s",
+              }}>
+              {t === "all" ? `All (${count})` : t}
+            </button>
+          ))}
         </div>
-        <table style={{ width:"100%", borderCollapse:"collapse", fontSize:13 }}>
-          <thead>
-            <tr style={{ borderBottom:"1px solid #111d2e" }}>
-              {["Supplier","Terms","Notes",""].map(h => (
-                <th key={h} style={{ padding:"8px 10px", textAlign:"left", fontSize:10, fontWeight:700, color:"#334155", textTransform:"uppercase", letterSpacing:"1px" }}>{h}</th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {suppliers.map(sup => (
-              <tr key={sup.id} style={{ borderTop:"1px solid #0d1626" }}>
-                {editSupplier?.id === sup.id ? (
-                  <>
+
+        {/* Suppliers list */}
+        <div style={{ borderTop:"1px solid var(--bdr)", paddingTop:4 }}>
+          {filtered.map(sup => (
+            <div key={sup.id} style={{ display:"flex", alignItems:"center", gap:12, padding:"10px 0", borderBottom:"1px solid rgba(255,255,255,.04)" }}>
+              {editSupplier?.id === sup.id ? (
+                <>
+                  <div style={{ flex:1, display:"flex", gap:8 }}>
                     {["name","terms","notes"].map(k => (
-                      <td key={k} style={{ padding:"6px 8px" }}>
-                        <input value={editSupplier[k]} className="input" style={{ padding:"6px 10px", fontSize:12 }}
-                          onChange={e => setEditSupplier({...editSupplier, [k]:e.target.value})} />
-                      </td>
+                      <input
+                        key={k}
+                        value={editSupplier[k]}
+                        className="input"
+                        style={{ padding:"6px 10px", fontSize:12 }}
+                        placeholder={k}
+                        onChange={e => setEditSupplier({ ...editSupplier, [k]: e.target.value })}
+                      />
                     ))}
-                    <td style={{ padding:"6px 8px", whiteSpace:"nowrap" }}>
-                      <button className="action-btn" style={{ background:"#052e16", color:"#4ade80", marginRight:4 }}
-                        onClick={() => { updateSupplier(editSupplier.id, { name: editSupplier.name, terms: editSupplier.terms, notes: editSupplier.notes }); setEditSupplier(null); }}>✓</button>
-                      <button className="action-btn" style={{ background:"#131c2e", color:"#64748b" }} onClick={() => setEditSupplier(null)}>✕</button>
-                    </td>
-                  </>
-                ) : (
-                  <>
-                    <td style={{ padding:"11px 10px", fontWeight:500 }}>{sup.name}</td>
-                    <td style={{ padding:"11px 10px" }}><code style={{ fontSize:11, color:"#a78bfa", background:"#1e1b40", padding:"2px 8px", borderRadius:5 }}>{sup.terms}</code></td>
-                    <td style={{ padding:"11px 10px", color:"#475569", fontSize:12 }}>{sup.notes||"—"}</td>
-                    <td style={{ padding:"8px", whiteSpace:"nowrap" }}>
-                      <button className="action-btn" style={{ background:"#131c2e", color:"#64748b", marginRight:4 }} onClick={() => setEditSupplier({...sup})}>Edit</button>
-                      <button className="action-btn" style={{ background:"#2d0a0a", color:"#f87171" }}
-                        onClick={() => { if (confirm("Delete?")) deleteSupplier(sup.id); }}>✕</button>
-                    </td>
-                  </>
-                )}
-              </tr>
-            ))}
-          </tbody>
-        </table>
-        <button className="action-btn" style={{ background:"#131c2e", color:"#64748b", marginTop:16, padding:"9px 18px" }}
+                  </div>
+                  <div style={{ display:"flex", gap:5, flexShrink:0 }}>
+                    <button className="btn btn-success btn-sm"
+                      onClick={() => { updateSupplier(editSupplier.id, { name:editSupplier.name, terms:editSupplier.terms, notes:editSupplier.notes }); setEditSupplier(null); }}>✓</button>
+                    <button className="btn btn-ghost btn-sm" onClick={() => setEditSupplier(null)}>✕</button>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div style={{ width:30, height:30, borderRadius:"50%", background:"var(--surf2)", border:"1px solid var(--bdr2)", display:"flex", alignItems:"center", justifyContent:"center", fontSize:13, fontWeight:700, color:"var(--t2)", flexShrink:0 }}>
+                    {sup.name.charAt(0)}
+                  </div>
+                  <span style={{ flex:1, fontSize:13.5 }}>{sup.name}</span>
+                  <span style={{ background:"var(--surf2)", padding:"3px 10px", borderRadius:6, fontSize:11.5, fontWeight:600, color:"var(--t2)", fontFamily:"monospace", whiteSpace:"nowrap" }}>{sup.terms || "—"}</span>
+                  {sup.notes && <span style={{ fontSize:12, color:"var(--t3)", maxWidth:100, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{sup.notes}</span>}
+                  <div style={{ display:"flex", gap:5, flexShrink:0 }}>
+                    <button className="btn btn-ghost btn-sm" onClick={() => setEditSupplier({...sup})}>Edit</button>
+                    <button className="btn btn-danger btn-sm" onClick={() => { if (confirm("Delete?")) deleteSupplier(sup.id); }}>×</button>
+                  </div>
+                </>
+              )}
+            </div>
+          ))}
+          {filtered.length === 0 && (
+            <div style={{ padding:"24px 0", textAlign:"center", color:"var(--t3)", fontSize:13 }}>
+              No suppliers with this payment term
+            </div>
+          )}
+        </div>
+
+        <button className="btn btn-ghost" style={{ marginTop:16 }}
           onClick={() => addSupplier({ name:"New Supplier", terms:"shotef", notes:"" }).then(row => setEditSupplier(row))}>
           + Add Supplier
         </button>

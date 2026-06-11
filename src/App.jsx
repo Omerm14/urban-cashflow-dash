@@ -268,21 +268,21 @@ export default function App() {
   }, [addSupplier]);
 
   if (authLoading) return (
-    <div style={{ background:"#080e1a", minHeight:"100vh", display:"flex", alignItems:"center", justifyContent:"center" }}>
-      <div style={{ color:"#64748b", fontSize:14 }}>Loading…</div>
+    <div style={{ background:"var(--bg)", minHeight:"100vh", display:"flex", alignItems:"center", justifyContent:"center" }}>
+      <div style={{ color:"var(--t3)", fontSize:14 }}>Loading…</div>
     </div>
   );
 
   if (!user) return <LoginPage />;
 
   if (loading) return (
-    <div style={{ background:"#080e1a", minHeight:"100vh", display:"flex", alignItems:"center", justifyContent:"center" }}>
-      <div style={{ color:"#64748b", fontSize:14 }}>Loading…</div>
+    <div style={{ background:"var(--bg)", minHeight:"100vh", display:"flex", alignItems:"center", justifyContent:"center" }}>
+      <div style={{ color:"var(--t3)", fontSize:14 }}>Loading…</div>
     </div>
   );
 
   return (
-    <div style={{ background:"#080e1a", minHeight:"100vh", color:"#e2e8f0", fontFamily:"Inter,system-ui,sans-serif" }}>
+    <div style={{ background:"var(--bg)", minHeight:"100vh", color:"var(--t1)" }}>
       <NavBar view={view} setView={setView} suppliersCount={suppliers.length}
         onSuppliersClick={() => setShowSuppliers(true)} user={user} onSignOut={signOut}
         integrationError={false}
@@ -292,14 +292,14 @@ export default function App() {
 
       {/* Notification panel — slides in from top-right below navbar */}
       {showNotifPanel && (
-        <div style={{ position:"fixed", top:57, right:28, zIndex:50, width:320,
-          background:"#0d1626", border:"1px solid #1e2d45", borderRadius:12,
-          boxShadow:"0 16px 40px #00000080", overflow:"hidden", animation:"fadeIn .2s" }}
+        <div style={{ position:"fixed", top:60, right:24, zIndex:50, width:320,
+          background:"var(--surf)", border:"1px solid var(--bdr2)", borderRadius:12,
+          boxShadow:"0 16px 40px rgba(0,0,0,.5)", overflow:"hidden", animation:"fadeIn .2s" }}
           onMouseLeave={() => {}}>
-          <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"12px 16px", borderBottom:"1px solid #111d2e" }}>
-            <span style={{ fontSize:13, fontWeight:700, color:"#f1f5f9" }}>Notifications</span>
+          <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"12px 16px", borderBottom:"1px solid var(--bdr)" }}>
+            <span style={{ fontSize:13, fontWeight:700 }}>Notifications</span>
             <button onClick={() => setShowNotifPanel(false)}
-              style={{ background:"none", border:"none", color:"#475569", cursor:"pointer", fontSize:14 }}>✕</button>
+              style={{ background:"none", border:"none", color:"var(--t3)", cursor:"pointer", fontSize:14 }}>✕</button>
           </div>
           {notifications.length === 0 ? (
             <div style={{ padding:"24px 16px", textAlign:"center", color:"#334155", fontSize:13 }}>No notifications yet</div>
@@ -346,26 +346,26 @@ export default function App() {
       <div style={{ maxWidth:1140, margin:"0 auto", padding:"28px 28px 60px" }}>
         {view !== "admin" && view !== "integrations" && (
           <div style={{ display:"flex", gap:10, marginBottom:32, alignItems:"center", flexWrap:"wrap" }}>
-            <button className="upload-btn" style={{ background:"linear-gradient(135deg,#6366f1,#a78bfa)", color:"#fff", boxShadow:"0 4px 20px #6366f133" }}
+            <button className="btn btn-primary" style={{ padding:"10px 20px", fontSize:13 }}
               onClick={() => fileRef.current.click()} disabled={extracting || loading}>
               <span style={{ fontSize:16 }}>+</span>{extracting ? "Extracting…" : loading ? "Loading…" : "Upload Invoices"}
             </button>
             <input ref={fileRef} type="file" accept="image/*,application/pdf" multiple onChange={handleUpload} style={{ display:"none" }} />
 
-            <button className="upload-btn" style={{ background:"#131c2e", color:"#94a3b8", border:"1px solid #1e2d45" }} onClick={() => csvRef.current.click()}>
+            <button className="btn btn-secondary" style={{ padding:"10px 20px", fontSize:13 }} onClick={() => csvRef.current.click()}>
               <span>📋</span> Load Supplier Sheet
             </button>
             <input ref={csvRef} type="file" accept=".csv,text/csv" onChange={handleCSV} style={{ display:"none" }} />
 
             {extractMsg && (
               <div style={{ display:"flex", alignItems:"center", gap:8, padding:"8px 16px", borderRadius:8,
-                background: extractMsg.ok===false?"#2d0a0a":extractMsg.ok?"#052e16":"#131c2e",
-                border:`1px solid ${extractMsg.ok===false?"#7f1d1d":extractMsg.ok?"#166534":"#1e2d45"}`,
-                color: extractMsg.ok===false?"#f87171":extractMsg.ok?"#4ade80":"#94a3b8", fontSize:13, animation:"fadeIn .3s" }}>
+                background: extractMsg.ok===false?"rgba(239,68,68,.1)":extractMsg.ok?"rgba(16,185,129,.1)":"var(--surf2)",
+                border:`1px solid ${extractMsg.ok===false?"rgba(239,68,68,.3)":extractMsg.ok?"rgba(16,185,129,.3)":"var(--bdr2)"}`,
+                color: extractMsg.ok===false?"var(--red)":extractMsg.ok?"var(--green)":"var(--t2)", fontSize:13, animation:"fadeIn .3s" }}>
                 {extractMsg.text}
               </div>
             )}
-            <div style={{ marginLeft:"auto", fontSize:12, color:"#334155", fontWeight:500 }}>{invoices.length} invoices</div>
+            <div style={{ marginLeft:"auto", fontSize:12, color:"var(--t3)", fontWeight:500 }}>{invoices.length} invoices</div>
           </div>
         )}
 
@@ -393,28 +393,28 @@ export default function App() {
       {activeSyncJob && (
         <div style={{
           position: "fixed", bottom: 0, left: 0, right: 0, zIndex: 60,
-          background: "#0d1626", borderTop: "1px solid #1e2d45",
+          background: "var(--surf)", borderTop: "1px solid var(--bdr)",
           padding: "0 24px",
         }}>
           <div style={{ maxWidth: 1140, margin: "0 auto", display: "flex", alignItems: "center", gap: 14, height: 44 }}>
-            <div style={{ width: 14, height: 14, borderRadius: "50%", border: "2px solid #6366f1", borderTopColor: "transparent", animation: "spin 0.8s linear infinite", flexShrink: 0 }} />
+            <div style={{ width: 14, height: 14, borderRadius: "50%", border: "2px solid var(--purple)", borderTopColor: "transparent", animation: "spin 0.8s linear infinite", flexShrink: 0 }} />
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
-                <span style={{ fontSize: 12, color: "#94a3b8" }}>
+                <span style={{ fontSize: 12, color: "var(--t2)" }}>
                   Syncing Drive… file {Math.min(activeSyncJob.cursor, activeSyncJob.totalFiles)} / {activeSyncJob.totalFiles}
-                  {activeSyncJob.added > 0 && <span style={{ color: "#4ade80", marginLeft: 8 }}>· {activeSyncJob.added} invoice{activeSyncJob.added !== 1 ? "s" : ""} added</span>}
+                  {activeSyncJob.added > 0 && <span style={{ color: "var(--green)", marginLeft: 8 }}>· {activeSyncJob.added} invoice{activeSyncJob.added !== 1 ? "s" : ""} added</span>}
                 </span>
               </div>
-              <div style={{ height: 3, background: "#131c2e", borderRadius: 2, overflow: "hidden" }}>
+              <div style={{ height: 3, background: "var(--surf2)", borderRadius: 2, overflow: "hidden" }}>
                 <div style={{
-                  height: "100%", borderRadius: 2, background: "#6366f1",
+                  height: "100%", borderRadius: 2, background: "var(--purple)",
                   width: `${activeSyncJob.totalFiles ? Math.round(activeSyncJob.cursor / activeSyncJob.totalFiles * 100) : 0}%`,
                   transition: "width 0.5s ease",
                 }} />
               </div>
             </div>
             <button onClick={() => cancelSync(activeSyncJob.integrationId)}
-              style={{ padding: "4px 12px", background: "#2d0a0a", border: "1px solid #7f1d1d", color: "#f87171", borderRadius: 6, cursor: "pointer", fontSize: 12, fontFamily: "inherit", flexShrink: 0 }}>
+              style={{ padding: "4px 12px", background: "rgba(239,68,68,.1)", border: "1px solid rgba(239,68,68,.25)", color: "var(--red)", borderRadius: 6, cursor: "pointer", fontSize: 12, fontFamily: "inherit", flexShrink: 0 }}>
               Stop
             </button>
           </div>
