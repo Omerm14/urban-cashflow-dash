@@ -77,6 +77,8 @@ export default function App() {
   const [previewUrl,      setPreviewUrl]      = useState(null);
   const [previewFilename, setPreviewFilename] = useState(null);
   const [loadingPreview,  setLoadingPreview]  = useState(false);
+  const [preSelMonth,     setPreSelMonth]     = useState(null);
+  const [fading,          setFading]          = useState(false);
   const fileRef = useRef();
   const csvRef  = useRef();
 
@@ -267,6 +269,15 @@ export default function App() {
     e.target.value = "";
   }, [addSupplier]);
 
+  const payMonth = useCallback(ym => {
+    setFading(true);
+    setTimeout(() => {
+      setPreSelMonth(ym);
+      setView("invoices");
+      setFading(false);
+    }, 160);
+  }, []);
+
   if (authLoading) return (
     <div style={{ background:"var(--bg)", minHeight:"100vh", display:"flex", alignItems:"center", justifyContent:"center" }}>
       <div style={{ color:"var(--t3)", fontSize:14 }}>Loading…</div>
@@ -369,8 +380,9 @@ export default function App() {
           </div>
         )}
 
-        {view === "dashboard"    && <Dashboard  kpis={kpis} monthlyData={monthlyData} allNames={allNames} color={color} maxTotal={maxTotal} />}
-        {view === "invoices"     && <InvoicesView computed={computed} dupeIds={dupeIds} updateInvoice={updateInvoice} deleteInvoice={deleteInvoice} bulkMarkPaid={bulkMarkPaid} bulkMarkUnpaid={bulkMarkUnpaid} bulkDelete={bulkDelete} setEditInvoice={setEditInvoice} color={color} onViewAttachment={handleViewAttachment} />}
+        <div style={{ opacity:fading ? 0 : 1, transition:"opacity .16s ease" }}>
+        {view === "dashboard"    && <Dashboard  kpis={kpis} monthlyData={monthlyData} allNames={allNames} color={color} maxTotal={maxTotal} onPayMonth={payMonth} />}
+        {view === "invoices"     && <InvoicesView computed={computed} dupeIds={dupeIds} updateInvoice={updateInvoice} deleteInvoice={deleteInvoice} bulkMarkPaid={bulkMarkPaid} bulkMarkUnpaid={bulkMarkUnpaid} bulkDelete={bulkDelete} setEditInvoice={setEditInvoice} color={color} onViewAttachment={handleViewAttachment} preSelMonth={preSelMonth} onClearPreSel={() => setPreSelMonth(null)} />}
         {view === "calendar"     && <CalendarView computed={computed} calMonth={calMonth} setCalMonth={setCalMonth} color={color} />}
         {view === "admin"        && <AdminPage />}
         {view === "integrations" && (
@@ -384,6 +396,7 @@ export default function App() {
             syncJobs={syncJobs}
           />
         )}
+        </div>
       </div>
 
       {editInvoice   && <EditInvoiceModal editInvoice={editInvoice} setEditInvoice={setEditInvoice} suppliers={suppliers} addInvoice={addInvoice} updateInvoice={updateInvoice} getSupplier={getSupplier} onViewAttachment={handleViewAttachment} />}

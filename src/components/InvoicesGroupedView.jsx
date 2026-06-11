@@ -1,4 +1,4 @@
-import { useRef, useEffect } from "react";
+import { useState, useRef, useEffect } from "react";
 import { currency, fmt, fmtMonth, toYM } from "../utils/dates";
 import { STATUS } from "../constants";
 
@@ -28,7 +28,29 @@ function statusBadge(status) {
   return { cls: map[status] || "badge-unpaid", dot: dots[status] || "● " };
 }
 
-function SupplierCard({ supplier, invoices, dupeIds, updateInvoice, deleteInvoice, setEditInvoice, color, selectedIds, onToggleSelect, onToggleAll, sortField, onViewAttachment }) {
+function urgencyStyle(dueDate) {
+  if (!dueDate) return {};
+  const today = new Date(); today.setHours(0, 0, 0, 0);
+  const due = new Date(dueDate); due.setHours(0, 0, 0, 0);
+  const days = Math.round((due - today) / 86400000);
+  if (days < 0) return { color:"var(--red)", fontWeight:700 };
+  if (days <= 7) return { color:"var(--amber)", fontWeight:600 };
+  return {};
+}
+
+function urgencyLabel(dueDate) {
+  if (!dueDate) return null;
+  const today = new Date(); today.setHours(0, 0, 0, 0);
+  const due = new Date(dueDate); due.setHours(0, 0, 0, 0);
+  const days = Math.round((due - today) / 86400000);
+  if (days < 0) return ` (${-days}d overdue)`;
+  if (days <= 7) return ` (due in ${days}d)`;
+  return null;
+}
+
+function SupplierCard({ supplier, invoices, dupeIds, updateInvoice, deleteInvoice, setEditInvoice, color, selectedIds, onToggleSelect, onToggleAll, sortField, onViewAttachment, onPayGroup }) {
+  const [hov, setHov] = useState(false);
+
   const sorted = [...invoices].sort((a, b) => {
     if (sortField === "amount") return Number(b.amount) - Number(a.amount);
     const af = a[sortField] ?? "", bf = b[sortField] ?? "";
@@ -47,8 +69,7 @@ function SupplierCard({ supplier, invoices, dupeIds, updateInvoice, deleteInvoic
   }, [someSelected]);
 
   return (
-    <div className="sup-group">
-      {/* Card header */}
+    <div className="sup-group" onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)}>
       <div className="sup-hdr">
         <input
           type="checkbox"
@@ -61,16 +82,24 @@ function SupplierCard({ supplier, invoices, dupeIds, updateInvoice, deleteInvoic
           {supplier.charAt(0)}
         </div>
         <span style={{ fontWeight:700, flex:1, fontSize:14 }}>{supplier}</span>
+        {hov && (
+          <button className="btn btn-primary btn-sm" style={{ borderRadius:50, fontSize:12 }}
+            onClick={e => { e.stopPropagation(); onPayGroup(cardIds); }}>
+            ⚡ Pay group
+          </button>
+        )}
         <span style={{ fontSize:12, color:"var(--t3)", background:"var(--surf2)", padding:"2px 8px", borderRadius:10, fontWeight:600 }}>
           {invoices.length} invoice{invoices.length !== 1 ? "s" : ""}
         </span>
         <span style={{ fontWeight:800, marginLeft:12, whiteSpace:"nowrap" }}>{currency(total)}</span>
       </div>
 
-      {/* Invoice rows */}
       {sorted.map(inv => {
         const isSelected = selectedIds.has(inv.id);
         const { cls, dot } = statusBadge(inv.status);
+        const isPaid = inv.status === STATUS.PAID;
+        const urgStyle = isPaid ? {} : urgencyStyle(inv.dueDate);
+        const urgLbl = isPaid ? null : urgencyLabel(inv.dueDate);
         return (
           <div key={inv.id} className={`sup-row${isSelected ? " sel" : ""}`}>
             <input
@@ -86,12 +115,17 @@ function SupplierCard({ supplier, invoices, dupeIds, updateInvoice, deleteInvoic
             <span style={{ color:"var(--t2)", fontSize:12 }}>{fmt(inv.invoiceDate)}</span>
             <span style={{ fontWeight:700 }}>{currency(inv.amount)}</span>
             <span className={`badge ${cls}`}>{dot}{inv.status}</span>
-            <span style={{ color:"var(--t3)", fontSize:12 }}>{inv.dueDate ? fmt(inv.dueDate) : <span style={{ color:"var(--amber)", fontSize:11 }} onClick={() => setEditInvoice({...inv})}>⚠ Fix</span>}</span>
+            <span style={{ fontSize:12, ...urgStyle }}>
+              {inv.dueDate
+                ? <>{fmt(inv.dueDate)}{urgLbl && <span style={{ fontSize:10 }}>{urgLbl}</span>}</>
+                : <span style={{ color:"var(--amber)", fontSize:11, cursor:"pointer" }} onClick={() => setEditInvoice({...inv})}>⚠ Fix</span>
+              }
+            </span>
             <div style={{ display:"flex", gap:5, justifyContent:"flex-end" }}>
               {inv.attachment_path && (
                 <button className="btn btn-ghost btn-sm" title="View file" onClick={() => onViewAttachment?.(inv)}>📎</button>
               )}
-              {inv.status !== STATUS.PAID && (
+              {!isPaid && (
                 <button className="btn btn-success btn-sm" onClick={() => updateInvoice(inv.id, { status: STATUS.PAID })}>✓ Paid</button>
               )}
               <button className="btn btn-ghost btn-sm" onClick={() => setEditInvoice({...inv})}>Edit</button>
@@ -101,7 +135,6 @@ function SupplierCard({ supplier, invoices, dupeIds, updateInvoice, deleteInvoic
         );
       })}
 
-      {/* Card footer */}
       <div style={{ padding:"7px 20px", borderTop:"1px solid rgba(255,255,255,.04)", display:"flex", justifyContent:"space-between", fontSize:12, color:"var(--t3)" }}>
         <label style={{ display:"flex", alignItems:"center", gap:7, cursor:"pointer" }}>
           <input
@@ -118,9 +151,14 @@ function SupplierCard({ supplier, invoices, dupeIds, updateInvoice, deleteInvoic
   );
 }
 
-export default function InvoicesGroupedView({ computed, dupeIds, updateInvoice, deleteInvoice, setEditInvoice, color, selectedIds, onToggleSelect, onToggleAll, selectedMonth, onMonthChange, sortField, onViewAttachment }) {
+export default function InvoicesGroupedView({ computed, dupeIds, updateInvoice, deleteInvoice, setEditInvoice, color, selectedIds, onToggleSelect, onToggleAll, selectedMonth, onMonthChange, sortField, onViewAttachment, onSelectAll }) {
   const monthInvoices = computed.filter(inv => inv.dueDate && inv.dueDate.startsWith(selectedMonth));
   const monthTotal = monthInvoices.reduce((s, i) => s + Number(i.amount), 0);
+  const unpaidInMonth = monthInvoices.filter(i => i.status !== STATUS.PAID);
+  const paidCount = monthInvoices.length - unpaidInMonth.length;
+  const totalCount = monthInvoices.length;
+  const allPaid = totalCount > 0 && paidCount === totalCount;
+  const progress = totalCount > 0 ? Math.round((paidCount / totalCount) * 100) : 0;
 
   const groups = Object.entries(
     monthInvoices.reduce((acc, inv) => {
@@ -128,6 +166,8 @@ export default function InvoicesGroupedView({ computed, dupeIds, updateInvoice, 
       return acc;
     }, {})
   ).sort(([a], [b]) => a.localeCompare(b));
+
+  const kbdStyle = { background:"var(--surf2)", border:"1px solid var(--bdr2)", borderRadius:4, padding:"1px 6px", fontFamily:"inherit", fontSize:10 };
 
   return (
     <div>
@@ -138,16 +178,54 @@ export default function InvoicesGroupedView({ computed, dupeIds, updateInvoice, 
         <button className="btn btn-ghost btn-sm" onClick={() => onMonthChange(nextMonth(selectedMonth))}>›</button>
       </div>
 
-      {/* Month total banner */}
+      {/* Progress bar */}
+      {totalCount > 0 && (
+        <div style={{ marginBottom:10 }}>
+          <div className="prog-track"><div className="prog-fill" style={{ width:`${progress}%` }}/></div>
+          <div style={{ fontSize:11, color:"var(--t3)", textAlign:"right", marginTop:3 }}>{paidCount} of {totalCount} paid</div>
+        </div>
+      )}
+
+      {/* Month total banner + select-all shortcut */}
       <div className="total-bar">
         <span style={{ fontSize:12, fontWeight:600, color:"var(--t3)", textTransform:"uppercase", letterSpacing:".04em" }}>
           Total due in {fmtMonth(selectedMonth).toUpperCase()}
         </span>
-        <span style={{ fontWeight:800, fontSize:20 }}>{currency(monthTotal)}</span>
+        <div style={{ display:"flex", alignItems:"center", gap:12 }}>
+          {unpaidInMonth.length > 0 && onSelectAll && (
+            <button className="btn btn-ghost btn-sm" onClick={() => onSelectAll(unpaidInMonth.map(i => i.id))}>
+              Select all ({unpaidInMonth.length}) →
+            </button>
+          )}
+          <span style={{ fontWeight:800, fontSize:20 }}>{currency(monthTotal)}</span>
+        </div>
       </div>
 
+      {/* Keyboard shortcut hint */}
+      {unpaidInMonth.length > 0 && (
+        <div style={{ display:"flex", gap:16, marginBottom:14, fontSize:11, color:"var(--t3)" }}>
+          <span><kbd style={kbdStyle}>A</kbd> select all</span>
+          <span><kbd style={kbdStyle}>P</kbd> pay</span>
+          <span><kbd style={kbdStyle}>Esc</kbd> clear</span>
+        </div>
+      )}
+
+      {/* All-done celebration */}
+      {allPaid && (
+        <div style={{ textAlign:"center", padding:"52px 0", animation:"scaleIn .4s cubic-bezier(.16,1,.3,1)" }}>
+          <div style={{ fontSize:52, marginBottom:14 }}>🎉</div>
+          <div style={{ fontWeight:800, fontSize:22, marginBottom:6 }}>All done for {fmtMonth(selectedMonth)}!</div>
+          <div style={{ color:"var(--t3)", fontSize:14, marginBottom:22 }}>
+            All {totalCount} invoice{totalCount !== 1 ? "s" : ""} have been paid.
+          </div>
+          <button className="btn btn-primary" onClick={() => onMonthChange(nextMonth(selectedMonth))}>
+            Next month →
+          </button>
+        </div>
+      )}
+
       {/* Empty state */}
-      {groups.length === 0 && (
+      {!allPaid && groups.length === 0 && (
         <div style={{ textAlign:"center", padding:"60px 0", color:"var(--t3)" }}>
           <div style={{ fontSize:36, marginBottom:10 }}>📅</div>
           <div style={{ fontSize:14 }}>No invoices due in {fmtMonth(selectedMonth)}</div>
@@ -155,7 +233,7 @@ export default function InvoicesGroupedView({ computed, dupeIds, updateInvoice, 
       )}
 
       {/* Supplier cards */}
-      {groups.map(([supplier, invoices]) => (
+      {!allPaid && groups.map(([supplier, invoices]) => (
         <SupplierCard
           key={supplier}
           supplier={supplier}
@@ -170,6 +248,7 @@ export default function InvoicesGroupedView({ computed, dupeIds, updateInvoice, 
           onToggleAll={onToggleAll}
           sortField={sortField}
           onViewAttachment={onViewAttachment}
+          onPayGroup={ids => onSelectAll && onSelectAll(ids)}
         />
       ))}
     </div>

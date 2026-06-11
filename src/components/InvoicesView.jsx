@@ -1,9 +1,15 @@
-import { useState, useCallback } from "react";
-import { toYM, currency } from "../utils/dates";
+import { useState, useCallback, useEffect } from "react";
+import { toYM, currency, fmtMonth } from "../utils/dates";
 import InvoicesTable from "./InvoicesTable";
 import InvoicesGroupedView from "./InvoicesGroupedView";
 
-export default function InvoicesView({ computed, dupeIds, updateInvoice, deleteInvoice, bulkMarkPaid, bulkMarkUnpaid, bulkDelete, setEditInvoice, color, onViewAttachment }) {
+function nxtMonth(ym) {
+  const [y, m] = ym.split("-").map(Number);
+  const d = new Date(y, m, 1);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+}
+
+export default function InvoicesView({ computed, dupeIds, updateInvoice, deleteInvoice, bulkMarkPaid, bulkMarkUnpaid, bulkDelete, setEditInvoice, color, onViewAttachment, preSelMonth, onClearPreSel }) {
   const [selectedIds,   setSelectedIds]   = useState(new Set());
   const [viewMode,      setViewMode]      = useState("grouped");
   const [selectedMonth, setSelectedMonth] = useState(() => toYM(new Date()));
@@ -11,6 +17,38 @@ export default function InvoicesView({ computed, dupeIds, updateInvoice, deleteI
   const [showPayModal,  setShowPayModal]  = useState(false);
   const [showSuccess,   setShowSuccess]   = useState(false);
   const [successMsg,    setSuccessMsg]    = useState("");
+  const [nextMoHint,    setNextMoHint]    = useState(null);
+
+  // Pre-select invoices when navigating from dashboard CTA
+  useEffect(() => {
+    if (!preSelMonth) return;
+    const monthInvs = computed.filter(inv => inv.dueDate && inv.dueDate.startsWith(preSelMonth) && inv.status !== "paid");
+    setSelectedMonth(preSelMonth);
+    setViewMode("grouped");
+    setSelectedIds(new Set(monthInvs.map(i => i.id)));
+    onClearPreSel?.();
+  }, [preSelMonth]); // eslint-disable-line
+
+  // Keyboard shortcuts: A = select all visible, P = pay, Esc = clear
+  useEffect(() => {
+    const handler = e => {
+      if (e.target.tagName === "INPUT" || e.target.tagName === "SELECT" || e.target.tagName === "TEXTAREA") return;
+      if (e.key === "a" || e.key === "A") {
+        const visibleIds = computed
+          .filter(inv => inv.dueDate && inv.dueDate.startsWith(selectedMonth) && inv.status !== "paid")
+          .map(i => i.id);
+        setSelectedIds(new Set(visibleIds));
+      } else if (e.key === "p" || e.key === "P") {
+        if (selectedIds.size > 0) setShowPayModal(true);
+      } else if (e.key === "Escape") {
+        setSelectedIds(new Set());
+        setShowPayModal(false);
+        setShowSuccess(false);
+      }
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [computed, selectedMonth, selectedIds]);
 
   const toggleSelect = useCallback(id => {
     setSelectedIds(prev => {
@@ -59,13 +97,17 @@ export default function InvoicesView({ computed, dupeIds, updateInvoice, deleteI
     const selInvs = computed.filter(i => selectedIds.has(i.id));
     const total = selInvs.reduce((s, i) => s + Number(i.amount), 0);
     const cnt = selInvs.length;
+    const paidIds = new Set([...selectedIds]);
     await bulkMarkPaid([...selectedIds]);
     clearSelection();
     setShowPayModal(false);
+    const nm = nxtMonth(selectedMonth);
+    const hasNext = computed.some(inv => inv.dueDate && inv.dueDate.startsWith(nm) && !paidIds.has(inv.id) && inv.status !== "paid");
+    setNextMoHint(hasNext ? nm : null);
     setSuccessMsg(`${cnt} invoice${cnt !== 1 ? "s" : ""} marked paid · ${currency(total)}`);
     setShowSuccess(true);
     setTimeout(() => setShowSuccess(false), 3200);
-  }, [selectedIds, computed, bulkMarkPaid, clearSelection]);
+  }, [selectedIds, computed, bulkMarkPaid, clearSelection, selectedMonth]);
 
   const count = selectedIds.size;
   const selInvs = computed.filter(i => selectedIds.has(i.id));
@@ -95,7 +137,6 @@ export default function InvoicesView({ computed, dupeIds, updateInvoice, deleteI
           </div>
         )}
 
-        {/* Secondary bulk actions (when items selected) */}
         {count > 0 && (
           <div style={{ display:"flex", alignItems:"center", gap:8, marginLeft:"auto" }}>
             <button className="btn btn-ghost btn-sm" onClick={handleBulkUnpaid}>↻ Mark Unpaid</button>
@@ -120,6 +161,7 @@ export default function InvoicesView({ computed, dupeIds, updateInvoice, deleteI
             selectedMonth={selectedMonth} onMonthChange={setSelectedMonth}
             sortField={sortField}
             onViewAttachment={onViewAttachment}
+            onSelectAll={ids => setSelectedIds(new Set(ids))}
           />
       }
 
@@ -188,14 +230,16 @@ export default function InvoicesView({ computed, dupeIds, updateInvoice, deleteI
       {/* Success overlay with confetti */}
       {showSuccess && (
         <div className="success-overlay" onClick={() => setShowSuccess(false)}>
-          {[...Array(14)].map((_, i) => (
+          {[...Array(22)].map((_, i) => (
             <div key={i} style={{
               position:"fixed",
-              left:`${10 + i * 6}%`,
-              top:`${35 + (i % 4) * 8}%`,
-              width:9, height:9, borderRadius:2,
-              background:["#8b5cf6","#3b82f6","#10b981","#f59e0b","#ec4899"][i % 5],
-              animation:`confettiFall ${.6 + i * .05}s ease-out ${i * .06}s both`,
+              left:`${5 + i * 4.2}%`,
+              top:`${30 + (i % 5) * 8}%`,
+              width: i % 3 === 0 ? 10 : i % 3 === 1 ? 7 : 5,
+              height: i % 3 === 0 ? 10 : i % 3 === 1 ? 7 : 5,
+              borderRadius: i % 2 === 0 ? 2 : "50%",
+              background:["#8b5cf6","#3b82f6","#10b981","#f59e0b","#ec4899","#06b6d4"][i % 6],
+              animation:`confettiFall ${.5 + (i % 8) * .07}s ease-out ${i * .05}s both`,
               pointerEvents:"none",
             }}/>
           ))}
@@ -205,9 +249,19 @@ export default function InvoicesView({ computed, dupeIds, updateInvoice, deleteI
                 strokeDasharray="50" style={{ animation:"draw .55s .1s ease forwards" }}/>
             </svg>
           </div>
-          <div style={{ fontWeight:800, fontSize:28, marginBottom:8 }}>Payment Confirmed! 🎉</div>
+          <div style={{ fontWeight:800, fontSize:28, marginBottom:8 }}>All Clear! 🎉</div>
           <div style={{ color:"var(--t2)", fontSize:15, marginBottom:24 }}>{successMsg}</div>
-          <button className="btn btn-ghost" onClick={() => setShowSuccess(false)}>← Back to invoices</button>
+          <div style={{ display:"flex", gap:10 }}>
+            <button className="btn btn-ghost" onClick={() => setShowSuccess(false)}>← Back</button>
+            {nextMoHint && (
+              <button className="btn btn-primary" onClick={() => {
+                setShowSuccess(false);
+                setSelectedMonth(nextMoHint);
+              }}>
+                Next: {fmtMonth(nextMoHint)} →
+              </button>
+            )}
+          </div>
         </div>
       )}
     </div>
