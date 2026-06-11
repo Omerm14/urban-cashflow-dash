@@ -1,30 +1,75 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { currency, fmtMonth, fmtMonthShort } from "../utils/dates";
 
-export default function Dashboard({ kpis, monthlyData, allNames, color, maxTotal }) {
+function CountUp({ to, duration = 1200 }) {
+  const [v, setV] = useState(0);
+  useEffect(() => {
+    const steps = 55;
+    const ms = duration / steps;
+    let i = 0;
+    const id = setInterval(() => {
+      i++;
+      const p = i / steps;
+      const e = 1 - Math.pow(1 - p, 3);
+      setV(to * e);
+      if (i >= steps) { setV(to); clearInterval(id); }
+    }, ms);
+    return () => clearInterval(id);
+  }, [to]);
+  return <>{currency(v)}</>;
+}
+
+export default function Dashboard({ kpis, monthlyData, allNames, color, maxTotal, onPayMonth }) {
   const [tooltip, setTooltip] = useState(null);
 
   const stats = [
     { label:"Outstanding", key:"outstanding", cls:"stat-outstanding", ico:"💳" },
-    { label:"Overdue",     key:"overdue",     cls:"stat-overdue",     ico:"🔴" },
+    { label:"Overdue",     key:"overdue",     cls:"stat-overdue",     ico:"⚠️", pulse:true },
     { label:"Next Month",  key:"nextMonth",   cls:"stat-nextmonth",   ico:"📅" },
     { label:"Total Paid",  key:"paid",        cls:"stat-paid",        ico:"✅" },
   ];
+
+  // CTA banner: first upcoming month with unpaid invoices
+  const ctaMonth = monthlyData[0] || null;
 
   return (
     <div style={{ animation:"slideUp .4s cubic-bezier(.16,1,.3,1)" }}>
       {/* KPI Cards */}
       <div className="stat-grid" style={{ marginBottom:20 }}>
         {stats.map(s => (
-          <div key={s.key} className={`card stat-card ${s.cls}`}>
+          <div key={s.key}
+            className={`card stat-card ${s.cls}`}
+            onClick={() => s.pulse && onPayMonth ? onPayMonth(s.key) : undefined}
+            style={s.pulse ? { animationName:"redPulse", animationDuration:"2.2s", animationIterationCount:"infinite", cursor:"pointer" } : {}}>
             <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start" }}>
               <span className="stat-lbl">{s.label}</span>
               <span style={{ fontSize:18, opacity:.45 }}>{s.ico}</span>
             </div>
-            <div className="stat-val">{currency(kpis[s.key])}</div>
+            <div className="stat-val"><CountUp to={kpis[s.key]}/></div>
           </div>
         ))}
       </div>
+
+      {/* Pay-month CTA banner */}
+      {ctaMonth && onPayMonth && (
+        <div className="pay-banner" onClick={() => onPayMonth(ctaMonth.ym)}>
+          <div style={{ display:"flex", alignItems:"center", gap:16 }}>
+            <div style={{ width:46, height:46, borderRadius:12, background:"var(--grad)", display:"flex", alignItems:"center", justifyContent:"center", fontSize:22, flexShrink:0 }}>⚡</div>
+            <div>
+              <div style={{ fontWeight:800, fontSize:16, marginBottom:3 }}>
+                Pay {fmtMonth(ctaMonth.ym)} — ready to go
+              </div>
+              <div style={{ color:"var(--t2)", fontSize:13 }}>
+                {Object.keys(ctaMonth.sups).length} suppliers · <strong style={{ color:"var(--t1)" }}>{currency(ctaMonth.total)}</strong> total
+              </div>
+            </div>
+          </div>
+          <button className="btn btn-primary" style={{ padding:"11px 22px", fontSize:14, flexShrink:0 }}
+            onClick={e => { e.stopPropagation(); onPayMonth(ctaMonth.ym); }}>
+            Pay All Now →
+          </button>
+        </div>
+      )}
 
       {/* Chart Card */}
       <div className="card" style={{ padding:28, marginBottom:20 }}>
@@ -59,7 +104,7 @@ export default function Dashboard({ kpis, monthlyData, allNames, color, maxTotal
       {/* Monthly breakdown cards */}
       <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(300px,1fr))", gap:14 }}>
         {monthlyData.map(({ ym, sups, total }) => (
-          <div key={ym} className="card">
+          <div key={ym} className="card" style={{ cursor:"pointer" }} onClick={() => onPayMonth && onPayMonth(ym)}>
             <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:12 }}>
               <span style={{ fontWeight:700, fontSize:14 }}>{fmtMonth(ym)}</span>
               <span style={{ fontWeight:800, fontSize:14, color:"var(--t2)" }}>{currency(total)}</span>
