@@ -38,15 +38,6 @@ function urgencyStyle(dueDate) {
   return {};
 }
 
-function urgencyLabel(dueDate) {
-  if (!dueDate) return null;
-  const today = new Date(); today.setHours(0, 0, 0, 0);
-  const due = new Date(dueDate); due.setHours(0, 0, 0, 0);
-  const days = Math.round((due - today) / 86400000);
-  if (days < 0) return ` (${-days}d overdue)`;
-  if (days <= 7) return ` (due in ${days}d)`;
-  return null;
-}
 
 function SupplierCard({ supplier, invoices, dupeIds, updateInvoice, deleteInvoice, setEditInvoice, color, selectedIds, onToggleSelect, onToggleAll, sortField, onViewAttachment, onPayGroup }) {
   const [hov, setHov] = useState(false);
@@ -99,7 +90,6 @@ function SupplierCard({ supplier, invoices, dupeIds, updateInvoice, deleteInvoic
         const { cls, dot } = statusBadge(inv.status);
         const isPaid = inv.status === STATUS.PAID;
         const urgStyle = isPaid ? {} : urgencyStyle(inv.dueDate);
-        const urgLbl = isPaid ? null : urgencyLabel(inv.dueDate);
         return (
           <div key={inv.id} className={`sup-row${isSelected ? " sel" : ""}`}>
             <input
@@ -117,7 +107,7 @@ function SupplierCard({ supplier, invoices, dupeIds, updateInvoice, deleteInvoic
             <span className={`badge ${cls}`}>{dot}{inv.status}</span>
             <span style={{ fontSize:12, ...urgStyle }}>
               {inv.dueDate
-                ? <>{fmt(inv.dueDate)}{urgLbl && <span style={{ fontSize:10 }}>{urgLbl}</span>}</>
+                ? fmt(inv.dueDate)
                 : <span style={{ color:"var(--amber)", fontSize:11, cursor:"pointer" }} onClick={() => setEditInvoice({...inv})}>⚠ Fix</span>
               }
             </span>
@@ -181,8 +171,11 @@ export default function InvoicesGroupedView({ computed, dupeIds, updateInvoice, 
       {/* Progress bar */}
       {totalCount > 0 && (
         <div style={{ marginBottom:10 }}>
+          <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:5 }}>
+            <span style={{ fontSize:11, color:"var(--t3)" }}>{paidCount} of {totalCount} invoices paid</span>
+            <span style={{ fontSize:12, fontWeight:700, background:"var(--grad)", WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent" }}>{progress}%</span>
+          </div>
           <div className="prog-track"><div className="prog-fill" style={{ width:`${progress}%` }}/></div>
-          <div style={{ fontSize:11, color:"var(--t3)", textAlign:"right", marginTop:3 }}>{paidCount} of {totalCount} paid</div>
         </div>
       )}
 
