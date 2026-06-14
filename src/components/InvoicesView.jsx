@@ -18,6 +18,7 @@ export default function InvoicesView({ computed, dupeIds, updateInvoice, deleteI
   const [showSuccess,   setShowSuccess]   = useState(false);
   const [successMsg,    setSuccessMsg]    = useState("");
   const [nextMoHint,    setNextMoHint]    = useState(null);
+  const [deleteTarget,  setDeleteTarget]  = useState(null);
 
   // Refs so effects always see the latest values without re-registering
   const computedRef      = useRef(computed);
@@ -94,6 +95,16 @@ export default function InvoicesView({ computed, dupeIds, updateInvoice, deleteI
     clearSelection();
   }, [selectedIds, bulkMarkUnpaid, clearSelection]);
 
+  const handleDeleteInvoice = useCallback(id => {
+    const inv = computed.find(i => i.id === id);
+    setDeleteTarget(inv ?? { id });
+  }, [computed]);
+
+  const confirmDelete = useCallback(async () => {
+    await deleteInvoice(deleteTarget.id);
+    setDeleteTarget(null);
+  }, [deleteTarget, deleteInvoice]);
+
   const handleBulkDelete = useCallback(async () => {
     const ids = [...selectedIds];
     if (!confirm(`Delete ${ids.length} invoice${ids.length > 1 ? "s" : ""}? This cannot be undone.`)) return;
@@ -156,14 +167,14 @@ export default function InvoicesView({ computed, dupeIds, updateInvoice, deleteI
       {viewMode === "table"
         ? <InvoicesTable
             computed={computed} dupeIds={dupeIds}
-            updateInvoice={updateInvoice} deleteInvoice={deleteInvoice}
+            updateInvoice={updateInvoice} deleteInvoice={handleDeleteInvoice}
             setEditInvoice={setEditInvoice} color={color}
             selectedIds={selectedIds} onToggleSelect={toggleSelect} onToggleAll={toggleAll}
             onViewAttachment={onViewAttachment}
           />
         : <InvoicesGroupedView
             computed={computed} dupeIds={dupeIds}
-            updateInvoice={updateInvoice} deleteInvoice={deleteInvoice}
+            updateInvoice={updateInvoice} deleteInvoice={handleDeleteInvoice}
             setEditInvoice={setEditInvoice} color={color}
             selectedIds={selectedIds} onToggleSelect={toggleSelect} onToggleAll={toggleAll}
             selectedMonth={selectedMonth} onMonthChange={setSelectedMonth}
@@ -269,6 +280,41 @@ export default function InvoicesView({ computed, dupeIds, updateInvoice, deleteI
                 Next: {fmtMonth(nextMoHint)} →
               </button>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* Delete confirmation modal */}
+      {deleteTarget && (
+        <div className="overlay" onClick={e => e.target === e.currentTarget && setDeleteTarget(null)}>
+          <div className="modal">
+            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:22 }}>
+              <div>
+                <div style={{ fontWeight:800, fontSize:20 }}>Delete Invoice?</div>
+                <div style={{ fontSize:13, color:"var(--t2)", marginTop:3 }}>This action cannot be undone.</div>
+              </div>
+              <button onClick={() => setDeleteTarget(null)} style={{ background:"none", border:"none", color:"var(--t3)", cursor:"pointer", fontSize:24 }}>×</button>
+            </div>
+
+            <div style={{ padding:"14px 16px", background:"var(--surf2)", borderRadius:10, marginBottom:22, display:"flex", alignItems:"center", gap:12 }}>
+              <div style={{ width:36, height:36, borderRadius:"50%", background:color(deleteTarget.supplier || ""), display:"flex", alignItems:"center", justifyContent:"center", fontSize:14, fontWeight:700, color:"#fff", flexShrink:0 }}>
+                {(deleteTarget.supplier || "?").charAt(0)}
+              </div>
+              <div style={{ flex:1, minWidth:0 }}>
+                <div style={{ fontWeight:700, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{deleteTarget.supplier || "—"}</div>
+                <div style={{ fontSize:12, color:"var(--t3)" }}>{deleteTarget.invoiceNo || deleteTarget.invoice_no || "—"}</div>
+              </div>
+              {deleteTarget.amount != null && (
+                <span style={{ fontWeight:800, whiteSpace:"nowrap" }}>{currency(Number(deleteTarget.amount))}</span>
+              )}
+            </div>
+
+            <div style={{ display:"flex", gap:10 }}>
+              <button className="btn btn-ghost" style={{ flex:1 }} onClick={() => setDeleteTarget(null)}>Cancel</button>
+              <button className="btn btn-danger" style={{ flex:2, padding:14, fontSize:15 }} onClick={confirmDelete}>
+                ✕ Delete Invoice
+              </button>
+            </div>
           </div>
         </div>
       )}
