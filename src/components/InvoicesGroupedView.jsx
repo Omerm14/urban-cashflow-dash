@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { currency, fmt, fmtMonth, toYM } from "../utils/dates";
 import { STATUS } from "../constants";
 
@@ -119,7 +119,7 @@ function SupplierCard({ supplier, invoices, dupeIds, updateInvoice, deleteInvoic
                 <button className="btn btn-success btn-sm" onClick={() => updateInvoice(inv.id, { status: STATUS.PAID })}>✓ Paid</button>
               )}
               <button className="btn btn-ghost btn-sm" onClick={() => setEditInvoice({...inv})}>Edit</button>
-              <button className="btn btn-danger btn-sm" onClick={() => { if (confirm("Delete this invoice?")) deleteInvoice(inv.id); }}>×</button>
+              <button className="btn btn-danger btn-sm" onClick={() => deleteInvoice(inv.id)}>×</button>
             </div>
           </div>
         );
@@ -142,6 +142,8 @@ function SupplierCard({ supplier, invoices, dupeIds, updateInvoice, deleteInvoic
 }
 
 export default function InvoicesGroupedView({ computed, dupeIds, updateInvoice, deleteInvoice, setEditInvoice, color, selectedIds, onToggleSelect, onToggleAll, selectedMonth, onMonthChange, sortField, onViewAttachment, onSelectAll }) {
+  const [showCelebration, setShowCelebration] = useState(false);
+
   const monthInvoices = computed.filter(inv => inv.dueDate && inv.dueDate.startsWith(selectedMonth));
   const monthTotal = monthInvoices.reduce((s, i) => s + Number(i.amount), 0);
   const unpaidInMonth = monthInvoices.filter(i => i.status !== STATUS.PAID);
@@ -149,6 +151,18 @@ export default function InvoicesGroupedView({ computed, dupeIds, updateInvoice, 
   const totalCount = monthInvoices.length;
   const allPaid = totalCount > 0 && paidCount === totalCount;
   const progress = totalCount > 0 ? Math.round((paidCount / totalCount) * 100) : 0;
+
+  const prevMonthRef = useRef(selectedMonth);
+  useEffect(() => {
+    if (prevMonthRef.current !== selectedMonth) {
+      setShowCelebration(false);
+      prevMonthRef.current = selectedMonth;
+    }
+  }, [selectedMonth]);
+
+  useEffect(() => {
+    if (allPaid && totalCount > 0) setShowCelebration(true);
+  }, [allPaid, totalCount]);
 
   const groups = Object.entries(
     monthInvoices.reduce((acc, inv) => {
@@ -203,22 +217,28 @@ export default function InvoicesGroupedView({ computed, dupeIds, updateInvoice, 
         </div>
       )}
 
-      {/* All-done celebration */}
-      {allPaid && (
-        <div style={{ textAlign:"center", padding:"52px 0", animation:"scaleIn .4s cubic-bezier(.16,1,.3,1)" }}>
-          <div style={{ fontSize:52, marginBottom:14 }}>🎉</div>
-          <div style={{ fontWeight:800, fontSize:22, marginBottom:6 }}>All done for {fmtMonth(selectedMonth)}!</div>
-          <div style={{ color:"var(--t3)", fontSize:14, marginBottom:22 }}>
-            All {totalCount} invoice{totalCount !== 1 ? "s" : ""} have been paid.
+      {/* All-done celebration overlay */}
+      {showCelebration && (
+        <div className="overlay" onClick={e => e.target === e.currentTarget && setShowCelebration(false)}>
+          <div className="modal" style={{ textAlign:"center", padding:"40px 32px", position:"relative" }}>
+            <button onClick={() => setShowCelebration(false)} style={{ position:"absolute", top:14, right:16, background:"none", border:"none", color:"var(--t3)", cursor:"pointer", fontSize:24 }}>×</button>
+            <div style={{ fontSize:52, marginBottom:14 }}>🎉</div>
+            <div style={{ fontWeight:800, fontSize:22, marginBottom:6 }}>All done for {fmtMonth(selectedMonth)}!</div>
+            <div style={{ color:"var(--t3)", fontSize:14, marginBottom:22 }}>
+              All {totalCount} invoice{totalCount !== 1 ? "s" : ""} have been paid.
+            </div>
+            <div style={{ display:"flex", gap:10, justifyContent:"center" }}>
+              <button className="btn btn-ghost" onClick={() => setShowCelebration(false)}>← Back</button>
+              <button className="btn btn-primary" onClick={() => { setShowCelebration(false); onMonthChange(nextMonth(selectedMonth)); }}>
+                Next month →
+              </button>
+            </div>
           </div>
-          <button className="btn btn-primary" onClick={() => onMonthChange(nextMonth(selectedMonth))}>
-            Next month →
-          </button>
         </div>
       )}
 
       {/* Empty state */}
-      {!allPaid && groups.length === 0 && (
+      {groups.length === 0 && (
         <div style={{ textAlign:"center", padding:"60px 0", color:"var(--t3)" }}>
           <div style={{ fontSize:36, marginBottom:10 }}>📅</div>
           <div style={{ fontSize:14 }}>No invoices due in {fmtMonth(selectedMonth)}</div>
@@ -226,7 +246,7 @@ export default function InvoicesGroupedView({ computed, dupeIds, updateInvoice, 
       )}
 
       {/* Supplier cards */}
-      {!allPaid && groups.map(([supplier, invoices]) => (
+      {groups.map(([supplier, invoices]) => (
         <SupplierCard
           key={supplier}
           supplier={supplier}

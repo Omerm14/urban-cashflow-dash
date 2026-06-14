@@ -102,7 +102,7 @@ export default function InvoicesTable({ computed, dupeIds, updateInvoice, delete
                       <button className="btn btn-success btn-sm" onClick={() => updateInvoice(inv.id, { status: STATUS.PAID })}>✓ Paid</button>
                     )}
                     <button className="btn btn-ghost btn-sm" onClick={() => setEditInvoice({...inv})}>Edit</button>
-                    <button className="btn btn-danger btn-sm" onClick={() => { if (confirm("Delete this invoice?")) deleteInvoice(inv.id); }}>✕</button>
+                    <button className="btn btn-danger btn-sm" onClick={() => deleteInvoice(inv.id)}>✕</button>
                   </div>
                 </td>
               </tr>
