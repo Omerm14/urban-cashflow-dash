@@ -3,17 +3,17 @@ import { supabase } from '../lib/supabase';
 
 const PLAN_FEATURES = {
   basic: [
-    'עד 50 חשבוניות בחודש',
-    '2 מקורות סנכרון',
-    'העלאה ידנית + OCR',
-    'לוח מחוונים ולוח שנה',
+    'Up to 50 invoices/month',
+    '2 sync sources',
+    'Manual upload + OCR',
+    'Dashboard & calendar',
   ],
   pro: [
-    'עד 150 חשבוניות בחודש',
-    '4 מקורות סנכרון (Gmail, Drive, WhatsApp, חשבונית ירוקה)',
-    'סנכרון אוטומטי',
-    'מעקב ביקורת מלא',
-    'תמיכה מועדפת',
+    'Up to 150 invoices/month',
+    'All 4 sources (Gmail, Drive, WhatsApp, Green Invoice)',
+    'Auto-sync',
+    'Full audit trail',
+    'Priority support',
   ],
 };
 
@@ -29,7 +29,7 @@ export default function UpgradeModal({ plan, used, limit, onContinueReadonly }) 
     setError(null);
     try {
       const { data: { session } } = await supabase.auth.getSession();
-      const res = await fetch('/api/stripe/checkout', {
+      const res = await fetch('/api/billing/checkout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session?.access_token}` },
         body: JSON.stringify({ plan: targetPlan }),

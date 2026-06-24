@@ -10,11 +10,10 @@ const app  = express();
 const auth = require('./middleware/auth');
 
 // Capture raw body for webhook signature verification before JSON parsing
-// (needed for both WhatsApp HMAC and Stripe signature verification).
+// (needed for WhatsApp HMAC verification).
 app.use((req, res, next) => {
   const needsRaw =
-    (req.path === '/api/webhook/whatsapp' && req.method === 'POST') ||
-    (req.path === '/api/stripe/webhook'   && req.method === 'POST');
+    (req.path === '/api/webhook/whatsapp' && req.method === 'POST');
   if (needsRaw) {
     let data = '';
     req.on('data', chunk => { data += chunk; });
@@ -60,10 +59,10 @@ const webhook = require('./routes/webhook');
 app.get('/api/webhook/whatsapp',  webhook.verifyWhatsApp);
 app.post('/api/webhook/whatsapp', webhook.handleWhatsApp);
 
-// Stripe (webhook has no auth; rest uses auth middleware)
-const stripeRoutes = require('./routes/stripe');
-app.post('/api/stripe/webhook', stripeRoutes.webhook);
-app.use('/api/stripe', auth, stripeRoutes.router);
+// Billing — Meshulam IPN has no auth; rest uses auth middleware
+const billingRoutes = require('./routes/billing');
+app.post('/api/billing/ipn', billingRoutes.ipn);
+app.use('/api/billing', auth, billingRoutes.router);
 
 // Cron (secured by CRON_SECRET header)
 app.get('/api/cron/sync', require('./routes/cron').runSync);

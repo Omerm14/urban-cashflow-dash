@@ -19,7 +19,7 @@ export const usePlan = () => {
     if (!user) return;
     try {
       // Use the server endpoint so ensureSubscription runs (idempotent upsert)
-      const res = await fetch('/api/stripe/usage', {
+      const res = await fetch('/api/billing/usage', {
         headers: { Authorization: `Bearer ${session?.access_token}` },
       });
       if (res.ok) {
