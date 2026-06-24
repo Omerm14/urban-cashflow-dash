@@ -740,6 +740,12 @@
   }
 
 </style>
+<script>
+  // If Supabase OAuth callback lands here, forward to the React app
+  if (window.location.hash && (window.location.hash.includes('access_token') || window.location.hash.includes('error_description'))) {
+    window.location.replace('/login' + window.location.hash);
+  }
+</script>
 </head>
 <body>
 <div id="pageBg" aria-hidden="true"><div class="pg-blob p1"></div><div class="pg-blob p2"></div><div class="pg-blob p3"></div><div class="pg-blob p4"></div></div>
