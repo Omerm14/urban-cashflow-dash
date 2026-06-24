@@ -713,6 +713,16 @@
   .wk-invoice-row .wbadge{font-size:10px;padding:3px 8px;border-radius:6px;font-weight:700}
   .wk-invoice-row .wbadge.due{background:rgba(245,158,11,.15);color:#f59e0b}
   .wk-invoice-row .wbadge.paid{background:rgba(16,185,129,.15);color:#10b981}
+  .wk-shot{display:none;flex-direction:column;gap:10px}
+  .wk-shot.active{display:flex}
+  .wk-scene-title{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:4px}
+  .wk-src-row{display:flex;align-items:center;gap:10px;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:11px 14px;font-size:13px;font-weight:600}
+  .wk-src-icon{width:28px;height:28px;border-radius:8px;display:grid;place-items:center;font-size:14px;background:var(--surface-2);flex:0 0 28px}
+  .wk-src-count{margin-left:auto;margin-right:8px;font-size:11px;color:var(--muted-2)}
+  .wk-src-total{font-size:12px;color:var(--muted-2);text-align:center;padding:6px 0}
+  .wk-group-hdr{display:flex;justify-content:space-between;align-items:center;font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;padding:2px 4px}
+  .wk-ghamt{color:var(--text);font-size:14px}
+  .wk-pay-btn{background:linear-gradient(135deg,#10b981,#059669);color:#fff;border-radius:12px;padding:14px 20px;text-align:center;font-size:14px;font-weight:700;margin-top:4px;letter-spacing:.01em}
 
   @media (max-width:880px){
     .fx{grid-template-columns:1fr;gap:20px}
@@ -1001,15 +1011,40 @@
       <div class="wk-preview"><div class="wk-frame">
         <div class="wk-bar"><span class="dots"><i style="background:#ef4444"></i><i style="background:#f59e0b"></i><i style="background:#10b981"></i></span><span class="wk-url">app.cashflow.co.il</span></div>
         <div class="wk-stage">
-  <div class="wk-kpi">
-    <div class="wk-kt"><div class="k">Outstanding</div><div class="v blue">₪95,858</div></div>
-    <div class="wk-kt"><div class="k">Overdue</div><div class="v red">₪47,313</div></div>
-    <div class="wk-kt"><div class="k">Next Month</div><div class="v amber">₪48,544</div></div>
-    <div class="wk-kt"><div class="k">Total Paid</div><div class="v green">₪18,299</div></div>
+  <div class="wk-shot active" data-i="0">
+    <div class="wk-scene-title">Sources syncing now</div>
+    <div class="wk-src-row"><span class="wk-src-icon">✉️</span><span>Gmail</span><span class="wk-src-count">12 invoices</span><span class="wbadge paid">Synced</span></div>
+    <div class="wk-src-row"><span class="wk-src-icon">▲</span><span>Google Drive</span><span class="wk-src-count">7 invoices</span><span class="wbadge paid">Synced</span></div>
+    <div class="wk-src-row"><span class="wk-src-icon">💬</span><span>WhatsApp</span><span class="wk-src-count">3 invoices</span><span class="wbadge due">Pending</span></div>
+    <div class="wk-src-row"><span class="wk-src-icon">🟢</span><span>Green Invoice</span><span class="wk-src-count">5 invoices</span><span class="wbadge paid">Synced</span></div>
+    <div class="wk-src-total">27 invoices imported · OCR complete</div>
   </div>
-  <div class="wk-mini-spark"><i style="height:55%"></i><i style="height:70%"></i><i style="height:45%"></i><i style="height:85%"></i><i style="height:60%"></i><i style="height:90%"></i><i style="height:75%"></i></div>
-  <div class="wk-invoice-row"><span class="wdot" style="background:#f59e0b"></span>Cohen Electric<span class="wamt">₪8,400 · Due Jun 30</span><span class="wbadge due">Due Soon</span></div>
-  <div class="wk-invoice-row"><span class="wdot" style="background:#10b981"></span>Packaging Co.<span class="wamt">₪3,200 · Paid Jun 18</span><span class="wbadge paid">Paid</span></div>
+  <div class="wk-shot" data-i="1">
+    <div class="wk-scene-title">Payables by month</div>
+    <div class="wk-group-hdr"><span>June 2025</span><span class="wk-ghamt">₪47,313</span></div>
+    <div class="wk-invoice-row"><span class="wdot" style="background:#ef4444"></span>Cohen Electric<span class="wamt">₪8,400</span><span class="wbadge due">Overdue</span></div>
+    <div class="wk-invoice-row"><span class="wdot" style="background:#f59e0b"></span>Packaging Co.<span class="wamt">₪12,900</span><span class="wbadge due">Due Jun 30</span></div>
+    <div class="wk-group-hdr" style="margin-top:8px"><span>July 2025</span><span class="wk-ghamt">₪48,544</span></div>
+    <div class="wk-invoice-row"><span class="wdot" style="background:#60a5fa"></span>Office Supplies Ltd<span class="wamt">₪6,200</span><span class="wbadge" style="background:rgba(96,165,250,.15);color:#60a5fa">Upcoming</span></div>
+  </div>
+  <div class="wk-shot" data-i="2">
+    <div class="wk-scene-title">June batch — ready to mark paid</div>
+    <div class="wk-invoice-row"><input type="checkbox" checked disabled style="margin-right:4px;accent-color:#10b981"><span class="wdot" style="background:#ef4444"></span>Cohen Electric<span class="wamt">₪8,400</span></div>
+    <div class="wk-invoice-row"><input type="checkbox" checked disabled style="margin-right:4px;accent-color:#10b981"><span class="wdot" style="background:#f59e0b"></span>Packaging Co.<span class="wamt">₪12,900</span></div>
+    <div class="wk-invoice-row"><input type="checkbox" checked disabled style="margin-right:4px;accent-color:#10b981"><span class="wdot" style="background:#60a5fa"></span>Supplier A<span class="wamt">₪25,844</span></div>
+    <div class="wk-pay-btn">✓ Mark All Paid · ₪47,313</div>
+  </div>
+  <div class="wk-shot" data-i="3">
+    <div class="wk-kpi">
+      <div class="wk-kt"><div class="k">Outstanding</div><div class="v blue">₪48,544</div></div>
+      <div class="wk-kt"><div class="k">Overdue</div><div class="v green">₪0</div></div>
+      <div class="wk-kt"><div class="k">Next Month</div><div class="v amber">₪48,544</div></div>
+      <div class="wk-kt"><div class="k">Total Paid</div><div class="v green">₪65,612</div></div>
+    </div>
+    <div class="wk-mini-spark"><i style="height:55%"></i><i style="height:70%"></i><i style="height:45%"></i><i style="height:85%"></i><i style="height:60%"></i><i style="height:90%"></i><i style="height:100%"></i></div>
+    <div class="wk-invoice-row"><span class="wdot" style="background:#10b981"></span>Cohen Electric<span class="wamt">₪8,400 · Paid Jun 28</span><span class="wbadge paid">Paid</span></div>
+    <div class="wk-invoice-row"><span class="wdot" style="background:#10b981"></span>Packaging Co.<span class="wamt">₪12,900 · Paid Jun 28</span><span class="wbadge paid">Paid</span></div>
+  </div>
 </div>
       </div></div>
     </div>
