@@ -4,6 +4,7 @@
 // browser has no delete credentials.
 const supabase = require('../lib/supabase');
 const storage  = require('../lib/storage');
+const { assertInvoiceLimit } = require('../lib/plans');
 
 // Best-effort removal of an invoice's stored original. Never throws — a missing
 // or already-deleted object must not block the row delete.
@@ -65,6 +66,15 @@ exports.bulkRemove = async (req, res) => {
 exports.presignUpload = async (req, res) => {
   const { filename, contentType, fileHash } = req.body || {};
   if (!filename) return res.status(400).json({ error: 'filename is required' });
+
+  try {
+    await assertInvoiceLimit(req.user.id);
+  } catch (limitErr) {
+    if (limitErr.code === 'PLAN_LIMIT_REACHED') {
+      return res.status(402).json({ error: limitErr.code, used: limitErr.used, limit: limitErr.limit, plan: limitErr.plan });
+    }
+    throw limitErr;
+  }
 
   const backend = storage.activeBackend();
   if (backend !== 'r2') return res.json({ backend });

@@ -2,6 +2,7 @@ const { google } = require('googleapis');
 const supabase   = require('../lib/supabase');
 const storage    = require('../lib/storage');
 const sync       = require('../services/syncProcessor');
+const { assertInvoiceLimit } = require('../lib/plans');
 
 const SCOPES = {
   google_drive: ['https://www.googleapis.com/auth/drive.readonly'],
@@ -385,6 +386,15 @@ const createDriveSyncJob = async (integration, userId) => {
 
 // POST /api/integrations/:id/sync  — returns immediately with a jobId for Drive
 exports.triggerSync = async (req, res) => {
+  try {
+    await assertInvoiceLimit(req.user.id);
+  } catch (limitErr) {
+    if (limitErr.code === 'PLAN_LIMIT_REACHED') {
+      return res.status(402).json({ error: limitErr.code, used: limitErr.used, limit: limitErr.limit, plan: limitErr.plan });
+    }
+    throw limitErr;
+  }
+
   const { data: integration, error } = await supabase
     .from('integrations')
     .select('*')

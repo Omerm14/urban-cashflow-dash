@@ -2,10 +2,23 @@
 // All prompts / JSON parsing live in lib/extraction.js so this path stays in
 // lockstep with the integration sync path (same supplier/date/credit rules).
 const extraction = require('../lib/extraction');
+const { assertInvoiceLimit } = require('../lib/plans');
 
 module.exports = async (req, res) => {
   const { b64, mediaType = 'image/jpeg', text, mode } = req.body;
   if (!b64 && !text) return res.status(400).json({ error: 'Missing image or text data' });
+
+  // Translations don't create invoices — skip limit check for that mode.
+  if (mode !== 'translate') {
+    try {
+      await assertInvoiceLimit(req.user.id);
+    } catch (limitErr) {
+      if (limitErr.code === 'PLAN_LIMIT_REACHED') {
+        return res.status(402).json({ error: limitErr.code, used: limitErr.used, limit: limitErr.limit, plan: limitErr.plan });
+      }
+      throw limitErr;
+    }
+  }
 
   try {
     let result;

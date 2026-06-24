@@ -470,7 +470,7 @@ function WhatsAppModal({ onClose, onSave }) {
 
 // ─── Integration card ─────────────────────────────────────────────────────────
 
-function IntegrationCard({ type, integration, onRefresh, onInvoicesRefresh, onNotificationsRefresh, showToast, onConnectModal, onStartSync, onCancelSync, activeSyncJob }) {
+function IntegrationCard({ type, integration, onRefresh, onInvoicesRefresh, onNotificationsRefresh, showToast, onConnectModal, onStartSync, onCancelSync, activeSyncJob, isAtLimit, onUpgrade }) {
   const cfg       = PROVIDERS[type];
   const Icon      = ICONS[type];
   const status    = integration?.status || "disconnected";
@@ -728,12 +728,16 @@ function IntegrationCard({ type, integration, onRefresh, onInvoicesRefresh, onNo
             </Btn>
           ) : (
             <>
-              <Btn onClick={() => handleSync(false)} disabled={isActive}
-                style={syncDone ? { background:"#052e16", color:"#4ade80", borderColor:"#166534" } : {}}>
+              <Btn
+                onClick={isAtLimit ? onUpgrade : () => handleSync(false)}
+                disabled={isActive}
+                title={isAtLimit ? 'הגעת למגבלת החשבוניות — שדרג לפלאן גבוה יותר' : undefined}
+                style={syncDone ? { background:"#052e16", color:"#4ade80", borderColor:"#166534" } : isAtLimit ? { opacity:.6 } : {}}>
                 {discovering ? "Finding files…"
                   : isJobSyncing ? `File ${Math.min(activeSyncJob.cursor, activeSyncJob.totalFiles)} / ${activeSyncJob.totalFiles}`
                   : resyncing ? "Re-syncing…"
                   : syncDone ? "✓ Done"
+                  : isAtLimit ? "🔒 Sync Now"
                   : "Sync Now"}
               </Btn>
               {isJobSyncing && (
@@ -917,8 +921,13 @@ function IntegrationCard({ type, integration, onRefresh, onInvoicesRefresh, onNo
               {savingConfig ? "Saving…" : "Save Settings"}
             </Btn>
             {type !== "whatsapp" && (
-              <Btn variant="secondary" onClick={() => handleSync(true)} disabled={isActive} style={{ fontSize: 12 }}>
-                {resyncing ? "Resyncing…" : "↺ Resync All (from beginning)"}
+              <Btn
+                variant="secondary"
+                onClick={isAtLimit ? onUpgrade : () => handleSync(true)}
+                disabled={isActive}
+                title={isAtLimit ? 'הגעת למגבלת החשבוניות — שדרג לפלאן גבוה יותר' : undefined}
+                style={{ fontSize: 12, ...(isAtLimit ? { opacity:.6 } : {}) }}>
+                {resyncing ? "Resyncing…" : isAtLimit ? "🔒 Resync All" : "↺ Resync All (from beginning)"}
               </Btn>
             )}
           </div>
@@ -946,7 +955,7 @@ function IntegrationCard({ type, integration, onRefresh, onInvoicesRefresh, onNo
 
 // ─── Main page ────────────────────────────────────────────────────────────────
 
-export default function IntegrationsPage({ oauthResult, onClearOAuthResult, onInvoicesRefresh, onNotificationsRefresh, onStartSync, onCancelSync, syncJobs }) {
+export default function IntegrationsPage({ oauthResult, onClearOAuthResult, onInvoicesRefresh, onNotificationsRefresh, onStartSync, onCancelSync, syncJobs, isAtLimit, onUpgrade }) {
   const [integrations,      setIntegrations]      = useState([]);
   const [loading,           setLoading]           = useState(true);
   const [toast,             setToast]             = useState(null);
@@ -1040,6 +1049,8 @@ export default function IntegrationsPage({ oauthResult, onClearOAuthResult, onIn
               onStartSync={onStartSync}
               onCancelSync={onCancelSync}
               activeSyncJob={activeSyncJob}
+              isAtLimit={isAtLimit}
+              onUpgrade={onUpgrade}
             />
           );
         })}
