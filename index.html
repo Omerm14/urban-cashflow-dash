@@ -30,8 +30,30 @@
 
   *{box-sizing:border-box;margin:0;padding:0}
   html{scroll-behavior:smooth}
+
+  /* ===== Global kinetic background ===== */
+  #pageBg{position:fixed;inset:0;z-index:-2;background:#0b0d12;overflow:hidden;pointer-events:none}
+  .pg-blob{position:absolute;border-radius:50%;filter:blur(120px);will-change:transform;pointer-events:none}
+  .pg-blob.p1{width:700px;height:700px;background:radial-gradient(circle,rgba(29,78,216,.55),transparent 70%);top:-200px;left:-200px;animation:pgdrift1 22s ease-in-out infinite alternate}
+  .pg-blob.p2{width:600px;height:600px;background:radial-gradient(circle,rgba(6,182,212,.3),transparent 70%);top:30%;right:-220px;animation:pgdrift2 28s ease-in-out infinite alternate}
+  .pg-blob.p3{width:500px;height:500px;background:radial-gradient(circle,rgba(99,102,241,.28),transparent 70%);bottom:10%;left:20%;animation:pgdrift3 25s ease-in-out infinite alternate}
+  .pg-blob.p4{width:400px;height:400px;background:radial-gradient(circle,rgba(16,185,129,.15),transparent 70%);bottom:-100px;right:5%;animation:pgdrift4 20s ease-in-out infinite alternate}
+  @keyframes pgdrift1{to{transform:translate(120px,160px) scale(1.15)}}
+  @keyframes pgdrift2{to{transform:translate(-100px,140px) scale(1.12)}}
+  @keyframes pgdrift3{to{transform:translate(80px,-120px) scale(1.1)}}
+  @keyframes pgdrift4{to{transform:translate(-60px,80px) scale(1.08)}}
+  /* Mouse spotlight */
+  #pgSpot{position:fixed;width:900px;height:900px;border-radius:50%;pointer-events:none;z-index:-1;transform:translate(-50%,-50%);
+    background:radial-gradient(circle at center,rgba(59,130,246,.1) 0%,rgba(6,182,212,.05) 30%,transparent 65%);
+    filter:blur(40px);transition:left .5s cubic-bezier(.25,.46,.45,.94),top .5s cubic-bezier(.25,.46,.45,.94);
+    will-change:left,top;left:50%;top:50%}
+  /* Noise texture overlay for depth */
+  #pageNoise{position:fixed;inset:0;z-index:-1;pointer-events:none;opacity:.032;
+    background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    background-size:256px 256px}
+
   body{
-    background:var(--bg);
+    background:transparent;
     color:var(--text);
     font-family:'Inter',system-ui,-apple-system,sans-serif;
     line-height:1.6;
@@ -94,9 +116,9 @@
   .hero{padding:150px 0 90px;overflow:hidden}
   .hero-bg{position:absolute;inset:0;z-index:0;overflow:hidden}
   .blob{position:absolute;border-radius:50%;filter:blur(90px);will-change:transform}
-  .blob.b1{width:520px;height:520px;background:radial-gradient(circle,#1d4ed8,transparent 70%);opacity:.5;top:-160px;left:-120px;animation:drift1 16s var(--ease) infinite alternate}
-  .blob.b2{width:460px;height:460px;background:radial-gradient(circle,#06b6d4,transparent 70%);opacity:.35;top:40px;right:-140px;animation:drift2 19s var(--ease) infinite alternate}
-  .blob.b3{width:380px;height:380px;background:radial-gradient(circle,#6366f1,transparent 70%);opacity:.3;bottom:-160px;left:30%;animation:drift3 22s var(--ease) infinite alternate}
+  .blob.b1{width:520px;height:520px;background:radial-gradient(circle,#1d4ed8,transparent 70%);opacity:.25;top:-160px;left:-120px;animation:drift1 16s var(--ease) infinite alternate}
+  .blob.b2{width:460px;height:460px;background:radial-gradient(circle,#06b6d4,transparent 70%);opacity:.18;top:40px;right:-140px;animation:drift2 19s var(--ease) infinite alternate}
+  .blob.b3{width:380px;height:380px;background:radial-gradient(circle,#6366f1,transparent 70%);opacity:.15;bottom:-160px;left:30%;animation:drift3 22s var(--ease) infinite alternate}
   @keyframes drift1{to{transform:translate(80px,60px) scale(1.1)}}
   @keyframes drift2{to{transform:translate(-70px,90px) scale(1.08)}}
   @keyframes drift3{to{transform:translate(60px,-50px) scale(1.12)}}
@@ -710,6 +732,9 @@
 </style>
 </head>
 <body>
+<div id="pageBg" aria-hidden="true"><div class="pg-blob p1"></div><div class="pg-blob p2"></div><div class="pg-blob p3"></div><div class="pg-blob p4"></div></div>
+<div id="pgSpot" aria-hidden="true"></div>
+<div id="pageNoise" aria-hidden="true"></div>
 <div id="progress"></div>
 
 <!-- SVG logo mark (defined once, reused) -->
@@ -1318,6 +1343,25 @@
     });
     // Close on link click
     menu.querySelectorAll('a').forEach(a => a.addEventListener('click', () => { menu.style.display = 'none'; }));
+  })();
+
+
+  // Global mouse spotlight
+  (function(){
+    const spot = document.getElementById('pgSpot');
+    if(!spot) return;
+    let tx = window.innerWidth/2, ty = window.innerHeight/2;
+    let cx = tx, cy = ty;
+    function lerp(a,b,t){return a+(b-a)*t}
+    function tick(){
+      cx = lerp(cx,tx,.06);
+      cy = lerp(cy,ty,.06);
+      spot.style.left = cx+'px';
+      spot.style.top = cy+'px';
+      requestAnimationFrame(tick);
+    }
+    document.addEventListener('mousemove',e=>{tx=e.clientX;ty=e.clientY;});
+    tick();
   })();
 
 </script>
