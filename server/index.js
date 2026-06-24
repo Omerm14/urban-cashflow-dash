@@ -10,8 +10,12 @@ const app  = express();
 const auth = require('./middleware/auth');
 
 // Capture raw body for webhook signature verification before JSON parsing
+// (needed for both WhatsApp HMAC and Stripe signature verification).
 app.use((req, res, next) => {
-  if (req.path === '/api/webhook/whatsapp' && req.method === 'POST') {
+  const needsRaw =
+    (req.path === '/api/webhook/whatsapp' && req.method === 'POST') ||
+    (req.path === '/api/stripe/webhook'   && req.method === 'POST');
+  if (needsRaw) {
     let data = '';
     req.on('data', chunk => { data += chunk; });
     req.on('end', () => { req.rawBody = data; next(); });
@@ -55,6 +59,11 @@ app.post('/api/attachments/presign',      auth, invoices.presignUpload);
 const webhook = require('./routes/webhook');
 app.get('/api/webhook/whatsapp',  webhook.verifyWhatsApp);
 app.post('/api/webhook/whatsapp', webhook.handleWhatsApp);
+
+// Stripe (webhook has no auth; rest uses auth middleware)
+const stripeRoutes = require('./routes/stripe');
+app.post('/api/stripe/webhook', stripeRoutes.webhook);
+app.use('/api/stripe', auth, stripeRoutes.router);
 
 // Cron (secured by CRON_SECRET header)
 app.get('/api/cron/sync', require('./routes/cron').runSync);

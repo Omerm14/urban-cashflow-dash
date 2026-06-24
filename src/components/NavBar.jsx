@@ -1,6 +1,13 @@
 import LogoIcon from "./LogoIcon";
 
-export default function NavBar({ view, setView, suppliersCount, onSuppliersClick, user, onSignOut, integrationError, unreadCount, onBellClick }) {
+const PLAN_BADGE = {
+  free:       { label: 'FREE',       bg: '#1e2330', color: '#64748b', border: '#2a3142' },
+  basic:      { label: 'BASIC',      bg: 'rgba(16,185,129,.12)', color: '#10b981', border: 'rgba(16,185,129,.3)' },
+  pro:        { label: 'PRO',        bg: 'rgba(59,130,246,.12)', color: '#60a5fa', border: 'rgba(59,130,246,.35)' },
+  enterprise: { label: 'ENTERPRISE', bg: 'rgba(99,102,241,.12)', color: '#818cf8', border: 'rgba(99,102,241,.35)' },
+};
+
+export default function NavBar({ view, setView, suppliersCount, onSuppliersClick, user, onSignOut, integrationError, unreadCount, onBellClick, plan }) {
   const isAdmin = user?.email && import.meta.env.VITE_ADMIN_EMAIL && user.email === import.meta.env.VITE_ADMIN_EMAIL;
   const views = isAdmin
     ? ["dashboard","invoices","calendar","integrations","admin"]
@@ -51,6 +58,16 @@ export default function NavBar({ view, setView, suppliersCount, onSuppliersClick
 
         {user && (
           <>
+            {plan && (() => {
+              const b = PLAN_BADGE[plan] || PLAN_BADGE.free;
+              return (
+                <span style={{
+                  fontSize: 10, fontWeight: 700, letterSpacing: '.08em',
+                  padding: '3px 8px', borderRadius: 6,
+                  background: b.bg, color: b.color, border: `1px solid ${b.border}`,
+                }}>{b.label}</span>
+              );
+            })()}
             <span style={{ fontSize:12, color:"var(--t3)", maxWidth:140, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{user.email}</span>
             <button onClick={onSignOut} className="btn btn-ghost btn-sm">Sign out</button>
           </>

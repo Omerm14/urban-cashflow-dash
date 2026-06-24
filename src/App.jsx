@@ -3,6 +3,7 @@ import { useAuth }            from "./contexts/AuthContext";
 import { useInvoiceData }     from "./hooks/useInvoiceData";
 import { useNotifications }   from "./hooks/useNotifications";
 import { useSyncJob }         from "./hooks/useSyncJob";
+import { usePlan }            from "./hooks/usePlan";
 import LoginPage              from "./pages/LoginPage";
 import AdminPage              from "./pages/AdminPage";
 import NavBar                 from "./components/NavBar";
@@ -13,6 +14,8 @@ import IntegrationsPage       from "./components/IntegrationsPage";
 import EditInvoiceModal       from "./components/EditInvoiceModal";
 import SuppliersModal         from "./components/SuppliersModal";
 import AttachmentPreviewModal from "./components/AttachmentPreviewModal";
+import UsageBanner            from "./components/UsageBanner";
+import UpgradeModal           from "./components/UpgradeModal";
 import { processPdf, fileToBase64, extractInvoice, translateSupplierName } from "./utils/image";
 import { findDuplicates, parseCSV, isLatinOnly }                           from "./utils/invoice";
 import { calcDueDate, toYM, correctSwappedDate }                           from "./utils/dates";
@@ -110,6 +113,11 @@ export default function App() {
     onBatchDone: appendInvoices,
     onJobDone:   () => refreshNotifications(),
   });
+
+  const { plan, limit, used, remaining, pct, isAtLimit, isNearLimit, refresh: refreshPlan } = usePlan();
+  const [upgradeModalDismissed, setUpgradeModalDismissed] = useState(false);
+  const showUpgradeModal = isAtLimit && !upgradeModalDismissed;
+  const openUpgrade = () => setUpgradeModalDismissed(false);
 
   const handleViewAttachment = useCallback(async inv => {
     setLoadingPreview(true);
@@ -238,6 +246,7 @@ export default function App() {
     );
 
     setExtracting(false);
+    if (added > 0) refreshPlan();
     const parts = [];
     if (added) parts.push(`${added} added`);
     if (fileSkipped.length) parts.push(`${fileSkipped.length} already uploaded`);
@@ -299,7 +308,17 @@ export default function App() {
         integrationError={false}
         unreadCount={unreadCount}
         onBellClick={() => { setShowNotifPanel(v => !v); if (!showNotifPanel) markAllRead(); }}
+        plan={plan}
       />
+
+      <UsageBanner plan={plan} used={used} limit={limit} remaining={remaining} onUpgrade={openUpgrade} />
+
+      {showUpgradeModal && (
+        <UpgradeModal
+          plan={plan} used={used} limit={limit}
+          onContinueReadonly={() => setUpgradeModalDismissed(true)}
+        />
+      )}
 
       {/* Notification panel — slides in from top-right below navbar */}
       {showNotifPanel && (
@@ -358,8 +377,11 @@ export default function App() {
         {view !== "admin" && view !== "integrations" && (
           <div style={{ display:"flex", gap:10, marginBottom:32, alignItems:"center", flexWrap:"wrap" }}>
             <button className="btn btn-primary" style={{ padding:"10px 20px", fontSize:13 }}
-              onClick={() => fileRef.current.click()} disabled={extracting || loading}>
-              <span style={{ fontSize:16 }}>+</span>{extracting ? "Extracting…" : loading ? "Loading…" : "Upload Invoices"}
+              onClick={isAtLimit ? openUpgrade : () => fileRef.current.click()}
+              disabled={extracting || loading}
+              title={isAtLimit ? 'הגעת למגבלת החשבוניות — שדרג לפלאן גבוה יותר' : undefined}>
+              <span style={{ fontSize:16 }}>+</span>
+              {extracting ? "Extracting…" : loading ? "Loading…" : isAtLimit ? "🔒 Upload Invoices" : "Upload Invoices"}
             </button>
             <input ref={fileRef} type="file" accept="image/*,application/pdf" multiple onChange={handleUpload} style={{ display:"none" }} />
 
@@ -389,11 +411,13 @@ export default function App() {
           <IntegrationsPage
             oauthResult={oauthResult}
             onClearOAuthResult={() => setOAuthResult(null)}
-            onInvoicesRefresh={refreshInvoices}
+            onInvoicesRefresh={() => { refreshInvoices(); refreshPlan(); }}
             onNotificationsRefresh={refreshNotifications}
             onStartSync={startSync}
             onCancelSync={cancelSync}
             syncJobs={syncJobs}
+            isAtLimit={isAtLimit}
+            onUpgrade={openUpgrade}
           />
         )}
         </div>
