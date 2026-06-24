@@ -1,7 +1,9 @@
 import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 
 export default function LoginPage() {
+  const navigate = useNavigate()
   const [mode,     setMode]     = useState('signin') // 'signin' | 'signup'
   const [email,    setEmail]    = useState('')
   const [password, setPassword] = useState('')
@@ -12,12 +14,15 @@ export default function LoginPage() {
   const submit = async e => {
     e.preventDefault()
     setBusy(true); setError(null); setMsg(null)
-    const fn = mode === 'signup'
-      ? supabase.auth.signUp({ email, password })
-      : supabase.auth.signInWithPassword({ email, password })
-    const { error } = await fn
-    if (error) setError(error.message)
-    else if (mode === 'signup') setMsg('Check your email to confirm your account.')
+    if (mode === 'signup') {
+      const { error } = await supabase.auth.signUp({ email, password })
+      if (error) setError(error.message)
+      else setMsg('Check your email to confirm your account.')
+    } else {
+      const { error } = await supabase.auth.signInWithPassword({ email, password })
+      if (error) setError(error.message)
+      else navigate('/app')
+    }
     setBusy(false)
   }
 
@@ -25,7 +30,7 @@ export default function LoginPage() {
     setBusy(true); setError(null)
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
-      options: { redirectTo: window.location.origin },
+      options: { redirectTo: window.location.origin + '/app' },
     })
     if (error) { setError(error.message); setBusy(false) }
   }

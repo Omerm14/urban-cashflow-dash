@@ -1,4 +1,5 @@
 import { useState, useRef, useCallback, useEffect } from "react";
+import { Routes, Route, Navigate } from "react-router-dom";
 import { useAuth }            from "./contexts/AuthContext";
 import { useInvoiceData }     from "./hooks/useInvoiceData";
 import { useNotifications }   from "./hooks/useNotifications";
@@ -288,12 +289,21 @@ export default function App() {
   }, []);
 
   if (authLoading) return (
-    <div style={{ background:"var(--bg)", minHeight:"100vh", display:"flex", alignItems:"center", justifyContent:"center" }}>
-      <div style={{ color:"var(--t3)", fontSize:14 }}>Loading…</div>
-    </div>
+    <Routes>
+      <Route path="*" element={
+        <div style={{ background:"var(--bg)", minHeight:"100vh", display:"flex", alignItems:"center", justifyContent:"center" }}>
+          <div style={{ color:"var(--t3)", fontSize:14 }}>Loading…</div>
+        </div>
+      } />
+    </Routes>
   );
 
-  if (!user) return <LoginPage />;
+  if (!user) return (
+    <Routes>
+      <Route path="/login" element={<LoginPage />} />
+      <Route path="*"      element={<Navigate to="/login" replace />} />
+    </Routes>
+  );
 
   if (loading) return (
     <div style={{ background:"var(--bg)", minHeight:"100vh", display:"flex", alignItems:"center", justifyContent:"center" }}>
@@ -302,6 +312,9 @@ export default function App() {
   );
 
   return (
+    <Routes>
+      <Route path="/login" element={<Navigate to="/app" replace />} />
+      <Route path="*" element={
     <div style={{ background:"var(--bg)", minHeight:"100vh", color:"var(--t1)" }}>
       <NavBar view={view} setView={setView} suppliersCount={suppliers.length}
         onSuppliersClick={() => setShowSuppliers(true)} user={user} onSignOut={signOut}
@@ -471,5 +484,7 @@ export default function App() {
         />
       )}
     </div>
+      } />
+    </Routes>
   );
 }
