@@ -56,6 +56,9 @@ const billing = require('../server/routes/billing');
 app.post('/api/billing/ipn', billing.ipn);
 app.use('/api/billing', auth, billing.router);
 
+// Account management
+app.delete('/api/account', auth, require('../server/routes/account').deleteAccount);
+
 // Cron (secured by CRON_SECRET header)
 app.get('/api/cron/sync', require('../server/routes/cron').runSync);
 app.get('/api/cron/gc',   require('../server/routes/gc').runGc);

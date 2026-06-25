@@ -1,4 +1,6 @@
+import { useState, useRef, useEffect } from 'react';
 import LogoIcon from "./LogoIcon";
+import { getInitials } from '../pages/SettingsPage';
 
 const PLAN_BADGE = {
   free:       { label: 'FREE',       bg: 'rgba(100,116,139,.15)', color: '#94a3b8', border: 'rgba(100,116,139,.3)' },
@@ -7,11 +9,20 @@ const PLAN_BADGE = {
   enterprise: { label: 'ENTERPRISE', bg: 'rgba(99,102,241,.12)',  color: '#818cf8', border: 'rgba(99,102,241,.35)' },
 };
 
-export default function NavBar({ view, setView, suppliersCount, onSuppliersClick, user, onSignOut, integrationError, unreadCount, onBellClick, plan, onUpgrade }) {
+export default function NavBar({ view, setView, suppliersCount, onSuppliersClick, user, onSignOut, integrationError, unreadCount, onBellClick, plan, onUpgrade, onSettings }) {
   const isAdmin = user?.email && import.meta.env.VITE_ADMIN_EMAIL && user.email === import.meta.env.VITE_ADMIN_EMAIL;
   const views = isAdmin
     ? ["dashboard","invoices","calendar","integrations","admin"]
     : ["dashboard","invoices","calendar","integrations"];
+
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuRef = useRef(null);
+
+  useEffect(() => {
+    const handler = e => { if (menuRef.current && !menuRef.current.contains(e.target)) setMenuOpen(false); };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
 
   return (
     <nav className="nav">
@@ -73,18 +84,58 @@ export default function NavBar({ view, setView, suppliersCount, onSuppliersClick
               );
             })()}
             {(plan === 'free' || plan === 'basic') && (
-              <button
-                onClick={onUpgrade}
-                style={{
-                  background: 'linear-gradient(135deg,var(--purple),var(--primary))',
-                  border: 'none', borderRadius: 8, padding: '5px 11px',
-                  fontSize: 12, fontWeight: 700, color: '#fff',
-                  cursor: 'pointer', fontFamily: 'inherit',
-                }}>
-                Upgrade ↑
-              </button>
+              <button onClick={onUpgrade} style={{
+                background: 'linear-gradient(135deg,var(--purple),var(--primary))',
+                border: 'none', borderRadius: 8, padding: '5px 11px',
+                fontSize: 12, fontWeight: 700, color: '#fff',
+                cursor: 'pointer', fontFamily: 'inherit',
+              }}>Upgrade ↑</button>
             )}
-            <button onClick={onSignOut} title={user.email} className="btn btn-ghost btn-sm">Sign out</button>
+
+            {/* Avatar / user menu */}
+            <div ref={menuRef} style={{ position: 'relative' }}>
+              <button
+                onClick={() => setMenuOpen(v => !v)}
+                title={user.email}
+                style={{
+                  width: 32, height: 32, borderRadius: '50%',
+                  background: 'linear-gradient(135deg,#6366f1,#3b82f6)',
+                  border: 'none', cursor: 'pointer',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontSize: 12, fontWeight: 800, color: '#fff', fontFamily: 'inherit',
+                  flexShrink: 0,
+                }}>
+                {getInitials(user)}
+              </button>
+              {menuOpen && (
+                <div style={{
+                  position: 'absolute', top: 40, right: 0, zIndex: 200,
+                  background: 'var(--surf)', border: '1px solid var(--bdr2)',
+                  borderRadius: 10, boxShadow: '0 8px 24px rgba(0,0,0,.4)',
+                  minWidth: 160, overflow: 'hidden',
+                }}>
+                  <div style={{ padding: '10px 14px', borderBottom: '1px solid var(--bdr)', fontSize: 12, color: 'var(--t3)' }}>
+                    {user.email}
+                  </div>
+                  <button onClick={() => { setMenuOpen(false); onSettings(); }} style={{
+                    display: 'block', width: '100%', padding: '11px 14px',
+                    background: 'none', border: 'none', textAlign: 'left',
+                    fontSize: 13, color: 'var(--t1)', cursor: 'pointer', fontFamily: 'inherit',
+                  }}
+                    onMouseEnter={e => e.currentTarget.style.background = 'var(--surf2)'}
+                    onMouseLeave={e => e.currentTarget.style.background = 'none'}
+                  >⚙ Settings</button>
+                  <button onClick={() => { setMenuOpen(false); onSignOut(); }} style={{
+                    display: 'block', width: '100%', padding: '11px 14px',
+                    background: 'none', border: 'none', textAlign: 'left',
+                    fontSize: 13, color: '#ef4444', cursor: 'pointer', fontFamily: 'inherit',
+                  }}
+                    onMouseEnter={e => e.currentTarget.style.background = 'var(--surf2)'}
+                    onMouseLeave={e => e.currentTarget.style.background = 'none'}
+                  >↩ Sign out</button>
+                </div>
+              )}
+            </div>
           </>
         )}
       </div>
