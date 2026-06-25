@@ -117,8 +117,10 @@ export default function App() {
 
   const { plan, limit, used, remaining, pct, isAtLimit, isNearLimit, refresh: refreshPlan } = usePlan();
   const [upgradeModalDismissed, setUpgradeModalDismissed] = useState(false);
-  const showUpgradeModal = isAtLimit && !upgradeModalDismissed;
-  const openUpgrade = () => setUpgradeModalDismissed(false);
+  const [upgradeModalForced,    setUpgradeModalForced]    = useState(false);
+  const showUpgradeModal = (isAtLimit && !upgradeModalDismissed) || upgradeModalForced;
+  const openUpgrade  = () => { setUpgradeModalDismissed(false); setUpgradeModalForced(true); };
+  const closeUpgrade = () => { setUpgradeModalDismissed(true);  setUpgradeModalForced(false); };
 
   const handleViewAttachment = useCallback(async inv => {
     setLoadingPreview(true);
@@ -330,7 +332,7 @@ export default function App() {
       {showUpgradeModal && (
         <UpgradeModal
           plan={plan} used={used} limit={limit}
-          onContinueReadonly={() => setUpgradeModalDismissed(true)}
+          onContinueReadonly={closeUpgrade}
         />
       )}
 
