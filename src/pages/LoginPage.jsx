@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { supabase } from '../lib/supabase'
+import LogoIcon from '../components/LogoIcon'
 
 export default function LoginPage() {
   const [mode,     setMode]     = useState('signin') // 'signin' | 'signup'
@@ -38,7 +39,7 @@ export default function LoginPage() {
     <div style={{ background:'#080e1a', minHeight:'100vh', display:'flex', alignItems:'center', justifyContent:'center', fontFamily:'Inter,system-ui,sans-serif' }}>
       <div style={{ width:380, background:'#0a1120', border:'1px solid #111d2e', borderRadius:16, padding:32 }}>
         <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:32 }}>
-          <div style={{ width:36, height:36, borderRadius:10, background:'linear-gradient(135deg,#3b82f6,#06b6d4)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:18 }}>💸</div>
+          <LogoIcon size={36}/>
           <span style={{ fontWeight:700, fontSize:18, color:'#f1f5f9' }}>Cashflow</span>
         </div>
 

@@ -1,38 +1,32 @@
-<svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+<svg width="32" height="32" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
   <defs>
-    <linearGradient id="fav-bg" x1="0" y1="0" x2="32" y2="32" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#0f172a"/>
-      <stop offset="1" stop-color="#0b1628"/>
-    </linearGradient>
-    <linearGradient id="fav-arc" x1="2" y1="3" x2="22" y2="29" gradientUnits="userSpaceOnUse">
+    <linearGradient id="fav-arc" x1="4" y1="4" x2="36" y2="36" gradientUnits="userSpaceOnUse">
       <stop stop-color="#3b82f6"/>
       <stop offset="1" stop-color="#2563eb"/>
     </linearGradient>
-    <linearGradient id="fav-arrow" x1="18" y1="22" x2="29" y2="11" gradientUnits="userSpaceOnUse">
+    <linearGradient id="fav-arrow" x1="24" y1="32" x2="36" y2="18" gradientUnits="userSpaceOnUse">
       <stop stop-color="#06b6d4"/>
-      <stop offset="1" stop-color="#0891b2"/>
+      <stop offset="1" stop-color="#22d3ee"/>
     </linearGradient>
   </defs>
 
-  <!-- Background rounded square -->
-  <rect width="32" height="32" rx="7" fill="url(#fav-bg)"/>
+  <!-- Background -->
+  <rect width="40" height="40" rx="10" fill="#0d1f3c"/>
 
   <!-- C-arc -->
-  <path
-    d="M25.5 10.5C23.5 7.2 19.8 5 16 5C9.9 5 5 9.9 5 16C5 22.1 9.9 27 16 27C19.8 27 23.5 24.8 25.5 21.5"
-    stroke="url(#fav-arc)"
-    stroke-width="3.5"
-    stroke-linecap="round"
-    fill="none"
-  />
+  <path d="M30 12C27 8.5 23.2 7 20 7C13 7 7 13 7 20C7 27 13 33 20 33C23.2 33 27 31.5 30 28"
+    stroke="url(#fav-arc)" stroke-width="3.8" stroke-linecap="round" fill="none"/>
 
-  <!-- Document -->
-  <rect x="11" y="10" width="10" height="13" rx="2" fill="white"/>
-  <line x1="13.5" y1="15" x2="18.5" y2="15" stroke="#3b82f6" stroke-width="1" stroke-linecap="round" opacity="0.6"/>
-  <line x1="13.5" y1="17.2" x2="18.5" y2="17.2" stroke="#3b82f6" stroke-width="1" stroke-linecap="round" opacity="0.6"/>
-  <line x1="13.5" y1="19.4" x2="16.5" y2="19.4" stroke="#3b82f6" stroke-width="1" stroke-linecap="round" opacity="0.6"/>
+  <!-- Document body -->
+  <rect x="15" y="13" width="11" height="14" rx="2" fill="white"/>
+  <path d="M22 13 L26 17 L22 17 Z" fill="#dbeafe" opacity="0.6"/>
+
+  <!-- Document lines -->
+  <line x1="17.5" y1="20" x2="23.5" y2="20" stroke="#3b82f6" stroke-width="1.1" stroke-linecap="round" opacity="0.55"/>
+  <line x1="17.5" y1="22.5" x2="23.5" y2="22.5" stroke="#3b82f6" stroke-width="1.1" stroke-linecap="round" opacity="0.55"/>
+  <line x1="17.5" y1="25" x2="21" y2="25" stroke="#3b82f6" stroke-width="1.1" stroke-linecap="round" opacity="0.55"/>
 
   <!-- Upward arrow (cyan) -->
-  <path d="M22.5 23C24 21 26 18.5 25 15" stroke="url(#fav-arrow)" stroke-width="2.2" stroke-linecap="round" fill="none"/>
-  <polyline points="22,12.5 25,15 27.5,12.5" stroke="url(#fav-arrow)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+  <path d="M27 31C29 28.5 31.5 25 30 21" stroke="url(#fav-arrow)" stroke-width="2.6" stroke-linecap="round" fill="none"/>
+  <polyline points="26.5,18 30,21 33,18" stroke="url(#fav-arrow)" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
 </svg>

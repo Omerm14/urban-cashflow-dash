@@ -2,50 +2,56 @@ export default function LogoIcon({ size = 36 }) {
   return (
     <svg width={size} height={size} viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
       <defs>
-        <linearGradient id="logo-arc-grad" x1="4" y1="4" x2="28" y2="36" gradientUnits="userSpaceOnUse">
+        <linearGradient id="li-bg" x1="0" y1="0" x2="40" y2="40" gradientUnits="userSpaceOnUse">
+          <stop stopColor="#0d1f3c"/>
+          <stop offset="1" stopColor="#0a1628"/>
+        </linearGradient>
+        <linearGradient id="li-arc" x1="4" y1="4" x2="36" y2="36" gradientUnits="userSpaceOnUse">
           <stop stopColor="#3b82f6"/>
           <stop offset="1" stopColor="#2563eb"/>
         </linearGradient>
-        <linearGradient id="logo-arrow-grad" x1="22" y1="28" x2="36" y2="14" gradientUnits="userSpaceOnUse">
+        <linearGradient id="li-arrow" x1="24" y1="32" x2="36" y2="18" gradientUnits="userSpaceOnUse">
           <stop stopColor="#06b6d4"/>
-          <stop offset="1" stopColor="#0891b2"/>
+          <stop offset="1" stopColor="#22d3ee"/>
         </linearGradient>
       </defs>
 
-      {/* C-arc: thick arc forming stylized "C" shape */}
+      {/* Background */}
+      <rect width="40" height="40" rx="10" fill="url(#li-bg)"/>
+
+      {/* C-arc — bold stroke forming the C shape, open on the right */}
       <path
-        d="M32 13.5C29.5 8.8 24.8 6 20 6C12.3 6 6 12.3 6 20C6 27.7 12.3 34 20 34C24.8 34 29.5 31.2 32 26.5"
-        stroke="url(#logo-arc-grad)"
-        strokeWidth="4.5"
+        d="M30 12C27 8.5 23.2 7 20 7C13 7 7 13 7 20C7 27 13 33 20 33C23.2 33 27 31.5 30 28"
+        stroke="url(#li-arc)"
+        strokeWidth="3.8"
         strokeLinecap="round"
         fill="none"
       />
 
       {/* Document body */}
-      <rect x="14" y="12" width="13" height="17" rx="2.5" fill="white"/>
+      <rect x="15" y="13" width="11" height="14" rx="2" fill="white"/>
 
-      {/* Document fold (top-right corner) */}
-      <path d="M23 12 L27 16 L23 16 Z" fill="url(#logo-arc-grad)"/>
-      <rect x="23" y="12" width="4" height="4" rx="0.5" fill="white" opacity="0.3"/>
+      {/* Document fold corner */}
+      <path d="M22 13 L26 17 L22 17 Z" fill="#dbeafe" opacity="0.6"/>
 
-      {/* Document lines */}
-      <line x1="17" y1="19.5" x2="24" y2="19.5" stroke="#3b82f6" strokeWidth="1.2" strokeLinecap="round" opacity="0.7"/>
-      <line x1="17" y1="22" x2="24" y2="22" stroke="#3b82f6" strokeWidth="1.2" strokeLinecap="round" opacity="0.7"/>
-      <line x1="17" y1="24.5" x2="21" y2="24.5" stroke="#3b82f6" strokeWidth="1.2" strokeLinecap="round" opacity="0.7"/>
+      {/* Document text lines */}
+      <line x1="17.5" y1="20" x2="23.5" y2="20" stroke="#3b82f6" strokeWidth="1.1" strokeLinecap="round" opacity="0.55"/>
+      <line x1="17.5" y1="22.5" x2="23.5" y2="22.5" stroke="#3b82f6" strokeWidth="1.1" strokeLinecap="round" opacity="0.55"/>
+      <line x1="17.5" y1="25" x2="21" y2="25" stroke="#3b82f6" strokeWidth="1.1" strokeLinecap="round" opacity="0.55"/>
 
-      {/* Curved upward arrow (cyan) emerging from bottom-right of arc */}
+      {/* Upward arrow tail (curved, cyan) */}
       <path
-        d="M28.5 29C30.5 26.5 33 23 31.5 19"
-        stroke="url(#logo-arrow-grad)"
-        strokeWidth="2.8"
+        d="M27 31C29 28.5 31.5 25 30 21"
+        stroke="url(#li-arrow)"
+        strokeWidth="2.6"
         strokeLinecap="round"
         fill="none"
       />
       {/* Arrowhead */}
       <polyline
-        points="28,16.5 31.5,19 34.5,16"
-        stroke="url(#logo-arrow-grad)"
-        strokeWidth="2.8"
+        points="26.5,18 30,21 33,18"
+        stroke="url(#li-arrow)"
+        strokeWidth="2.6"
         strokeLinecap="round"
         strokeLinejoin="round"
         fill="none"
