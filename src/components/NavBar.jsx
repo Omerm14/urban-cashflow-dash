@@ -7,7 +7,7 @@ const PLAN_BADGE = {
   enterprise: { label: 'ENTERPRISE', bg: 'rgba(99,102,241,.12)', color: '#818cf8', border: 'rgba(99,102,241,.35)' },
 };
 
-export default function NavBar({ view, setView, suppliersCount, onSuppliersClick, user, onSignOut, integrationError, unreadCount, onBellClick, plan }) {
+export default function NavBar({ view, setView, suppliersCount, onSuppliersClick, user, onSignOut, integrationError, unreadCount, onBellClick, plan, onUpgrade }) {
   const isAdmin = user?.email && import.meta.env.VITE_ADMIN_EMAIL && user.email === import.meta.env.VITE_ADMIN_EMAIL;
   const views = isAdmin
     ? ["dashboard","invoices","calendar","integrations","admin"]
@@ -61,13 +61,29 @@ export default function NavBar({ view, setView, suppliersCount, onSuppliersClick
             {plan && (() => {
               const b = PLAN_BADGE[plan] || PLAN_BADGE.free;
               return (
-                <span style={{
-                  fontSize: 10, fontWeight: 700, letterSpacing: '.08em',
-                  padding: '3px 8px', borderRadius: 6,
-                  background: b.bg, color: b.color, border: `1px solid ${b.border}`,
-                }}>{b.label}</span>
+                <span
+                  onClick={plan !== 'enterprise' ? onUpgrade : undefined}
+                  title={plan !== 'enterprise' ? 'View plans & upgrade' : undefined}
+                  style={{
+                    fontSize: 10, fontWeight: 700, letterSpacing: '.08em',
+                    padding: '3px 8px', borderRadius: 6,
+                    background: b.bg, color: b.color, border: `1px solid ${b.border}`,
+                    cursor: plan !== 'enterprise' ? 'pointer' : 'default',
+                  }}>{b.label}</span>
               );
             })()}
+            {(plan === 'free' || plan === 'basic') && (
+              <button
+                onClick={onUpgrade}
+                style={{
+                  background: 'linear-gradient(135deg,var(--purple),var(--primary))',
+                  border: 'none', borderRadius: 8, padding: '5px 11px',
+                  fontSize: 12, fontWeight: 700, color: '#fff',
+                  cursor: 'pointer', fontFamily: 'inherit',
+                }}>
+                Upgrade ↑
+              </button>
+            )}
             <span style={{ fontSize:12, color:"var(--t3)", maxWidth:140, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{user.email}</span>
             <button onClick={onSignOut} className="btn btn-ghost btn-sm">Sign out</button>
           </>

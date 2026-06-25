@@ -322,6 +322,7 @@ export default function App() {
         unreadCount={unreadCount}
         onBellClick={() => { setShowNotifPanel(v => !v); if (!showNotifPanel) markAllRead(); }}
         plan={plan}
+        onUpgrade={openUpgrade}
       />
 
       <UsageBanner plan={plan} used={used} limit={limit} remaining={remaining} onUpgrade={openUpgrade} />
@@ -392,7 +393,7 @@ export default function App() {
             <button className="btn btn-primary" style={{ padding:"10px 20px", fontSize:13 }}
               onClick={isAtLimit ? openUpgrade : () => fileRef.current.click()}
               disabled={extracting || loading}
-              title={isAtLimit ? 'הגעת למגבלת החשבוניות — שדרג לפלאן גבוה יותר' : undefined}>
+              title={isAtLimit ? 'Invoice limit reached — upgrade your plan' : undefined}>
               <span style={{ fontSize:16 }}>+</span>
               {extracting ? "Extracting…" : loading ? "Loading…" : isAtLimit ? "🔒 Upload Invoices" : "Upload Invoices"}
             </button>
