@@ -24,6 +24,7 @@ export default function InvoicesTable({ computed, dupeIds, updateInvoice, delete
 
   return (
     <div className="card" style={{ padding:0, overflow:"hidden" }}>
+      <div style={{ overflowX:"auto", WebkitOverflowScrolling:"touch" }}>
       <table className="itbl">
         <thead>
           <tr>
@@ -110,6 +111,7 @@ export default function InvoicesTable({ computed, dupeIds, updateInvoice, delete
           })}
         </tbody>
       </table>
+      </div>
       <div style={{ padding:"14px 18px", borderTop:"1px solid rgba(255,255,255,.04)" }}>
         <button className="btn btn-ghost btn-sm"
           onClick={() => setEditInvoice({ id:null, supplier:"", invoiceNo:"", invoiceDate:"", amount:"", dueDate:"", status:STATUS.UNPAID, notes:"" })}>

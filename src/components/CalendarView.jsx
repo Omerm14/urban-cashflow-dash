@@ -39,7 +39,7 @@ export default function CalendarView({ computed, calMonth, setCalMonth, color })
         </div>
         <button onClick={nextMonth} style={navBtn}>›</button>
       </div>
-      <div style={{ display:"grid", gridTemplateColumns:"repeat(7,1fr)", gap:4 }}>
+      <div style={{ display:"grid", gridTemplateColumns:"repeat(7,1fr)", gap:4, overflowX:"auto", minWidth:0 }}>
         {["Sun","Mon","Tue","Wed","Thu","Fri","Sat"].map(d => (
           <div key={d} style={{ padding:"8px 4px", textAlign:"center", fontSize:11, color:"#334155", fontWeight:700, letterSpacing:".5px", textTransform:"uppercase" }}>{d}</div>
         ))}

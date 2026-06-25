@@ -401,6 +401,7 @@
   @media (max-width:600px){
     .wrap{padding:0 18px}
     .hero{padding:120px 0 70px}
+    .converge{height:340px}
     .prob-grid,.feat-grid,.integ-grid,.steps,.price-grid,.stats-card{grid-template-columns:1fr}
     .stat::after{display:none!important}
     .price-card.popular{order:-1}
@@ -748,6 +749,50 @@
     .ig-sat .badge{width:52px;height:52px}.ig-sat .badge svg{width:28px;height:28px}
     .ig-core{width:80px;height:80px}.ig-core svg{width:40px;height:40px}
     .fx-ai{flex-direction:column}
+  }
+
+  /* ===== 480px — small phones ===== */
+  @media (max-width:480px){
+    /* Hero: shrink the animated visual so it doesn't eat vertical space */
+    .converge{height:300px}
+    .dash-card{width:260px}
+    .source-chip{font-size:12px;padding:8px 11px}
+    /* Hero copy */
+    .hero{padding:100px 0 50px}
+    .hero-sub{font-size:16px;margin-bottom:24px}
+    .hero-tagline-heb{font-size:16px}
+    /* Section headings */
+    h2.section-title{font-size:clamp(22px,7vw,34px)}
+    /* Sections vertical rhythm */
+    .problem,.features,.integrations,.how-it-works,.pricing,.faq,.stats,.cta-section{padding:60px 0}
+    /* Pricing cards: tighter padding */
+    .price-card{padding:24px 20px}
+    /* How-it-works tour steps: full width */
+    .tr-step{flex:0 0 200px}
+    /* Stats */
+    .stat-val-lg{font-size:clamp(28px,8vw,42px)}
+    /* Pricing toggle pill */
+    .billing-toggle{flex-wrap:wrap;justify-content:center}
+    /* FAQ */
+    .faq-q{font-size:15px;padding:16px 0}
+    /* Integration grid: already 1-col, just tighten */
+    .imap{max-width:100%}
+    /* Nav mobile menu */
+    #mobileMenu a{font-size:15px;padding:12px 0}
+    /* CTA section */
+    .cta-inner{padding:40px 20px}
+    /* Footer */
+    .foot-copy{font-size:12px}
+  }
+
+  /* ===== 375px — iPhone SE / smallest ===== */
+  @media (max-width:375px){
+    .wrap{padding:0 14px}
+    .converge{height:260px}
+    .dash-card{width:230px;padding:14px}
+    .hero-pill{font-size:12px}
+    .btn-lg{padding:14px 22px;font-size:15px}
+    .price-card{padding:20px 16px}
   }
 
 </style>
