@@ -22,7 +22,6 @@ export default function UpgradeModal({ plan, used, limit, onContinueReadonly }) 
   const [error, setError]   = useState(null);
 
   const pct = limit === Infinity ? 0 : used / limit;
-  if (pct < 1) return null;
 
   const checkout = async (targetPlan) => {
     setLoading(targetPlan);
@@ -62,18 +61,18 @@ export default function UpgradeModal({ plan, used, limit, onContinueReadonly }) 
         <div style={{ textAlign: 'center', marginBottom: 28 }}>
           <div style={{ fontSize: 36, marginBottom: 10 }}>🚀</div>
           <h2 style={{ fontSize: 24, fontWeight: 800, letterSpacing: '-.02em', margin: 0 }}>
-            הגעת למגבלת החשבוניות החודשית
+            {pct >= 1 ? 'Monthly invoice limit reached' : 'Upgrade your plan'}
           </h2>
           <p style={{ color: '#94a3b8', marginTop: 8, fontSize: 15 }}>
-            הפלאן שלך מאפשר {limit} חשבוניות בחודש. השתמשת ב-{used}.
+            Your plan allows {limit} invoices/month. You've used {used}.
           </p>
         </div>
 
         {/* Usage bar */}
         <div style={{ marginBottom: 28 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, color: '#64748b', marginBottom: 6 }}>
-            <span>{used} בשימוש</span>
-            <span>{limit} מגבלה</span>
+            <span>{used} used</span>
+            <span>{limit} limit</span>
           </div>
           <div style={{ height: 8, background: '#1e2330', borderRadius: 4, overflow: 'hidden' }}>
             <div style={{
@@ -93,7 +92,7 @@ export default function UpgradeModal({ plan, used, limit, onContinueReadonly }) 
           }}>
             <div style={{ fontSize: 13, fontWeight: 700, color: '#94a3b8', marginBottom: 8 }}>BASIC</div>
             <div style={{ fontSize: 28, fontWeight: 900, letterSpacing: '-.03em', marginBottom: 2 }}>
-              ₪99 <small style={{ fontSize: 13, fontWeight: 500, color: '#64748b' }}>/חודש</small>
+              ₪99 <small style={{ fontSize: 13, fontWeight: 500, color: '#64748b' }}>/mo</small>
             </div>
             <ul style={{ listStyle: 'none', padding: 0, margin: '14px 0 18px', display: 'flex', flexDirection: 'column', gap: 8 }}>
               {PLAN_FEATURES.basic.map(f => (
@@ -112,7 +111,7 @@ export default function UpgradeModal({ plan, used, limit, onContinueReadonly }) 
                 opacity: loading === 'basic' ? .7 : 1,
               }}
             >
-              {loading === 'basic' ? '...' : 'בחר Basic'}
+              {loading === 'basic' ? '...' : 'Get Basic'}
             </button>
           </div>
 
@@ -129,10 +128,10 @@ export default function UpgradeModal({ plan, used, limit, onContinueReadonly }) 
               background: 'linear-gradient(135deg,#3b82f6,#06b6d4)',
               color: '#fff', fontSize: 10, fontWeight: 700, letterSpacing: '.06em',
               padding: '4px 12px', borderRadius: 100, whiteSpace: 'nowrap',
-            }}>הכי פופולרי</div>
+            }}>Most Popular</div>
             <div style={{ fontSize: 13, fontWeight: 700, color: '#60a5fa', marginBottom: 8 }}>PRO</div>
             <div style={{ fontSize: 28, fontWeight: 900, letterSpacing: '-.03em', marginBottom: 2 }}>
-              ₪199 <small style={{ fontSize: 13, fontWeight: 500, color: '#64748b' }}>/חודש</small>
+              ₪199 <small style={{ fontSize: 13, fontWeight: 500, color: '#64748b' }}>/mo</small>
             </div>
             <ul style={{ listStyle: 'none', padding: 0, margin: '14px 0 18px', display: 'flex', flexDirection: 'column', gap: 8 }}>
               {PLAN_FEATURES.pro.map(f => (
@@ -153,7 +152,7 @@ export default function UpgradeModal({ plan, used, limit, onContinueReadonly }) 
                 opacity: loading === 'pro' ? .7 : 1,
               }}
             >
-              {loading === 'pro' ? '...' : 'בחר Pro'}
+              {loading === 'pro' ? '...' : 'Get Pro'}
             </button>
           </div>
         </div>
@@ -171,7 +170,7 @@ export default function UpgradeModal({ plan, used, limit, onContinueReadonly }) 
             textDecoration: 'underline', textDecorationStyle: 'dotted',
           }}
         >
-          המשך לצפות בחשבוניות קיימות (ללא הוספה)
+          Continue viewing existing invoices (no new uploads)
         </button>
       </div>
     </div>

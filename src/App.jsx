@@ -7,6 +7,7 @@ import { useSyncJob }         from "./hooks/useSyncJob";
 import { usePlan }            from "./hooks/usePlan";
 import LoginPage              from "./pages/LoginPage";
 import AdminPage              from "./pages/AdminPage";
+import SettingsPage           from "./pages/SettingsPage";
 import NavBar                 from "./components/NavBar";
 import Dashboard              from "./components/Dashboard";
 import InvoicesView           from "./components/InvoicesView";
@@ -67,7 +68,7 @@ const uploadOriginal = async (file, userId, accessToken) => {
 };
 
 export default function App() {
-  const { user, loading: authLoading, signOut } = useAuth();
+  const { user, session, loading: authLoading, signOut } = useAuth();
 
   const [view,            setView]            = useState("dashboard");
   const [extracting,      setExtracting]      = useState(false);
@@ -117,8 +118,10 @@ export default function App() {
 
   const { plan, limit, used, remaining, pct, isAtLimit, isNearLimit, refresh: refreshPlan } = usePlan();
   const [upgradeModalDismissed, setUpgradeModalDismissed] = useState(false);
-  const showUpgradeModal = isAtLimit && !upgradeModalDismissed;
-  const openUpgrade = () => setUpgradeModalDismissed(false);
+  const [upgradeModalForced,    setUpgradeModalForced]    = useState(false);
+  const showUpgradeModal = (isAtLimit && !upgradeModalDismissed) || upgradeModalForced;
+  const openUpgrade  = () => { setUpgradeModalDismissed(false); setUpgradeModalForced(true); };
+  const closeUpgrade = () => { setUpgradeModalDismissed(true);  setUpgradeModalForced(false); };
 
   const handleViewAttachment = useCallback(async inv => {
     setLoadingPreview(true);
@@ -322,14 +325,16 @@ export default function App() {
         unreadCount={unreadCount}
         onBellClick={() => { setShowNotifPanel(v => !v); if (!showNotifPanel) markAllRead(); }}
         plan={plan}
+        onUpgrade={openUpgrade}
+        onSettings={() => setView('settings')}
       />
 
-      <UsageBanner plan={plan} used={used} limit={limit} remaining={remaining} onUpgrade={openUpgrade} />
+      {view !== 'settings' && <UsageBanner plan={plan} used={used} limit={limit} remaining={remaining} onUpgrade={openUpgrade} />}
 
       {showUpgradeModal && (
         <UpgradeModal
           plan={plan} used={used} limit={limit}
-          onContinueReadonly={() => setUpgradeModalDismissed(true)}
+          onContinueReadonly={closeUpgrade}
         />
       )}
 
@@ -387,12 +392,12 @@ export default function App() {
       )}
 
       <div style={{ maxWidth:1140, margin:"0 auto", padding:"28px clamp(12px,4vw,28px) 60px" }}>
-        {view !== "admin" && view !== "integrations" && (
+        {view !== "admin" && view !== "integrations" && view !== "settings" && (
           <div style={{ display:"flex", gap:10, marginBottom:32, alignItems:"center", flexWrap:"wrap" }}>
             <button className="btn btn-primary" style={{ padding:"10px 20px", fontSize:13 }}
               onClick={isAtLimit ? openUpgrade : () => fileRef.current.click()}
               disabled={extracting || loading}
-              title={isAtLimit ? 'הגעת למגבלת החשבוניות — שדרג לפלאן גבוה יותר' : undefined}>
+              title={isAtLimit ? 'Invoice limit reached — upgrade your plan' : undefined}>
               <span style={{ fontSize:16 }}>+</span>
               {extracting ? "Extracting…" : loading ? "Loading…" : isAtLimit ? "🔒 Upload Invoices" : "Upload Invoices"}
             </button>
@@ -420,6 +425,7 @@ export default function App() {
         {view === "invoices"     && <InvoicesView computed={computed} dupeIds={dupeIds} updateInvoice={updateInvoice} deleteInvoice={deleteInvoice} bulkMarkPaid={bulkMarkPaid} bulkMarkUnpaid={bulkMarkUnpaid} bulkDelete={bulkDelete} setEditInvoice={setEditInvoice} color={color} onViewAttachment={handleViewAttachment} preSelMonth={preSelMonth} onClearPreSel={() => setPreSelMonth(null)} />}
         {view === "calendar"     && <CalendarView computed={computed} calMonth={calMonth} setCalMonth={setCalMonth} color={color} />}
         {view === "admin"        && <AdminPage />}
+        {view === "settings"     && <SettingsPage user={user} plan={plan} used={used} limit={limit} remaining={remaining} onUpgrade={openUpgrade} onBack={() => setView("dashboard")} invoices={invoices} session={session} />}
         {view === "integrations" && (
           <IntegrationsPage
             oauthResult={oauthResult}
