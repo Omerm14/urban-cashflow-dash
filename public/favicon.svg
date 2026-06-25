@@ -1,0 +1,32 @@
+<svg width="32" height="32" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="fav-arc" x1="4" y1="4" x2="36" y2="36" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#3b82f6"/>
+      <stop offset="1" stop-color="#2563eb"/>
+    </linearGradient>
+    <linearGradient id="fav-arrow" x1="24" y1="32" x2="36" y2="18" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#06b6d4"/>
+      <stop offset="1" stop-color="#22d3ee"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Background -->
+  <rect width="40" height="40" rx="10" fill="#0d1f3c"/>
+
+  <!-- C-arc -->
+  <path d="M30 12C27 8.5 23.2 7 20 7C13 7 7 13 7 20C7 27 13 33 20 33C23.2 33 27 31.5 30 28"
+    stroke="url(#fav-arc)" stroke-width="3.8" stroke-linecap="round" fill="none"/>
+
+  <!-- Document body -->
+  <rect x="15" y="13" width="11" height="14" rx="2" fill="white"/>
+  <path d="M22 13 L26 17 L22 17 Z" fill="#dbeafe" opacity="0.6"/>
+
+  <!-- Document lines -->
+  <line x1="17.5" y1="20" x2="23.5" y2="20" stroke="#3b82f6" stroke-width="1.1" stroke-linecap="round" opacity="0.55"/>
+  <line x1="17.5" y1="22.5" x2="23.5" y2="22.5" stroke="#3b82f6" stroke-width="1.1" stroke-linecap="round" opacity="0.55"/>
+  <line x1="17.5" y1="25" x2="21" y2="25" stroke="#3b82f6" stroke-width="1.1" stroke-linecap="round" opacity="0.55"/>
+
+  <!-- Upward arrow (cyan) -->
+  <path d="M27 31C29 28.5 31.5 25 30 21" stroke="url(#fav-arrow)" stroke-width="2.6" stroke-linecap="round" fill="none"/>
+  <polyline points="26.5,18 30,21 33,18" stroke="url(#fav-arrow)" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+</svg>

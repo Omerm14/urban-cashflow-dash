@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { supabase } from '../lib/supabase'
+import LogoIcon from '../components/LogoIcon'
 
 export default function LoginPage() {
   const [mode,     setMode]     = useState('signin') // 'signin' | 'signup'
@@ -38,7 +39,7 @@ export default function LoginPage() {
     <div style={{ background:'#080e1a', minHeight:'100vh', display:'flex', alignItems:'center', justifyContent:'center', fontFamily:'Inter,system-ui,sans-serif' }}>
       <div style={{ width:380, background:'#0a1120', border:'1px solid #111d2e', borderRadius:16, padding:32 }}>
         <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:32 }}>
-          <div style={{ width:36, height:36, borderRadius:10, background:'linear-gradient(135deg,#6366f1,#a78bfa)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:18 }}>💸</div>
+          <LogoIcon size={36}/>
           <span style={{ fontWeight:700, fontSize:18, color:'#f1f5f9' }}>Cashflow</span>
         </div>
 
@@ -65,7 +66,7 @@ export default function LoginPage() {
           {msg   && <div style={{ marginBottom:14, padding:'10px 14px', background:'#052e16', border:'1px solid #166534', borderRadius:8, color:'#4ade80', fontSize:13 }}>{msg}</div>}
 
           <button type="submit" disabled={busy}
-            style={{ width:'100%', padding:'11px', background:'linear-gradient(135deg,#6366f1,#a78bfa)', border:'none', borderRadius:10, color:'#fff', fontWeight:700, fontSize:14, cursor:'pointer', fontFamily:'inherit', marginBottom:12, opacity:busy?0.7:1 }}>
+            style={{ width:'100%', padding:'11px', background:'linear-gradient(135deg,#3b82f6,#06b6d4)', border:'none', borderRadius:10, color:'#fff', fontWeight:700, fontSize:14, cursor:'pointer', fontFamily:'inherit', marginBottom:12, opacity:busy?0.7:1 }}>
             {busy ? 'Please wait…' : mode === 'signup' ? 'Create account' : 'Sign in'}
           </button>
         </form>
@@ -79,7 +80,7 @@ export default function LoginPage() {
         <div style={{ textAlign:'center', fontSize:13, color:'#475569' }}>
           {mode === 'signup' ? 'Already have an account? ' : "Don't have an account? "}
           <button onClick={() => { setMode(mode === 'signup' ? 'signin' : 'signup'); setError(null); setMsg(null) }}
-            style={{ background:'none', border:'none', color:'#a78bfa', cursor:'pointer', fontFamily:'inherit', fontSize:13, fontWeight:500, padding:0 }}>
+            style={{ background:'none', border:'none', color:'#38bdf8', cursor:'pointer', fontFamily:'inherit', fontSize:13, fontWeight:500, padding:0 }}>
             {mode === 'signup' ? 'Sign in' : 'Create one'}
           </button>
         </div>

@@ -5,6 +5,17 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Cashflow — Stop Chasing Invoices. Start Managing Cash Flow.</title>
 <meta name="description" content="Cashflow automatically collects, reads, and organizes every invoice you receive — from Gmail, WhatsApp, Google Drive, and Green Invoice — so you always know what you owe and when." />
+<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+<meta property="og:type" content="website" />
+<meta property="og:title" content="Cashflow — Stop Chasing Invoices. Start Managing Cash Flow." />
+<meta property="og:description" content="Cashflow automatically collects, reads, and organizes every invoice you receive — from Gmail, WhatsApp, Google Drive, and Green Invoice — so you always know what you owe and when." />
+<meta property="og:image" content="/og-image.svg" />
+<meta property="og:image:width" content="1200" />
+<meta property="og:image:height" content="630" />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content="Cashflow — Stop Chasing Invoices. Start Managing Cash Flow." />
+<meta name="twitter:description" content="Cashflow automatically collects, reads, and organizes every invoice you receive — from Gmail, WhatsApp, Google Drive, and Green Invoice — so you always know what you owe and when." />
+<meta name="twitter:image" content="/og-image.svg" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Heebo:wght@400;500;700;800&display=swap" rel="stylesheet" />
@@ -100,7 +111,7 @@
 
   /* Logo mark */
   .logo{font-weight:800;font-size:19px;letter-spacing:-.01em;display:flex;align-items:center;gap:10px}
-  .logo .mark{width:30px;height:30px;flex:0 0 30px;display:block}
+  .logo .mark{width:34px;height:34px;flex:0 0 34px;display:block}
 
   /* Nav */
   nav{position:fixed;top:0;left:0;right:0;z-index:150;transition:background .3s var(--ease),border-color .3s var(--ease);border-bottom:1px solid transparent}
@@ -756,13 +767,27 @@
 <!-- SVG logo mark (defined once, reused) -->
 <svg width="0" height="0" style="position:absolute" aria-hidden="true">
   <defs>
-    <linearGradient id="cashflowGrad" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0" stop-color="#3b82f6"/><stop offset="1" stop-color="#06b6d4"/>
+    <linearGradient id="cashflowArcGrad" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#3b82f6"/><stop offset="1" stop-color="#2563eb"/>
     </linearGradient>
-    <symbol id="cashflowMark" viewBox="0 0 32 32">
-      <rect x="1" y="1" width="30" height="30" rx="9" fill="url(#cashflowGrad)" opacity="0.16"/>
-      <rect x="1.5" y="1.5" width="29" height="29" rx="8.5" fill="none" stroke="url(#cashflowGrad)" stroke-width="1.2" opacity="0.5"/>
-      <path d="M8 9 H20 M8 9 C8 13 24 13 24 17 M24 17 C24 21 8 21 8 23 M12 23 H24" stroke="url(#cashflowGrad)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+    <linearGradient id="cashflowArrowGrad" x1="0.5" y1="1" x2="1" y2="0">
+      <stop offset="0" stop-color="#06b6d4"/><stop offset="1" stop-color="#0891b2"/>
+    </linearGradient>
+    <symbol id="cashflowMark" viewBox="0 0 40 40">
+      <!-- Background -->
+      <rect width="40" height="40" rx="10" fill="#0d1f3c"/>
+      <!-- C-arc -->
+      <path d="M30 12C27 8.5 23.2 7 20 7C13 7 7 13 7 20C7 27 13 33 20 33C23.2 33 27 31.5 30 28" stroke="url(#cashflowArcGrad)" stroke-width="3.8" stroke-linecap="round" fill="none"/>
+      <!-- Document -->
+      <rect x="15" y="13" width="11" height="14" rx="2" fill="white"/>
+      <path d="M22 13 L26 17 L22 17 Z" fill="#dbeafe" opacity="0.6"/>
+      <!-- Document lines -->
+      <line x1="17.5" y1="20" x2="23.5" y2="20" stroke="#3b82f6" stroke-width="1.1" stroke-linecap="round" opacity="0.55"/>
+      <line x1="17.5" y1="22.5" x2="23.5" y2="22.5" stroke="#3b82f6" stroke-width="1.1" stroke-linecap="round" opacity="0.55"/>
+      <line x1="17.5" y1="25" x2="21" y2="25" stroke="#3b82f6" stroke-width="1.1" stroke-linecap="round" opacity="0.55"/>
+      <!-- Cyan upward arrow -->
+      <path d="M27 31C29 28.5 31.5 25 30 21" stroke="url(#cashflowArrowGrad)" stroke-width="2.6" stroke-linecap="round" fill="none"/>
+      <polyline points="26.5,18 30,21 33,18" stroke="url(#cashflowArrowGrad)" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
     </symbol>
   </defs>
 </svg>

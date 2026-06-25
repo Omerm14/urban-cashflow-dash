@@ -450,7 +450,7 @@ export default function App() {
           padding: "0 24px",
         }}>
           <div style={{ maxWidth: 1140, margin: "0 auto", display: "flex", alignItems: "center", gap: 14, height: 44 }}>
-            <div style={{ width: 14, height: 14, borderRadius: "50%", border: "2px solid var(--purple)", borderTopColor: "transparent", animation: "spin 0.8s linear infinite", flexShrink: 0 }} />
+            <div style={{ width: 14, height: 14, borderRadius: "50%", border: "2px solid var(--cyan)", borderTopColor: "transparent", animation: "spin 0.8s linear infinite", flexShrink: 0 }} />
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
                 <span style={{ fontSize: 12, color: "var(--t2)" }}>
@@ -460,7 +460,7 @@ export default function App() {
               </div>
               <div style={{ height: 3, background: "var(--surf2)", borderRadius: 2, overflow: "hidden" }}>
                 <div style={{
-                  height: "100%", borderRadius: 2, background: "var(--purple)",
+                  height: "100%", borderRadius: 2, background: "var(--cyan)",
                   width: `${activeSyncJob.totalFiles ? Math.round(activeSyncJob.cursor / activeSyncJob.totalFiles * 100) : 0}%`,
                   transition: "width 0.5s ease",
                 }} />
