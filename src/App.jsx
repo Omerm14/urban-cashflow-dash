@@ -335,7 +335,7 @@ export default function App() {
 
       {/* Notification panel — slides in from top-right below navbar */}
       {showNotifPanel && (
-        <div style={{ position:"fixed", top:60, right:24, zIndex:50, width:320,
+        <div style={{ position:"fixed", top:60, right:24, zIndex:50, width:320, maxWidth:"calc(100vw - 32px)",
           background:"var(--surf)", border:"1px solid var(--bdr2)", borderRadius:12,
           boxShadow:"0 16px 40px rgba(0,0,0,.5)", overflow:"hidden", animation:"fadeIn .2s" }}
           onMouseLeave={() => {}}>
@@ -386,7 +386,7 @@ export default function App() {
         </div>
       )}
 
-      <div style={{ maxWidth:1140, margin:"0 auto", padding:"28px 28px 60px" }}>
+      <div style={{ maxWidth:1140, margin:"0 auto", padding:"28px clamp(12px,4vw,28px) 60px" }}>
         {view !== "admin" && view !== "integrations" && (
           <div style={{ display:"flex", gap:10, marginBottom:32, alignItems:"center", flexWrap:"wrap" }}>
             <button className="btn btn-primary" style={{ padding:"10px 20px", fontSize:13 }}

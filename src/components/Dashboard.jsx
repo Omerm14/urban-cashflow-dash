@@ -85,7 +85,7 @@ export default function Dashboard({ kpis, monthlyData, allNames, color, maxTotal
             <div style={{ fontSize:14 }}>No upcoming payments</div>
           </div>
         ) : (
-          <div style={{ position:"relative" }}>
+          <div style={{ position:"relative", minWidth:0, overflow:"hidden" }}>
             <ChartBars data={monthlyData} color={color} maxTotal={maxTotal} tooltip={tooltip} setTooltip={setTooltip}/>
             {/* Legend */}
             <div style={{ display:"flex", flexWrap:"wrap", gap:"7px 14px", marginTop:18, paddingTop:18, borderTop:"1px solid rgba(255,255,255,.05)" }}>

@@ -158,7 +158,48 @@ body{font-family:'Plus Jakarta Sans',system-ui,sans-serif;background:var(--bg);c
 /* ─── SHIMMER ─── */
 .shimmer{background:linear-gradient(90deg,var(--surf2) 25%,#253550 50%,var(--surf2) 75%);background-size:200% 100%;animation:shimmer 1.5s infinite;border-radius:8px}
 
+/* ─── MOBILE ─── */
 @media(max-width:768px){
+  /* Stat grid: 2 columns on tablet */
   .stat-grid{grid-template-columns:repeat(2,1fr)}
-  .sup-row{grid-template-columns:32px 1fr 80px}
+  /* Supplier row: hide middle columns */
+  .sup-row{grid-template-columns:32px 1fr 90px}
+  /* Nav adjustments */
+  .nav{padding:0 16px}
+  .nav-link{padding:0 10px;font-size:13px}
+  /* Table: allow horizontal scroll */
+  .tbl-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
+  .itbl{min-width:600px}
+  /* Batch bar */
+  .batch-bar{left:16px;right:16px;transform:none;border-radius:16px;padding:10px 16px;font-size:12px}
+  /* Modal */
+  .modal{padding:20px;margin:16px;width:calc(100% - 32px);max-width:none}
+  /* Calendar day */
+  .cal-day{min-height:72px}
+}
+
+@media(max-width:480px){
+  /* Stat grid: 1 column on small phones */
+  .stat-grid{grid-template-columns:1fr}
+  /* Supplier row: minimal */
+  .sup-row{grid-template-columns:28px 1fr 80px;padding:8px 12px;font-size:12px}
+  .sup-hdr{padding:12px 12px}
+  /* Nav: tighter */
+  .nav{padding:0 12px}
+  .nav-brand{margin-right:12px}
+  .nav-link{padding:0 8px;font-size:12px}
+  .sup-pill{padding:4px 8px;font-size:12px}
+  /* Table */
+  .itbl{min-width:520px}
+  /* Batch bar */
+  .batch-bar{left:12px;right:12px;padding:8px 14px}
+  /* Modal */
+  .modal{padding:16px;margin:12px;width:calc(100% - 24px)}
+  /* Calendar */
+  .cal-day{min-height:58px;padding:4px 3px}
+  .cal-h span{font-size:10px}
+  /* Month nav */
+  .month-nav{padding:0 4px}
+  /* Badges */
+  .badge{font-size:10px;padding:2px 7px}
 }
