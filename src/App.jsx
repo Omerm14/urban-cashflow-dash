@@ -117,8 +117,10 @@ export default function App() {
 
   const { plan, limit, used, remaining, pct, isAtLimit, isNearLimit, refresh: refreshPlan } = usePlan();
   const [upgradeModalDismissed, setUpgradeModalDismissed] = useState(false);
-  const showUpgradeModal = isAtLimit && !upgradeModalDismissed;
-  const openUpgrade = () => setUpgradeModalDismissed(false);
+  const [upgradeModalForced,    setUpgradeModalForced]    = useState(false);
+  const showUpgradeModal = (isAtLimit && !upgradeModalDismissed) || upgradeModalForced;
+  const openUpgrade  = () => { setUpgradeModalDismissed(false); setUpgradeModalForced(true); };
+  const closeUpgrade = () => { setUpgradeModalDismissed(true);  setUpgradeModalForced(false); };
 
   const handleViewAttachment = useCallback(async inv => {
     setLoadingPreview(true);
@@ -322,6 +324,7 @@ export default function App() {
         unreadCount={unreadCount}
         onBellClick={() => { setShowNotifPanel(v => !v); if (!showNotifPanel) markAllRead(); }}
         plan={plan}
+        onUpgrade={openUpgrade}
       />
 
       <UsageBanner plan={plan} used={used} limit={limit} remaining={remaining} onUpgrade={openUpgrade} />
@@ -329,7 +332,7 @@ export default function App() {
       {showUpgradeModal && (
         <UpgradeModal
           plan={plan} used={used} limit={limit}
-          onContinueReadonly={() => setUpgradeModalDismissed(true)}
+          onContinueReadonly={closeUpgrade}
         />
       )}
 
@@ -392,7 +395,7 @@ export default function App() {
             <button className="btn btn-primary" style={{ padding:"10px 20px", fontSize:13 }}
               onClick={isAtLimit ? openUpgrade : () => fileRef.current.click()}
               disabled={extracting || loading}
-              title={isAtLimit ? 'הגעת למגבלת החשבוניות — שדרג לפלאן גבוה יותר' : undefined}>
+              title={isAtLimit ? 'Invoice limit reached — upgrade your plan' : undefined}>
               <span style={{ fontSize:16 }}>+</span>
               {extracting ? "Extracting…" : loading ? "Loading…" : isAtLimit ? "🔒 Upload Invoices" : "Upload Invoices"}
             </button>

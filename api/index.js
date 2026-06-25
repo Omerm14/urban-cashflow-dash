@@ -51,6 +51,11 @@ const webhook = require('../server/routes/webhook');
 app.get('/api/webhook/whatsapp',  webhook.verifyWhatsApp);
 app.post('/api/webhook/whatsapp', webhook.handleWhatsApp);
 
+// Billing (Meshulam)
+const billing = require('../server/routes/billing');
+app.post('/api/billing/ipn', billing.ipn);
+app.use('/api/billing', auth, billing.router);
+
 // Cron (secured by CRON_SECRET header)
 app.get('/api/cron/sync', require('../server/routes/cron').runSync);
 app.get('/api/cron/gc',   require('../server/routes/gc').runGc);

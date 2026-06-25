@@ -731,7 +731,7 @@ function IntegrationCard({ type, integration, onRefresh, onInvoicesRefresh, onNo
               <Btn
                 onClick={isAtLimit ? onUpgrade : () => handleSync(false)}
                 disabled={isActive}
-                title={isAtLimit ? 'הגעת למגבלת החשבוניות — שדרג לפלאן גבוה יותר' : undefined}
+                title={isAtLimit ? 'Invoice limit reached — upgrade your plan' : undefined}
                 style={syncDone ? { background:"#052e16", color:"#4ade80", borderColor:"#166534" } : isAtLimit ? { opacity:.6 } : {}}>
                 {discovering ? "Finding files…"
                   : isJobSyncing ? `File ${Math.min(activeSyncJob.cursor, activeSyncJob.totalFiles)} / ${activeSyncJob.totalFiles}`
@@ -925,7 +925,7 @@ function IntegrationCard({ type, integration, onRefresh, onInvoicesRefresh, onNo
                 variant="secondary"
                 onClick={isAtLimit ? onUpgrade : () => handleSync(true)}
                 disabled={isActive}
-                title={isAtLimit ? 'הגעת למגבלת החשבוניות — שדרג לפלאן גבוה יותר' : undefined}
+                title={isAtLimit ? 'Invoice limit reached — upgrade your plan' : undefined}
                 style={{ fontSize: 12, ...(isAtLimit ? { opacity:.6 } : {}) }}>
                 {resyncing ? "Resyncing…" : isAtLimit ? "🔒 Resync All" : "↺ Resync All (from beginning)"}
               </Btn>
