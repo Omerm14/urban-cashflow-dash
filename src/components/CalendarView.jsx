@@ -49,7 +49,7 @@ export default function CalendarView({ computed, calMonth, setCalMonth, color })
           const isToday = today.getDate()===day && today.getMonth()===calM && today.getFullYear()===calY;
           return (
             <div key={day} className={`cal-day${isToday?" today":""}`}>
-              <div style={{ fontSize:12, fontWeight:600, color:isToday?"#a78bfa":"#334155", marginBottom:5 }}>{day}</div>
+              <div style={{ fontSize:12, fontWeight:600, color:isToday?"#38bdf8":"#334155", marginBottom:5 }}>{day}</div>
               {dayInvs.slice(0, 3).map(inv => (
                 <div key={inv.id} className="chip" style={{ background:color(inv.supplier) }} title={`${inv.supplier} · ${currency(inv.amount)}`}>
                   {inv.supplier.split(" ")[0]} · {currency(inv.amount)}

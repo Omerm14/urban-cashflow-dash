@@ -17,7 +17,7 @@ export default function NavBar({ view, setView, suppliersCount, onSuppliersClick
     <nav className="nav">
       <div className="nav-brand" onClick={() => setView("dashboard")}>
         <LogoIcon size={30}/>
-        <span style={{ fontWeight:800, fontSize:16, background:"linear-gradient(90deg,#8b5cf6,#3b82f6)", WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent" }}>
+        <span style={{ fontWeight:800, fontSize:16, background:"linear-gradient(90deg,#06b6d4,#3b82f6)", WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent" }}>
           Cashflow
         </span>
       </div>
@@ -52,7 +52,7 @@ export default function NavBar({ view, setView, suppliersCount, onSuppliersClick
         </button>
 
         <button className="sup-pill" onClick={onSuppliersClick}>
-          <span style={{ width:7, height:7, borderRadius:"50%", background:"var(--purple)" }}/>
+          <span style={{ width:7, height:7, borderRadius:"50%", background:"var(--cyan)" }}/>
           Suppliers ({suppliersCount})
         </button>
 

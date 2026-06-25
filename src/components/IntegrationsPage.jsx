@@ -120,7 +120,7 @@ const StatusPill = ({ status }) => {
 
 const Btn = ({ children, onClick, disabled, variant = "primary", style: extra = {} }) => {
   const v = {
-    primary:   { background: "linear-gradient(135deg,#6366f1,#a78bfa)", color: "#fff", border: "none" },
+    primary:   { background: "linear-gradient(135deg,#3b82f6,#06b6d4)", color: "#fff", border: "none" },
     secondary: { background: "#131c2e", color: "#94a3b8", border: "1px solid #1e2d45" },
     danger:    { background: "#1a0606", color: "#f87171", border: "1px solid #7f1d1d" },
   }[variant];
@@ -219,7 +219,7 @@ function DriveNavigator({ selectedFolder, selectedFolderName, onSelect }) {
         <div style={{
           display: "flex", alignItems: "center", justifyContent: "space-between",
           padding: "8px 12px", borderBottom: "1px solid #0d1626",
-          background: isSelected(current.id === "root" ? "" : current.id) ? "#6366f111" : "transparent",
+          background: isSelected(current.id === "root" ? "" : current.id) ? "#3b82f611" : "transparent",
         }}>
           <span style={{ fontSize: 12, color: "#64748b", fontStyle: "italic" }}>
             {current.id === "root" ? "Sync all of My Drive" : `Sync all in "${current.name}"`}
@@ -249,7 +249,7 @@ function DriveNavigator({ selectedFolder, selectedFolderName, onSelect }) {
             <div key={f.id} style={{
               display: "flex", alignItems: "center", justifyContent: "space-between",
               padding: "8px 12px", borderBottom: "1px solid #0d1626",
-              background: isSelected(f.id) ? "#6366f111" : "transparent",
+              background: isSelected(f.id) ? "#3b82f611" : "transparent",
             }}>
               <div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0 }}>
                 <span style={{ color: "#4285f4", fontSize: 14, flexShrink: 0 }}>📁</span>
@@ -438,7 +438,7 @@ function WhatsAppModal({ onClose, onSave }) {
         <div style={{ marginBottom: 18, background: "#0a1628", borderRadius: 10, padding: "12px 14px", border: "1px solid #1e2d45" }}>
           <div style={{ fontSize: 11, fontWeight: 600, color: "#475569", marginBottom: 6, textTransform: "uppercase", letterSpacing: ".5px" }}>Your Webhook URL</div>
           <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-            <code style={{ fontSize: 11, color: "#a78bfa", flex: 1, wordBreak: "break-all" }}>{webhookUrl}</code>
+            <code style={{ fontSize: 11, color: "#38bdf8", flex: 1, wordBreak: "break-all" }}>{webhookUrl}</code>
             <button onClick={() => navigator.clipboard.writeText(webhookUrl)}
               style={{ padding: "4px 10px", background: "#1e2d45", border: "1px solid #334155", borderRadius: 6, color: "#94a3b8", cursor: "pointer", fontSize: 11, fontFamily: "inherit", flexShrink: 0 }}>
               Copy
@@ -698,7 +698,7 @@ function IntegrationCard({ type, integration, onRefresh, onInvoicesRefresh, onNo
               {integration.error_message}
               {cfg.authType === "oauth" && (
                 <button onClick={handleConnect}
-                  style={{ marginLeft: 8, color: "#a78bfa", background: "none", border: "none", cursor: "pointer", fontSize: 12, fontFamily: "inherit", textDecoration: "underline" }}>
+                  style={{ marginLeft: 8, color: "#38bdf8", background: "none", border: "none", cursor: "pointer", fontSize: 12, fontFamily: "inherit", textDecoration: "underline" }}>
                   Re-authorize
                 </button>
               )}
@@ -793,7 +793,7 @@ function IntegrationCard({ type, integration, onRefresh, onInvoicesRefresh, onNo
                         padding: "5px 12px", borderRadius: 20, fontSize: 12,
                         background: selectedLabels.includes(l.id) ? "#6366f122" : "#0d1626",
                         border: `1px solid ${selectedLabels.includes(l.id) ? "#6366f1" : "#1e2d45"}`,
-                        color: selectedLabels.includes(l.id) ? "#a78bfa" : "#64748b",
+                        color: selectedLabels.includes(l.id) ? "#38bdf8" : "#64748b",
                         transition: "all .15s",
                       }}>
                         <input type="checkbox" checked={selectedLabels.includes(l.id)} onChange={() => toggleLabel(l.id)}
@@ -850,7 +850,7 @@ function IntegrationCard({ type, integration, onRefresh, onInvoicesRefresh, onNo
             <div style={{ marginBottom: 18 }}>
               <div style={{ fontSize: 11, fontWeight: 600, color: "#475569", marginBottom: 6, textTransform: "uppercase", letterSpacing: ".5px" }}>Webhook URL</div>
               <div style={{ display: "flex", gap: 8, alignItems: "center", background: "#0a1628", borderRadius: 8, padding: "8px 12px", border: "1px solid #1e2d45" }}>
-                <code style={{ fontSize: 11, color: "#a78bfa", flex: 1, wordBreak: "break-all" }}>
+                <code style={{ fontSize: 11, color: "#38bdf8", flex: 1, wordBreak: "break-all" }}>
                   {window.location.origin}/api/webhook/whatsapp
                 </code>
                 <button onClick={() => navigator.clipboard.writeText(`${window.location.origin}/api/webhook/whatsapp`)}

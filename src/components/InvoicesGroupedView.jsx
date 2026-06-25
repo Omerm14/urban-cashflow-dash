@@ -67,7 +67,7 @@ function SupplierCard({ supplier, invoices, dupeIds, updateInvoice, deleteInvoic
           checked={allSelected}
           ref={selectAllRef}
           onChange={() => onToggleAll(cardIds)}
-          style={{ accentColor:"var(--purple)", cursor:"pointer", width:15, height:15, flexShrink:0 }}
+          style={{ accentColor:"var(--cyan)", cursor:"pointer", width:15, height:15, flexShrink:0 }}
         />
         <div style={{ width:34, height:34, borderRadius:"50%", background:c, display:"flex", alignItems:"center", justifyContent:"center", fontSize:14, fontWeight:700, color:"#fff", flexShrink:0 }}>
           {supplier.charAt(0)}
@@ -96,7 +96,7 @@ function SupplierCard({ supplier, invoices, dupeIds, updateInvoice, deleteInvoic
               type="checkbox"
               checked={isSelected}
               onChange={() => onToggleSelect(inv.id)}
-              style={{ accentColor:"var(--purple)", cursor:"pointer", width:15, height:15 }}
+              style={{ accentColor:"var(--cyan)", cursor:"pointer", width:15, height:15 }}
             />
             <span style={{ color:"var(--t3)", fontSize:12, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap", fontFamily:"monospace" }}>
               {inv.invoiceNo || "—"}
@@ -131,7 +131,7 @@ function SupplierCard({ supplier, invoices, dupeIds, updateInvoice, deleteInvoic
             type="checkbox"
             checked={allSelected}
             onChange={() => onToggleAll(cardIds)}
-            style={{ accentColor:"var(--purple)", cursor:"pointer", width:13, height:13 }}
+            style={{ accentColor:"var(--cyan)", cursor:"pointer", width:13, height:13 }}
           />
           Select all in card
         </label>

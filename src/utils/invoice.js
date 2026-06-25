@@ -80,4 +80,4 @@ export const statusStyle = s =>
   s === "Paid"    ? { bg:"#052e16", color:"#4ade80", dot:"#22c55e" } :
   s === "Overdue" ? { bg:"#2d0a0a", color:"#f87171", dot:"#ef4444" } :
   s === "Credit"  ? { bg:"#0e3a3a", color:"#2dd4bf", dot:"#14b8a6" } :
-                    { bg:"#1e1b40", color:"#a78bfa", dot:"#818cf8" };
+                    { bg:"#0b1628", color:"#06b6d4", dot:"#818cf8" };

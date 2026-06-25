@@ -84,7 +84,7 @@ export default function AdminPage() {
                 <td style={{ padding:'13px 18px', color:'#94a3b8' }}>{u.calls}</td>
                 <td style={{ padding:'13px 18px', color:'#94a3b8' }}>{u.inputTokens.toLocaleString()}</td>
                 <td style={{ padding:'13px 18px', color:'#94a3b8' }}>{u.outputTokens.toLocaleString()}</td>
-                <td style={{ padding:'13px 18px', fontWeight:600, color:'#a78bfa' }}>${u.estimatedCostUSD.toFixed(4)}</td>
+                <td style={{ padding:'13px 18px', fontWeight:600, color:'#38bdf8' }}>${u.estimatedCostUSD.toFixed(4)}</td>
               </tr>
             ))}
           </tbody>
