@@ -407,18 +407,19 @@ function GreenInvoiceModal({ onClose, onSave }) {
 function WhatsAppModal({ onClose, onSave }) {
   const [apiToken,      setApiToken]      = useState("");
   const [phoneNumberId, setPhoneNumberId] = useState("");
-  const [webhookSecret, setWebhookSecret] = useState("");
+  const [verifyToken,   setVerifyToken]   = useState("");
+  const [appSecret,     setAppSecret]     = useState("");
   const [saving,        setSaving]        = useState(false);
   const [err,           setErr]           = useState(null);
   const webhookUrl = `${window.location.origin}/api/webhook/whatsapp`;
 
   const save = async () => {
-    if (!apiToken || !phoneNumberId || !webhookSecret) return setErr("All fields are required");
+    if (!apiToken || !phoneNumberId || !verifyToken) return setErr("API Token, Phone Number ID, and Verify Token are required");
     setSaving(true); setErr(null);
     try {
       await apiFetch("/api/integrations/whatsapp", {
         method: "POST",
-        body: { api_token: apiToken, phone_number_id: phoneNumberId, webhook_secret: webhookSecret },
+        body: { api_token: apiToken, phone_number_id: phoneNumberId, verify_token: verifyToken, app_secret: appSecret },
       });
       onSave();
     } catch (e) { setErr(e.message); }
@@ -446,14 +447,15 @@ function WhatsAppModal({ onClose, onSave }) {
           </div>
         </div>
         {[
-          ["Permanent Access Token", apiToken,      setApiToken,      "Meta → WhatsApp → API Setup"],
-          ["Phone Number ID",        phoneNumberId, setPhoneNumberId, "Meta → WhatsApp → API Setup"],
-          ["Webhook Verify Token",   webhookSecret, setWebhookSecret, "Create any random string — paste same value in Meta console"],
-        ].map(([label, val, setter, hint]) => (
+          ["Permanent Access Token", apiToken,      setApiToken,      "Meta → WhatsApp → API Setup",                                        true],
+          ["Phone Number ID",        phoneNumberId, setPhoneNumberId, "Meta → WhatsApp → API Setup",                                        true],
+          ["Webhook Verify Token",   verifyToken,   setVerifyToken,   "Create any random string — paste this same value in Meta → Webhooks → Verify Token", true],
+          ["App Secret (optional)",  appSecret,     setAppSecret,     "Meta → App Dashboard → App Settings → Basic → App Secret. Used to verify message signatures.", false],
+        ].map(([label, val, setter, hint, required]) => (
           <div key={label} style={{ marginBottom: 14 }}>
             <div style={{ fontSize: 11, fontWeight: 600, color: "#475569", marginBottom: 2, textTransform: "uppercase", letterSpacing: ".5px" }}>{label}</div>
             {hint && <div style={{ fontSize: 11, color: "#334155", marginBottom: 5 }}>{hint}</div>}
-            <input type="text" value={val} className="input" onChange={e => setter(e.target.value)} />
+            <input type="text" value={val} className="input" onChange={e => setter(e.target.value)} placeholder={required ? "" : "Optional"} />
           </div>
         ))}
         {err && <div style={{ color: "#f87171", fontSize: 12, marginBottom: 12 }}>{err}</div>}
@@ -728,6 +730,7 @@ function IntegrationCard({ type, integration, onRefresh, onInvoicesRefresh, onNo
             </Btn>
           ) : (
             <>
+              {cfg.authType !== "webhook" && (
               <Btn
                 onClick={isAtLimit ? onUpgrade : () => handleSync(false)}
                 disabled={isActive}
@@ -740,6 +743,7 @@ function IntegrationCard({ type, integration, onRefresh, onInvoicesRefresh, onNo
                   : isAtLimit ? "🔒 Sync Now"
                   : "Sync Now"}
               </Btn>
+              )}
               {isJobSyncing && (
                 <Btn variant="danger" onClick={() => onCancelSync?.(integration.id)} style={{ padding: "0 14px" }}>
                   Stop
@@ -897,7 +901,8 @@ function IntegrationCard({ type, integration, onRefresh, onInvoicesRefresh, onNo
             </div>
           )}
 
-          {/* Auto-sync */}
+          {/* Auto-sync (not applicable for webhook-driven integrations) */}
+          {cfg.authType !== "webhook" && (
           <div style={{ marginBottom: 18 }}>
             <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", fontSize: 13, color: "#94a3b8", marginBottom: 8 }}>
               <input type="checkbox" checked={autoSync} onChange={e => setAutoSync(e.target.checked)}
@@ -914,6 +919,7 @@ function IntegrationCard({ type, integration, onRefresh, onInvoicesRefresh, onNo
               </div>
             )}
           </div>
+          )}
 
           {/* Save + Resync */}
           <div style={{ display: "flex", gap: 8, paddingBottom: 18 }}>

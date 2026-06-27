@@ -563,11 +563,11 @@ exports.processWhatsAppMedia = async (integration, userId, mediaId, filename, mi
   const { api_token } = integration.credentials || {};
   if (!api_token) throw new Error('WhatsApp API token not set');
 
-  // Check idempotency — skip if already processed
+  // Check idempotency — skip if already processed (sync_source_meta lives on invoices, not sync_events)
   const { data: existing } = await supabase
-    .from('sync_events')
+    .from('invoices')
     .select('id')
-    .eq('integration_id', integration.id)
+    .eq('user_id', userId)
     .contains('sync_source_meta', { wa_message_id: waMessageId })
     .maybeSingle();
   if (existing) {

@@ -10,18 +10,29 @@ const verifySignature = (rawBody, signature, secret) => {
 };
 
 // GET /api/webhook/whatsapp  — webhook verification challenge (Meta requirement)
-exports.verifyWhatsApp = (req, res) => {
+exports.verifyWhatsApp = async (req, res) => {
   const mode      = req.query['hub.mode'];
   const token     = req.query['hub.verify_token'];
   const challenge = req.query['hub.challenge'];
 
-  const expected = process.env.WHATSAPP_VERIFY_TOKEN || '';
-  const a = Buffer.from(`${token || ''}`);
-  const b = Buffer.from(expected);
-  const tokenOk = expected && a.length === b.length && crypto.timingSafeEqual(a, b);
-  if (mode === 'subscribe' && tokenOk) {
-    return res.status(200).send(challenge);
-  }
+  if (mode !== 'subscribe' || !token) return res.status(403).json({ error: 'Forbidden' });
+
+  // Find a connected WhatsApp integration whose verify_token matches
+  const { data: integrations } = await supabase
+    .from('integrations')
+    .select('id, credentials')
+    .eq('type', 'whatsapp')
+    .eq('status', 'connected');
+
+  const matched = (integrations || []).find(i => {
+    const stored = i.credentials?.verify_token || '';
+    if (!stored) return false;
+    const a = Buffer.from(`${token}`);
+    const b = Buffer.from(stored);
+    return a.length === b.length && crypto.timingSafeEqual(a, b);
+  });
+
+  if (matched) return res.status(200).send(challenge);
   res.status(403).json({ error: 'Forbidden' });
 };
 
@@ -55,9 +66,9 @@ exports.handleWhatsApp = async (req, res) => {
 
         if (!integration) continue;
 
-        // Verify HMAC signature now that we have the integration's secret
-        if (rawBody && integration.credentials?.webhook_secret) {
-          if (!verifySignature(rawBody, signature, integration.credentials.webhook_secret)) {
+        // Verify HMAC signature now that we have the integration's app secret
+        if (rawBody && integration.credentials?.app_secret) {
+          if (!verifySignature(rawBody, signature, integration.credentials.app_secret)) {
             console.warn('[webhook:wa] invalid signature for integration', integration.id);
             continue;
           }

@@ -268,18 +268,18 @@ exports.connectGreenInvoice = async (req, res) => {
   res.json({ ok: true });
 };
 
-// POST /api/integrations/whatsapp  { api_token, phone_number_id, webhook_secret }
+// POST /api/integrations/whatsapp  { api_token, phone_number_id, verify_token, app_secret }
 exports.connectWhatsApp = async (req, res) => {
-  const { api_token, phone_number_id, webhook_secret } = req.body;
-  if (!api_token || !phone_number_id || !webhook_secret) {
-    return res.status(400).json({ error: 'api_token, phone_number_id, and webhook_secret are required' });
+  const { api_token, phone_number_id, verify_token, app_secret } = req.body;
+  if (!api_token || !phone_number_id || !verify_token) {
+    return res.status(400).json({ error: 'api_token, phone_number_id, and verify_token are required' });
   }
 
   const { error } = await supabase.from('integrations').upsert({
     user_id:       req.user.id,
     type:          'whatsapp',
     status:        'connected',
-    credentials:   { api_token, phone_number_id, webhook_secret },
+    credentials:   { api_token, phone_number_id, verify_token, app_secret: app_secret || null },
     config:        { phone_number_id },
     error_message: null,
     error_count:   0,
