@@ -391,7 +391,9 @@ export default function App() {
         </div>
       )}
 
-      <div style={{ maxWidth:1140, margin:"0 auto", padding:"28px 28px 60px" }}>
+      {view === 'settings' && <SettingsPage user={user} plan={plan} used={used} limit={limit} remaining={remaining} onUpgrade={openUpgrade} onBack={() => setView("dashboard")} invoices={invoices} session={session} />}
+
+      <div style={{ maxWidth:1140, margin:"0 auto", padding:"28px 28px 60px", display: view === 'settings' ? 'none' : undefined }}>
         {view !== "admin" && view !== "integrations" && view !== "settings" && (
           <div style={{ display:"flex", gap:10, marginBottom:32, alignItems:"center", flexWrap:"wrap" }}>
             <button className="btn btn-primary" style={{ padding:"10px 20px", fontSize:13 }}
@@ -425,7 +427,6 @@ export default function App() {
         {view === "invoices"     && <InvoicesView computed={computed} dupeIds={dupeIds} updateInvoice={updateInvoice} deleteInvoice={deleteInvoice} bulkMarkPaid={bulkMarkPaid} bulkMarkUnpaid={bulkMarkUnpaid} bulkDelete={bulkDelete} setEditInvoice={setEditInvoice} color={color} onViewAttachment={handleViewAttachment} preSelMonth={preSelMonth} onClearPreSel={() => setPreSelMonth(null)} />}
         {view === "calendar"     && <CalendarView computed={computed} calMonth={calMonth} setCalMonth={setCalMonth} color={color} />}
         {view === "admin"        && <AdminPage />}
-        {view === "settings"     && <SettingsPage user={user} plan={plan} used={used} limit={limit} remaining={remaining} onUpgrade={openUpgrade} onBack={() => setView("dashboard")} invoices={invoices} session={session} />}
         {view === "integrations" && (
           <IntegrationsPage
             oauthResult={oauthResult}

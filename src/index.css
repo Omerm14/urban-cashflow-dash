@@ -150,6 +150,16 @@ body{font-family:'Plus Jakarta Sans',system-ui,sans-serif;background:var(--bg);c
 .kpi-card:hover{border-color:var(--bdr2)}
 .row-hover:hover{background:rgba(255,255,255,.02) !important}
 
+/* ─── SETTINGS ─── */
+.settings-shell{display:flex;min-height:calc(100vh - 56px)}
+.settings-sidebar{width:260px;flex-shrink:0;padding:24px 16px;border-right:1px solid var(--bdr);position:sticky;top:56px;height:calc(100vh - 56px);overflow-y:auto;display:flex;flex-direction:column;gap:8px}
+.settings-content{flex:1;padding:36px 48px;max-width:740px}
+.settings-nav-item{display:flex;align-items:center;gap:10px;width:100%;padding:10px 12px;border-radius:9px;border:none;border-left:2px solid transparent;background:transparent;color:var(--t2);font:500 13px 'Plus Jakarta Sans',sans-serif;cursor:pointer;text-align:left;transition:all .15s}
+.settings-nav-item:hover{background:rgba(255,255,255,.03);color:var(--t1)}
+.settings-nav-item.active{background:rgba(99,102,241,.1);color:#a78bfa;border-left-color:#6366f1;font-weight:700}
+.settings-nav-item.danger{color:var(--red)}
+.settings-nav-item.danger.active{background:rgba(239,68,68,.08);color:#f87171;border-left-color:var(--red)}
+
 /* ─── SCROLLBAR ─── */
 ::-webkit-scrollbar{width:5px;height:5px}
 ::-webkit-scrollbar-track{background:transparent}
