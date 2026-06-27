@@ -268,25 +268,30 @@ exports.connectGreenInvoice = async (req, res) => {
   res.json({ ok: true });
 };
 
-// POST /api/integrations/whatsapp  { api_token, phone_number_id, webhook_secret }
+// POST /api/integrations/whatsapp  — no user input needed; server uses shared env-var credentials
 exports.connectWhatsApp = async (req, res) => {
-  const { api_token, phone_number_id, webhook_secret } = req.body;
-  if (!api_token || !phone_number_id || !webhook_secret) {
-    return res.status(400).json({ error: 'api_token, phone_number_id, and webhook_secret are required' });
+  const phone = (process.env.WHATSAPP_PHONE_NUMBER || '').replace(/\D/g, '');
+  if (!phone || !process.env.WHATSAPP_API_TOKEN) {
+    return res.status(500).json({ error: 'WhatsApp is not configured on this server. Set WHATSAPP_PHONE_NUMBER and WHATSAPP_API_TOKEN.' });
   }
+
+  // Generate a short unique inbox code (avoids ambiguous chars like 0/O, 1/I)
+  const CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  const inbox_code = Array.from({ length: 6 }, () => CHARS[Math.floor(Math.random() * CHARS.length)]).join('');
+  const wa_link = `https://wa.me/${phone}?text=${inbox_code}`;
 
   const { error } = await supabase.from('integrations').upsert({
     user_id:       req.user.id,
     type:          'whatsapp',
     status:        'connected',
-    credentials:   { api_token, phone_number_id, webhook_secret },
-    config:        { phone_number_id },
+    credentials:   {},
+    config:        { inbox_code, wa_link },
     error_message: null,
     error_count:   0,
   }, { onConflict: 'user_id,type' });
 
   if (error) return res.status(500).json({ error: error.message });
-  res.json({ ok: true });
+  res.json({ ok: true, inbox_code, wa_link });
 };
 
 // PATCH /api/integrations/:id/config  { config: {...} }
