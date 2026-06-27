@@ -955,7 +955,7 @@ function IntegrationCard({ type, integration, onRefresh, onInvoicesRefresh, onNo
 
 // ─── Main page ────────────────────────────────────────────────────────────────
 
-export default function IntegrationsPage({ oauthResult, onClearOAuthResult, onInvoicesRefresh, onNotificationsRefresh, onStartSync, onCancelSync, syncJobs, isAtLimit, onUpgrade }) {
+export default function IntegrationsPage({ oauthResult, onClearOAuthResult, onInvoicesRefresh, onNotificationsRefresh, onStartSync, onCancelSync, syncJobs, isAtLimit, onUpgrade, onIntegrationConnected }) {
   const [integrations,      setIntegrations]      = useState([]);
   const [loading,           setLoading]           = useState(true);
   const [toast,             setToast]             = useState(null);
@@ -970,7 +970,9 @@ export default function IntegrationsPage({ oauthResult, onClearOAuthResult, onIn
   const load = useCallback(async () => {
     try {
       const { integrations: data } = await apiFetch("/api/integrations");
-      setIntegrations(data || []);
+      const list = data || [];
+      setIntegrations(list);
+      if (list.length > 0 && onIntegrationConnected) onIntegrationConnected();
     } catch (e) { showToast(e.message, false); }
     finally { setLoading(false); }
   }, [showToast]);

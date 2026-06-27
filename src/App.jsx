@@ -23,6 +23,9 @@ import { findDuplicates, parseCSV, isLatinOnly }                           from 
 import { calcDueDate, toYM, correctSwappedDate }                           from "./utils/dates";
 import { STATUS }                                    from "./constants";
 import { supabase }                                  from "./lib/supabase";
+import { useOnboarding }                             from "./hooks/useOnboarding";
+import OnboardingTour                                from "./components/onboarding/OnboardingTour";
+import OnboardingChecklist                           from "./components/onboarding/OnboardingChecklist";
 
 // SHA-256 hex of a file — used to name attachment objects so repeat uploads
 // (including every page of one PDF) dedup to a single stored original.
@@ -117,6 +120,11 @@ export default function App() {
   });
 
   const { plan, limit, used, remaining, pct, isAtLimit, isNearLimit, refresh: refreshPlan } = usePlan();
+
+  const {
+    tourActive, tourStep, checklistVisible, tasks,
+    startTour, endTour, nextStep, prevStep, markTaskDone, dismissChecklist,
+  } = useOnboarding({ userId: user?.id, invoices, suppliers });
   const [upgradeModalDismissed, setUpgradeModalDismissed] = useState(false);
   const [upgradeModalForced,    setUpgradeModalForced]    = useState(false);
   const showUpgradeModal = (isAtLimit && !upgradeModalDismissed) || upgradeModalForced;
@@ -327,6 +335,7 @@ export default function App() {
         plan={plan}
         onUpgrade={openUpgrade}
         onSettings={() => setView('settings')}
+        onStartTour={startTour}
       />
 
       {view !== 'settings' && <UsageBanner plan={plan} used={used} limit={limit} remaining={remaining} onUpgrade={openUpgrade} />}
@@ -395,6 +404,7 @@ export default function App() {
         {view !== "admin" && view !== "integrations" && view !== "settings" && (
           <div style={{ display:"flex", gap:10, marginBottom:32, alignItems:"center", flexWrap:"wrap" }}>
             <button className="btn btn-primary" style={{ padding:"10px 20px", fontSize:13 }}
+              data-onboarding="upload"
               onClick={isAtLimit ? openUpgrade : () => fileRef.current.click()}
               disabled={extracting || loading}
               title={isAtLimit ? 'Invoice limit reached — upgrade your plan' : undefined}>
@@ -428,6 +438,7 @@ export default function App() {
         {view === "settings"     && <SettingsPage user={user} plan={plan} used={used} limit={limit} remaining={remaining} onUpgrade={openUpgrade} onBack={() => setView("dashboard")} invoices={invoices} session={session} />}
         {view === "integrations" && (
           <IntegrationsPage
+            onIntegrationConnected={() => markTaskDone('integrations')}
             oauthResult={oauthResult}
             onClearOAuthResult={() => setOAuthResult(null)}
             onInvoicesRefresh={() => { refreshInvoices(); refreshPlan(); }}
@@ -475,6 +486,24 @@ export default function App() {
             </button>
           </div>
         </div>
+      )}
+
+      {tourActive && (
+        <OnboardingTour
+          step={tourStep}
+          onNext={nextStep}
+          onPrev={prevStep}
+          onSkip={endTour}
+          onFinish={endTour}
+        />
+      )}
+
+      {checklistVisible && !tourActive && view === "dashboard" && (
+        <OnboardingChecklist
+          tasks={tasks}
+          onDismiss={dismissChecklist}
+          onRestartTour={startTour}
+        />
       )}
 
       {loadingPreview && (

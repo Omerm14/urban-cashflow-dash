@@ -35,7 +35,7 @@ export default function Dashboard({ kpis, monthlyData, allNames, color, maxTotal
   return (
     <div style={{ animation:"slideUp .4s cubic-bezier(.16,1,.3,1)" }}>
       {/* KPI Cards */}
-      <div className="stat-grid" style={{ marginBottom:20 }}>
+      <div className="stat-grid" data-onboarding="kpi" style={{ marginBottom:20 }}>
         {stats.map(s => (
           <div key={s.key}
             className={`card stat-card ${s.cls}`}
