@@ -51,29 +51,8 @@
   </rect>
   <rect width="1200" height="630" fill="url(#og-grid)" opacity="0.15" mask="url(#og-grid-mask)"/>
 
-  <!-- ===== LOGO MARK (centered, 160px equivalent at 40px viewBox → scale 4x) ===== -->
-  <!-- C-arc -->
-  <path
-    d="M660 188C643 156 614 136 584 136C535 136 496 175 496 224C496 273 535 312 584 312C614 312 643 292 660 260"
-    stroke="url(#og-arc)"
-    stroke-width="18"
-    stroke-linecap="round"
-    fill="none"
-  />
-
-  <!-- Document body -->
-  <rect x="554" y="164" width="60" height="78" rx="8" fill="white"/>
-  <!-- Document fold -->
-  <path d="M600 164 L614 178 L600 178 Z" fill="#3b82f6" opacity="0.6"/>
-
-  <!-- Document lines -->
-  <line x1="566" y1="196" x2="600" y2="196" stroke="#3b82f6" stroke-width="4" stroke-linecap="round" opacity="0.5"/>
-  <line x1="566" y1="208" x2="600" y2="208" stroke="#3b82f6" stroke-width="4" stroke-linecap="round" opacity="0.5"/>
-  <line x1="566" y1="220" x2="586" y2="220" stroke="#3b82f6" stroke-width="4" stroke-linecap="round" opacity="0.5"/>
-
-  <!-- Cyan arrow -->
-  <path d="M640 278C654 260 670 236 660 206" stroke="url(#og-arrow)" stroke-width="11" stroke-linecap="round" fill="none"/>
-  <polyline points="633,196 660,206 672,184" stroke="url(#og-arrow)" stroke-width="11" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+  <!-- ===== LOGO MARK ===== -->
+  <image href="/logo.png" x="470" y="124" width="200" height="200"/>
 
   <!-- ===== WORDMARK ===== -->
   <!-- "Cash" in white -->
