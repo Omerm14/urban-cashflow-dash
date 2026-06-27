@@ -560,8 +560,8 @@ exports.processGoogleDriveFileBatch = async (integration, userId, files) => {
 // ─── WhatsApp Business sync ──────────────────────────────────────────────────
 
 exports.processWhatsAppMedia = async (integration, userId, mediaId, filename, mimeType, waMessageId) => {
-  const { api_token } = integration.credentials || {};
-  if (!api_token) throw new Error('WhatsApp API token not set');
+  const api_token = process.env.WHATSAPP_API_TOKEN;
+  if (!api_token) throw new Error('WHATSAPP_API_TOKEN not configured on server');
 
   // Check idempotency — skip if already processed (sync_source_meta lives on invoices, not sync_events)
   const { data: existing } = await supabase
