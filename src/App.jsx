@@ -8,7 +8,8 @@ import { usePlan }            from "./hooks/usePlan";
 import LoginPage              from "./pages/LoginPage";
 import AdminPage              from "./pages/AdminPage";
 import SettingsPage           from "./pages/SettingsPage";
-import NavBar                 from "./components/NavBar";
+import Sidebar                from "./components/Sidebar";
+import GlobalHeader           from "./components/NavBar";
 import Dashboard              from "./components/Dashboard";
 import InvoicesView           from "./components/InvoicesView";
 import CalendarView           from "./components/CalendarView";
@@ -24,16 +25,11 @@ import { calcDueDate, toYM, correctSwappedDate }                           from 
 import { STATUS }                                    from "./constants";
 import { supabase }                                  from "./lib/supabase";
 
-// SHA-256 hex of a file — used to name attachment objects so repeat uploads
-// (including every page of one PDF) dedup to a single stored original.
 const sha256Hex = async file => {
   const digest = await crypto.subtle.digest('SHA-256', await file.arrayBuffer());
   return Array.from(new Uint8Array(digest)).map(b => b.toString(16).padStart(2, '0')).join('');
 };
 
-// Store the original file in the active backend and return attachment columns.
-// Asks the API which backend is active: 'r2' → presigned PUT direct to R2;
-// otherwise (or on any presign hiccup) → Supabase Storage via the SDK as before.
 const uploadOriginal = async (file, userId, accessToken) => {
   const ext = (file.name.split('.').pop() || 'bin').toLowerCase();
   let fileHash = null;
@@ -84,10 +80,8 @@ export default function App() {
   const [loadingPreview,  setLoadingPreview]  = useState(false);
   const [preSelMonth,     setPreSelMonth]     = useState(null);
   const [fading,          setFading]          = useState(false);
-  const fileRef = useRef();
-  const csvRef  = useRef();
+  const csvRef = useRef();
 
-  // Handle OAuth redirect params and view= param from Google OAuth callback
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const viewParam      = params.get("view");
@@ -97,7 +91,6 @@ export default function App() {
       setView("integrations");
       if (oauthConnected) setOAuthResult({ connected: oauthConnected });
       if (oauthError)     setOAuthResult({ error: decodeURIComponent(oauthError) });
-      // Clean up URL
       window.history.replaceState({}, "", window.location.pathname);
     }
   }, []);
@@ -123,6 +116,8 @@ export default function App() {
   const openUpgrade  = () => { setUpgradeModalDismissed(false); setUpgradeModalForced(true); };
   const closeUpgrade = () => { setUpgradeModalDismissed(true);  setUpgradeModalForced(false); };
 
+  const isAdmin = user?.email && import.meta.env.VITE_ADMIN_EMAIL && user.email === import.meta.env.VITE_ADMIN_EMAIL;
+
   const handleViewAttachment = useCallback(async inv => {
     setLoadingPreview(true);
     try {
@@ -147,7 +142,6 @@ export default function App() {
     setExtracting(true);
     setExtractMsg({ text: `Processing ${files.length} file${files.length > 1 ? "s" : ""}…`, ok: null });
 
-    // Pre-filter by filename to avoid wasting API tokens on already-uploaded files
     const existingFileNames = new Set(invoices.map(i => i.source_file).filter(Boolean).map(n => n.toLowerCase()));
     const [toExtract, fileSkipped] = files.reduce(([ok, skip], f) =>
       existingFileNames.has(f.name.toLowerCase()) ? [ok, [...skip, f]] : [[...ok, f], skip],
@@ -158,7 +152,6 @@ export default function App() {
       toExtract.map(f => f.type === "application/pdf" ? processPdf(f) : fileToBase64(f).then(img => [img]))
     );
 
-    // Flatten: each PDF page becomes its own extraction unit
     const pageUnits = [];
     imageResults.forEach((r, i) => {
       if (r.status === "rejected") {
@@ -211,7 +204,6 @@ export default function App() {
       candidates.push(r.value);
     });
 
-    // Deduplicate against existing invoices
     const computedForDedup = computed.map(inv => ({
       ...inv,
       supplier: getSupplier(inv.supplier)?.name || inv.supplier,
@@ -226,7 +218,6 @@ export default function App() {
     const toAdd = candidates.filter((_, i) => !dupeSet.has(`__new_${i}`));
     const contentDupeCount = candidates.length - toAdd.length;
 
-    // Add non-duplicate candidates (store original file first so it's openable)
     const { data: { session: uploadSession } } = await supabase.auth.getSession();
     let added = 0, attachmentIssues = 0;
     await Promise.allSettled(
@@ -236,7 +227,6 @@ export default function App() {
           try {
             attachment = await uploadOriginal(file, user.id, uploadSession?.access_token);
           } catch (upErr) {
-            // Keep the invoice but flag the missing original for repair.
             console.warn(`attachment upload failed for ${file.name}:`, upErr.message);
             attachment = { attachment_status: 'missing' };
             attachmentIssues++;
@@ -294,8 +284,8 @@ export default function App() {
   if (authLoading) return (
     <Routes>
       <Route path="*" element={
-        <div style={{ background:"var(--bg)", minHeight:"100vh", display:"flex", alignItems:"center", justifyContent:"center" }}>
-          <div style={{ color:"var(--t3)", fontSize:14 }}>Loading…</div>
+        <div style={{ background: 'var(--canvas)', minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div style={{ color: 'var(--t3)', fontSize: 14 }}>Loading…</div>
         </div>
       } />
     </Routes>
@@ -309,8 +299,8 @@ export default function App() {
   );
 
   if (loading) return (
-    <div style={{ background:"var(--bg)", minHeight:"100vh", display:"flex", alignItems:"center", justifyContent:"center" }}>
-      <div style={{ color:"var(--t3)", fontSize:14 }}>Loading…</div>
+    <div style={{ background: 'var(--canvas)', minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <div style={{ color: 'var(--t3)', fontSize: 14 }}>Loading…</div>
     </div>
   );
 
@@ -318,178 +308,190 @@ export default function App() {
     <Routes>
       <Route path="/login" element={<Navigate to="/app" replace />} />
       <Route path="*" element={
-    <div style={{ background:"var(--bg)", minHeight:"100vh", color:"var(--t1)" }}>
-      <NavBar view={view} setView={setView} suppliersCount={suppliers.length}
-        onSuppliersClick={() => setShowSuppliers(true)} user={user} onSignOut={signOut}
-        integrationError={false}
-        unreadCount={unreadCount}
-        onBellClick={() => { setShowNotifPanel(v => !v); if (!showNotifPanel) markAllRead(); }}
-        plan={plan}
-        onUpgrade={openUpgrade}
-        onSettings={() => setView('settings')}
-      />
+        <div className="app-shell">
+          {/* Sidebar */}
+          <Sidebar
+            view={view}
+            setView={setView}
+            user={user}
+            onSignOut={signOut}
+            onSettings={() => setView('settings')}
+            plan={plan}
+            used={used}
+            limit={limit}
+            pct={pct}
+            suppliersCount={suppliers.length}
+            onSuppliersClick={() => setShowSuppliers(true)}
+            onUpgrade={openUpgrade}
+            onUpload={handleUpload}
+            isAtLimit={isAtLimit}
+            extracting={extracting}
+            isAdmin={isAdmin}
+          />
 
-      {view !== 'settings' && <UsageBanner plan={plan} used={used} limit={limit} remaining={remaining} onUpgrade={openUpgrade} />}
+          {/* Main content area */}
+          <div className="main-area">
+            <GlobalHeader
+              unreadCount={unreadCount}
+              onBellClick={() => { setShowNotifPanel(v => !v); if (!showNotifPanel) markAllRead(); }}
+            />
 
-      {showUpgradeModal && (
-        <UpgradeModal
-          plan={plan} used={used} limit={limit}
-          onContinueReadonly={closeUpgrade}
-        />
-      )}
+            {/* Upgrade modal */}
+            {showUpgradeModal && (
+              <UpgradeModal
+                plan={plan} used={used} limit={limit}
+                onContinueReadonly={closeUpgrade}
+              />
+            )}
 
-      {/* Notification panel — slides in from top-right below navbar */}
-      {showNotifPanel && (
-        <div style={{ position:"fixed", top:60, right:24, zIndex:50, width:320, maxWidth:"calc(100vw - 32px)",
-          background:"var(--surf)", border:"1px solid var(--bdr2)", borderRadius:12,
-          boxShadow:"0 16px 40px rgba(0,0,0,.5)", overflow:"hidden", animation:"fadeIn .2s" }}
-          onMouseLeave={() => {}}>
-          <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"12px 16px", borderBottom:"1px solid var(--bdr)" }}>
-            <span style={{ fontSize:13, fontWeight:700 }}>Notifications</span>
-            <button onClick={() => setShowNotifPanel(false)}
-              style={{ background:"none", border:"none", color:"var(--t3)", cursor:"pointer", fontSize:14 }}>✕</button>
-          </div>
-          {notifications.length === 0 ? (
-            <div style={{ padding:"24px 16px", textAlign:"center", color:"#334155", fontSize:13 }}>No notifications yet</div>
-          ) : (
-            <div style={{ maxHeight:360, overflowY:"auto" }}>
-              {notifications.map(n => {
-                const srcLabel = n.integration_type
-                  ? { google_drive:"Drive", gmail:"Gmail", whatsapp:"WhatsApp", green_invoice:"GreenInv" }[n.integration_type] || n.integration_type
-                  : "Manual";
-                const ago = (() => {
-                  const sec = Math.floor((Date.now() - new Date(n.created_at)) / 1000);
-                  if (sec < 60) return `${sec}s ago`;
-                  if (sec < 3600) return `${Math.floor(sec/60)}m ago`;
-                  if (sec < 86400) return `${Math.floor(sec/3600)}h ago`;
-                  return `${Math.floor(sec/86400)}d ago`;
-                })();
-                const isSummary = n.type === "sync_summary";
-                const icon  = isSummary ? "✓" : { ocr_failed:"✕", download_failed:"↯" }[n.event_type] || "·";
-                const color = isSummary ? "#4ade80" : { ocr_failed:"#f87171", download_failed:"#fb923c" }[n.event_type] || "#94a3b8";
-                const label = isSummary
-                  ? `${n.count} new invoice${n.count !== 1 ? "s" : ""} synced`
-                  : (n.source_file || n.event_type);
-                return (
-                  <div key={n.id} style={{ display:"flex", gap:10, padding:"10px 16px", borderBottom:"1px solid #0d1626", alignItems:"flex-start" }}>
-                    <span style={{ color, fontWeight:700, fontSize:11, flexShrink:0, marginTop:2 }}>{icon}</span>
-                    <div style={{ flex:1, minWidth:0 }}>
-                      <div style={{ fontSize:12, color: isSummary ? "#e2e8f0" : "#94a3b8", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>
-                        {label}
-                      </div>
-                      {n.error_message && <div style={{ fontSize:11, color:"#f87171", marginTop:2 }}>{n.error_message}</div>}
-                    </div>
-                    <div style={{ flexShrink:0, textAlign:"right" }}>
-                      <div style={{ fontSize:10, color:"#334155" }}>{srcLabel}</div>
-                      <div style={{ fontSize:10, color:"#1e2d45", marginTop:1 }}>{ago}</div>
-                    </div>
+            {/* Notification panel */}
+            {showNotifPanel && (
+              <div style={{
+                position: 'fixed', top: 48, right: 20, zIndex: 150, width: 320, maxWidth: 'calc(100vw - 32px)',
+                background: 'var(--surf)', border: '1px solid var(--bdr)', borderRadius: 12,
+                boxShadow: '0 8px 32px rgba(0,0,0,.12)', overflow: 'hidden', animation: 'fadeIn .2s',
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px', borderBottom: '1px solid var(--bdr)' }}>
+                  <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--t1)' }}>Notifications</span>
+                  <button onClick={() => setShowNotifPanel(false)} style={{ background: 'none', border: 'none', color: 'var(--t3)', cursor: 'pointer', fontSize: 14, lineHeight: 1 }}>✕</button>
+                </div>
+                {notifications.length === 0 ? (
+                  <div style={{ padding: '24px 16px', textAlign: 'center', color: 'var(--t3)', fontSize: 13 }}>No notifications yet</div>
+                ) : (
+                  <div style={{ maxHeight: 360, overflowY: 'auto' }}>
+                    {notifications.map(n => {
+                      const srcLabel = n.integration_type
+                        ? { google_drive: 'Drive', gmail: 'Gmail', whatsapp: 'WhatsApp', green_invoice: 'GreenInv' }[n.integration_type] || n.integration_type
+                        : 'Manual';
+                      const ago = (() => {
+                        const sec = Math.floor((Date.now() - new Date(n.created_at)) / 1000);
+                        if (sec < 60) return `${sec}s ago`;
+                        if (sec < 3600) return `${Math.floor(sec / 60)}m ago`;
+                        if (sec < 86400) return `${Math.floor(sec / 3600)}h ago`;
+                        return `${Math.floor(sec / 86400)}d ago`;
+                      })();
+                      const isSummary = n.type === 'sync_summary';
+                      const icon  = isSummary ? '✓' : { ocr_failed: '✕', download_failed: '↯' }[n.event_type] || '·';
+                      const clr   = isSummary ? 'var(--green)' : { ocr_failed: 'var(--red)', download_failed: 'var(--amber)' }[n.event_type] || 'var(--t3)';
+                      const label = isSummary
+                        ? `${n.count} new invoice${n.count !== 1 ? 's' : ''} synced`
+                        : (n.source_file || n.event_type);
+                      return (
+                        <div key={n.id} style={{ display: 'flex', gap: 10, padding: '10px 16px', borderBottom: '1px solid var(--bdr)', alignItems: 'flex-start' }}>
+                          <span style={{ color: clr, fontWeight: 700, fontSize: 11, flexShrink: 0, marginTop: 2 }}>{icon}</span>
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ fontSize: 12, color: 'var(--t1)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{label}</div>
+                            {n.error_message && <div style={{ fontSize: 11, color: 'var(--red)', marginTop: 2 }}>{n.error_message}</div>}
+                          </div>
+                          <div style={{ flexShrink: 0, textAlign: 'right' }}>
+                            <div style={{ fontSize: 10, color: 'var(--t3)' }}>{srcLabel}</div>
+                            <div style={{ fontSize: 10, color: 'var(--t3)', marginTop: 1 }}>{ago}</div>
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
-                );
-              })}
-            </div>
-          )}
-        </div>
-      )}
-
-      <div style={{ maxWidth:1140, margin:"0 auto", padding:"28px clamp(12px,4vw,28px) 60px" }}>
-        {view !== "admin" && view !== "integrations" && view !== "settings" && (
-          <div style={{ display:"flex", gap:10, marginBottom:32, alignItems:"center", flexWrap:"wrap" }}>
-            <button className="btn btn-primary" style={{ padding:"10px 20px", fontSize:13 }}
-              onClick={isAtLimit ? openUpgrade : () => fileRef.current.click()}
-              disabled={extracting || loading}
-              title={isAtLimit ? 'Invoice limit reached — upgrade your plan' : undefined}>
-              <span style={{ fontSize:16 }}>+</span>
-              {extracting ? "Extracting…" : loading ? "Loading…" : isAtLimit ? "🔒 Upload Invoices" : "Upload Invoices"}
-            </button>
-            <input ref={fileRef} type="file" accept="image/*,application/pdf" multiple onChange={handleUpload} style={{ display:"none" }} />
-
-            <button className="btn btn-secondary" style={{ padding:"10px 20px", fontSize:13 }} onClick={() => csvRef.current.click()}>
-              <span>📋</span> Load Supplier Sheet
-            </button>
-            <input ref={csvRef} type="file" accept=".csv,text/csv" onChange={handleCSV} style={{ display:"none" }} />
-
-            {extractMsg && (
-              <div style={{ display:"flex", alignItems:"center", gap:8, padding:"8px 16px", borderRadius:8,
-                background: extractMsg.ok===false?"rgba(239,68,68,.1)":extractMsg.ok?"rgba(16,185,129,.1)":"var(--surf2)",
-                border:`1px solid ${extractMsg.ok===false?"rgba(239,68,68,.3)":extractMsg.ok?"rgba(16,185,129,.3)":"var(--bdr2)"}`,
-                color: extractMsg.ok===false?"var(--red)":extractMsg.ok?"var(--green)":"var(--t2)", fontSize:13, animation:"fadeIn .3s" }}>
-                {extractMsg.text}
+                )}
               </div>
             )}
-            <div style={{ marginLeft:"auto", fontSize:12, color:"var(--t3)", fontWeight:500 }}>{invoices.length} invoices</div>
-          </div>
-        )}
 
-        <div style={{ opacity:fading ? 0 : 1, transition:"opacity .16s ease" }}>
-        {view === "dashboard"    && <Dashboard  kpis={kpis} monthlyData={monthlyData} allNames={allNames} color={color} maxTotal={maxTotal} onPayMonth={payMonth} />}
-        {view === "invoices"     && <InvoicesView computed={computed} dupeIds={dupeIds} updateInvoice={updateInvoice} deleteInvoice={deleteInvoice} bulkMarkPaid={bulkMarkPaid} bulkMarkUnpaid={bulkMarkUnpaid} bulkDelete={bulkDelete} setEditInvoice={setEditInvoice} color={color} onViewAttachment={handleViewAttachment} preSelMonth={preSelMonth} onClearPreSel={() => setPreSelMonth(null)} />}
-        {view === "calendar"     && <CalendarView computed={computed} calMonth={calMonth} setCalMonth={setCalMonth} color={color} />}
-        {view === "admin"        && <AdminPage />}
-        {view === "settings"     && <SettingsPage user={user} plan={plan} used={used} limit={limit} remaining={remaining} onUpgrade={openUpgrade} onBack={() => setView("dashboard")} invoices={invoices} session={session} />}
-        {view === "integrations" && (
-          <IntegrationsPage
-            oauthResult={oauthResult}
-            onClearOAuthResult={() => setOAuthResult(null)}
-            onInvoicesRefresh={() => { refreshInvoices(); refreshPlan(); }}
-            onNotificationsRefresh={refreshNotifications}
-            onStartSync={startSync}
-            onCancelSync={cancelSync}
-            syncJobs={syncJobs}
-            isAtLimit={isAtLimit}
-            onUpgrade={openUpgrade}
-          />
-        )}
-        </div>
-      </div>
+            <div className="page-content">
+              {/* Usage banner — shown on non-settings views */}
+              {view !== 'settings' && (
+                <UsageBanner plan={plan} used={used} limit={limit} remaining={remaining} onUpgrade={openUpgrade} />
+              )}
 
-      {editInvoice   && <EditInvoiceModal editInvoice={editInvoice} setEditInvoice={setEditInvoice} suppliers={suppliers} addInvoice={addInvoice} updateInvoice={updateInvoice} getSupplier={getSupplier} onViewAttachment={handleViewAttachment} />}
-      {showSuppliers && <SuppliersModal suppliers={suppliers} addSupplier={addSupplier} updateSupplier={updateSupplier} deleteSupplier={deleteSupplier} editSupplier={editSupplier} setEditSupplier={setEditSupplier} onClose={() => setShowSuppliers(false)} />}
+              {/* Toolbar: CSV upload + extract status */}
+              {view !== 'admin' && view !== 'integrations' && view !== 'settings' && (
+                <div style={{ display: 'flex', gap: 10, marginBottom: 24, alignItems: 'center', flexWrap: 'wrap' }}>
+                  <button className="btn btn-secondary" style={{ padding: '8px 16px', fontSize: 13 }} onClick={() => csvRef.current.click()}>
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" style={{ flexShrink: 0 }}>
+                      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/>
+                    </svg>
+                    Load Supplier Sheet
+                  </button>
+                  <input ref={csvRef} type="file" accept=".csv,text/csv" onChange={handleCSV} style={{ display: 'none' }} />
 
-      {/* Global sync status bar — visible from any tab while Drive sync is in progress */}
-      {activeSyncJob && (
-        <div style={{
-          position: "fixed", bottom: 0, left: 0, right: 0, zIndex: 60,
-          background: "var(--surf)", borderTop: "1px solid var(--bdr)",
-          padding: "0 24px",
-        }}>
-          <div style={{ maxWidth: 1140, margin: "0 auto", display: "flex", alignItems: "center", gap: 14, height: 44 }}>
-            <div style={{ width: 14, height: 14, borderRadius: "50%", border: "2px solid var(--cyan)", borderTopColor: "transparent", animation: "spin 0.8s linear infinite", flexShrink: 0 }} />
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
-                <span style={{ fontSize: 12, color: "var(--t2)" }}>
-                  Syncing Drive… file {Math.min(activeSyncJob.cursor, activeSyncJob.totalFiles)} / {activeSyncJob.totalFiles}
-                  {activeSyncJob.added > 0 && <span style={{ color: "var(--green)", marginLeft: 8 }}>· {activeSyncJob.added} invoice{activeSyncJob.added !== 1 ? "s" : ""} added</span>}
-                </span>
-              </div>
-              <div style={{ height: 3, background: "var(--surf2)", borderRadius: 2, overflow: "hidden" }}>
-                <div style={{
-                  height: "100%", borderRadius: 2, background: "var(--cyan)",
-                  width: `${activeSyncJob.totalFiles ? Math.round(activeSyncJob.cursor / activeSyncJob.totalFiles * 100) : 0}%`,
-                  transition: "width 0.5s ease",
-                }} />
+                  {extractMsg && (
+                    <div style={{
+                      display: 'flex', alignItems: 'center', gap: 8, padding: '7px 14px', borderRadius: 7,
+                      background: extractMsg.ok === false ? 'rgba(239,68,68,.07)' : extractMsg.ok ? 'rgba(16,185,129,.07)' : 'var(--surf2)',
+                      border: `1px solid ${extractMsg.ok === false ? 'rgba(239,68,68,.2)' : extractMsg.ok ? 'rgba(16,185,129,.2)' : 'var(--bdr)'}`,
+                      color: extractMsg.ok === false ? 'var(--red)' : extractMsg.ok ? '#065F46' : 'var(--t2)',
+                      fontSize: 13, animation: 'fadeIn .3s',
+                    }}>
+                      {extractMsg.text}
+                    </div>
+                  )}
+                  <div style={{ marginLeft: 'auto', fontSize: 12, color: 'var(--t3)', fontWeight: 500 }}>{invoices.length} invoices</div>
+                </div>
+              )}
+
+              {/* Page content */}
+              <div style={{ opacity: fading ? 0 : 1, transition: 'opacity .16s ease' }}>
+                {view === 'dashboard'    && <Dashboard kpis={kpis} monthlyData={monthlyData} allNames={allNames} color={color} maxTotal={maxTotal} onPayMonth={payMonth} />}
+                {view === 'invoices'     && <InvoicesView computed={computed} dupeIds={dupeIds} updateInvoice={updateInvoice} deleteInvoice={deleteInvoice} bulkMarkPaid={bulkMarkPaid} bulkMarkUnpaid={bulkMarkUnpaid} bulkDelete={bulkDelete} setEditInvoice={setEditInvoice} color={color} onViewAttachment={handleViewAttachment} preSelMonth={preSelMonth} onClearPreSel={() => setPreSelMonth(null)} />}
+                {view === 'calendar'     && <CalendarView computed={computed} calMonth={calMonth} setCalMonth={setCalMonth} color={color} />}
+                {view === 'admin'        && <AdminPage />}
+                {view === 'settings'     && <SettingsPage user={user} plan={plan} used={used} limit={limit} remaining={remaining} onUpgrade={openUpgrade} onBack={() => setView('dashboard')} invoices={invoices} session={session} />}
+                {view === 'integrations' && (
+                  <IntegrationsPage
+                    oauthResult={oauthResult}
+                    onClearOAuthResult={() => setOAuthResult(null)}
+                    onInvoicesRefresh={() => { refreshInvoices(); refreshPlan(); }}
+                    onNotificationsRefresh={refreshNotifications}
+                    onStartSync={startSync}
+                    onCancelSync={cancelSync}
+                    syncJobs={syncJobs}
+                    isAtLimit={isAtLimit}
+                    onUpgrade={openUpgrade}
+                  />
+                )}
               </div>
             </div>
-            <button onClick={() => cancelSync(activeSyncJob.integrationId)}
-              style={{ padding: "4px 12px", background: "rgba(239,68,68,.1)", border: "1px solid rgba(239,68,68,.25)", color: "var(--red)", borderRadius: 6, cursor: "pointer", fontSize: 12, fontFamily: "inherit", flexShrink: 0 }}>
-              Stop
-            </button>
           </div>
-        </div>
-      )}
 
-      {loadingPreview && (
-        <div style={{ position:"fixed", inset:0, background:"#00000060", display:"flex", alignItems:"center", justifyContent:"center", zIndex:100 }}>
-          <div style={{ color:"#94a3b8", fontSize:14 }}>Loading preview…</div>
+          {/* Modals */}
+          {editInvoice   && <EditInvoiceModal editInvoice={editInvoice} setEditInvoice={setEditInvoice} suppliers={suppliers} addInvoice={addInvoice} updateInvoice={updateInvoice} getSupplier={getSupplier} onViewAttachment={handleViewAttachment} />}
+          {showSuppliers && <SuppliersModal suppliers={suppliers} addSupplier={addSupplier} updateSupplier={updateSupplier} deleteSupplier={deleteSupplier} editSupplier={editSupplier} setEditSupplier={setEditSupplier} onClose={() => setShowSuppliers(false)} />}
+
+          {/* Sync status bar */}
+          {activeSyncJob && (
+            <div style={{ position: 'fixed', bottom: 0, left: 220, right: 0, zIndex: 60, background: 'var(--surf)', borderTop: '1px solid var(--bdr)', padding: '0 24px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 14, height: 44 }}>
+                <div style={{ width: 14, height: 14, borderRadius: '50%', border: '2px solid var(--indigo)', borderTopColor: 'transparent', animation: 'spin 0.8s linear infinite', flexShrink: 0 }} />
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+                    <span style={{ fontSize: 12, color: 'var(--t2)' }}>
+                      Syncing Drive… file {Math.min(activeSyncJob.cursor, activeSyncJob.totalFiles)} / {activeSyncJob.totalFiles}
+                      {activeSyncJob.added > 0 && <span style={{ color: 'var(--green)', marginLeft: 8 }}>· {activeSyncJob.added} invoice{activeSyncJob.added !== 1 ? 's' : ''} added</span>}
+                    </span>
+                  </div>
+                  <div style={{ height: 3, background: 'var(--bdr)', borderRadius: 2, overflow: 'hidden' }}>
+                    <div style={{ height: '100%', borderRadius: 2, background: 'var(--indigo)', width: `${activeSyncJob.totalFiles ? Math.round(activeSyncJob.cursor / activeSyncJob.totalFiles * 100) : 0}%`, transition: 'width 0.5s ease' }} />
+                  </div>
+                </div>
+                <button onClick={() => cancelSync(activeSyncJob.integrationId)}
+                  style={{ padding: '4px 12px', background: 'rgba(239,68,68,.07)', border: '1px solid rgba(239,68,68,.2)', color: 'var(--red)', borderRadius: 6, cursor: 'pointer', fontSize: 12, fontFamily: 'inherit', flexShrink: 0 }}>
+                  Stop
+                </button>
+              </div>
+            </div>
+          )}
+
+          {loadingPreview && (
+            <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 400 }}>
+              <div style={{ color: 'var(--t2)', fontSize: 14 }}>Loading preview…</div>
+            </div>
+          )}
+          {previewUrl && (
+            <AttachmentPreviewModal
+              url={previewUrl}
+              filename={previewFilename}
+              onClose={() => { setPreviewUrl(null); setPreviewFilename(null); }}
+            />
+          )}
         </div>
-      )}
-      {previewUrl && (
-        <AttachmentPreviewModal
-          url={previewUrl}
-          filename={previewFilename}
-          onClose={() => { setPreviewUrl(null); setPreviewFilename(null); }}
-        />
-      )}
-    </div>
       } />
     </Routes>
   );
