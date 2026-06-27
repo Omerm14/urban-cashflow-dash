@@ -39,7 +39,7 @@ export default function LoginPage() {
     <div style={{ background:'#080e1a', minHeight:'100vh', display:'flex', alignItems:'center', justifyContent:'center', fontFamily:'Inter,system-ui,sans-serif' }}>
       <div style={{ width:380, background:'#0a1120', border:'1px solid #111d2e', borderRadius:16, padding:32 }}>
         <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:32 }}>
-          <LogoIcon size={36}/>
+          <LogoIcon size={64}/>
           <span style={{ fontWeight:700, fontSize:18, color:'#f1f5f9' }}>Cashflow</span>
         </div>
 

@@ -27,7 +27,7 @@ export default function NavBar({ view, setView, suppliersCount, onSuppliersClick
   return (
     <nav className="nav">
       <div className="nav-brand" onClick={() => setView("dashboard")}>
-        <LogoIcon size={30}/>
+        <LogoIcon size={52}/>
         <span style={{ fontWeight:800, fontSize:16, background:"linear-gradient(90deg,#06b6d4,#3b82f6)", WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent" }}>
           Cashflow
         </span>
