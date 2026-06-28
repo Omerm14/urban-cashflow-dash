@@ -183,6 +183,9 @@ body{font-family:'IBM Plex Sans',system-ui,sans-serif;background:var(--bg);color
 /* ─── HIDE SCROLLBAR UTILITY ─── */
 .hide-scrollbar::-webkit-scrollbar{display:none}
 
+/* ─── MODAL 2-COLUMN GRID ─── */
+.modal-2col{grid-template-columns:1fr 1fr}
+
 @media(max-width:640px){
   .modal{position:fixed;bottom:0;left:0;right:0;width:100%;max-width:100%;margin:0;border-radius:20px 20px 0 0;max-height:90vh;animation:slideUp .3s cubic-bezier(.16,1,.3,1)}
   .overlay{align-items:flex-end;padding:0}
@@ -199,6 +202,8 @@ body{font-family:'IBM Plex Sans',system-ui,sans-serif;background:var(--bg);color
   .total-bar{flex-direction:column;align-items:flex-start;gap:8px}
   /* Month tabs smaller on mobile */
   .month-tab{padding:5px 11px;font-size:12px}
+  /* Edit invoice modal: single column */
+  .modal-2col{grid-template-columns:1fr}
 }
 
 @media(max-width:900px){

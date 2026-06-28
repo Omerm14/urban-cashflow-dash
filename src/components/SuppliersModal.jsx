@@ -2,15 +2,14 @@ import { useState } from "react";
 
 const TERM_FILTERS = ["all", "shotef_plus(75)", "shotef_plus(45)", "shotef_plus(30)", "shotef_plus(10)", "shotef", "immediate", "custom"];
 
-export default function SuppliersModal({ suppliers, addSupplier, updateSupplier, deleteSupplier, editSupplier, setEditSupplier, onClose }) {
+export default function SuppliersModal({ suppliers, addSupplier, updateSupplier, deleteSupplier, editSupplier, setEditSupplier, onClose, inline }) {
   const [filterTerm, setFilterTerm] = useState("all");
 
   const filtered = filterTerm === "all" ? suppliers : suppliers.filter(s => s.terms === filterTerm);
   const activeCounts = TERM_FILTERS.map(t => ({ t, count: t === "all" ? suppliers.length : suppliers.filter(s => s.terms === t).length }));
 
-  return (
-    <div className="overlay" onClick={e => e.target === e.currentTarget && onClose()}>
-      <div className="modal" style={{ width:600 }}>
+  const inner = (
+    <div className="modal" style={{ width: "min(600px, 100%)", maxWidth:"100%" }}>
         {/* Header */}
         <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:18 }}>
           <div>
@@ -91,6 +90,12 @@ export default function SuppliersModal({ suppliers, addSupplier, updateSupplier,
           + Add Supplier
         </button>
       </div>
+  );
+
+  if (inline) return inner;
+  return (
+    <div className="overlay" onClick={e => e.target === e.currentTarget && onClose()}>
+      {inner}
     </div>
   );
 }

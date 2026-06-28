@@ -33,7 +33,7 @@ export default function EditInvoiceModal({ editInvoice, setEditInvoice, supplier
   };
 
   return (
-    <div className="modal-overlay" onClick={e => e.target===e.currentTarget && close()}>
+    <div className="overlay" onClick={e => e.target===e.currentTarget && close()}>
       <div className="modal">
         <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:24 }}>
           <div>
@@ -42,7 +42,7 @@ export default function EditInvoiceModal({ editInvoice, setEditInvoice, supplier
           </div>
           <button onClick={close} style={{ width:32, height:32, borderRadius:8, background:"var(--surf)", border:"1px solid var(--bdr2)", color:"var(--t2)", cursor:"pointer", fontSize:16, display:"flex", alignItems:"center", justifyContent:"center" }}>✕</button>
         </div>
-        <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:14, marginBottom:14 }}>
+        <div className="modal-2col" style={{ display:"grid", gap:14, marginBottom:14 }}>
           {[["Invoice #","invoiceNo","text"],["Invoice Date","invoiceDate","date"],["Amount","amount","number"],["Due Date (override)","dueDate","date"]].map(([label, key, type]) => (
             <div key={key}>
               <div style={{ fontSize:11, fontWeight:600, color:"var(--t2)", marginBottom:6, textTransform:"uppercase", letterSpacing:".5px" }}>{label}</div>

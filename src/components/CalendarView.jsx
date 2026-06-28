@@ -55,7 +55,7 @@ export default function CalendarView({ computed, calMonth, setCalMonth, color })
                   {inv.supplier.split(" ")[0]} · {currency(inv.amount)}
                 </div>
               ))}
-              {dayInvs.length > 3 && <div style={{ fontSize:9, color:"#475569", fontWeight:600 }}>+{dayInvs.length-3} more</div>}
+              {dayInvs.length > 3 && <div style={{ fontSize:9, color:"var(--t3)", fontWeight:600 }}>+{dayInvs.length-3} more</div>}
             </div>
           );
         })}
