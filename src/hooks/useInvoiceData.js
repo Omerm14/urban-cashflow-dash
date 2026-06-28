@@ -162,13 +162,25 @@ export const useInvoiceData = () => {
 
   const kpis = useMemo(() => {
     const nm = toYM(new Date(new Date().getFullYear(), new Date().getMonth() + 1, 1));
-    // Compute prev month outstanding for delta
     const pm = toYM(new Date(new Date().getFullYear(), new Date().getMonth() - 1, 1));
-    const prevOutstanding = computed.filter(i => i.status !== STATUS.PAID && i.dueDate && i.dueDate < toYM(new Date())).reduce((s, i) => s + Number(i.amount), 0);
+    const thisMonth = toYM(new Date());
     const nextMonthData = monthlyData.find(m => m.ym === nm);
-    // Find the next upcoming month with unpaid invoices
-    const today = toYM(new Date());
-    const nextDueEntry = monthlyData.find(m => m.ym >= today);
+
+    // Month-over-month outstanding delta: current month due vs previous month due
+    const currentMonthDue = monthlyData.find(m => m.ym === thisMonth)?.total || 0;
+    const prevMonthDue    = monthlyData.find(m => m.ym === pm)?.total || 0;
+    const outstandingDelta = prevMonthDue > 0
+      ? Math.round(((currentMonthDue - prevMonthDue) / prevMonthDue) * 100)
+      : null;
+
+    // Year-over-year paid delta
+    const thisYear = new Date().getFullYear();
+    const paidThisYear = computed.filter(i => i.status === STATUS.PAID && new Date(i.invoice_date || i.created_at).getFullYear() === thisYear).reduce((s,i) => s + Number(i.amount), 0);
+    const paidLastYear = computed.filter(i => i.status === STATUS.PAID && new Date(i.invoice_date || i.created_at).getFullYear() === thisYear - 1).reduce((s,i) => s + Number(i.amount), 0);
+    const paidDelta = paidLastYear > 0
+      ? Math.round(((paidThisYear - paidLastYear) / paidLastYear) * 100)
+      : null;
+
     return {
       outstanding:    computed.filter(i => i.status !== STATUS.PAID).reduce((s, i) => s + Number(i.amount), 0),
       overdue:        computed.filter(i => i.status === STATUS.OVERDUE).reduce((s, i) => s + Number(i.amount), 0),
@@ -179,6 +191,8 @@ export const useInvoiceData = () => {
       overdueCount:      computed.filter(i => i.status === STATUS.OVERDUE).length,
       outstandingCount:  computed.filter(i => i.status !== STATUS.PAID).length,
       paidCount:         computed.filter(i => i.status === STATUS.PAID).length,
+      outstandingDelta,
+      paidDelta,
     };
   }, [computed, monthlyData]);
 

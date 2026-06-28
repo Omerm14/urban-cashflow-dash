@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback, useEffect } from "react";
+import { useState, useRef, useCallback, useEffect, useMemo } from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
 import { useAuth }            from "./contexts/AuthContext";
 import { ThemeProvider }      from "./contexts/ThemeContext";
@@ -106,6 +106,10 @@ function AppShell() {
   });
 
   const { plan, limit, used, remaining, pct, isAtLimit, isNearLimit, refresh: refreshPlan } = usePlan();
+  const usedThisMonth = useMemo(() => {
+    const start = new Date(); start.setDate(1); start.setHours(0, 0, 0, 0);
+    return invoices.filter(i => new Date(i.created_at) >= start).length;
+  }, [invoices]);
   const [upgradeModalDismissed, setUpgradeModalDismissed] = useState(false);
   const [upgradeModalForced,    setUpgradeModalForced]    = useState(false);
   const showUpgradeModal = (isAtLimit && !upgradeModalDismissed) || upgradeModalForced;
@@ -334,6 +338,7 @@ function AppShell() {
                     updateSupplier={updateSupplier} deleteSupplier={deleteSupplier}
                     editSupplier={editSupplier} setEditSupplier={setEditSupplier}
                     onClose={() => setView("dashboard")} inline
+                    onImportCSV={() => csvRef.current.click()}
                   />
                 </div>
               )}
@@ -341,7 +346,7 @@ function AppShell() {
           </div>
 
           {/* Modals */}
-          {showUpgradeModal && <UpgradeModal plan={plan} used={used} limit={limit} onClose={closeUpgrade} onContinueReadonly={closeUpgrade} />}
+          {showUpgradeModal && <UpgradeModal plan={plan} used={used || usedThisMonth} limit={limit} onClose={closeUpgrade} onContinueReadonly={closeUpgrade} />}
           {editInvoice   && <EditInvoiceModal editInvoice={editInvoice} setEditInvoice={setEditInvoice} suppliers={suppliers} addInvoice={addInvoice} updateInvoice={updateInvoice} getSupplier={getSupplier} onViewAttachment={handleViewAttachment} />}
           {showSuppliers && <SuppliersModal suppliers={suppliers} addSupplier={addSupplier} updateSupplier={updateSupplier} deleteSupplier={deleteSupplier} editSupplier={editSupplier} setEditSupplier={setEditSupplier} onClose={() => setShowSuppliers(false)} />}
 

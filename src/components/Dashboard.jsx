@@ -109,6 +109,8 @@ export default function Dashboard({ kpis, monthlyData, allNames, color, maxTotal
   const overdueCount      = kpis.overdueCount      ?? 0;
   const outstandingCount  = kpis.outstandingCount  ?? 0;
   const paidCount         = kpis.paidCount         ?? 0;
+  const outstandingDelta  = kpis.outstandingDelta  ?? null;
+  const paidDelta         = kpis.paidDelta         ?? null;
   const today = new Date();
   const hour = today.getHours();
   const greeting = hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
@@ -124,10 +126,12 @@ export default function Dashboard({ kpis, monthlyData, allNames, color, maxTotal
       label:"Outstanding", value:kpis.outstanding, delay:0,
       iconBg:"rgba(99,102,241,.13)", iconColor:"#818CF8",
       iconPath:<><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></>,
-      pill: outstandingCount > 0
-        ? <Pill color="#818CF8" bg="rgba(99,102,241,.12)" border="rgba(99,102,241,.3)">{outstandingCount} invoices</Pill>
-        : <Pill color="#22C55E" bg="rgba(34,197,94,.12)" border="rgba(34,197,94,.25)">All clear</Pill>,
-      context: outstandingCount > 0 ? "unpaid" : undefined,
+      pill: outstandingDelta !== null
+        ? <Pill color={outstandingDelta >= 0 ? "#22C55E" : "#F87171"} bg={outstandingDelta >= 0 ? "rgba(34,197,94,.12)" : "rgba(239,68,68,.12)"} border={outstandingDelta >= 0 ? "rgba(34,197,94,.25)" : "rgba(239,68,68,.25)"}>{outstandingDelta >= 0 ? "↑" : "↓"} {Math.abs(outstandingDelta)}%</Pill>
+        : outstandingCount > 0
+          ? <Pill color="#818CF8" bg="rgba(99,102,241,.12)" border="rgba(99,102,241,.3)">{outstandingCount} invoices</Pill>
+          : <Pill color="#22C55E" bg="rgba(34,197,94,.12)" border="rgba(34,197,94,.25)">All clear</Pill>,
+      context:"vs last month",
     },
     {
       label:"Overdue", value:kpis.overdue, valueColor:"#F87171", delay:0.06,
@@ -149,9 +153,11 @@ export default function Dashboard({ kpis, monthlyData, allNames, color, maxTotal
       label:"Total Paid", value:kpis.paid, delay:0.18,
       iconBg:"rgba(34,197,94,.12)", iconColor:"#22C55E",
       iconPath:<><polyline points="20 6 9 17 4 12"/></>,
-      pill: paidCount > 0
-        ? <Pill color="#22C55E" bg="rgba(34,197,94,.12)" border="rgba(34,197,94,.25)">{paidCount} invoices</Pill>
-        : <Pill color="#627488" bg="rgba(98,116,136,.12)" border="rgba(98,116,136,.25)">None yet</Pill>,
+      pill: paidDelta !== null
+        ? <Pill color={paidDelta >= 0 ? "#22C55E" : "#F87171"} bg={paidDelta >= 0 ? "rgba(34,197,94,.12)" : "rgba(239,68,68,.12)"} border={paidDelta >= 0 ? "rgba(34,197,94,.25)" : "rgba(239,68,68,.25)"}>{paidDelta >= 0 ? "↑" : "↓"} {Math.abs(paidDelta)}%</Pill>
+        : paidCount > 0
+          ? <Pill color="#22C55E" bg="rgba(34,197,94,.12)" border="rgba(34,197,94,.25)">{paidCount} invoices</Pill>
+          : <Pill color="#627488" bg="rgba(98,116,136,.12)" border="rgba(98,116,136,.25)">None yet</Pill>,
       context:"this year",
     },
   ];
@@ -309,9 +315,9 @@ export default function Dashboard({ kpis, monthlyData, allNames, color, maxTotal
               onMouseEnter={e => e.currentTarget.style.borderColor = "rgba(255,255,255,.12)"}
               onMouseLeave={e => e.currentTarget.style.borderColor = "var(--bdr)"}
             >
-              <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:10 }}>
-                <span style={{ fontFamily:SANS, fontWeight:600, fontSize:13, color:"var(--t1)", letterSpacing:"-0.02em" }}>{fmtMonthShort2(ym)}</span>
-                <span style={{ fontFamily:SANS, fontWeight:600, fontSize:13, color:"var(--t1)", fontVariantNumeric:"tabular-nums" }}>{currencyCompact(total)}</span>
+              <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:10, gap:6 }}>
+                <span style={{ fontFamily:SANS, fontWeight:600, fontSize:13, color:"var(--t1)", letterSpacing:"-0.02em", minWidth:0, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{fmtMonthShort2(ym)}</span>
+                <span style={{ fontFamily:SANS, fontWeight:600, fontSize:13, color:"var(--t1)", fontVariantNumeric:"tabular-nums", flexShrink:0, whiteSpace:"nowrap" }}>{currencyCompact(total)}</span>
               </div>
               {!isMobile && Object.entries(sups).sort((a, b) => b[1] - a[1]).slice(0, 3).map(([sup, amt]) => (
                 <div key={sup} style={{ display:"flex", alignItems:"center", gap:8, padding:"2px 0" }}>
@@ -319,7 +325,7 @@ export default function Dashboard({ kpis, monthlyData, allNames, color, maxTotal
                     {sup.charAt(0)}
                   </div>
                   <span style={{ flex:1, fontFamily:SANS, fontSize:11, color:"var(--t2)", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{sup}</span>
-                  <span style={{ fontFamily:SANS, fontSize:12, fontWeight:600, color:"var(--t1)", fontVariantNumeric:"tabular-nums" }}>{currencyCompact(amt)}</span>
+                  <span style={{ fontFamily:SANS, fontSize:12, fontWeight:600, color:"var(--t1)", fontVariantNumeric:"tabular-nums", flexShrink:0, whiteSpace:"nowrap" }}>{currencyCompact(amt)}</span>
                 </div>
               ))}
             </div>

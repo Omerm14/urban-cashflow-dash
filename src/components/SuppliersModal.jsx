@@ -3,7 +3,7 @@ import { useState } from "react";
 const TERM_FILTERS = ["all", "shotef_plus(75)", "shotef_plus(45)", "shotef_plus(30)", "shotef_plus(10)", "shotef", "immediate", "custom"];
 const TERM_OPTIONS = TERM_FILTERS.filter(t => t !== "all");
 
-export default function SuppliersModal({ suppliers, addSupplier, updateSupplier, deleteSupplier, editSupplier, setEditSupplier, onClose, inline }) {
+export default function SuppliersModal({ suppliers, addSupplier, updateSupplier, deleteSupplier, editSupplier, setEditSupplier, onClose, inline, onImportCSV }) {
   const [filterTerm, setFilterTerm] = useState("all");
 
   const filtered = filterTerm === "all" ? suppliers : suppliers.filter(s => s.terms === filterTerm);
@@ -101,10 +101,17 @@ export default function SuppliersModal({ suppliers, addSupplier, updateSupplier,
           )}
         </div>
 
-        <button className="btn btn-ghost" style={{ marginTop:16 }}
-          onClick={() => addSupplier({ name:"New Supplier", terms:"shotef", notes:"" }).then(row => setEditSupplier(row)).catch(err => alert(`Could not add supplier: ${err.message}`))}>
-          + Add Supplier
-        </button>
+        <div style={{ display:"flex", gap:8, marginTop:16 }}>
+          <button className="btn btn-ghost"
+            onClick={() => addSupplier({ name:"New Supplier", terms:"shotef", notes:"" }).then(row => setEditSupplier(row)).catch(err => alert(`Could not add supplier: ${err.message}`))}>
+            + Add Supplier
+          </button>
+          {onImportCSV && (
+            <button className="btn btn-ghost" onClick={onImportCSV} title="Import suppliers from CSV (name, terms, notes)">
+              ↑ Import CSV
+            </button>
+          )}
+        </div>
       </div>
   );
 
