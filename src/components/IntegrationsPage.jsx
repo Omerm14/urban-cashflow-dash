@@ -563,6 +563,7 @@ function IntegrationCard({ type, integration, onRefresh, onInvoicesRefresh, onNo
       const { url } = await apiFetch(
         `/api/integrations/google/auth-url?type=${type}&returnUrl=${encodeURIComponent(window.location.origin)}`
       );
+      if (!url) throw new Error('No auth URL returned from server');
       window.location.href = url;
     } catch (e) { showToast(e.message, false); }
   };

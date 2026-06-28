@@ -38,7 +38,7 @@ export const useNotifications = () => {
           const last = grouped[grouped.length - 1];
           if (last?.type === "sync_summary" &&
               last.integration_type === n.integration_type &&
-              new Date(last.created_at) - new Date(n.created_at) < WINDOW_MS) {
+              new Date(n.created_at) - new Date(last.created_at) < WINDOW_MS) {
             last.count++;
           } else {
             grouped.push({ ...n, type: "sync_summary", count: 1 });

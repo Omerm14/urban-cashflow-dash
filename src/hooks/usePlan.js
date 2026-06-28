@@ -31,11 +31,13 @@ export const usePlan = () => {
       // Fall back to direct Supabase read
       const now = new Date();
       const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
-      const [{ data: sub }, { count }] = await Promise.all([
-        supabase.from('subscriptions').select('plan').eq('user_id', user.id).single(),
+      const [subResult, invResult] = await Promise.allSettled([
+        supabase.from('subscriptions').select('plan').eq('user_id', user.id).maybeSingle(),
         supabase.from('invoices').select('id', { count: 'exact', head: true })
           .eq('user_id', user.id).gte('created_at', monthStart),
       ]);
+      const sub = subResult.status === 'fulfilled' ? subResult.value?.data : null;
+      const count = invResult.status === 'fulfilled' ? invResult.value?.count : 0;
       setPlan(sub?.plan || 'free');
       setUsed(count || 0);
     } finally {

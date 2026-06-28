@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 
 const SANS = "'IBM Plex Sans', system-ui, sans-serif";
@@ -49,10 +49,11 @@ export default function UpgradeModal({ used = 18, limit = 20, onClose, onContinu
       const res = await fetch('/api/billing/checkout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session?.access_token}` },
-        body: JSON.stringify({ plan: targetPlan }),
+        body: JSON.stringify({ plan: targetPlan, billing }),
       });
+      if (!res.ok) { const d = await res.json().catch(() => ({})); throw new Error(d.error || 'Payment connection error'); }
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Payment connection error');
+      if (!data.url) throw new Error('No checkout URL returned');
       window.location.href = data.url;
     } catch (err) {
       setError(err.message);
@@ -116,7 +117,7 @@ export default function UpgradeModal({ used = 18, limit = 20, onClose, onContinu
         </div>
 
         {/* Plan cards */}
-        <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10, marginBottom:12 }}>
+        <div style={{ display:'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap:10, marginBottom:12 }}>
           {/* Basic */}
           <div style={{ background:'var(--surf2)', border:'1px solid var(--bdr)', borderRadius:10, padding:14 }}>
             <div style={{ fontFamily:SANS, fontSize:10, fontWeight:700, letterSpacing:'0.08em', color:'var(--t3)', marginBottom:5 }}>BASIC</div>
@@ -144,13 +145,13 @@ export default function UpgradeModal({ used = 18, limit = 20, onClose, onContinu
 
         {/* Feature table */}
         <div style={{ background:'var(--surf2)', border:'1px solid var(--bdr)', borderRadius:8, overflow:'hidden', marginBottom:12 }}>
-          <div style={{ display:'grid', gridTemplateColumns:'1fr 50px 50px', padding:'6px 12px', borderBottom:'1px solid var(--bdr)' }}>
+          <div style={{ display:'grid', gridTemplateColumns:'1fr 44px 44px', padding:'6px 12px', borderBottom:'1px solid var(--bdr)' }}>
             {['', 'Basic', 'Pro'].map((h, i) => (
               <span key={h} style={{ fontFamily:SANS, fontSize:10, fontWeight:700, textTransform:'uppercase', color: i === 2 ? 'var(--indigo)' : 'var(--t3)', textAlign: i > 0 ? 'center' : 'left' }}>{h}</span>
             ))}
           </div>
           {FEATURES.map(f => (
-            <div key={f.label} style={{ display:'grid', gridTemplateColumns:'1fr 50px 50px', padding:'5px 12px', borderTop:'1px solid var(--bdr)' }}>
+            <div key={f.label} style={{ display:'grid', gridTemplateColumns:'1fr 44px 44px', padding:'5px 12px', borderTop:'1px solid var(--bdr)' }}>
               <span style={{ fontFamily:SANS, fontSize:12, color:'var(--t2)' }}>{f.label}</span>
               <span style={{ display:'flex', justifyContent:'center' }}>{f.basic ? <Check /> : <Cross />}</span>
               <span style={{ display:'flex', justifyContent:'center' }}>{f.pro ? <Check /> : <Cross />}</span>
