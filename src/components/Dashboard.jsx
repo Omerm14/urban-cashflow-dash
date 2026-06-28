@@ -149,8 +149,11 @@ export default function Dashboard({ kpis, monthlyData, allNames, color, maxTotal
 
   const ctaMonth = monthlyData[0] || null;
 
+  const [chartMonths, setChartMonths] = useState(6);
+
   // Build recharts data: array of { month, Supplier1: amt, Supplier2: amt, ... }
-  const chartData = monthlyData.map(({ ym, sups }) => ({
+  const visibleMonthlyData = chartMonths === "All" ? monthlyData : monthlyData.slice(-chartMonths);
+  const chartData = visibleMonthlyData.map(({ ym, sups }) => ({
     month: fmtMonthShort(ym),
     ym,
     ...sups,
@@ -223,12 +226,28 @@ export default function Dashboard({ kpis, monthlyData, allNames, color, maxTotal
       )}
 
       {/* Chart + breakdown */}
-      <div style={{ display:"grid", gridTemplateColumns: isCompact ? "1fr" : "minmax(0,1fr) minmax(0,310px)", gap:14 }}>
+      <div style={{ display:"grid", gridTemplateColumns: isCompact ? "1fr" : "minmax(0,1fr) minmax(0,min(310px,28%))", gap:14 }}>
         {/* Recharts Card */}
         <div style={{ background:"var(--surf)", border:"1px solid var(--bdr)", borderRadius:12, padding:"22px 24px", minWidth:0 }}>
-          <div style={{ marginBottom:20 }}>
-            <div style={{ fontFamily:SANS, fontWeight:600, fontSize:14, color:"var(--t1)", letterSpacing:"-0.02em" }}>Payment Schedule</div>
-            <div style={{ fontFamily:SANS, fontSize:12, color:"var(--t2)", marginTop:3 }}>Upcoming payments by month</div>
+          <div style={{ display:"flex", alignItems:"flex-start", justifyContent:"space-between", marginBottom:20, gap:8, flexWrap:"wrap" }}>
+            <div>
+              <div style={{ fontFamily:SANS, fontWeight:600, fontSize:14, color:"var(--t1)", letterSpacing:"-0.02em" }}>Payment Schedule</div>
+              <div style={{ fontFamily:SANS, fontSize:12, color:"var(--t2)", marginTop:3 }}>Upcoming payments by month</div>
+            </div>
+            <div style={{ display:"flex", gap:4, flexShrink:0 }}>
+              {[3, 6, 12, "All"].map(n => (
+                <button key={n} onClick={() => setChartMonths(n)} style={{
+                  background: chartMonths === n ? "rgba(99,102,241,.18)" : "transparent",
+                  border: `1px solid ${chartMonths === n ? "rgba(99,102,241,.5)" : "var(--bdr)"}`,
+                  borderRadius:6, padding:"3px 9px",
+                  fontFamily:SANS, fontSize:11, fontWeight:600,
+                  color: chartMonths === n ? "#A5B4FC" : "var(--t3)",
+                  cursor:"pointer", transition:"all 0.15s",
+                }}>
+                  {n === "All" ? "All" : `${n}M`}
+                </button>
+              ))}
+            </div>
           </div>
 
           {chartData.length === 0 ? (
@@ -248,7 +267,7 @@ export default function Dashboard({ kpis, monthlyData, allNames, color, maxTotal
                   />
                   <YAxis
                     axisLine={false} tickLine={false}
-                    tick={{ fontFamily:MONO, fontSize:10, fill:"#4A6278" }}
+                    tick={{ fontFamily:SANS, fontSize:10, fill:"#4A6278" }}
                     tickFormatter={v => v === 0 ? "" : `${Math.round(v/1000)}k₪`}
                     width={44}
                   />
@@ -271,7 +290,7 @@ export default function Dashboard({ kpis, monthlyData, allNames, color, maxTotal
         </div>
 
         {/* Breakdown cards */}
-        <div style={{ display:"grid", gridTemplateColumns: isMobile ? "1fr 1fr" : "1fr", gap:10, minWidth:0, overflow:"hidden" }}>
+        <div style={{ display:"grid", gridTemplateColumns: isMobile ? "1fr 1fr" : "1fr", gap:10, minWidth:0 }}>
           {monthlyData.map(({ ym, sups, total }) => (
             <div key={ym}
               style={{ background:"var(--surf)", border:"1px solid var(--bdr)", borderRadius:12, padding:"14px 16px", cursor:"pointer", transition:"border-color 0.18s" }}
