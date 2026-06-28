@@ -280,7 +280,11 @@ function AppShell() {
             />
 
             <div className="app-content" style={{ opacity: fading ? 0 : 1, transition: "opacity .16s ease" }}>
-              {/* Upload action row — invoices page only; sidebar handles upload for all other views */}
+              {/* Always-present hidden inputs so sidebar Upload button works from any view */}
+              <input ref={fileRef} type="file" accept="image/*,application/pdf" multiple onChange={handleUpload} style={{ display: "none" }} />
+              <input ref={csvRef} type="file" accept=".csv,text/csv" onChange={handleCSV} style={{ display: "none" }} />
+
+              {/* Upload action row — invoices page only */}
               {view === 'invoices' && (
                 <div style={{ marginBottom: 24 }}>
                   <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
@@ -290,12 +294,10 @@ function AppShell() {
                       <span>+</span>
                       {extracting ? "Extracting…" : isAtLimit ? "🔒 Upload" : "Upload Invoices"}
                     </button>
-                    <input ref={fileRef} type="file" accept="image/*,application/pdf" multiple onChange={handleUpload} style={{ display: "none" }} />
 
                     <button className="btn btn-secondary" style={{ fontSize: 13 }} onClick={() => csvRef.current.click()}>
                       📋 Suppliers
                     </button>
-                    <input ref={csvRef} type="file" accept=".csv,text/csv" onChange={handleCSV} style={{ display: "none" }} />
 
                     <div style={{ marginLeft: "auto", fontSize: 12, color: "var(--t3)", fontWeight: 500, flexShrink: 0 }}>{invoices.length} invoices</div>
                   </div>
@@ -311,7 +313,7 @@ function AppShell() {
               )}
 
               {/* Views */}
-              {view === "dashboard"    && <Dashboard kpis={kpis} monthlyData={monthlyData} allNames={allNames} color={color} maxTotal={maxTotal} onPayMonth={payMonth} onViewInvoices={ym => { setPreSelMonth(ym); setView("invoices"); }} />}
+              {view === "dashboard"    && <Dashboard kpis={kpis} monthlyData={monthlyData} allNames={allNames} color={color} maxTotal={maxTotal} onPayMonth={payMonth} onViewInvoices={ym => { setPreSelMonth(ym); setView("invoices"); }} user={user} />}
               {view === "invoices"     && <InvoicesView computed={computed} dupeIds={dupeIds} updateInvoice={updateInvoice} deleteInvoice={deleteInvoice} bulkMarkPaid={bulkMarkPaid} bulkMarkUnpaid={bulkMarkUnpaid} bulkDelete={bulkDelete} setEditInvoice={setEditInvoice} color={color} onViewAttachment={handleViewAttachment} preSelMonth={preSelMonth} onClearPreSel={() => setPreSelMonth(null)} />}
               {view === "calendar"     && <CalendarView computed={computed} calMonth={calMonth} setCalMonth={setCalMonth} color={color} />}
               {view === "admin"        && <AdminPage />}

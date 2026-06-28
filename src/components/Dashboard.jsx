@@ -96,7 +96,7 @@ function CustomTooltip({ active, payload, label }) {
   );
 }
 
-export default function Dashboard({ kpis, monthlyData, allNames, color, maxTotal, onPayMonth, onViewInvoices }) {
+export default function Dashboard({ kpis, monthlyData, allNames, color, maxTotal, onPayMonth, onViewInvoices, user }) {
   const [winW, setWinW] = useState(window.innerWidth);
   useEffect(() => {
     const h = () => setWinW(window.innerWidth);
@@ -106,12 +106,17 @@ export default function Dashboard({ kpis, monthlyData, allNames, color, maxTotal
   const isMobile = winW <= 640;
   const isCompact = winW <= 900;
 
-  const overdueCount = kpis.overdueCount ?? 0;
+  const overdueCount      = kpis.overdueCount      ?? 0;
+  const outstandingCount  = kpis.outstandingCount  ?? 0;
+  const paidCount         = kpis.paidCount         ?? 0;
   const today = new Date();
+  const hour = today.getHours();
+  const greeting = hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
+  const displayName = user?.user_metadata?.full_name || user?.user_metadata?.name || user?.email?.split("@")[0] || null;
   const dateLabel = today.toLocaleDateString("en-GB", { day:"numeric", month:"long", year:"numeric" });
   const monthPill = today.toLocaleDateString("en-GB", { month:"short", year:"numeric" });
 
-  const nextMonthName = kpis.nextMonthYM ? fmtMonthShort2(kpis.nextMonthYM) : "Next month";
+  const nextMonthName  = kpis.nextMonthYM ? fmtMonthShort2(kpis.nextMonthYM) : "Next month";
   const nextMonthCount = kpis.nextMonthCount ?? 0;
 
   const CARDS = [
@@ -119,8 +124,10 @@ export default function Dashboard({ kpis, monthlyData, allNames, color, maxTotal
       label:"Outstanding", value:kpis.outstanding, delay:0,
       iconBg:"rgba(99,102,241,.13)", iconColor:"#818CF8",
       iconPath:<><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></>,
-      pill:<Pill color="#22C55E" bg="rgba(34,197,94,.12)" border="rgba(34,197,94,.25)">↑ Active</Pill>,
-      context:"vs last month",
+      pill: outstandingCount > 0
+        ? <Pill color="#818CF8" bg="rgba(99,102,241,.12)" border="rgba(99,102,241,.3)">{outstandingCount} invoices</Pill>
+        : <Pill color="#22C55E" bg="rgba(34,197,94,.12)" border="rgba(34,197,94,.25)">All clear</Pill>,
+      context: outstandingCount > 0 ? "unpaid" : undefined,
     },
     {
       label:"Overdue", value:kpis.overdue, valueColor:"#F87171", delay:0.06,
@@ -142,7 +149,9 @@ export default function Dashboard({ kpis, monthlyData, allNames, color, maxTotal
       label:"Total Paid", value:kpis.paid, delay:0.18,
       iconBg:"rgba(34,197,94,.12)", iconColor:"#22C55E",
       iconPath:<><polyline points="20 6 9 17 4 12"/></>,
-      pill:<Pill color="#22C55E" bg="rgba(34,197,94,.12)" border="rgba(34,197,94,.25)">↑ Paid</Pill>,
+      pill: paidCount > 0
+        ? <Pill color="#22C55E" bg="rgba(34,197,94,.12)" border="rgba(34,197,94,.25)">{paidCount} invoices</Pill>
+        : <Pill color="#627488" bg="rgba(98,116,136,.12)" border="rgba(98,116,136,.25)">None yet</Pill>,
       context:"this year",
     },
   ];
@@ -166,12 +175,14 @@ export default function Dashboard({ kpis, monthlyData, allNames, color, maxTotal
       {/* Page header */}
       <div style={{ display:"flex", alignItems:"flex-start", justifyContent:"space-between", marginBottom:24, flexWrap:"wrap", gap:10 }}>
         <div>
-          <div style={{ fontFamily:SANS, fontWeight:700, fontSize:22, color:"var(--t1)", letterSpacing:"-0.03em", marginBottom:3 }}>Dashboard</div>
+          <div style={{ fontFamily:SANS, fontWeight:700, fontSize:22, color:"var(--t1)", letterSpacing:"-0.03em", marginBottom:3 }}>
+            {displayName ? `${greeting}, ${displayName}` : "Dashboard"}
+          </div>
           <div style={{ fontFamily:SANS, fontSize:13, color:"var(--t2)" }}>
             {dateLabel} · Here's where you stand today
           </div>
         </div>
-        <span style={{ fontFamily:MONO, fontSize:12, fontWeight:600, color:"var(--t3)", background:"var(--surf2)", border:"1px solid var(--bdr)", borderRadius:6, padding:"4px 10px", flexShrink:0 }}>
+        <span style={{ fontFamily:SANS, fontSize:12, fontWeight:600, color:"var(--t3)", background:"var(--surf2)", border:"1px solid var(--bdr)", borderRadius:6, padding:"4px 10px", flexShrink:0 }}>
           {monthPill}
         </span>
       </div>
@@ -257,7 +268,7 @@ export default function Dashboard({ kpis, monthlyData, allNames, color, maxTotal
             </div>
           ) : (
             <>
-              <ResponsiveContainer width="100%" height={200}>
+              <ResponsiveContainer width="100%" height={280}>
                 <BarChart data={chartData} barSize={isMobile ? 20 : 28} barCategoryGap="40%" margin={{ top:14, right:4, left:0, bottom:0 }}>
                   <CartesianGrid vertical={false} stroke="rgba(255,255,255,.05)" />
                   <XAxis
