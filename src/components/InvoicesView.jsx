@@ -158,8 +158,8 @@ export default function InvoicesView({ computed, dupeIds, updateInvoice, deleteI
 
         {count > 0 && (
           <div style={{ display:"flex", alignItems:"center", gap:8, marginLeft:"auto" }}>
-            <button className="btn btn-ghost btn-sm" onClick={handleBulkUnpaid}>↻ Mark Unpaid</button>
-            <button className="btn btn-danger btn-sm" onClick={handleBulkDelete}>✕ Delete</button>
+            <button className="btn btn-ghost btn-sm" onClick={handleBulkUnpaid}>Mark Unpaid</button>
+            <button className="btn btn-danger btn-sm" onClick={handleBulkDelete}>Delete</button>
           </div>
         )}
       </div>
@@ -190,7 +190,7 @@ export default function InvoicesView({ computed, dupeIds, updateInvoice, deleteI
           <div className="batch-count">{count}</div>
           <span style={{ fontWeight:600, color:"var(--t2)" }}>{count} selected</span>
           <span style={{ width:1, height:20, background:"rgba(255,255,255,.1)" }}/>
-          <span style={{ fontWeight:800, fontSize:16, background:"var(--grad)", WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent" }}>
+          <span style={{ fontWeight:800, fontSize:16, color:"#fff", fontFamily:"'DM Mono',monospace" }}>
             {currency(selTotal)}
           </span>
           <button className="btn btn-primary" style={{ borderRadius:50 }} onClick={() => setShowPayModal(true)}>
@@ -229,9 +229,9 @@ export default function InvoicesView({ computed, dupeIds, updateInvoice, deleteI
               ))}
             </div>
 
-            <div style={{ padding:"14px 16px", background:"rgba(6,182,212,.08)", border:"1px solid rgba(6,182,212,.2)", borderRadius:10, marginBottom:18, display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+            <div style={{ padding:"14px 16px", background:"var(--indigo-tint)", border:"1px solid var(--indigo-border)", borderRadius:10, marginBottom:18, display:"flex", justifyContent:"space-between", alignItems:"center" }}>
               <span style={{ color:"var(--t2)", fontSize:13 }}>Total payment</span>
-              <span style={{ fontWeight:800, fontSize:22, background:"var(--grad)", WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent" }}>
+              <span style={{ fontWeight:800, fontSize:22, color:"var(--indigo)", fontFamily:"'DM Mono',monospace" }}>
                 {currency(selTotal)}
               </span>
             </div>
@@ -239,7 +239,7 @@ export default function InvoicesView({ computed, dupeIds, updateInvoice, deleteI
             <div style={{ display:"flex", gap:10 }}>
               <button className="btn btn-ghost" style={{ flex:1 }} onClick={() => setShowPayModal(false)}>Cancel</button>
               <button className="btn btn-primary" style={{ flex:2, padding:14, fontSize:15 }} onClick={handlePayNow}>
-                ✓ Confirm Payment
+                Confirm Payment
               </button>
             </div>
           </div>
@@ -257,7 +257,7 @@ export default function InvoicesView({ computed, dupeIds, updateInvoice, deleteI
               width: i % 3 === 0 ? 10 : i % 3 === 1 ? 7 : 5,
               height: i % 3 === 0 ? 10 : i % 3 === 1 ? 7 : 5,
               borderRadius: i % 2 === 0 ? 2 : "50%",
-              background:["#06b6d4","#3b82f6","#10b981","#f59e0b","#ec4899","#06b6d4"][i % 6],
+              background:["#6366F1","#818CF8","#10b981","#f59e0b","#A5B4FC","#34D399"][i % 6],
               animation:`confettiFall ${.5 + (i % 8) * .07}s ease-out ${i * .05}s both`,
               pointerEvents:"none",
             }}/>
@@ -268,10 +268,10 @@ export default function InvoicesView({ computed, dupeIds, updateInvoice, deleteI
                 strokeDasharray="50" style={{ animation:"draw .55s .1s ease forwards" }}/>
             </svg>
           </div>
-          <div style={{ fontWeight:800, fontSize:28, marginBottom:8 }}>All Clear! 🎉</div>
+          <div style={{ fontWeight:800, fontSize:28, marginBottom:8 }}>All Clear!</div>
           <div style={{ color:"var(--t2)", fontSize:15, marginBottom:24 }}>{successMsg}</div>
           <div style={{ display:"flex", gap:10 }}>
-            <button className="btn btn-ghost" onClick={() => setShowSuccess(false)}>← Back</button>
+            <button className="btn btn-ghost" onClick={() => setShowSuccess(false)}>Back</button>
             {nextMoHint && (
               <button className="btn btn-primary" onClick={() => {
                 setShowSuccess(false);
@@ -312,7 +312,7 @@ export default function InvoicesView({ computed, dupeIds, updateInvoice, deleteI
             <div style={{ display:"flex", gap:10 }}>
               <button className="btn btn-ghost" style={{ flex:1 }} onClick={() => setDeleteTarget(null)}>Cancel</button>
               <button className="btn btn-danger" style={{ flex:2, padding:14, fontSize:15 }} onClick={confirmDelete}>
-                ✕ Delete Invoice
+                Delete Invoice
               </button>
             </div>
           </div>

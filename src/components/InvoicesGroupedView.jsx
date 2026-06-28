@@ -14,18 +14,12 @@ function nextMonth(ym) {
 
 function statusBadge(status) {
   const map = {
-    [STATUS.UNPAID]:  "badge-unpaid",
-    [STATUS.PAID]:    "badge-paid",
-    [STATUS.OVERDUE]: "badge-overdue",
-    [STATUS.CREDIT]:  "badge-credit",
+    [STATUS.UNPAID]:  { cls:"badge-unpaid",  label:"Unpaid" },
+    [STATUS.PAID]:    { cls:"badge-paid",    label:"Paid" },
+    [STATUS.OVERDUE]: { cls:"badge-overdue", label:"Overdue" },
+    [STATUS.CREDIT]:  { cls:"badge-credit",  label:"Credit" },
   };
-  const dots = {
-    [STATUS.UNPAID]:  "● ",
-    [STATUS.PAID]:    "✓ ",
-    [STATUS.OVERDUE]: "! ",
-    [STATUS.CREDIT]:  "↩ ",
-  };
-  return { cls: map[status] || "badge-unpaid", dot: dots[status] || "● " };
+  return map[status] || map[STATUS.UNPAID];
 }
 
 function urgencyStyle(dueDate) {
@@ -76,7 +70,7 @@ function SupplierCard({ supplier, invoices, dupeIds, updateInvoice, deleteInvoic
         {hov && (
           <button className="btn btn-primary btn-sm" style={{ borderRadius:50, fontSize:12 }}
             onClick={e => { e.stopPropagation(); onPayGroup(cardIds); }}>
-            ⚡ Pay group
+            Pay group
           </button>
         )}
         <span style={{ fontSize:12, color:"var(--t3)", background:"var(--surf2)", padding:"2px 8px", borderRadius:10, fontWeight:600 }}>
@@ -87,7 +81,7 @@ function SupplierCard({ supplier, invoices, dupeIds, updateInvoice, deleteInvoic
 
       {sorted.map(inv => {
         const isSelected = selectedIds.has(inv.id);
-        const { cls, dot } = statusBadge(inv.status);
+        const { cls, label } = statusBadge(inv.status);
         const isPaid = inv.status === STATUS.PAID;
         const urgStyle = isPaid ? {} : urgencyStyle(inv.dueDate);
         return (
@@ -104,7 +98,7 @@ function SupplierCard({ supplier, invoices, dupeIds, updateInvoice, deleteInvoic
             </span>
             <span style={{ color:"var(--t2)", fontSize:12 }}>{fmt(inv.invoiceDate)}</span>
             <span style={{ fontWeight:700 }}>{currency(inv.amount)}</span>
-            <span className={`badge ${cls}`}>{dot}{inv.status}</span>
+            <span className={`badge ${cls}`}>{label}</span>
             <span style={{ fontSize:12, ...urgStyle }}>
               {inv.dueDate
                 ? fmt(inv.dueDate)
@@ -144,6 +138,8 @@ function SupplierCard({ supplier, invoices, dupeIds, updateInvoice, deleteInvoic
 export default function InvoicesGroupedView({ computed, dupeIds, updateInvoice, deleteInvoice, setEditInvoice, color, selectedIds, onToggleSelect, onToggleAll, selectedMonth, onMonthChange, sortField, onViewAttachment, onSelectAll }) {
   const [showCelebration, setShowCelebration] = useState(false);
 
+  const availableMonths = [...new Set(computed.map(i => i.dueDate?.slice(0,7)).filter(Boolean))].sort();
+
   const monthInvoices = computed.filter(inv => inv.dueDate && inv.dueDate.startsWith(selectedMonth));
   const monthTotal = monthInvoices.reduce((s, i) => s + Number(i.amount), 0);
   const unpaidInMonth = monthInvoices.filter(i => i.status !== STATUS.PAID);
@@ -175,12 +171,29 @@ export default function InvoicesGroupedView({ computed, dupeIds, updateInvoice, 
 
   return (
     <div>
-      {/* Month navigation */}
-      <div className="month-nav">
-        <button className="btn btn-ghost btn-sm" onClick={() => onMonthChange(prevMonth(selectedMonth))}>‹</button>
-        <span style={{ fontWeight:700, fontSize:16 }}>{fmtMonth(selectedMonth)}</span>
-        <button className="btn btn-ghost btn-sm" onClick={() => onMonthChange(nextMonth(selectedMonth))}>›</button>
-      </div>
+      {/* Month tab rail */}
+      {availableMonths.length > 0 && (
+        <div className="month-rail">
+          {availableMonths.map(ym => (
+            <button
+              key={ym}
+              className={`month-tab${ym === selectedMonth ? " active" : ""}`}
+              onClick={() => onMonthChange(ym)}
+            >
+              {fmtMonth(ym)}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* Month navigation fallback (when no invoices) */}
+      {availableMonths.length === 0 && (
+        <div className="month-nav">
+          <button className="btn btn-ghost btn-sm" onClick={() => onMonthChange(prevMonth(selectedMonth))}>‹</button>
+          <span style={{ fontWeight:700, fontSize:16 }}>{fmtMonth(selectedMonth)}</span>
+          <button className="btn btn-ghost btn-sm" onClick={() => onMonthChange(nextMonth(selectedMonth))}>›</button>
+        </div>
+      )}
 
       {/* Progress bar */}
       {totalCount > 0 && (
@@ -222,7 +235,11 @@ export default function InvoicesGroupedView({ computed, dupeIds, updateInvoice, 
         <div className="overlay" onClick={e => e.target === e.currentTarget && setShowCelebration(false)}>
           <div className="modal" style={{ textAlign:"center", padding:"40px 32px", position:"relative" }}>
             <button onClick={() => setShowCelebration(false)} style={{ position:"absolute", top:14, right:16, background:"none", border:"none", color:"var(--t3)", cursor:"pointer", fontSize:24 }}>×</button>
-            <div style={{ fontSize:52, marginBottom:14 }}>🎉</div>
+            <div style={{ width:64, height:64, borderRadius:"50%", background:"rgba(16,185,129,.12)", border:"1px solid rgba(16,185,129,.25)", display:"flex", alignItems:"center", justifyContent:"center", margin:"0 auto 18px" }}>
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#34D399" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="20 6 9 17 4 12"/>
+              </svg>
+            </div>
             <div style={{ fontWeight:800, fontSize:22, marginBottom:6 }}>All done for {fmtMonth(selectedMonth)}!</div>
             <div style={{ color:"var(--t3)", fontSize:14, marginBottom:22 }}>
               All {totalCount} invoice{totalCount !== 1 ? "s" : ""} have been paid.
@@ -240,7 +257,9 @@ export default function InvoicesGroupedView({ computed, dupeIds, updateInvoice, 
       {/* Empty state */}
       {groups.length === 0 && (
         <div style={{ textAlign:"center", padding:"60px 0", color:"var(--t3)" }}>
-          <div style={{ fontSize:36, marginBottom:10 }}>📅</div>
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" style={{ marginBottom:10, opacity:.4 }}>
+            <rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
+          </svg>
           <div style={{ fontSize:14 }}>No invoices due in {fmtMonth(selectedMonth)}</div>
         </div>
       )}

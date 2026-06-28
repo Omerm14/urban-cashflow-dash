@@ -1,9 +1,9 @@
-import DirectionToggle from './DirectionToggle';
+import ThemeToggle from './ThemeToggle';
 
 export default function GlobalHeader({ unreadCount, onBellClick }) {
   return (
     <header className="global-hdr">
-      <DirectionToggle />
+      <ThemeToggle />
 
       {/* Search placeholder */}
       <button

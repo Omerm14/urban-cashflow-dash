@@ -9,10 +9,10 @@ const PLAN_BADGE = {
 };
 
 const NAV_ITEMS = [
-  { id: 'profile',  icon: '👤', label: 'Profile' },
-  { id: 'billing',  icon: '💳', label: 'Plan & Billing' },
-  { id: 'security', icon: '🔐', label: 'Security' },
-  { id: 'danger',   icon: '⚠️', label: 'Danger Zone', red: true },
+  { id: 'profile',  label: 'Profile' },
+  { id: 'billing',  label: 'Plan & Billing' },
+  { id: 'security', label: 'Security' },
+  { id: 'danger',   label: 'Danger Zone', red: true },
 ];
 
 /* ─── Alert box ─────────────────────────────────────────────── */
@@ -24,7 +24,7 @@ function Alert({ msg }) {
       display: 'flex', alignItems: 'center', gap: 10,
       padding: '11px 16px', borderRadius: 10, fontSize: 13,
       background: ok ? 'rgba(16,185,129,.08)' : 'rgba(239,68,68,.08)',
-      color: ok ? '#10b981' : '#f87171',
+      color: ok ? '#34D399' : '#F87171',
       border: `1px solid ${ok ? 'rgba(16,185,129,.25)' : 'rgba(239,68,68,.25)'}`,
       marginBottom: 16,
     }}>
@@ -37,14 +37,9 @@ function Alert({ msg }) {
 /* ─── Save button ───────────────────────────────────────────── */
 function SaveBtn({ onClick, saving, label = 'Save Changes' }) {
   return (
-    <button onClick={onClick} disabled={saving} style={{
-      background: 'linear-gradient(135deg,#6366f1,#3b82f6)',
-      border: 'none', borderRadius: 10, padding: '10px 22px',
-      fontSize: 13, fontWeight: 700, color: '#fff', cursor: saving ? 'default' : 'pointer',
-      fontFamily: 'inherit', opacity: saving ? .65 : 1,
-      boxShadow: saving ? 'none' : '0 4px 14px rgba(99,102,241,.35)',
-      transition: 'all .2s',
-    }}>{saving ? 'Saving…' : label}</button>
+    <button onClick={onClick} disabled={saving} className="btn btn-primary" style={{ opacity: saving ? .65 : 1 }}>
+      {saving ? 'Saving…' : label}
+    </button>
   );
 }
 
@@ -68,7 +63,7 @@ export default function SettingsPage({ user, plan, used, limit, remaining, onUpg
       {/* Page header */}
       <div style={{
         borderBottom: '1px solid var(--bdr)',
-        background: 'rgba(10,14,26,.6)',
+        background: 'var(--surf)',
         padding: '20px 32px',
         display: 'flex', alignItems: 'center', gap: 16,
       }}>
@@ -138,7 +133,7 @@ export default function SettingsPage({ user, plan, used, limit, remaining, onUpg
                 textAlign: 'left', transition: 'all .15s',
                 borderLeft: tab === item.id ? `2px solid ${item.red ? '#ef4444' : '#6366f1'}` : '2px solid transparent',
               }}>
-                <span style={{ fontSize: 15 }}>{item.icon}</span>
+                <span style={{ fontSize: 13 }}>{item.label.charAt(0)}</span>
                 {item.label}
               </button>
             ))}
@@ -530,11 +525,8 @@ function DangerTab({ user, session }) {
 function SectionHeader({ icon, title, desc, red }) {
   return (
     <div style={{ marginBottom: 20 }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
-        <span style={{ fontSize: 18 }}>{icon}</span>
-        <h2 style={{ margin: 0, fontSize: 16, fontWeight: 800, color: red ? '#f87171' : 'var(--t1)' }}>{title}</h2>
-      </div>
-      <div style={{ fontSize: 13, color: 'var(--t3)', paddingLeft: 28 }}>{desc}</div>
+      <h2 style={{ margin: '0 0 4px', fontSize: 16, fontWeight: 800, color: red ? 'var(--red)' : 'var(--t1)' }}>{title}</h2>
+      {desc && <div style={{ fontSize: 13, color: 'var(--t3)' }}>{desc}</div>}
     </div>
   );
 }

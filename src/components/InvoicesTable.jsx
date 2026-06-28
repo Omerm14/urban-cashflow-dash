@@ -4,13 +4,15 @@ import { STATUS } from "../constants";
 
 function statusBadge(status) {
   const map = {
-    [STATUS.UNPAID]:  { cls:"badge-unpaid",  dot:"● " },
-    [STATUS.PAID]:    { cls:"badge-paid",    dot:"✓ " },
-    [STATUS.OVERDUE]: { cls:"badge-overdue", dot:"! " },
-    [STATUS.CREDIT]:  { cls:"badge-credit",  dot:"↩ " },
+    [STATUS.UNPAID]:  { cls:"badge-unpaid",  label:"Unpaid" },
+    [STATUS.PAID]:    { cls:"badge-paid",    label:"Paid" },
+    [STATUS.OVERDUE]: { cls:"badge-overdue", label:"Overdue" },
+    [STATUS.CREDIT]:  { cls:"badge-credit",  label:"Credit" },
   };
   return map[status] || map[STATUS.UNPAID];
 }
+
+const SOURCE_LABELS = { google_drive:"Drive", gmail:"Gmail", whatsapp:"WhatsApp", green_invoice:"GreenInv" };
 
 export default function InvoicesTable({ computed, dupeIds, updateInvoice, deleteInvoice, setEditInvoice, color, selectedIds, onToggleSelect, onToggleAll, onViewAttachment }) {
   const allIds = computed.map(i => i.id);
@@ -45,13 +47,15 @@ export default function InvoicesTable({ computed, dupeIds, updateInvoice, delete
         <tbody>
           {computed.length === 0 && (
             <tr><td colSpan={9} style={{ padding:"60px 0", textAlign:"center", color:"var(--t3)" }}>
-              <div style={{ fontSize:36, marginBottom:10 }}>🧾</div>
-              <div>No invoices yet — upload some above</div>
+              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" style={{ marginBottom:10, opacity:.4 }}>
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/>
+              </svg>
+              <div style={{ fontSize:14 }}>No invoices yet — upload some</div>
             </td></tr>
           )}
           {computed.map(inv => {
             const isSelected = selectedIds.has(inv.id);
-            const { cls, dot } = statusBadge(inv.status);
+            const { cls, label } = statusBadge(inv.status);
             return (
               <tr key={inv.id} className={isSelected ? "sel" : ""}>
                 <td style={{ padding:"13px 14px 13px 18px" }}>
@@ -75,24 +79,19 @@ export default function InvoicesTable({ computed, dupeIds, updateInvoice, delete
                   </div>
                 </td>
                 <td style={{ color:"var(--t2)" }}>{fmt(inv.invoiceDate)}</td>
-                <td style={{ fontWeight:700, fontSize:14 }}>{currency(inv.amount)}</td>
+                <td className="mono" style={{ fontWeight:600 }}>{currency(inv.amount)}</td>
                 <td>
                   {inv.dueDate
                     ? <span style={{ color:"var(--t2)" }}>{fmt(inv.dueDate)}</span>
                     : <span style={{ color:"var(--amber)", fontSize:11, fontWeight:600, cursor:"pointer" }} onClick={() => setEditInvoice({...inv})}>⚠ Fix supplier</span>}
                 </td>
                 <td>
-                  <span className={`badge ${cls}`}>{dot}{inv.status}</span>
+                  <span className={`badge ${cls}`}>{label}</span>
                 </td>
                 <td>
-                  {inv.sync_source ? (
-                    <span style={{ fontSize:11, color:"var(--t3)", display:"flex", alignItems:"center", gap:4 }}>
-                      {{ google_drive:"📁", gmail:"✉️", whatsapp:"💬", green_invoice:"🟢" }[inv.sync_source] || "🔗"}
-                      {inv.sync_source === "google_drive" ? "Drive" : inv.sync_source === "gmail" ? "Gmail" : inv.sync_source === "whatsapp" ? "WA" : inv.sync_source === "green_invoice" ? "GI" : inv.sync_source}
-                    </span>
-                  ) : (
-                    <span style={{ fontSize:11, color:"var(--t3)" }}>Manual</span>
-                  )}
+                  <span style={{ fontSize:11, color:"var(--t3)" }}>
+                    {inv.sync_source ? (SOURCE_LABELS[inv.sync_source] || inv.sync_source) : "Manual"}
+                  </span>
                 </td>
                 <td>
                   <div style={{ display:"flex", gap:6, justifyContent:"flex-end" }}>

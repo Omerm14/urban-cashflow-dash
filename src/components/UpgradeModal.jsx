@@ -1,27 +1,21 @@
 import { useState } from 'react';
 import { supabase } from '../lib/supabase';
 
-const PLAN_FEATURES = {
-  basic: [
-    'Up to 50 invoices/month',
-    '2 sync sources',
-    'Manual upload + OCR',
-    'Dashboard & calendar',
-  ],
-  pro: [
-    'Up to 150 invoices/month',
-    'All 4 sources (Gmail, Drive, WhatsApp, Green Invoice)',
-    'Auto-sync',
-    'Full audit trail',
-    'Priority support',
-  ],
-};
+const FEATURES = [
+  { label: 'Invoices/month',        basic: '50',    pro: '150' },
+  { label: 'Sync sources',          basic: '2',     pro: 'All 4' },
+  { label: 'Manual upload + OCR',   basic: true,    pro: true },
+  { label: 'Auto-sync',             basic: false,   pro: true },
+  { label: 'Full audit trail',      basic: false,   pro: true },
+  { label: 'Priority support',      basic: false,   pro: true },
+];
 
 export default function UpgradeModal({ plan, used, limit, onContinueReadonly }) {
-  const [loading, setLoading] = useState(null); // 'basic' | 'pro'
+  const [loading, setLoading] = useState(null);
   const [error, setError]   = useState(null);
 
   const pct = limit === Infinity ? 0 : used / limit;
+  const barPct = Math.min(100, Math.round((used / limit) * 100));
 
   const checkout = async (targetPlan) => {
     setLoading(targetPlan);
@@ -34,7 +28,7 @@ export default function UpgradeModal({ plan, used, limit, onContinueReadonly }) 
         body: JSON.stringify({ plan: targetPlan }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'שגיאה בהתחברות לתשלום');
+      if (!res.ok) throw new Error(data.error || 'Payment connection error');
       window.location.href = data.url;
     } catch (err) {
       setError(err.message);
@@ -42,135 +36,113 @@ export default function UpgradeModal({ plan, used, limit, onContinueReadonly }) 
     }
   };
 
-  const barPct = Math.min(100, Math.round((used / limit) * 100));
-
   return (
-    <div style={{
-      position: 'fixed', inset: 0, zIndex: 500,
-      background: 'rgba(6,8,12,.85)', backdropFilter: 'blur(10px)',
-      display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20,
-    }}>
-      <div style={{
-        width: '100%', maxWidth: 540,
-        background: 'linear-gradient(180deg,#171b25,#13161e)',
-        border: '1px solid #2a3142', borderRadius: 22,
-        padding: '36px 32px',
-        boxShadow: '0 50px 100px -30px rgba(0,0,0,.9)',
-      }}>
+    <div style={{ position:'fixed', inset:0, zIndex:500, background:'rgba(0,0,0,.6)', backdropFilter:'blur(8px)', display:'flex', alignItems:'center', justifyContent:'center', padding:20 }}>
+      <div style={{ width:'100%', maxWidth:560, background:'var(--surf)', border:'1px solid var(--bdr)', borderRadius:'var(--r)', padding:'32px', boxShadow:'0 40px 80px rgba(0,0,0,.4)' }}>
+
         {/* Header */}
-        <div style={{ textAlign: 'center', marginBottom: 28 }}>
-          <div style={{ fontSize: 36, marginBottom: 10 }}>🚀</div>
-          <h2 style={{ fontSize: 24, fontWeight: 800, letterSpacing: '-.02em', margin: 0 }}>
-            {pct >= 1 ? 'Monthly invoice limit reached' : 'Upgrade your plan'}
-          </h2>
-          <p style={{ color: '#94a3b8', marginTop: 8, fontSize: 15 }}>
-            Your plan allows {limit} invoices/month. You've used {used}.
+        <div style={{ marginBottom:24 }}>
+          <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:8 }}>
+            <div style={{ width:36, height:36, borderRadius:8, background:'var(--indigo-tint)', border:'1px solid var(--indigo-border)', display:'flex', alignItems:'center', justifyContent:'center' }}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--indigo)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/><path d="M5 21h14"/>
+              </svg>
+            </div>
+            <h2 style={{ fontSize:20, fontWeight:800, letterSpacing:'-.02em', margin:0, color:'var(--t1)' }}>
+              {pct >= 1 ? 'Invoice limit reached' : "You're growing. Your plan should too."}
+            </h2>
+          </div>
+          <p style={{ color:'var(--t2)', fontSize:13, margin:0 }}>
+            You've processed {used} of your {limit} monthly invoices — great progress.
           </p>
         </div>
 
         {/* Usage bar */}
-        <div style={{ marginBottom: 28 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, color: '#64748b', marginBottom: 6 }}>
-            <span>{used} used</span>
+        <div style={{ marginBottom:24, padding:'14px 16px', background:'var(--surf2)', border:'1px solid var(--bdr)', borderRadius:8 }}>
+          <div style={{ display:'flex', justifyContent:'space-between', fontSize:12, color:'var(--t2)', marginBottom:8 }}>
+            <span style={{ fontWeight:600, color:'var(--t1)' }}>{used} invoices processed</span>
             <span>{limit} limit</span>
           </div>
-          <div style={{ height: 8, background: '#1e2330', borderRadius: 4, overflow: 'hidden' }}>
-            <div style={{
-              height: '100%', width: `${barPct}%`,
-              background: 'linear-gradient(90deg,#ef4444,#f97316)',
-              borderRadius: 4, transition: 'width .4s',
-            }} />
+          <div style={{ height:6, background:'var(--bdr)', borderRadius:3, overflow:'hidden' }}>
+            <div style={{ height:'100%', width:`${barPct}%`, background: barPct >= 90 ? 'var(--red)' : 'var(--indigo)', borderRadius:3, transition:'width .4s' }}/>
           </div>
         </div>
 
         {/* Plan cards */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, marginBottom: 20 }}>
+        <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12, marginBottom:20 }}>
           {/* Basic */}
-          <div style={{
-            background: '#0d0f14', border: '1px solid #1e2330',
-            borderRadius: 16, padding: '20px 18px',
-          }}>
-            <div style={{ fontSize: 13, fontWeight: 700, color: '#94a3b8', marginBottom: 8 }}>BASIC</div>
-            <div style={{ fontSize: 28, fontWeight: 900, letterSpacing: '-.03em', marginBottom: 2 }}>
-              ₪99 <small style={{ fontSize: 13, fontWeight: 500, color: '#64748b' }}>/mo</small>
+          <div style={{ background:'var(--surf2)', border:'1px solid var(--bdr)', borderRadius:8, padding:'18px 16px' }}>
+            <div style={{ fontSize:11, fontWeight:700, color:'var(--t3)', letterSpacing:'.06em', marginBottom:8 }}>BASIC</div>
+            <div style={{ fontSize:26, fontWeight:900, letterSpacing:'-.03em', color:'var(--t1)', marginBottom:12 }}>
+              ₪99 <small style={{ fontSize:13, fontWeight:500, color:'var(--t3)' }}>/mo</small>
             </div>
-            <ul style={{ listStyle: 'none', padding: 0, margin: '14px 0 18px', display: 'flex', flexDirection: 'column', gap: 8 }}>
-              {PLAN_FEATURES.basic.map(f => (
-                <li key={f} style={{ fontSize: 12, color: '#94a3b8', display: 'flex', gap: 8, alignItems: 'flex-start' }}>
-                  <span style={{ color: '#10b981', flexShrink: 0 }}>✓</span>{f}
-                </li>
-              ))}
-            </ul>
             <button
               onClick={() => checkout('basic')}
               disabled={!!loading}
-              style={{
-                width: '100%', padding: '11px 0', borderRadius: 10,
-                background: '#1e2330', border: '1px solid #2a3142',
-                color: '#f1f5f9', fontSize: 14, fontWeight: 600, cursor: loading ? 'not-allowed' : 'pointer',
-                opacity: loading === 'basic' ? .7 : 1,
-              }}
+              className="btn btn-secondary"
+              style={{ width:'100%', justifyContent:'center', opacity: loading === 'basic' ? .6 : 1 }}
             >
-              {loading === 'basic' ? '...' : 'Get Basic'}
+              {loading === 'basic' ? 'Redirecting…' : 'Get Basic'}
             </button>
           </div>
 
           {/* Pro */}
-          <div style={{
-            background: 'linear-gradient(180deg,rgba(59,130,246,.08),#0d0f14)',
-            border: '1px solid rgba(59,130,246,.5)',
-            borderRadius: 16, padding: '20px 18px',
-            boxShadow: '0 0 0 1px rgba(59,130,246,.2)',
-            position: 'relative',
-          }}>
-            <div style={{
-              position: 'absolute', top: -11, left: '50%', transform: 'translateX(-50%)',
-              background: 'linear-gradient(135deg,#3b82f6,#06b6d4)',
-              color: '#fff', fontSize: 10, fontWeight: 700, letterSpacing: '.06em',
-              padding: '4px 12px', borderRadius: 100, whiteSpace: 'nowrap',
-            }}>Most Popular</div>
-            <div style={{ fontSize: 13, fontWeight: 700, color: '#60a5fa', marginBottom: 8 }}>PRO</div>
-            <div style={{ fontSize: 28, fontWeight: 900, letterSpacing: '-.03em', marginBottom: 2 }}>
-              ₪199 <small style={{ fontSize: 13, fontWeight: 500, color: '#64748b' }}>/mo</small>
+          <div style={{ background:'var(--indigo-tint)', border:'1px solid var(--indigo-border)', borderRadius:8, padding:'18px 16px', position:'relative' }}>
+            <div style={{ position:'absolute', top:-10, left:'50%', transform:'translateX(-50%)', background:'var(--indigo)', color:'#fff', fontSize:10, fontWeight:700, letterSpacing:'.06em', padding:'3px 10px', borderRadius:100, whiteSpace:'nowrap' }}>
+              Most Popular
             </div>
-            <ul style={{ listStyle: 'none', padding: 0, margin: '14px 0 18px', display: 'flex', flexDirection: 'column', gap: 8 }}>
-              {PLAN_FEATURES.pro.map(f => (
-                <li key={f} style={{ fontSize: 12, color: '#94a3b8', display: 'flex', gap: 8, alignItems: 'flex-start' }}>
-                  <span style={{ color: '#3b82f6', flexShrink: 0 }}>✓</span>{f}
-                </li>
-              ))}
-            </ul>
+            <div style={{ fontSize:11, fontWeight:700, color:'var(--indigo)', letterSpacing:'.06em', marginBottom:8 }}>PRO</div>
+            <div style={{ fontSize:26, fontWeight:900, letterSpacing:'-.03em', color:'var(--t1)', marginBottom:12 }}>
+              ₪199 <small style={{ fontSize:13, fontWeight:500, color:'var(--t3)' }}>/mo</small>
+            </div>
             <button
               onClick={() => checkout('pro')}
               disabled={!!loading}
-              style={{
-                width: '100%', padding: '11px 0', borderRadius: 10,
-                background: 'linear-gradient(135deg,#3b82f6,#2563eb)',
-                border: 'none', color: '#fff', fontSize: 14, fontWeight: 700,
-                cursor: loading ? 'not-allowed' : 'pointer',
-                boxShadow: '0 8px 20px -8px rgba(59,130,246,.6)',
-                opacity: loading === 'pro' ? .7 : 1,
-              }}
+              className="btn btn-primary"
+              style={{ width:'100%', justifyContent:'center', opacity: loading === 'pro' ? .6 : 1 }}
             >
-              {loading === 'pro' ? '...' : 'Get Pro'}
+              {loading === 'pro' ? 'Redirecting…' : 'Get Pro'}
             </button>
           </div>
         </div>
 
-        {error && (
-          <p style={{ color: '#ef4444', fontSize: 13, textAlign: 'center', marginBottom: 14 }}>{error}</p>
-        )}
+        {/* Feature comparison table */}
+        <div style={{ border:'1px solid var(--bdr)', borderRadius:8, overflow:'hidden', marginBottom:20 }}>
+          <table style={{ width:'100%', borderCollapse:'collapse', fontSize:12 }}>
+            <thead>
+              <tr style={{ background:'var(--surf2)' }}>
+                <th style={{ padding:'8px 14px', textAlign:'left', color:'var(--t3)', fontWeight:600, borderBottom:'1px solid var(--bdr)' }}>Feature</th>
+                <th style={{ padding:'8px 14px', textAlign:'center', color:'var(--t2)', fontWeight:700, borderBottom:'1px solid var(--bdr)' }}>Basic</th>
+                <th style={{ padding:'8px 14px', textAlign:'center', color:'var(--indigo)', fontWeight:700, borderBottom:'1px solid var(--bdr)' }}>Pro</th>
+              </tr>
+            </thead>
+            <tbody>
+              {FEATURES.map((f, i) => (
+                <tr key={f.label} style={{ borderTop: i > 0 ? '1px solid var(--bdr)' : 'none' }}>
+                  <td style={{ padding:'8px 14px', color:'var(--t2)' }}>{f.label}</td>
+                  <td style={{ padding:'8px 14px', textAlign:'center', color:'var(--t1)', fontWeight:600 }}>
+                    {typeof f.basic === 'boolean'
+                      ? (f.basic ? <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--green)" strokeWidth="2.5" strokeLinecap="round"><polyline points="20 6 9 17 4 12"/></svg> : <span style={{ color:'var(--bdr2)', fontSize:16 }}>—</span>)
+                      : f.basic}
+                  </td>
+                  <td style={{ padding:'8px 14px', textAlign:'center', color:'var(--t1)', fontWeight:600 }}>
+                    {typeof f.pro === 'boolean'
+                      ? (f.pro ? <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--green)" strokeWidth="2.5" strokeLinecap="round"><polyline points="20 6 9 17 4 12"/></svg> : <span style={{ color:'var(--bdr2)', fontSize:16 }}>—</span>)
+                      : f.pro}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
 
-        {/* Continue readonly */}
+        {error && <p style={{ color:'var(--red)', fontSize:13, textAlign:'center', marginBottom:12 }}>{error}</p>}
+
         <button
           onClick={onContinueReadonly}
-          style={{
-            display: 'block', width: '100%', background: 'none', border: 'none',
-            color: '#64748b', fontSize: 13, cursor: 'pointer', padding: '8px 0',
-            textDecoration: 'underline', textDecorationStyle: 'dotted',
-          }}
+          style={{ display:'block', width:'100%', background:'none', border:'none', color:'var(--t3)', fontSize:13, cursor:'pointer', padding:'6px 0', textDecoration:'underline', textDecorationStyle:'dotted' }}
         >
-          Continue viewing existing invoices (no new uploads)
+          Continue viewing existing invoices
         </button>
       </div>
     </div>

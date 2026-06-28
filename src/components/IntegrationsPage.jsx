@@ -101,38 +101,18 @@ const FREQ_OPTIONS = [
 
 const StatusPill = ({ status }) => {
   const map = {
-    connected:    { label: "Connected",    color: "#4ade80", bg: "#052e16" },
-    disconnected: { label: "Disconnected", color: "#475569", bg: "#0d1626" },
-    error:        { label: "Error",        color: "#f87171", bg: "#2d0a0a" },
+    connected:    { cls: "badge badge-connected",    label: "Connected" },
+    disconnected: { cls: "badge badge-disconnected", label: "Disconnected" },
+    error:        { cls: "badge badge-overdue",      label: "Error" },
   };
   const s = map[status] || map.disconnected;
-  return (
-    <span style={{
-      display: "inline-flex", alignItems: "center", gap: 5,
-      padding: "3px 10px", borderRadius: 20,
-      background: s.bg, color: s.color, fontSize: 11, fontWeight: 700, letterSpacing: ".4px",
-    }}>
-      <span style={{ width: 5, height: 5, borderRadius: "50%", background: s.color, opacity: .9 }} />
-      {s.label}
-    </span>
-  );
+  return <span className={s.cls}>{s.label}</span>;
 };
 
-const Btn = ({ children, onClick, disabled, variant = "primary", style: extra = {} }) => {
-  const v = {
-    primary:   { background: "linear-gradient(135deg,#3b82f6,#06b6d4)", color: "#fff", border: "none" },
-    secondary: { background: "#131c2e", color: "#94a3b8", border: "1px solid #1e2d45" },
-    danger:    { background: "#1a0606", color: "#f87171", border: "1px solid #7f1d1d" },
-  }[variant];
+const Btn = ({ children, onClick, disabled, variant = "primary", title, style: extra = {} }) => {
+  const cls = { primary: "btn btn-primary", secondary: "btn btn-ghost", danger: "btn btn-danger" }[variant] || "btn btn-primary";
   return (
-    <button onClick={onClick} disabled={disabled} style={{
-      padding: "8px 18px", borderRadius: 10,
-      fontFamily: "inherit", fontSize: 13, fontWeight: 600,
-      cursor: disabled ? "not-allowed" : "pointer",
-      opacity: disabled ? .6 : 1,
-      transition: "opacity .15s",
-      ...v, ...extra,
-    }}>
+    <button className={cls} onClick={onClick} disabled={disabled} title={title} style={{ fontSize:13, ...extra }}>
       {children}
     </button>
   );
@@ -634,12 +614,13 @@ function IntegrationCard({ type, integration, onRefresh, onInvoicesRefresh, onNo
   );
 
   const isActive   = discovering || resyncing || isJobSyncing;
-  const cardBorder = isActive ? `1px solid ${cfg.color}55` : hasError ? "1px solid #7f1d1d" : "1px solid #111d2e";
+  const cardBorder = isActive ? `1px solid ${cfg.color}55` : hasError ? '1px solid rgba(239,68,68,.3)' : 'var(--bdr)';
 
   return (
     <div className="card" style={{
-      border: cardBorder, transition: "border-color .3s, box-shadow .3s",
+      border: `1px solid ${cardBorder}`, transition: "border-color .3s, box-shadow .3s",
       position: "relative", padding: 0, overflow: "hidden",
+      ...(connected ? { borderLeft: `3px solid ${cfg.color}` } : {}),
       ...(isActive ? { boxShadow: `0 0 24px ${cfg.color}18` } : {}),
     }}>
 
@@ -680,8 +661,8 @@ function IntegrationCard({ type, integration, onRefresh, onInvoicesRefresh, onNo
             <Icon size={26} />
           </div>
           <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontWeight: 700, fontSize: 15, color: "#f1f5f9", marginBottom: 3 }}>{cfg.label}</div>
-            <div style={{ fontSize: 12, color: "#475569", lineHeight: 1.5 }}>{cfg.description}</div>
+            <div style={{ fontWeight: 700, fontSize: 15, color: "var(--t1)", marginBottom: 3 }}>{cfg.label}</div>
+            <div style={{ fontSize: 12, color: "var(--t3)", lineHeight: 1.5 }}>{cfg.description}</div>
           </div>
           <StatusPill status={status} />
         </div>
@@ -710,12 +691,12 @@ function IntegrationCard({ type, integration, onRefresh, onInvoicesRefresh, onNo
         {connected && (
           <div style={{ display: "flex", gap: 24, marginBottom: 16, fontSize: 12 }}>
             <div>
-              <div style={{ color: "#334155", marginBottom: 2 }}>Last sync</div>
-              <div style={{ color: "#94a3b8", fontWeight: 600 }}>{lastSync}</div>
+              <div style={{ color: "var(--t3)", marginBottom: 2 }}>Last sync</div>
+              <div style={{ color: "var(--t2)", fontWeight: 600 }}>{lastSync}</div>
             </div>
             <div>
-              <div style={{ color: "#334155", marginBottom: 2 }}>Invoices synced</div>
-              <div style={{ color: "#94a3b8", fontWeight: 600 }}>{integration?.sync_count || 0}</div>
+              <div style={{ color: "var(--t3)", marginBottom: 2 }}>Invoices synced</div>
+              <div style={{ color: "var(--t2)", fontWeight: 600 }}>{integration?.sync_count || 0}</div>
             </div>
           </div>
         )}
@@ -756,7 +737,7 @@ function IntegrationCard({ type, integration, onRefresh, onInvoicesRefresh, onNo
 
       {/* Settings panel */}
       {connected && configOpen && (
-        <div style={{ borderTop: "1px solid #111d2e", padding: "18px 22px 0" }}>
+        <div style={{ borderTop: "1px solid var(--bdr)", padding: "18px 22px 0" }}>
 
           {/* Drive folder navigator */}
           {type === "google_drive" && (
@@ -936,9 +917,9 @@ function IntegrationCard({ type, integration, onRefresh, onInvoicesRefresh, onNo
 
       {/* Sync history */}
       {connected && (
-        <div style={{ borderTop: "1px solid #0d1626", padding: "10px 22px 14px" }}>
+        <div style={{ borderTop: "1px solid var(--bdr)", padding: "10px 22px 14px" }}>
           <button onClick={() => setHistoryOpen(h => !h)}
-            style={{ background: "none", border: "none", color: "#334155", cursor: "pointer", fontFamily: "inherit", fontSize: 12, padding: 0, display: "flex", alignItems: "center", gap: 5 }}>
+            style={{ background: "none", border: "none", color: "var(--t3)", cursor: "pointer", fontFamily: "inherit", fontSize: 12, padding: 0, display: "flex", alignItems: "center", gap: 5 }}>
             <span style={{ fontSize: 10 }}>{historyOpen ? "▲" : "▼"}</span>
             Sync history
           </button>
@@ -1010,25 +991,25 @@ export default function IntegrationsPage({ oauthResult, onClearOAuthResult, onIn
   return (
     <div>
       <div style={{ marginBottom: 28 }}>
-        <div style={{ fontWeight: 800, fontSize: 22, color: "#f1f5f9", marginBottom: 6 }}>Auto-Sync Integrations</div>
-        <div style={{ fontSize: 14, color: "#475569" }}>
+        <div style={{ fontWeight: 800, fontSize: 22, color: "var(--t1)", marginBottom: 6 }}>Auto-Sync Integrations</div>
+        <div style={{ fontSize: 14, color: "var(--t2)" }}>
           Connect your invoice sources. Cashflow will automatically pull in new invoices — no manual uploads needed.
         </div>
         {hasAnyError && (
-          <div style={{ marginTop: 14, padding: "10px 16px", background: "#2d0a0a", border: "1px solid #7f1d1d", borderRadius: 10, fontSize: 13, color: "#f87171" }}>
-            ⚠ One or more integrations have errors — expand the card to re-authorize.
+          <div style={{ marginTop: 14, padding: "10px 16px", background: "rgba(239,68,68,.08)", border: "1px solid rgba(239,68,68,.2)", borderRadius: 8, fontSize: 13, color: "var(--red)" }}>
+            One or more integrations have errors — expand the card to re-authorize.
           </div>
         )}
       </div>
 
       {toast && (
         <div style={{
-          marginBottom: 20, padding: "10px 16px", borderRadius: 10, fontSize: 13, animation: "fadeIn .3s",
-          background: toast.ok ? "#052e16" : "#2d0a0a",
-          border:     `1px solid ${toast.ok ? "#166534" : "#7f1d1d"}`,
-          color:      toast.ok ? "#4ade80" : "#f87171",
+          marginBottom: 20, padding: "10px 16px", borderRadius: 8, fontSize: 13, animation: "fadeIn .3s",
+          background: toast.ok ? "rgba(16,185,129,.1)" : "rgba(239,68,68,.08)",
+          border:     `1px solid ${toast.ok ? "rgba(16,185,129,.25)" : "rgba(239,68,68,.2)"}`,
+          color:      toast.ok ? "#34D399" : "var(--red)",
         }}>
-          {toast.ok ? "✓ " : "✕ "}{toast.text}
+          {toast.text}
         </div>
       )}
 
