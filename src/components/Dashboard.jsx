@@ -48,73 +48,105 @@ function MissingSuppliersModal({ missingSuppliers, invoices, suppliers, onClose 
     const avg = recentAmounts.length
       ? recentAmounts.reduce((s, a) => s + a, 0) / recentAmounts.length
       : null;
-
     const monthsPresent = pastMonths.filter(pm =>
       history.some(inv => (inv.invoice_date || '').startsWith(pm))
     );
-
     return { name, sup, lastInv, avg, monthsPresent };
   });
 
   return (
     <div className="overlay" onClick={e => e.target === e.currentTarget && onClose()}>
-      <div className="modal" style={{ width: 560, maxHeight: '80vh', display: 'flex', flexDirection: 'column' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 18 }}>
-          <div>
-            <div style={{ fontWeight: 800, fontSize: 20, color: '#fb923c' }}>⚠ חשבוניות חסרות</div>
-            <div style={{ fontSize: 13, color: 'var(--t2)', marginTop: 3 }}>
+      <div className="modal" style={{ width: 580, maxHeight: '85vh', display: 'flex', flexDirection: 'column', padding: 0, overflow: 'hidden' }}>
+
+        {/* Gradient header */}
+        <div style={{ padding: '22px 24px 20px', background: 'linear-gradient(135deg, rgba(249,115,22,.18) 0%, rgba(249,115,22,.04) 100%)', borderBottom: '1px solid rgba(249,115,22,.2)', display: 'flex', alignItems: 'center', gap: 14 }}>
+          <div style={{ width: 44, height: 44, borderRadius: 12, background: 'rgba(249,115,22,.2)', border: '1px solid rgba(249,115,22,.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, flexShrink: 0 }}>⚠️</div>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontWeight: 800, fontSize: 18, color: '#fb923c', direction: 'rtl' }}>חשבוניות חסרות</div>
+            <div style={{ fontSize: 12, color: '#fdba74', marginTop: 2, direction: 'rtl' }}>
               ספקים קבועים שלא שלחו חשבונית החודש
             </div>
           </div>
-          <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'var(--t3)', cursor: 'pointer', fontSize: 24, lineHeight: 1 }}>×</button>
+          <button onClick={onClose} style={{ background: 'rgba(255,255,255,.06)', border: '1px solid rgba(255,255,255,.1)', borderRadius: 8, color: 'var(--t3)', cursor: 'pointer', fontSize: 18, width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>×</button>
         </div>
 
-        <div style={{ overflowY: 'auto', flex: 1 }}>
+        {/* Supplier cards */}
+        <div style={{ overflowY: 'auto', flex: 1, padding: '12px 16px', display: 'flex', flexDirection: 'column', gap: 10 }}>
           {enriched.map(({ name, sup, lastInv, avg, monthsPresent }) => (
-            <div key={name} style={{ padding: '14px 0', borderBottom: '1px solid rgba(255,255,255,.06)' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
-                <div style={{ width: 36, height: 36, borderRadius: '50%', background: 'rgba(249,115,22,.15)', border: '1px solid rgba(249,115,22,.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 15, fontWeight: 800, color: '#fb923c', flexShrink: 0 }}>
+            <div key={name} style={{ borderRadius: 12, background: 'var(--surf2)', border: '1px solid rgba(255,255,255,.07)', borderLeft: '3px solid #fb923c', padding: '14px 16px' }}>
+
+              {/* Top row: avatar + name + badge + expected amount */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
+                <div style={{ width: 40, height: 40, borderRadius: 10, background: 'rgba(249,115,22,.15)', border: '1px solid rgba(249,115,22,.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 17, fontWeight: 900, color: '#fb923c', flexShrink: 0 }}>
                   {name.charAt(0)}
                 </div>
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontWeight: 700, fontSize: 14 }}>{name}</div>
-                  {sup?.terms && (
-                    <div style={{ fontSize: 11, color: 'var(--t3)', marginTop: 1 }}>
-                      תנאי תשלום: <span style={{ fontFamily: 'monospace' }}>{sup.terms}</span>
-                      {sup.recurring && <span style={{ marginRight: 8, color: 'var(--cyan)', fontWeight: 600 }}> · קבוע ידנית</span>}
-                      {!sup?.recurring && <span style={{ marginRight: 8, color: 'var(--t3)' }}> · זוהה אוטומטית</span>}
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontWeight: 800, fontSize: 15, color: 'var(--t1)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{name}</div>
+                  <div style={{ display: 'flex', gap: 6, marginTop: 4, flexWrap: 'wrap' }}>
+                    {sup?.terms && (
+                      <span style={{ fontSize: 10, fontWeight: 600, fontFamily: 'monospace', padding: '1px 7px', borderRadius: 5, background: 'rgba(255,255,255,.06)', color: 'var(--t3)', border: '1px solid rgba(255,255,255,.08)' }}>{sup.terms}</span>
+                    )}
+                    <span style={{ fontSize: 10, fontWeight: 700, padding: '1px 7px', borderRadius: 5,
+                      background: sup?.recurring ? 'rgba(6,182,212,.1)' : 'rgba(100,116,139,.1)',
+                      color: sup?.recurring ? 'var(--cyan)' : '#64748b',
+                      border: `1px solid ${sup?.recurring ? 'rgba(6,182,212,.25)' : 'rgba(100,116,139,.2)'}` }}>
+                      {sup?.recurring ? '✓ קבוע ידנית' : 'זוהה אוטומטית'}
+                    </span>
+                  </div>
+                </div>
+                {avg && (
+                  <div style={{ textAlign: 'center', flexShrink: 0 }}>
+                    <div style={{ fontSize: 9, color: 'var(--t3)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '.4px', marginBottom: 2 }}>צפי</div>
+                    <div style={{ fontWeight: 800, fontSize: 15, color: '#fb923c' }}>{currency(avg)}</div>
+                  </div>
+                )}
+              </div>
+
+              {/* Month presence dots */}
+              <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
+                {pastMonths.map((pm, i) => {
+                  const present = monthsPresent.includes(pm);
+                  return (
+                    <div key={pm} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
+                      <div style={{ width: 28, height: 28, borderRadius: '50%',
+                        background: present ? 'rgba(249,115,22,.25)' : 'rgba(255,255,255,.04)',
+                        border: `2px solid ${present ? '#fb923c' : 'rgba(255,255,255,.1)'}`,
+                        display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        {present && <div style={{ width: 10, height: 10, borderRadius: '50%', background: '#fb923c' }} />}
+                      </div>
+                      <span style={{ fontSize: 9, color: present ? '#fdba74' : 'var(--t3)', fontWeight: 600 }}>
+                        {fmtMonthShort(pm)}
+                      </span>
                     </div>
-                  )}
+                  );
+                })}
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
+                  <div style={{ width: 28, height: 28, borderRadius: '50%', background: 'rgba(239,68,68,.08)', border: '2px dashed rgba(239,68,68,.35)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <span style={{ fontSize: 12, color: '#ef4444' }}>?</span>
+                  </div>
+                  <span style={{ fontSize: 9, color: '#ef4444', fontWeight: 700 }}>החודש</span>
                 </div>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8 }}>
-                <InfoBox label="חשבונית אחרונה" value={lastInv ? fmt(lastInv.invoice_date) : '—'} sub={lastInv ? currency(lastInv.amount) : null} />
-                <InfoBox label="ממוצע חודשי" value={avg ? currency(avg) : '—'} sub="3 חודשים אחרונים" />
-                <InfoBox
-                  label="נוכחות אחרונה"
-                  value={`${monthsPresent.length} / 3 חודשים`}
-                  sub={monthsPresent.map(pm => fmtMonthShort(pm)).join(', ') || '—'}
-                />
-              </div>
+              {/* Last invoice row */}
+              {lastInv && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 10px', borderRadius: 8, background: 'rgba(255,255,255,.03)', border: '1px solid rgba(255,255,255,.05)' }}>
+                  <span style={{ fontSize: 11, color: 'var(--t3)' }}>חשבונית אחרונה:</span>
+                  <span style={{ fontSize: 11, color: 'var(--t2)', fontWeight: 600 }}>{fmt(lastInv.invoice_date)}</span>
+                  <span style={{ fontSize: 11, color: 'var(--t1)', fontWeight: 700, marginRight: 'auto' }}>{currency(lastInv.amount)}</span>
+                </div>
+              )}
             </div>
           ))}
         </div>
 
-        <div style={{ paddingTop: 16, borderTop: '1px solid rgba(255,255,255,.06)', marginTop: 4, fontSize: 12, color: 'var(--t3)' }}>
-          ספק מזוהה כקבוע אם הופיע ב-2+ מתוך 3 החודשים האחרונים, או סומן ידנית
+        {/* Footer */}
+        <div style={{ padding: '12px 16px', borderTop: '1px solid rgba(255,255,255,.06)', background: 'rgba(249,115,22,.04)' }}>
+          <span style={{ fontSize: 11, color: 'rgba(253,186,116,.6)' }}>
+            ספק מזוהה כקבוע אם הופיע ב-2 מתוך 3 החודשים האחרונים, או סומן ידנית
+          </span>
         </div>
       </div>
-    </div>
-  );
-}
-
-function InfoBox({ label, value, sub }) {
-  return (
-    <div style={{ background: 'var(--surf2)', borderRadius: 8, padding: '10px 12px', border: '1px solid rgba(255,255,255,.05)' }}>
-      <div style={{ fontSize: 10, fontWeight: 600, color: 'var(--t3)', textTransform: 'uppercase', letterSpacing: '.5px', marginBottom: 4 }}>{label}</div>
-      <div style={{ fontWeight: 700, fontSize: 13, color: 'var(--t1)' }}>{value}</div>
-      {sub && <div style={{ fontSize: 11, color: 'var(--t3)', marginTop: 2 }}>{sub}</div>}
     </div>
   );
 }
@@ -149,95 +181,119 @@ function AnomalyModal({ anomalyMap, computed, invoices, onClose, onEditInvoice }
 
   return (
     <div className="overlay" onClick={e => e.target === e.currentTarget && onClose()}>
-      <div className="modal" style={{ width: 600, maxHeight: '80vh', display: 'flex', flexDirection: 'column' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 18 }}>
-          <div>
-            <div style={{ fontWeight: 800, fontSize: 20, color: '#fbbf24' }}>📊 חשבוניות חריגות</div>
-            <div style={{ fontSize: 13, color: 'var(--t2)', marginTop: 3 }}>
-              חשבוניות עם סכום חריג ביחס לממוצע הספק
+      <div className="modal" style={{ width: 620, maxHeight: '85vh', display: 'flex', flexDirection: 'column', padding: 0, overflow: 'hidden' }}>
+
+        {/* Gradient header */}
+        <div style={{ padding: '22px 24px 20px', background: 'linear-gradient(135deg, rgba(234,179,8,.15) 0%, rgba(234,179,8,.04) 100%)', borderBottom: '1px solid rgba(234,179,8,.2)', display: 'flex', alignItems: 'center', gap: 14 }}>
+          <div style={{ width: 44, height: 44, borderRadius: 12, background: 'rgba(234,179,8,.18)', border: '1px solid rgba(234,179,8,.38)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, flexShrink: 0 }}>📊</div>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontWeight: 800, fontSize: 18, color: '#fbbf24', direction: 'rtl' }}>חשבוניות חריגות</div>
+            <div style={{ fontSize: 12, color: '#fde68a', marginTop: 2, direction: 'rtl' }}>
+              סכום חריג מהממוצע החודשי של הספק
             </div>
           </div>
-          <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'var(--t3)', cursor: 'pointer', fontSize: 24, lineHeight: 1 }}>×</button>
+          <button onClick={onClose} style={{ background: 'rgba(255,255,255,.06)', border: '1px solid rgba(255,255,255,.1)', borderRadius: 8, color: 'var(--t3)', cursor: 'pointer', fontSize: 18, width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>×</button>
         </div>
 
-        <div style={{ overflowY: 'auto', flex: 1 }}>
+        {/* Invoice cards */}
+        <div style={{ overflowY: 'auto', flex: 1, padding: '12px 16px', display: 'flex', flexDirection: 'column', gap: 12 }}>
           {items.map(({ inv, anomaly, history }) => {
             const isHigh = anomaly.direction === 'higher';
+            const accentColor = isHigh ? '#f59e0b' : '#60a5fa';
+            const accentBg    = isHigh ? 'rgba(245,158,11,.1)' : 'rgba(96,165,250,.1)';
+            const accentBdr   = isHigh ? 'rgba(245,158,11,.28)' : 'rgba(96,165,250,.28)';
+            const maxVal = Math.max(Number(inv.amount), anomaly.average) * 1.08;
+            const avgPct = Math.round((anomaly.average / maxVal) * 100);
+            const curPct = Math.round((Number(inv.amount) / maxVal) * 100);
+
             return (
-              <div key={inv.id} style={{ padding: '14px 0', borderBottom: '1px solid rgba(255,255,255,.06)' }}>
-                <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10, marginBottom: 12 }}>
-                  <div style={{ width: 36, height: 36, borderRadius: '50%', background: 'rgba(234,179,8,.12)', border: '1px solid rgba(234,179,8,.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 15, fontWeight: 800, color: '#fbbf24', flexShrink: 0 }}>
+              <div key={inv.id} style={{ borderRadius: 12, background: 'var(--surf2)', border: `1px solid ${accentBdr}`, borderLeft: `3px solid ${accentColor}`, overflow: 'hidden' }}>
+
+                {/* Card header */}
+                <div style={{ padding: '14px 16px 12px', display: 'flex', alignItems: 'center', gap: 12 }}>
+                  <div style={{ width: 40, height: 40, borderRadius: 10, background: accentBg, border: `1px solid ${accentBdr}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 17, fontWeight: 900, color: accentColor, flexShrink: 0 }}>
                     {inv.supplier.charAt(0)}
                   </div>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontWeight: 700, fontSize: 14 }}>{inv.supplier}</div>
-                    <div style={{ fontSize: 11, color: 'var(--t3)', marginTop: 1 }}>
-                      חשבונית {inv.invoiceNo || '—'} · {fmt(inv.invoiceDate)}
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontWeight: 800, fontSize: 14, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{inv.supplier}</div>
+                    <div style={{ fontSize: 11, color: 'var(--t3)', marginTop: 2 }}>
+                      {inv.invoiceNo && <span>{inv.invoiceNo} · </span>}{fmt(inv.invoiceDate)}
                     </div>
                   </div>
-                  <button
-                    className="btn btn-ghost btn-sm"
-                    onClick={() => { onClose(); onEditInvoice({ ...inv }); }}>
-                    פתח ✎
-                  </button>
+                  {/* Deviation badge */}
+                  <div style={{ padding: '5px 12px', borderRadius: 20, background: accentBg, border: `1px solid ${accentBdr}`, fontWeight: 900, fontSize: 15, color: accentColor, flexShrink: 0, letterSpacing: '-.3px' }}>
+                    {isHigh ? '↑' : '↓'} {anomaly.deviationPct}%
+                  </div>
                 </div>
 
-                {/* Amount comparison bar */}
-                <div style={{ background: 'var(--surf2)', borderRadius: 10, padding: '12px 14px', border: '1px solid rgba(255,255,255,.05)' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
-                    <div>
-                      <div style={{ fontSize: 10, color: 'var(--t3)', textTransform: 'uppercase', letterSpacing: '.5px', marginBottom: 3 }}>סכום חשבונית</div>
-                      <div style={{ fontWeight: 800, fontSize: 18, color: isHigh ? '#fbbf24' : '#60a5fa' }}>
-                        {currency(inv.amount)}
-                        <span style={{ fontSize: 12, fontWeight: 600, marginRight: 6, color: isHigh ? '#fbbf24' : '#60a5fa' }}>
-                          {isHigh ? '↑' : '↓'} {anomaly.deviationPct}%
-                        </span>
+                {/* Amount comparison */}
+                <div style={{ padding: '12px 16px', background: 'rgba(0,0,0,.15)', borderTop: '1px solid rgba(255,255,255,.05)' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 9 }}>
+
+                    {/* Average row */}
+                    <div style={{ display: 'grid', gridTemplateColumns: '72px 90px 1fr', alignItems: 'center', gap: 10 }}>
+                      <span style={{ fontSize: 11, color: 'var(--t3)', fontWeight: 600 }}>ממוצע</span>
+                      <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--t2)', textAlign: 'right' }}>{currency(anomaly.average)}</span>
+                      <div style={{ height: 10, background: 'rgba(255,255,255,.06)', borderRadius: 5 }}>
+                        <div style={{ width: `${avgPct}%`, height: '100%', borderRadius: 5, background: 'rgba(100,116,139,.55)' }} />
                       </div>
                     </div>
-                    <div style={{ textAlign: 'right' }}>
-                      <div style={{ fontSize: 10, color: 'var(--t3)', textTransform: 'uppercase', letterSpacing: '.5px', marginBottom: 3 }}>ממוצע ספק (3 חודשים)</div>
-                      <div style={{ fontWeight: 700, fontSize: 15, color: 'var(--t2)' }}>{currency(anomaly.average)}</div>
+
+                    {/* Current invoice row */}
+                    <div style={{ display: 'grid', gridTemplateColumns: '72px 90px 1fr', alignItems: 'center', gap: 10 }}>
+                      <span style={{ fontSize: 11, color: accentColor, fontWeight: 700 }}>חשבונית</span>
+                      <span style={{ fontSize: 13, fontWeight: 800, color: accentColor, textAlign: 'right' }}>{currency(inv.amount)}</span>
+                      <div style={{ height: 10, background: 'rgba(255,255,255,.06)', borderRadius: 5 }}>
+                        <div style={{ width: `${curPct}%`, height: '100%', borderRadius: 5, background: accentColor }} />
+                      </div>
                     </div>
                   </div>
+                </div>
 
-                  {/* Visual bar */}
-                  {(() => {
-                    const maxVal = Math.max(Number(inv.amount), anomaly.average) * 1.1;
-                    const avgPct = Math.round((anomaly.average / maxVal) * 100);
-                    const curPct = Math.round((Number(inv.amount) / maxVal) * 100);
-                    return (
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                          <span style={{ fontSize: 10, color: 'var(--t3)', width: 52, flexShrink: 0 }}>ממוצע</span>
-                          <div style={{ flex: 1, height: 6, background: 'rgba(255,255,255,.06)', borderRadius: 3 }}>
-                            <div style={{ width: `${avgPct}%`, height: '100%', borderRadius: 3, background: 'rgba(100,116,139,.6)' }} />
+                {/* History timeline + CTA */}
+                {history.length > 0 && (
+                  <div style={{ padding: '10px 16px 14px', borderTop: '1px solid rgba(255,255,255,.04)', display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <span style={{ fontSize: 10, color: 'var(--t3)', fontWeight: 600, flexShrink: 0 }}>היסטוריה:</span>
+                    <div style={{ display: 'flex', alignItems: 'center', flex: 1, gap: 0 }}>
+                      {history.map((h, i) => (
+                        <div key={h.id} style={{ display: 'flex', alignItems: 'center' }}>
+                          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
+                            <div style={{ width: 8, height: 8, borderRadius: '50%', background: 'rgba(100,116,139,.5)', border: '1.5px solid rgba(100,116,139,.5)' }} />
+                            <span style={{ fontSize: 9, color: 'var(--t3)', whiteSpace: 'nowrap' }}>{fmtMonthShort(h.invoice_date?.slice(0,7) || '')}</span>
+                            <span style={{ fontSize: 9, color: 'var(--t2)', fontWeight: 700, whiteSpace: 'nowrap' }}>{currency(h.amount)}</span>
                           </div>
+                          {i < history.length - 1 && (
+                            <div style={{ width: 20, height: 1.5, background: 'rgba(100,116,139,.25)', margin: '0 2px', marginBottom: 14 }} />
+                          )}
                         </div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                          <span style={{ fontSize: 10, color: 'var(--t3)', width: 52, flexShrink: 0 }}>חשבונית</span>
-                          <div style={{ flex: 1, height: 6, background: 'rgba(255,255,255,.06)', borderRadius: 3 }}>
-                            <div style={{ width: `${curPct}%`, height: '100%', borderRadius: 3, background: isHigh ? '#f59e0b' : '#3b82f6' }} />
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })()}
-
-                  {/* Last few invoices */}
-                  {history.length > 0 && (
-                    <div style={{ marginTop: 10, paddingTop: 10, borderTop: '1px solid rgba(255,255,255,.05)', display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                      <span style={{ fontSize: 10, color: 'var(--t3)', alignSelf: 'center' }}>היסטוריה:</span>
-                      {history.map(h => (
-                        <span key={h.id} style={{ fontSize: 11, color: 'var(--t2)', background: 'rgba(255,255,255,.04)', padding: '2px 8px', borderRadius: 6 }}>
-                          {fmt(h.invoice_date)} · {currency(h.amount)}
-                        </span>
                       ))}
                     </div>
-                  )}
-                </div>
+                    <button
+                      style={{ padding: '7px 14px', borderRadius: 8, background: accentBg, border: `1px solid ${accentBdr}`, color: accentColor, fontWeight: 700, fontSize: 12, cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0, transition: 'all .15s' }}
+                      onClick={() => { onClose(); onEditInvoice({ ...inv }); }}>
+                      פתח ✎
+                    </button>
+                  </div>
+                )}
+                {history.length === 0 && (
+                  <div style={{ padding: '10px 16px 14px', borderTop: '1px solid rgba(255,255,255,.04)', display: 'flex', justifyContent: 'flex-end' }}>
+                    <button
+                      style={{ padding: '7px 14px', borderRadius: 8, background: accentBg, border: `1px solid ${accentBdr}`, color: accentColor, fontWeight: 700, fontSize: 12, cursor: 'pointer', fontFamily: 'inherit' }}
+                      onClick={() => { onClose(); onEditInvoice({ ...inv }); }}>
+                      פתח ✎
+                    </button>
+                  </div>
+                )}
               </div>
             );
           })}
+        </div>
+
+        {/* Footer */}
+        <div style={{ padding: '12px 16px', borderTop: '1px solid rgba(255,255,255,.06)', background: 'rgba(234,179,8,.04)' }}>
+          <span style={{ fontSize: 11, color: 'rgba(253,230,138,.55)' }}>
+            חשבונית מסומנת כחריגה כאשר הסכום סוטה ביותר מ-30% מהממוצע של הספק
+          </span>
         </div>
       </div>
     </div>
