@@ -3,6 +3,107 @@
 export const isLatinOnly = s =>
   Boolean(s) && /[A-Za-z]/.test(s) && !/[א-ת]/.test(s);
 
+const normName = s => s?.normalize('NFC').toLowerCase().trim() || '';
+
+// Returns display names of suppliers that are considered recurring but have no
+// invoice in the given YM string (e.g. "2026-06").
+// A supplier is auto-recurring if it appeared in ≥ 2 of the past 3 months.
+// Manual recurring suppliers (suppliers.recurring = true) are always included.
+export const getMissingSuppliers = (invoices, suppliers, ym) => {
+  if (!ym || !invoices?.length) return [];
+
+  const [year, month] = ym.split('-').map(Number);
+  const pastMonths = [];
+  for (let i = 1; i <= 3; i++) {
+    const d = new Date(year, month - 1 - i, 1);
+    pastMonths.push(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`);
+  }
+
+  const nonCredit = invoices.filter(inv => inv.status !== 'Credit' && Number(inv.amount) >= 0);
+
+  // Suppliers with an invoice in current month
+  const thisMonthSet = new Set(
+    nonCredit
+      .filter(inv => (inv.invoice_date || inv.invoiceDate || '').startsWith(ym))
+      .map(inv => normName(inv.supplier))
+  );
+
+  // Auto-detect: count distinct past months per supplier
+  const monthsPerSupplier = {};
+  nonCredit.forEach(inv => {
+    const d = inv.invoice_date || inv.invoiceDate || '';
+    const pm = pastMonths.find(p => d.startsWith(p));
+    if (!pm) return;
+    const key = normName(inv.supplier);
+    if (!key) return;
+    if (!monthsPerSupplier[key]) monthsPerSupplier[key] = new Set();
+    monthsPerSupplier[key].add(pm);
+  });
+
+  const autoRecurring = new Set(
+    Object.entries(monthsPerSupplier)
+      .filter(([, s]) => s.size >= 2)
+      .map(([key]) => key)
+  );
+
+  const manualRecurring = new Set(
+    (suppliers || []).filter(s => s.recurring).map(s => normName(s.name))
+  );
+
+  const missing = [...new Set([...autoRecurring, ...manualRecurring])]
+    .filter(key => !thisMonthSet.has(key));
+
+  return missing.map(key => {
+    const sup = (suppliers || []).find(s => normName(s.name) === key);
+    if (sup) return sup.name;
+    const inv = [...invoices].reverse().find(i => normName(i.supplier) === key);
+    return inv?.supplier || key;
+  }).sort();
+};
+
+// Returns anomaly data if the invoice amount deviates >30% from the supplier's
+// 3-month average. Returns null if not enough history or no anomaly.
+export const getAmountAnomaly = (invoice, allInvoices) => {
+  const supKey = normName(invoice.supplier);
+  if (!supKey) return null;
+  const invDate = invoice.invoice_date || invoice.invoiceDate || '';
+  if (!invDate) return null;
+
+  const [year, month] = invDate.split('-').map(Number);
+  const pastMonths = [];
+  for (let i = 1; i <= 3; i++) {
+    const d = new Date(year, month - 1 - i, 1);
+    pastMonths.push(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`);
+  }
+
+  const amounts = allInvoices
+    .filter(inv => {
+      if (inv.id === invoice.id) return false;
+      if (normName(inv.supplier) !== supKey) return false;
+      if (inv.status === 'Credit' || inv.invoice_type === 'credit' || Number(inv.amount) < 0) return false;
+      const d = inv.invoice_date || inv.invoiceDate || '';
+      return pastMonths.some(pm => d.startsWith(pm));
+    })
+    .map(inv => Number(inv.amount))
+    .filter(a => a > 0);
+
+  if (amounts.length < 2) return null;
+
+  const avg = amounts.reduce((s, a) => s + a, 0) / amounts.length;
+  const current = Number(invoice.amount);
+  if (!current || current < 0) return null;
+
+  const deviation = (current - avg) / avg;
+  if (Math.abs(deviation) < 0.3) return null;
+
+  return {
+    isAnomaly: true,
+    deviationPct: Math.round(Math.abs(deviation) * 100),
+    average: avg,
+    direction: deviation > 0 ? 'higher' : 'lower',
+  };
+};
+
 // Canonical form: NFC, lowercase, all quote variants → ASCII "
 const normSup = s => s?.toLowerCase().replace(/[.,\s]+$/, '').trim() || '';
 const norm    = s => s?.normalize('NFC').toLowerCase().trim().replace(/[״"""]/g, '"') ?? '';
