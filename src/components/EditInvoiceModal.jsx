@@ -40,7 +40,7 @@ export default function EditInvoiceModal({ editInvoice, setEditInvoice, supplier
             <div style={{ fontWeight:700, fontSize:17, color:"var(--t1)" }}>{editInvoice.id ? "Edit Invoice" : "New Invoice"}</div>
             <div style={{ fontSize:12, color:"var(--t2)", marginTop:2 }}>Invoice details & payment info</div>
           </div>
-          <button onClick={close} style={{ width:32, height:32, borderRadius:8, background:"var(--surf)", border:"1px solid #1e2d45", color:"var(--t2)", cursor:"pointer", fontSize:16, display:"flex", alignItems:"center", justifyContent:"center" }}>✕</button>
+          <button onClick={close} style={{ width:32, height:32, borderRadius:8, background:"var(--surf)", border:"1px solid var(--bdr2)", color:"var(--t2)", cursor:"pointer", fontSize:16, display:"flex", alignItems:"center", justifyContent:"center" }}>✕</button>
         </div>
         <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:14, marginBottom:14 }}>
           {[["Invoice #","invoiceNo","text"],["Invoice Date","invoiceDate","date"],["Amount","amount","number"],["Due Date (override)","dueDate","date"]].map(([label, key, type]) => (
@@ -70,7 +70,7 @@ export default function EditInvoiceModal({ editInvoice, setEditInvoice, supplier
         </div>
         {/* Sync audit trail — read-only, shown only for auto-synced invoices */}
         {editInvoice.sync_source && (
-          <div style={{ marginBottom:20, padding:"10px 14px", background:"#0d1626", borderRadius:10, border:"1px solid #1e2d45" }}>
+          <div style={{ marginBottom:20, padding:"10px 14px", background:"var(--surf2)", borderRadius:10, border:"1px solid var(--bdr)" }}>
             <div style={{ fontSize:10, fontWeight:700, color:"var(--t3)", textTransform:"uppercase", letterSpacing:".7px", marginBottom:6 }}>Sync Audit</div>
             <div style={{ fontSize:12, color:"var(--t2)", display:"flex", flexDirection:"column", gap:3 }}>
               <span>Source: <strong style={{ color:"var(--t3)" }}>
@@ -96,8 +96,8 @@ export default function EditInvoiceModal({ editInvoice, setEditInvoice, supplier
         )}
 
         <div style={{ display:"flex", gap:10, justifyContent:"flex-end" }}>
-          <button onClick={close} style={{ padding:"10px 20px", background:"var(--surf)", border:"1px solid #1e2d45", borderRadius:10, color:"var(--t2)", cursor:"pointer", fontFamily:"inherit", fontWeight:500, fontSize:13 }}>Cancel</button>
-          <button onClick={save}  style={{ padding:"10px 24px", background:"linear-gradient(135deg,#3b82f6,#06b6d4)", border:"none", borderRadius:10, color:"#fff", fontWeight:700, cursor:"pointer", fontFamily:"inherit", fontSize:13, boxShadow:"0 4px 15px #3b82f633" }}>Save Invoice</button>
+          <button onClick={close} style={{ padding:"10px 20px", background:"var(--surf)", border:"1px solid var(--bdr2)", borderRadius:10, color:"var(--t2)", cursor:"pointer", fontFamily:"inherit", fontWeight:500, fontSize:13 }}>Cancel</button>
+          <button onClick={save}  style={{ padding:"10px 24px", background:"var(--indigo)", border:"none", borderRadius:10, color:"#fff", fontWeight:700, cursor:"pointer", fontFamily:"inherit", fontSize:13, boxShadow:"0 4px 15px rgba(99,102,241,.35)" }}>Save Invoice</button>
         </div>
       </div>
     </div>

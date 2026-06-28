@@ -190,7 +190,7 @@ export default function InvoicesView({ computed, dupeIds, updateInvoice, deleteI
           <div className="batch-count">{count}</div>
           <span style={{ fontWeight:600, color:"var(--t2)" }}>{count} selected</span>
           <span style={{ width:1, height:20, background:"rgba(255,255,255,.1)" }}/>
-          <span style={{ fontWeight:800, fontSize:16, background:"var(--grad)", WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent" }}>
+          <span style={{ fontWeight:800, fontSize:16, color:"#A5B4FC" }}>
             {currency(selTotal)}
           </span>
           <button className="btn btn-primary" style={{ borderRadius:50 }} onClick={() => setShowPayModal(true)}>
@@ -229,9 +229,9 @@ export default function InvoicesView({ computed, dupeIds, updateInvoice, deleteI
               ))}
             </div>
 
-            <div style={{ padding:"14px 16px", background:"rgba(6,182,212,.08)", border:"1px solid rgba(6,182,212,.2)", borderRadius:10, marginBottom:18, display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+            <div style={{ padding:"14px 16px", background:"var(--indigo-tint)", border:"1px solid var(--indigo-bdr)", borderRadius:10, marginBottom:18, display:"flex", justifyContent:"space-between", alignItems:"center" }}>
               <span style={{ color:"var(--t2)", fontSize:13 }}>Total payment</span>
-              <span style={{ fontWeight:800, fontSize:22, background:"var(--grad)", WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent" }}>
+              <span style={{ fontWeight:800, fontSize:22, color:"#A5B4FC" }}>
                 {currency(selTotal)}
               </span>
             </div>
@@ -257,7 +257,7 @@ export default function InvoicesView({ computed, dupeIds, updateInvoice, deleteI
               width: i % 3 === 0 ? 10 : i % 3 === 1 ? 7 : 5,
               height: i % 3 === 0 ? 10 : i % 3 === 1 ? 7 : 5,
               borderRadius: i % 2 === 0 ? 2 : "50%",
-              background:["#06b6d4","#3b82f6","#10b981","#f59e0b","#ec4899","#06b6d4"][i % 6],
+              background:["#6366F1","#818CF8","#22C55E","#F59E0B","#A5B4FC","#6366F1"][i % 6],
               animation:`confettiFall ${.5 + (i % 8) * .07}s ease-out ${i * .05}s both`,
               pointerEvents:"none",
             }}/>

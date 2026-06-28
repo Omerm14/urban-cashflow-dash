@@ -273,6 +273,10 @@ function AppShell() {
               view={view}
               onMenuOpen={() => setMobileOpen(true)}
               unreadCount={unreadCount}
+              showNotifPanel={showNotifPanel}
+              onBellClick={() => { setShowNotifPanel(v => !v); if (!showNotifPanel) markAllRead(); }}
+              notifications={notifications}
+              markAllRead={markAllRead}
             />
 
             <div className="app-content" style={{ opacity: fading ? 0 : 1, transition: "opacity .16s ease" }}>
@@ -309,7 +313,7 @@ function AppShell() {
               {view === "invoices"     && <InvoicesView computed={computed} dupeIds={dupeIds} updateInvoice={updateInvoice} deleteInvoice={deleteInvoice} bulkMarkPaid={bulkMarkPaid} bulkMarkUnpaid={bulkMarkUnpaid} bulkDelete={bulkDelete} setEditInvoice={setEditInvoice} color={color} onViewAttachment={handleViewAttachment} preSelMonth={preSelMonth} onClearPreSel={() => setPreSelMonth(null)} />}
               {view === "calendar"     && <CalendarView computed={computed} calMonth={calMonth} setCalMonth={setCalMonth} color={color} />}
               {view === "admin"        && <AdminPage />}
-              {view === "settings"     && <SettingsPage user={user} plan={plan} used={used} limit={limit} remaining={remaining} onUpgrade={openUpgrade} onBack={() => setView("dashboard")} invoices={invoices} session={session} />}
+              {view === "settings"     && <SettingsPage user={user} plan={plan} used={used} limit={limit} remaining={remaining} onUpgrade={openUpgrade} invoices={invoices} session={session} />}
               {view === "integrations" && (
                 <IntegrationsPage
                   oauthResult={oauthResult} onClearOAuthResult={() => setOAuthResult(null)}

@@ -49,9 +49,9 @@ body{font-family:'IBM Plex Sans',system-ui,sans-serif;background:var(--bg);color
 @keyframes meshMove{0%{background-position:0 0}100%{background-position:40px 40px}}
 
 /* ─── APP SHELL LAYOUT ─── */
-.app-shell{display:flex;flex-direction:row;height:100vh;overflow:hidden}
-.app-main{display:flex;flex-direction:column;flex:1;overflow:hidden;min-width:0}
-.app-content{flex:1;overflow-y:auto;padding:28px 32px}
+.app-shell{display:flex;flex-direction:row;height:100vh;overflow:hidden;overflow-x:hidden}
+.app-main{display:flex;flex-direction:column;flex:1;overflow:hidden;overflow-x:hidden;min-width:0}
+.app-content{flex:1;overflow-y:auto;overflow-x:hidden;padding:28px 32px}
 @media(max-width:900px){.app-content{padding:20px 20px}}
 @media(max-width:640px){.app-content{padding:16px 16px}}
 

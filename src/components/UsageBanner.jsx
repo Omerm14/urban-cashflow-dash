@@ -8,7 +8,7 @@ export default function UsageBanner({ plan, used, limit, remaining, onUpgrade })
   const pct = limit === Infinity ? 0 : used / limit;
   const isWarning = pct >= 0.8;
 
-  const bg     = isWarning ? 'rgba(239,68,68,.10)' : 'var(--surf2)';
+  const bg     = isWarning ? 'var(--red-tint)' : 'var(--surf2)';
   const border = isWarning ? '1px solid rgba(239,68,68,.25)' : '1px solid var(--bdr)';
   const color  = isWarning ? '#F87171' : 'var(--t2)';
 
@@ -24,7 +24,7 @@ export default function UsageBanner({ plan, used, limit, remaining, onUpgrade })
       <span>
         <strong>{used}</strong> / {limit} invoices used this month
         {remaining > 0
-          ? <span style={{ color: isWarning ? '#fcd34d' : 'var(--t3)', marginLeft: 6 }}>· {remaining} remaining</span>
+          ? <span style={{ color: isWarning ? 'var(--amber)' : 'var(--t3)', marginLeft: 6 }}>· {remaining} remaining</span>
           : <span style={{ color: '#f87171', marginLeft: 6, fontWeight: 700 }}>· Limit reached</span>
         }
       </span>
@@ -32,10 +32,10 @@ export default function UsageBanner({ plan, used, limit, remaining, onUpgrade })
         <button
           onClick={onUpgrade}
           style={{
-            background: isWarning ? '#EF4444' : '#6366F1',
+            background: isWarning ? 'var(--red)' : 'var(--indigo)',
             border: 'none', borderRadius: 8,
             padding: '5px 12px', fontSize: 12, fontWeight: 700,
-            color: isWarning ? '#1c1917' : '#fff', cursor: 'pointer',
+            color: isWarning ? '#fff' : '#fff', cursor: 'pointer',
           }}
         >
           Upgrade Now

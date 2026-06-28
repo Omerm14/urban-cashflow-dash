@@ -34,7 +34,7 @@ export default function InvoicesTable({ computed, dupeIds, updateInvoice, delete
                 type="checkbox"
                 checked={allSelected}
                 onChange={() => onToggleAll(allIds)}
-                style={{ accentColor:"var(--cyan)", cursor:"pointer", width:14, height:14 }}
+                style={{ accentColor:"var(--indigo)", cursor:"pointer", width:14, height:14 }}
               />
             </th>
             {["Invoice #","Supplier","Date","Amount","Due Date","Status","Source",""].map(h => (
@@ -59,7 +59,7 @@ export default function InvoicesTable({ computed, dupeIds, updateInvoice, delete
                     type="checkbox"
                     checked={isSelected}
                     onChange={() => onToggleSelect(inv.id)}
-                    style={{ accentColor:"var(--cyan)", cursor:"pointer", width:14, height:14 }}
+                    style={{ accentColor:"var(--indigo)", cursor:"pointer", width:14, height:14 }}
                   />
                 </td>
                 <td style={{ color:"var(--t3)", fontFamily:"monospace", fontSize:12 }}>{inv.invoiceNo}</td>

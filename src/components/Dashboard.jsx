@@ -75,8 +75,14 @@ function KPICard({ label, value, valueColor, iconBg, iconColor, iconPath, pill, 
 
 export default function Dashboard({ kpis, monthlyData, allNames, color, maxTotal, onPayMonth }) {
   const [tooltip, setTooltip] = useState(null);
-  const isMobile = window.innerWidth <= 640;
-  const isTablet = window.innerWidth <= 900;
+  const [winW, setWinW] = useState(window.innerWidth);
+  useEffect(() => {
+    const onResize = () => setWinW(window.innerWidth);
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, []);
+  const isMobile = winW <= 640;
+  const isTablet = winW <= 900;
   const isCompact = isMobile || isTablet;
 
   const overdueCount = kpis.overdueCount ?? 0;
@@ -110,12 +116,11 @@ export default function Dashboard({ kpis, monthlyData, allNames, color, maxTotal
   ];
 
   const ctaMonth = monthlyData[0] || null;
-  const kpiCols = isMobile ? "1fr 1fr" : isTablet ? "1fr 1fr" : "repeat(4,1fr)";
 
   return (
     <div style={{ animation: "slideUp .4s cubic-bezier(.16,1,.3,1)" }}>
       {/* KPI Cards */}
-      <div style={{ display: "grid", gridTemplateColumns: kpiCols, gap: 12, marginBottom: 16 }}>
+      <div className="stat-grid" style={{ marginBottom: 16 }}>
         {CARDS.map(c => <KPICard key={c.label} {...c} />)}
       </div>
 

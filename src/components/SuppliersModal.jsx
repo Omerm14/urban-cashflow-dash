@@ -29,9 +29,9 @@ export default function SuppliersModal({ suppliers, addSupplier, updateSupplier,
               key={t}
               onClick={() => setFilterTerm(t)}
               style={{
-                padding:"3px 12px", borderRadius:20, border:`1px solid ${filterTerm === t ? "var(--cyan)" : "var(--bdr)"}`,
-                background: filterTerm === t ? "rgba(6,182,212,.1)" : "transparent",
-                color: filterTerm === t ? "var(--cyan)" : "var(--t3)",
+                padding:"3px 12px", borderRadius:20, border:`1px solid ${filterTerm === t ? "var(--indigo)" : "var(--bdr)"}`,
+                background: filterTerm === t ? "var(--indigo-tint)" : "transparent",
+                color: filterTerm === t ? "var(--indigo)" : "var(--t3)",
                 cursor:"pointer", fontSize:12, fontWeight:600, fontFamily:"inherit", transition:"all .15s",
               }}>
               {t === "all" ? `All (${count})` : t}
