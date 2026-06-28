@@ -14,7 +14,12 @@ function statusBadge(status) {
 
 const SOURCE_LABELS = { google_drive:"Drive", gmail:"Gmail", whatsapp:"WhatsApp", green_invoice:"GreenInv" };
 
-export default function InvoicesTable({ computed, dupeIds, updateInvoice, deleteInvoice, setEditInvoice, color, selectedIds, onToggleSelect, onToggleAll, onViewAttachment }) {
+const SortArrow = ({ field, sortField, sortDir }) => {
+  if (sortField !== field) return <span style={{ color: 'var(--bdr2)', marginLeft: 3, fontSize: 9 }}>⇅</span>;
+  return <span style={{ color: 'var(--indigo)', marginLeft: 3, fontSize: 10 }}>{sortDir === 'asc' ? '↑' : '↓'}</span>;
+};
+
+export default function InvoicesTable({ computed, dupeIds, updateInvoice, deleteInvoice, setEditInvoice, color, selectedIds, onToggleSelect, onToggleAll, onViewAttachment, sortField, sortDir, onSort }) {
   const allIds = computed.map(i => i.id);
   const allSelected = allIds.length > 0 && allIds.every(id => selectedIds.has(id));
   const someSelected = !allSelected && allIds.some(id => selectedIds.has(id));
@@ -23,6 +28,14 @@ export default function InvoicesTable({ computed, dupeIds, updateInvoice, delete
   useEffect(() => {
     if (selectAllRef.current) selectAllRef.current.indeterminate = someSelected;
   }, [someSelected]);
+
+  const sortableCols = [
+    { key: 'invoiceNo',   label: 'Invoice #' },
+    { key: 'supplier',    label: 'Supplier' },
+    { key: 'invoiceDate', label: 'Date' },
+    { key: 'amount',      label: 'Amount' },
+    { key: 'dueDate',     label: 'Due Date' },
+  ];
 
   return (
     <div className="card" style={{ padding:0, overflow:"hidden" }}>
@@ -39,9 +52,13 @@ export default function InvoicesTable({ computed, dupeIds, updateInvoice, delete
                 style={{ accentColor:"var(--cyan)", cursor:"pointer", width:14, height:14 }}
               />
             </th>
-            {["Invoice #","Supplier","Date","Amount","Due Date","Status","Source",""].map(h => (
-              <th key={h}>{h}</th>
+            {sortableCols.map(({ key, label }) => (
+              <th key={key} className="sortable" onClick={() => onSort?.(key)}
+                style={{ userSelect: 'none' }}>
+                {label}<SortArrow field={key} sortField={sortField} sortDir={sortDir} />
+              </th>
             ))}
+            {["Status","Source",""].map(h => <th key={h}>{h}</th>)}
           </tr>
         </thead>
         <tbody>
@@ -74,7 +91,7 @@ export default function InvoicesTable({ computed, dupeIds, updateInvoice, delete
                     </div>
                     <div>
                       <span style={{ fontWeight:500, fontSize:13 }}>{inv.supplier}</span>
-                      {dupeIds.has(inv.id) && <div style={{ fontSize:10, fontWeight:700, color:"var(--amber)", marginTop:1 }}>⚠ POSSIBLE DUPLICATE</div>}
+                      {dupeIds.has(inv.id) && <div style={{ fontSize:10, fontWeight:700, color:"var(--amber)", marginTop:1, display:'flex', alignItems:'center', gap:3 }}><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>POSSIBLE DUPLICATE</div>}
                     </div>
                   </div>
                 </td>
@@ -83,7 +100,7 @@ export default function InvoicesTable({ computed, dupeIds, updateInvoice, delete
                 <td>
                   {inv.dueDate
                     ? <span style={{ color:"var(--t2)" }}>{fmt(inv.dueDate)}</span>
-                    : <span style={{ color:"var(--amber)", fontSize:11, fontWeight:600, cursor:"pointer" }} onClick={() => setEditInvoice({...inv})}>⚠ Fix supplier</span>}
+                    : <span style={{ color:"var(--amber)", fontSize:11, fontWeight:600, cursor:"pointer", display:'inline-flex', alignItems:'center', gap:3 }} onClick={() => setEditInvoice({...inv})}><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>Fix supplier</span>}
                 </td>
                 <td>
                   <span className={`badge ${cls}`}>{label}</span>
@@ -96,7 +113,7 @@ export default function InvoicesTable({ computed, dupeIds, updateInvoice, delete
                 <td>
                   <div style={{ display:"flex", gap:6, justifyContent:"flex-end" }}>
                     {inv.attachment_path && (
-                      <button className="btn btn-ghost btn-sm" title="View original file" onClick={() => onViewAttachment?.(inv)}>📎</button>
+                      <button className="btn btn-ghost btn-sm" title="View original file" onClick={() => onViewAttachment?.(inv)} style={{ display:'inline-flex', alignItems:'center', gap:4 }}><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg></button>
                     )}
                     {inv.status !== STATUS.PAID && (
                       <button className="btn btn-success btn-sm" onClick={() => updateInvoice(inv.id, { status: STATUS.PAID })}>✓ Paid</button>

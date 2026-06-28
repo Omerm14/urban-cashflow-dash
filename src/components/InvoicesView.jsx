@@ -14,6 +14,7 @@ export default function InvoicesView({ computed, dupeIds, updateInvoice, deleteI
   const [viewMode,      setViewMode]      = useState("grouped");
   const [selectedMonth, setSelectedMonth] = useState(() => toYM(new Date()));
   const [sortField,     setSortField]     = useState("invoiceDate");
+  const [sortDir,       setSortDir]       = useState("desc");
   const [showPayModal,  setShowPayModal]  = useState(false);
   const [showSuccess,   setShowSuccess]   = useState(false);
   const [successMsg,    setSuccessMsg]    = useState("");
@@ -132,6 +133,20 @@ export default function InvoicesView({ computed, dupeIds, updateInvoice, deleteI
   const selInvs = computed.filter(i => selectedIds.has(i.id));
   const selTotal = selInvs.reduce((s, i) => s + Number(i.amount), 0);
 
+  const handleSort = (field) => {
+    if (sortField === field) setSortDir(d => d === 'asc' ? 'desc' : 'asc');
+    else { setSortField(field); setSortDir('asc'); }
+  };
+
+  const sortedComputed = [...computed].sort((a, b) => {
+    const av = a[sortField] ?? '';
+    const bv = b[sortField] ?? '';
+    const cmp = typeof av === 'number' ? av - bv : String(av).localeCompare(String(bv));
+    return sortDir === 'asc' ? cmp : -cmp;
+  });
+
+  const selSuppliers = [...new Set(selInvs.map(i => i.supplier))].slice(0, 5);
+
   return (
     <div>
       {/* Header row */}
@@ -166,11 +181,12 @@ export default function InvoicesView({ computed, dupeIds, updateInvoice, deleteI
 
       {viewMode === "table"
         ? <InvoicesTable
-            computed={computed} dupeIds={dupeIds}
+            computed={sortedComputed} dupeIds={dupeIds}
             updateInvoice={updateInvoice} deleteInvoice={handleDeleteInvoice}
             setEditInvoice={setEditInvoice} color={color}
             selectedIds={selectedIds} onToggleSelect={toggleSelect} onToggleAll={toggleAll}
             onViewAttachment={onViewAttachment}
+            sortField={sortField} sortDir={sortDir} onSort={handleSort}
           />
         : <InvoicesGroupedView
             computed={computed} dupeIds={dupeIds}
@@ -187,7 +203,19 @@ export default function InvoicesView({ computed, dupeIds, updateInvoice, deleteI
       {/* Floating batch bar */}
       {count > 0 && (
         <div className="batch-bar">
-          <div className="batch-count">{count}</div>
+          {/* Supplier avatars */}
+          <div style={{ display:'flex', alignItems:'center' }}>
+            {selSuppliers.map((sup, i) => (
+              <div key={sup} style={{ width:28, height:28, borderRadius:'50%', background:color(sup), border:'2px solid var(--navy)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:11, fontWeight:700, color:'#fff', flexShrink:0, marginLeft: i > 0 ? -8 : 0, zIndex: selSuppliers.length - i }}>
+                {sup.charAt(0).toUpperCase()}
+              </div>
+            ))}
+            {selInvs.length > selSuppliers.length && (
+              <div style={{ marginLeft:-8, width:28, height:28, borderRadius:'50%', background:'var(--surf2)', border:'2px solid var(--navy)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:10, color:'var(--t2)', fontWeight:700 }}>
+                +{selInvs.length - selSuppliers.length}
+              </div>
+            )}
+          </div>
           <span style={{ fontWeight:600, color:"var(--t2)" }}>{count} selected</span>
           <span style={{ width:1, height:20, background:"rgba(255,255,255,.1)" }}/>
           <span style={{ fontWeight:800, fontSize:16, color:"#fff", fontFamily:"'DM Mono',monospace" }}>

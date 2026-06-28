@@ -168,8 +168,20 @@ export const useInvoiceData = () => {
     };
   }, [computed, monthlyData]);
 
+  const prevKpis = useMemo(() => {
+    const now = new Date();
+    const prevYM = toYM(new Date(now.getFullYear(), now.getMonth() - 1, 1));
+    const prev = computed.filter(i => (i.invoiceDate || '').startsWith(prevYM));
+    return {
+      outstanding: prev.filter(i => i.status !== STATUS.PAID).reduce((s, i) => s + Number(i.amount), 0),
+      overdue:     prev.filter(i => i.status === STATUS.OVERDUE).reduce((s, i) => s + Number(i.amount), 0),
+      paid:        prev.filter(i => i.status === STATUS.PAID).reduce((s, i) => s + Number(i.amount), 0),
+      nextMonth:   0,
+    };
+  }, [computed]);
+
   return {
-    suppliers, invoices, computed, dupeIds, monthlyData, allNames, color, maxTotal, kpis, loading,
+    suppliers, invoices, computed, dupeIds, monthlyData, allNames, color, maxTotal, kpis, prevKpis, loading,
     addInvoice, updateInvoice, deleteInvoice, bulkMarkPaid, bulkMarkUnpaid, bulkDelete,
     addSupplier, updateSupplier, deleteSupplier,
     getSupplier, refreshInvoices, appendInvoices,

@@ -1013,28 +1013,81 @@ export default function IntegrationsPage({ oauthResult, onClearOAuthResult, onIn
         </div>
       )}
 
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(360px, 1fr))", gap: 20 }}>
-        {Object.keys(PROVIDERS).map(type => {
-          const intg = getIntegration(type);
-          const activeSyncJob = intg ? (syncJobs?.[intg.id] || null) : null;
-          return (
-            <IntegrationCard
-              key={type}
-              type={type}
-              integration={intg}
-              onRefresh={load}
-              onInvoicesRefresh={onInvoicesRefresh}
-              onNotificationsRefresh={onNotificationsRefresh}
-              showToast={showToast}
-              onConnectModal={handleConnectModal}
-              onStartSync={onStartSync}
-              onCancelSync={onCancelSync}
-              activeSyncJob={activeSyncJob}
-              isAtLimit={isAtLimit}
-              onUpgrade={onUpgrade}
-            />
-          );
-        })}
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 280px", gap: 20, alignItems: "start" }}>
+        {/* Integration cards column */}
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))", gap: 16 }}>
+          {Object.keys(PROVIDERS).map(type => {
+            const intg = getIntegration(type);
+            const activeSyncJob = intg ? (syncJobs?.[intg.id] || null) : null;
+            return (
+              <IntegrationCard
+                key={type}
+                type={type}
+                integration={intg}
+                onRefresh={load}
+                onInvoicesRefresh={onInvoicesRefresh}
+                onNotificationsRefresh={onNotificationsRefresh}
+                showToast={showToast}
+                onConnectModal={handleConnectModal}
+                onStartSync={onStartSync}
+                onCancelSync={onCancelSync}
+                activeSyncJob={activeSyncJob}
+                isAtLimit={isAtLimit}
+                onUpgrade={onUpgrade}
+              />
+            );
+          })}
+        </div>
+
+        {/* Unified sync activity panel */}
+        <div className="card" style={{ padding: 20, position: 'sticky', top: 60 }}>
+          <div style={{ fontWeight: 700, fontSize: 13, color: 'var(--t1)', marginBottom: 16, letterSpacing: '-.01em' }}>Sync Activity</div>
+          {integrations.filter(i => i.status === 'connected').length === 0 ? (
+            <div style={{ fontSize: 12, color: 'var(--t3)', textAlign: 'center', padding: '24px 0' }}>
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" style={{ opacity: .3, display: 'block', margin: '0 auto 8px' }}>
+                <circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M4.22 4.22l2.12 2.12M17.66 17.66l2.12 2.12M2 12h3M19 12h3"/>
+              </svg>
+              No sources connected yet
+            </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              {integrations.filter(i => i.status === 'connected').map(intg => {
+                const cfg = PROVIDERS[intg.type];
+                const Icon = ICONS[intg.type];
+                const job = syncJobs?.[intg.id];
+                const isRunning = job && !job.done && !job.error;
+                const lastSync = intg.last_sync
+                  ? new Date(intg.last_sync).toLocaleString('en-GB', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })
+                  : 'Never';
+                return (
+                  <div key={intg.id} style={{ paddingBottom: 12, borderBottom: '1px solid var(--bdr)' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+                      <div style={{ width: 28, height: 28, borderRadius: 8, background: cfg.accent, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                        <Icon size={16} />
+                      </div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--t1)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{cfg.label}</div>
+                        <div style={{ fontSize: 11, color: 'var(--t3)' }}>{lastSync}</div>
+                      </div>
+                      {isRunning ? (
+                        <span style={{ fontSize: 10, fontWeight: 700, color: cfg.color, background: `${cfg.color}18`, padding: '2px 7px', borderRadius: 10 }}>Syncing…</span>
+                      ) : (
+                        <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--green)', background: 'rgba(16,185,129,.12)', padding: '2px 7px', borderRadius: 10 }}>
+                          {intg.sync_count || 0} invoices
+                        </span>
+                      )}
+                    </div>
+                    {isRunning && job.totalFiles > 0 && (
+                      <div style={{ height: 3, background: 'var(--bdr)', borderRadius: 2, overflow: 'hidden' }}>
+                        <div style={{ height: '100%', background: cfg.color, borderRadius: 2, width: `${Math.round((job.cursor / job.totalFiles) * 100)}%`, transition: 'width .5s' }} />
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
       </div>
 
       {showGreenModal && (

@@ -41,7 +41,20 @@ const KpiIcon = ({ type }) => {
   );
 };
 
-export default function Dashboard({ kpis, monthlyData, allNames, color, maxTotal, onPayMonth }) {
+function TrendPill({ curr, prev }) {
+  if (!prev) return null;
+  const diff = curr - prev;
+  const pct = Math.round(Math.abs(diff / prev) * 100);
+  if (pct === 0) return null;
+  const up = diff > 0;
+  return (
+    <span className={`stat-trend ${up ? 'up' : 'down'}`}>
+      {up ? '↑' : '↓'} {pct}%
+    </span>
+  );
+}
+
+export default function Dashboard({ kpis, prevKpis, monthlyData, allNames, color, maxTotal, onPayMonth }) {
   const [tooltip, setTooltip] = useState(null);
 
   const stats = [
@@ -69,37 +82,42 @@ export default function Dashboard({ kpis, monthlyData, allNames, color, maxTotal
               <KpiIcon type={s.type} />
             </div>
             <div className="stat-val"><CountUp to={kpis[s.key]} /></div>
+            {prevKpis && <TrendPill curr={kpis[s.key]} prev={prevKpis[s.key]} />}
           </div>
         ))}
       </div>
 
-      {/* Pay-month CTA */}
+      {/* Pay-month CTA — prominent action card */}
       {ctaMonth && onPayMonth && (
-        <div className="pay-banner" onClick={() => onPayMonth(ctaMonth.ym)}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-            <div style={{ width: 42, height: 42, borderRadius: 10, background: 'var(--indigo)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                <polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>
-                <path d="M5 21h14"/>
-              </svg>
-            </div>
-            <div>
-              <div style={{ fontWeight: 700, fontSize: 15, color: 'var(--t1)', marginBottom: 2 }}>
-                Pay {fmtMonth(ctaMonth.ym)} — ready to go
+        <div className="card" style={{ marginBottom: 20, padding: '24px 28px', cursor: 'pointer', borderColor: 'var(--indigo-border)', background: 'linear-gradient(135deg,rgba(99,102,241,.06),rgba(129,140,248,.03))' }}
+          onClick={() => onPayMonth(ctaMonth.ym)}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+              <div style={{ width: 48, height: 48, borderRadius: 12, background: 'var(--indigo)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>
+                  <path d="M5 21h14"/>
+                </svg>
               </div>
-              <div style={{ color: 'var(--t2)', fontSize: 13 }}>
-                {Object.keys(ctaMonth.sups).length} suppliers ·{' '}
-                <strong style={{ color: 'var(--t1)' }}>{currency(ctaMonth.total)}</strong> total
+              <div>
+                <div style={{ fontWeight: 800, fontSize: 17, color: 'var(--t1)', marginBottom: 4, letterSpacing: '-.02em' }}>
+                  Pay {fmtMonth(ctaMonth.ym)} — ready to go
+                </div>
+                <div style={{ color: 'var(--t2)', fontSize: 13 }}>
+                  <span style={{ fontFamily: "'DM Mono',monospace", fontWeight: 700, color: 'var(--indigo)', fontSize: 15 }}>{currency(ctaMonth.total)}</span>
+                  {' '}across{' '}
+                  <strong style={{ color: 'var(--t1)' }}>{Object.keys(ctaMonth.sups).length}</strong> supplier{Object.keys(ctaMonth.sups).length !== 1 ? 's' : ''}
+                </div>
               </div>
             </div>
+            <button
+              className="btn btn-primary"
+              style={{ padding: '10px 24px', fontSize: 14, flexShrink: 0 }}
+              onClick={e => { e.stopPropagation(); onPayMonth(ctaMonth.ym); }}
+            >
+              Pay All Now →
+            </button>
           </div>
-          <button
-            className="btn btn-primary"
-            style={{ padding: '9px 20px', fontSize: 13, flexShrink: 0 }}
-            onClick={e => { e.stopPropagation(); onPayMonth(ctaMonth.ym); }}
-          >
-            Pay All Now →
-          </button>
         </div>
       )}
 
@@ -201,7 +219,7 @@ function ChartBars({ data, color, maxTotal, tooltip, setTooltip }) {
           const val = (maxV / yTicks) * (i + 1);
           return (
             <g key={i}>
-              <line x1={0} y1={y} x2={totalW} y2={y} stroke="#E2E8F0" strokeWidth="1" strokeDasharray="4 3" />
+              <line x1={0} y1={y} x2={totalW} y2={y} style={{ stroke: 'var(--bdr2)' }} strokeWidth="1" strokeDasharray="4 3" />
               <text x={0} y={y - 3} textAnchor="start" fill="#94A3B8" fontSize="9" fontFamily="'DM Mono',monospace">
                 {val >= 1000 ? `₪${(val / 1000).toFixed(0)}k` : `₪${Math.round(val)}`}
               </text>

@@ -96,7 +96,7 @@ export default function App() {
   }, []);
 
   const {
-    suppliers, invoices, computed, dupeIds, monthlyData, allNames, color, maxTotal, kpis, loading,
+    suppliers, invoices, computed, dupeIds, monthlyData, allNames, color, maxTotal, kpis, prevKpis, loading,
     addInvoice, updateInvoice, deleteInvoice, bulkMarkPaid, bulkMarkUnpaid, bulkDelete,
     addSupplier, updateSupplier, deleteSupplier,
     getSupplier, refreshInvoices, appendInvoices,
@@ -429,7 +429,7 @@ export default function App() {
 
               {/* Page content */}
               <div style={{ opacity: fading ? 0 : 1, transition: 'opacity .16s ease' }}>
-                {view === 'dashboard'    && <Dashboard kpis={kpis} monthlyData={monthlyData} allNames={allNames} color={color} maxTotal={maxTotal} onPayMonth={payMonth} />}
+                {view === 'dashboard'    && <Dashboard kpis={kpis} prevKpis={prevKpis} monthlyData={monthlyData} allNames={allNames} color={color} maxTotal={maxTotal} onPayMonth={payMonth} />}
                 {view === 'invoices'     && <InvoicesView computed={computed} dupeIds={dupeIds} updateInvoice={updateInvoice} deleteInvoice={deleteInvoice} bulkMarkPaid={bulkMarkPaid} bulkMarkUnpaid={bulkMarkUnpaid} bulkDelete={bulkDelete} setEditInvoice={setEditInvoice} color={color} onViewAttachment={handleViewAttachment} preSelMonth={preSelMonth} onClearPreSel={() => setPreSelMonth(null)} />}
                 {view === 'calendar'     && <CalendarView computed={computed} calMonth={calMonth} setCalMonth={setCalMonth} color={color} />}
                 {view === 'admin'        && <AdminPage />}

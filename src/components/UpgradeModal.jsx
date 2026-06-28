@@ -13,6 +13,10 @@ const FEATURES = [
 export default function UpgradeModal({ plan, used, limit, onContinueReadonly }) {
   const [loading, setLoading] = useState(null);
   const [error, setError]   = useState(null);
+  const [billing, setBilling] = useState('monthly');
+
+  const isAnnual = billing === 'annual';
+  const prices = { basic: isAnnual ? 990 : 99, pro: isAnnual ? 1990 : 199 };
 
   const pct = limit === Infinity ? 0 : used / limit;
   const barPct = Math.min(100, Math.round((used / limit) * 100));
@@ -68,13 +72,32 @@ export default function UpgradeModal({ plan, used, limit, onContinueReadonly }) 
           </div>
         </div>
 
+        {/* Billing toggle */}
+        <div style={{ display:'flex', alignItems:'center', justifyContent:'center', marginBottom:20 }}>
+          <div style={{ display:'inline-flex', background:'var(--surf2)', border:'1px solid var(--bdr)', borderRadius:100, padding:3, gap:2 }}>
+            {['monthly','annual'].map(opt => (
+              <button key={opt} onClick={() => setBilling(opt)}
+                style={{ padding:'6px 16px', borderRadius:100, border:'none', cursor:'pointer', fontSize:12, fontWeight:700, transition:'all .15s',
+                  background: billing === opt ? 'var(--indigo)' : 'transparent',
+                  color: billing === opt ? '#fff' : 'var(--t3)' }}>
+                {opt === 'monthly' ? 'Monthly' : 'Annual'}
+              </button>
+            ))}
+          </div>
+          {isAnnual && (
+            <span style={{ marginLeft:10, fontSize:11, fontWeight:700, color:'var(--green)', background:'rgba(16,185,129,.12)', padding:'3px 8px', borderRadius:100 }}>
+              Save 17%
+            </span>
+          )}
+        </div>
+
         {/* Plan cards */}
         <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12, marginBottom:20 }}>
           {/* Basic */}
           <div style={{ background:'var(--surf2)', border:'1px solid var(--bdr)', borderRadius:8, padding:'18px 16px' }}>
             <div style={{ fontSize:11, fontWeight:700, color:'var(--t3)', letterSpacing:'.06em', marginBottom:8 }}>BASIC</div>
             <div style={{ fontSize:26, fontWeight:900, letterSpacing:'-.03em', color:'var(--t1)', marginBottom:12 }}>
-              ₪99 <small style={{ fontSize:13, fontWeight:500, color:'var(--t3)' }}>/mo</small>
+              ₪{prices.basic} <small style={{ fontSize:13, fontWeight:500, color:'var(--t3)' }}>{isAnnual ? '/yr' : '/mo'}</small>
             </div>
             <button
               onClick={() => checkout('basic')}
@@ -93,7 +116,7 @@ export default function UpgradeModal({ plan, used, limit, onContinueReadonly }) 
             </div>
             <div style={{ fontSize:11, fontWeight:700, color:'var(--indigo)', letterSpacing:'.06em', marginBottom:8 }}>PRO</div>
             <div style={{ fontSize:26, fontWeight:900, letterSpacing:'-.03em', color:'var(--t1)', marginBottom:12 }}>
-              ₪199 <small style={{ fontSize:13, fontWeight:500, color:'var(--t3)' }}>/mo</small>
+              ₪{prices.pro} <small style={{ fontSize:13, fontWeight:500, color:'var(--t3)' }}>{isAnnual ? '/yr' : '/mo'}</small>
             </div>
             <button
               onClick={() => checkout('pro')}
