@@ -280,8 +280,8 @@ function AppShell() {
             />
 
             <div className="app-content" style={{ opacity: fading ? 0 : 1, transition: "opacity .16s ease" }}>
-              {/* Upload action row (hidden on settings/admin/integrations) */}
-              {view !== 'settings' && view !== 'admin' && view !== 'integrations' && (
+              {/* Upload action row — invoices page only; sidebar handles upload for all other views */}
+              {view === 'invoices' && (
                 <div style={{ marginBottom: 24 }}>
                   <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
                     <button className="btn btn-primary" style={{ fontSize: 13 }}

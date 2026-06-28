@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { currency, fmtMonth, fmtMonthShort } from "../utils/dates";
+import { currency, currencyCompact, fmtMonth, fmtMonthShort } from "../utils/dates";
 import {
   ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
 } from "recharts";
@@ -40,7 +40,7 @@ function CountUp({ to, duration = 1200 }) {
     }, ms);
     return () => clearInterval(id);
   }, [to, duration]);
-  return <>{currency(v)}</>;
+  return <>{currencyCompact(v)}</>;
 }
 
 function Pill({ color, bg, border, children }) {
@@ -67,7 +67,7 @@ function KPICard({ label, value, valueColor, iconBg, iconColor, iconPath, pill, 
           </svg>
         </div>
       </div>
-      <div style={{ fontFamily:SANS, fontWeight:600, fontSize: isMobile ? 22 : 30, lineHeight:1, wordBreak:"break-all", color:valueColor || "var(--t1)", letterSpacing:"-0.04em", fontVariantNumeric:"tabular-nums", marginBottom: isMobile ? 8 : 10 }}>
+      <div style={{ fontFamily:SANS, fontWeight:700, fontSize: isMobile ? 22 : 32, lineHeight:1, wordBreak:"break-all", color:valueColor || "var(--t1)", letterSpacing:"-0.04em", fontVariantNumeric:"tabular-nums", marginBottom: isMobile ? 8 : 10 }}>
         <CountUp to={value} />
       </div>
       <div style={{ display:"flex", alignItems:"center", gap:5, flexWrap:"wrap" }}>
@@ -89,7 +89,7 @@ function CustomTooltip({ active, payload, label }) {
             <span style={{ width:7, height:7, borderRadius:"50%", background:p.fill, display:"inline-block" }} />
             {p.dataKey}
           </span>
-          <span style={{ fontFamily:MONO, fontWeight:600, color:"var(--t1)" }}>{currency(p.value)}</span>
+          <span style={{ fontFamily:SANS, fontVariantNumeric:"tabular-nums", fontWeight:600, color:"var(--t1)" }}>{currencyCompact(p.value)}</span>
         </div>
       ))}
     </div>
@@ -199,7 +199,7 @@ export default function Dashboard({ kpis, monthlyData, allNames, color, maxTotal
               </div>
               <div style={{ fontFamily:SANS, fontSize:13, color:"var(--t2)" }}>
                 {Object.keys(ctaMonth.sups).length} suppliers ·{" "}
-                <span style={{ color:"#A5B4FC", fontWeight:500, fontFamily:MONO }}>{currency(ctaMonth.total)}</span> total due
+                <span style={{ color:"#A5B4FC", fontWeight:600, fontFamily:SANS, fontVariantNumeric:"tabular-nums" }}>{currencyCompact(ctaMonth.total)}</span> total due
               </div>
             </div>
           </div>
@@ -249,7 +249,7 @@ export default function Dashboard({ kpis, monthlyData, allNames, color, maxTotal
                   <YAxis
                     axisLine={false} tickLine={false}
                     tick={{ fontFamily:MONO, fontSize:10, fill:"#4A6278" }}
-                    tickFormatter={v => v === 0 ? "" : `${currency(0).charAt(0)}${Math.round(v/1000)}k`}
+                    tickFormatter={v => v === 0 ? "" : `${Math.round(v/1000)}k₪`}
                     width={44}
                   />
                   <Tooltip content={<CustomTooltip />} cursor={{ fill:"rgba(255,255,255,.03)" }} />
@@ -271,7 +271,7 @@ export default function Dashboard({ kpis, monthlyData, allNames, color, maxTotal
         </div>
 
         {/* Breakdown cards */}
-        <div style={{ display:"grid", gridTemplateColumns: isMobile ? "1fr 1fr" : "1fr", gap:10 }}>
+        <div style={{ display:"grid", gridTemplateColumns: isMobile ? "1fr 1fr" : "1fr", gap:10, minWidth:0, overflow:"hidden" }}>
           {monthlyData.map(({ ym, sups, total }) => (
             <div key={ym}
               style={{ background:"var(--surf)", border:"1px solid var(--bdr)", borderRadius:12, padding:"14px 16px", cursor:"pointer", transition:"border-color 0.18s" }}
@@ -281,7 +281,7 @@ export default function Dashboard({ kpis, monthlyData, allNames, color, maxTotal
             >
               <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:10 }}>
                 <span style={{ fontFamily:SANS, fontWeight:600, fontSize:13, color:"var(--t1)", letterSpacing:"-0.02em" }}>{fmtMonthShort2(ym)}</span>
-                <span style={{ fontFamily:MONO, fontWeight:600, fontSize:13, color:"var(--t1)", fontVariantNumeric:"tabular-nums" }}>{currency(total)}</span>
+                <span style={{ fontFamily:SANS, fontWeight:600, fontSize:13, color:"var(--t1)", fontVariantNumeric:"tabular-nums" }}>{currencyCompact(total)}</span>
               </div>
               {!isMobile && Object.entries(sups).sort((a, b) => b[1] - a[1]).slice(0, 3).map(([sup, amt]) => (
                 <div key={sup} style={{ display:"flex", alignItems:"center", gap:8, padding:"2px 0" }}>
@@ -289,7 +289,7 @@ export default function Dashboard({ kpis, monthlyData, allNames, color, maxTotal
                     {sup.charAt(0)}
                   </div>
                   <span style={{ flex:1, fontFamily:SANS, fontSize:11, color:"var(--t2)", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{sup}</span>
-                  <span style={{ fontFamily:MONO, fontSize:12, fontWeight:600, color:"var(--t1)", fontVariantNumeric:"tabular-nums" }}>{currency(amt)}</span>
+                  <span style={{ fontFamily:SANS, fontSize:12, fontWeight:600, color:"var(--t1)", fontVariantNumeric:"tabular-nums" }}>{currencyCompact(amt)}</span>
                 </div>
               ))}
             </div>
