@@ -160,12 +160,21 @@ export const useInvoiceData = () => {
 
   const kpis = useMemo(() => {
     const nm = toYM(new Date(new Date().getFullYear(), new Date().getMonth() + 1, 1));
+    // Compute prev month outstanding for delta
+    const pm = toYM(new Date(new Date().getFullYear(), new Date().getMonth() - 1, 1));
+    const prevOutstanding = computed.filter(i => i.status !== STATUS.PAID && i.dueDate && i.dueDate < toYM(new Date())).reduce((s, i) => s + Number(i.amount), 0);
+    const nextMonthData = monthlyData.find(m => m.ym === nm);
+    // Find the next upcoming month with unpaid invoices
+    const today = toYM(new Date());
+    const nextDueEntry = monthlyData.find(m => m.ym >= today);
     return {
-      outstanding: computed.filter(i => i.status !== STATUS.PAID).reduce((s, i) => s + Number(i.amount), 0),
-      overdue:     computed.filter(i => i.status === STATUS.OVERDUE).reduce((s, i) => s + Number(i.amount), 0),
-      paid:        computed.filter(i => i.status === STATUS.PAID).reduce((s, i) => s + Number(i.amount), 0),
-      nextMonth:    monthlyData.find(m => m.ym === nm)?.total || 0,
-      overdueCount: computed.filter(i => i.status === STATUS.OVERDUE).length,
+      outstanding:    computed.filter(i => i.status !== STATUS.PAID).reduce((s, i) => s + Number(i.amount), 0),
+      overdue:        computed.filter(i => i.status === STATUS.OVERDUE).reduce((s, i) => s + Number(i.amount), 0),
+      paid:           computed.filter(i => i.status === STATUS.PAID).reduce((s, i) => s + Number(i.amount), 0),
+      nextMonth:      nextMonthData?.total || 0,
+      nextMonthYM:    nm,
+      nextMonthCount: computed.filter(i => i.status !== STATUS.PAID && i.dueDate && i.dueDate.startsWith(nm)).length,
+      overdueCount:   computed.filter(i => i.status === STATUS.OVERDUE).length,
     };
   }, [computed, monthlyData]);
 
