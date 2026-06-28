@@ -31,6 +31,9 @@ function Cross() {
 }
 
 export default function UpgradeModal({ used = 18, limit = 20, onClose, onContinueReadonly }) {
+  const [winW, setWinW] = useState(window.innerWidth);
+  useEffect(() => { const h = () => setWinW(window.innerWidth); window.addEventListener('resize', h); return () => window.removeEventListener('resize', h); }, []);
+  const isMobile = winW < 640;
   const [billing, setBilling] = useState('monthly');
   const [loading, setLoading] = useState(null);
   const [error, setError]   = useState(null);
@@ -61,15 +64,17 @@ export default function UpgradeModal({ used = 18, limit = 20, onClose, onContinu
     <div style={{
       position:'fixed', inset:0, zIndex:500,
       background:'rgba(5,8,16,.9)', backdropFilter:'blur(6px)',
-      display:'flex', alignItems:'center', justifyContent:'center',
-      padding:20, animation:'fadeIn 0.2s',
+      display:'flex', alignItems: isMobile ? 'flex-end' : 'center', justifyContent:'center',
+      padding: isMobile ? 0 : 20, animation:'fadeIn 0.2s',
     }}>
       <div style={{
-        width:'100%', maxWidth:560,
-        background:'var(--surf)', border:'1px solid var(--bdr2)', borderRadius:16,
-        padding:'30px 26px', boxShadow:'0 20px 60px rgba(0,0,0,.5)',
+        width:'100%', maxWidth: isMobile ? '100%' : 560,
+        background:'var(--surf)', border:'1px solid var(--bdr2)',
+        borderRadius: isMobile ? '16px 16px 0 0' : 16,
+        padding: isMobile ? '24px 20px' : '30px 26px',
+        boxShadow:'0 20px 60px rgba(0,0,0,.5)',
         position:'relative', maxHeight:'90vh', overflowY:'auto',
-        fontFamily:SANS,
+        fontFamily:SANS, animation: isMobile ? 'slideUp 0.25s ease' : undefined,
       }}>
         {/* Close */}
         <button onClick={close} style={{ position:'absolute', top:14, right:16, background:'none', border:'none', color:'var(--t3)', cursor:'pointer', display:'flex', padding:4 }}>

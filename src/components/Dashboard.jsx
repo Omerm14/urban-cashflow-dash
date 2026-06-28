@@ -44,22 +44,23 @@ function Pill({ color, bg, border, children }) {
   );
 }
 
-function KPICard({ label, value, valueColor, iconBg, iconColor, iconPath, pill, delay }) {
+function KPICard({ label, value, valueColor, iconBg, iconColor, iconPath, pill, delay, isMobile }) {
+  const iconSize = isMobile ? 26 : 32;
   return (
     <div style={{
       background:"var(--surf)", border:"1px solid var(--bdr)", borderRadius:12,
-      padding:"18px 20px", opacity:0,
+      padding: isMobile ? "14px 16px" : "18px 20px", opacity:0,
       animation:"kpiIn 0.38s ease forwards", animationDelay:`${delay}s`,
     }}>
-      <div style={{ display:"flex", alignItems:"flex-start", justifyContent:"space-between", marginBottom:12 }}>
-        <span style={{ fontFamily:SANS, fontSize:11, fontWeight:700, color:"var(--t3)", textTransform:"uppercase", letterSpacing:"0.07em" }}>{label}</span>
-        <div style={{ width:34, height:34, borderRadius:9, background:iconBg, display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={iconColor} strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+      <div style={{ display:"flex", alignItems:"flex-start", justifyContent:"space-between", marginBottom: isMobile ? 10 : 12 }}>
+        <span style={{ fontFamily:SANS, fontSize:10, fontWeight:700, color:"var(--t3)", textTransform:"uppercase", letterSpacing:"0.07em" }}>{label}</span>
+        <div style={{ width:iconSize, height:iconSize, borderRadius:7, background:iconBg, display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
+          <svg width={isMobile ? 12 : 14} height={isMobile ? 12 : 14} viewBox="0 0 24 24" fill="none" stroke={iconColor} strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
             {iconPath}
           </svg>
         </div>
       </div>
-      <div style={{ fontFamily:MONO, fontWeight:600, fontSize:28, color:valueColor || "var(--t1)", letterSpacing:"-0.03em", fontVariantNumeric:"tabular-nums", marginBottom:10 }}>
+      <div style={{ fontFamily:MONO, fontWeight:600, fontSize: isMobile ? 22 : 30, lineHeight:1, wordBreak:"break-all", color:valueColor || "var(--t1)", letterSpacing:"-0.03em", fontVariantNumeric:"tabular-nums", marginBottom: isMobile ? 8 : 10 }}>
         <CountUp to={value} />
       </div>
       {pill}
@@ -157,7 +158,7 @@ export default function Dashboard({ kpis, monthlyData, allNames, color, maxTotal
 
       {/* KPI Cards */}
       <div className="stat-grid" style={{ marginBottom:16 }}>
-        {CARDS.map(c => <KPICard key={c.label} {...c} />)}
+        {CARDS.map(c => <KPICard key={c.label} {...c} isMobile={isMobile} />)}
       </div>
 
       {/* Pay-month CTA banner */}
@@ -221,7 +222,7 @@ export default function Dashboard({ kpis, monthlyData, allNames, color, maxTotal
           ) : (
             <>
               <ResponsiveContainer width="100%" height={200}>
-                <BarChart data={chartData} barSize={28} margin={{ top:14, right:4, left:0, bottom:0 }}>
+                <BarChart data={chartData} barSize={isMobile ? 20 : 28} barCategoryGap="40%" margin={{ top:14, right:4, left:0, bottom:0 }}>
                   <CartesianGrid vertical={false} stroke="rgba(255,255,255,.05)" />
                   <XAxis
                     dataKey="month"

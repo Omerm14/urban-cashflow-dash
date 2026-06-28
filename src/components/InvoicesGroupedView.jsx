@@ -133,7 +133,7 @@ function SupplierCard({ supplier, invoices, dupeIds, updateInvoice, deleteInvoic
             onChange={() => onToggleAll(cardIds)}
             style={{ accentColor:"var(--indigo)", cursor:"pointer", width:13, height:13 }}
           />
-          Select all in card
+          Select all unpaid
         </label>
         <span>Total: <strong style={{ color:"var(--t2)" }}>{currency(total)}</strong></span>
       </div>
@@ -210,7 +210,7 @@ export default function InvoicesGroupedView({ computed, dupeIds, updateInvoice, 
             <span style={{ fontSize:11, color:"var(--t3)" }}>{paidCount} of {totalCount} invoices paid</span>
             <span style={{ fontSize:12, fontWeight:700, color:"#818CF8" }}>{progress}%</span>
           </div>
-          <div className="prog-track"><div className="prog-fill" style={{ width:`${progress}%` }}/></div>
+          <div className="prog-track"><div className="prog-fill" style={{ width:`${progress}%`, background: allPaid ? 'var(--green)' : 'var(--indigo)' }}/></div>
         </div>
       )}
 

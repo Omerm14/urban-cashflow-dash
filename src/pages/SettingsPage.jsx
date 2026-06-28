@@ -156,6 +156,10 @@ export default function SettingsPage({ user, plan, used, limit, remaining, onUpg
 
   return (
     <div style={{ minHeight: '100%', fontFamily: SANS }}>
+      <div style={{ marginBottom: 28 }}>
+        <div style={{ fontFamily: SANS, fontWeight: 700, fontSize: 22, color: 'var(--t1)', letterSpacing: '-0.03em', marginBottom: 3 }}>Settings</div>
+        <div style={{ fontFamily: SANS, fontSize: 13, color: 'var(--t2)' }}>Manage your account, plan, and integrations</div>
+      </div>
       <div style={{ display: 'flex', maxWidth: 960, margin: '0 auto', gap: 28, alignItems: 'flex-start' }}>
 
         {/* Left nav — sticky desktop / horizontal pills mobile */}
@@ -241,11 +245,15 @@ function GeneralSection({ isMobile }) {
   const [msg, setMsg] = useState(null);
 
   const save = async () => {
-    setSaving(true);
+    setSaving(true); setMsg(null);
     localStorage.setItem('currency', currency);
     localStorage.setItem('timezone', timezone);
     localStorage.setItem('businessName', businessName);
-    await new Promise(r => setTimeout(r, 400));
+    const { data: { session } } = await supabase.auth.getSession();
+    if (session) {
+      const { error } = await supabase.from('profiles').upsert({ id: session.user.id, business_name: businessName, currency, timezone }, { onConflict: 'id' });
+      if (error) { setMsg({ type: 'error', text: error.message }); setSaving(false); return; }
+    }
     setMsg({ type: 'ok', text: 'Settings saved.' });
     setSaving(false);
     setTimeout(() => setMsg(null), 2000);
@@ -369,7 +377,7 @@ function BillingSection({ plan, used, limit, remaining, onUpgrade, invoices, isM
   const [sub, setSub] = useState(null);
 
   useEffect(() => {
-    supabase.from('subscriptions').select('*').single().then(({ data }) => setSub(data));
+    supabase.from('subscriptions').select('*').maybeSingle().then(({ data }) => setSub(data));
   }, []);
 
   const planFeatures = {
@@ -481,10 +489,14 @@ function IntegrationsSection({ session }) {
           ) : connected[int.key] ? (
             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
               <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--green)' }}>● Connected</span>
-              <button style={{ background: 'var(--red-tint)', border: '1px solid var(--red-bdr)', borderRadius: 8, padding: '6px 14px', fontSize: 12, fontWeight: 600, color: 'var(--red)', cursor: 'pointer', fontFamily: SANS }}>Disconnect</button>
+              <button
+                onClick={() => window.alert(`To disconnect ${int.label}, go to the Integrations page.`)}
+                style={{ background: 'var(--red-tint)', border: '1px solid var(--red-bdr)', borderRadius: 8, padding: '6px 14px', fontSize: 12, fontWeight: 600, color: 'var(--red)', cursor: 'pointer', fontFamily: SANS }}>Disconnect</button>
             </div>
           ) : (
-            <button style={{ background: 'var(--indigo)', border: 'none', borderRadius: 8, padding: '6px 16px', fontSize: 12, fontWeight: 600, color: '#fff', cursor: 'pointer', fontFamily: SANS, boxShadow: '0 2px 10px rgba(99,102,241,.3)' }}>Connect</button>
+            <button
+              onClick={() => window.alert(`To connect ${int.label}, go to the Integrations page from the sidebar.`)}
+              style={{ background: 'var(--indigo)', border: 'none', borderRadius: 8, padding: '6px 16px', fontSize: 12, fontWeight: 600, color: '#fff', cursor: 'pointer', fontFamily: SANS, boxShadow: '0 2px 10px rgba(99,102,241,.3)' }}>Connect</button>
           )}
         </div>
       ))}
