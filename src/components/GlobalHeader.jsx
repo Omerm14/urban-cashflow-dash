@@ -25,7 +25,9 @@ function NotificationPanel({ notifications, markAllRead, onClose }) {
 
   const fmt = ts => {
     if (!ts) return "";
-    const diff = Date.now() - new Date(ts).getTime();
+    const t = new Date(ts).getTime();
+    if (isNaN(t)) return "";
+    const diff = Date.now() - t;
     const m = Math.floor(diff / 60000);
     if (m < 1) return "just now";
     if (m < 60) return `${m}m ago`;

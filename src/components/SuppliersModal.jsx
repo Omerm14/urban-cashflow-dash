@@ -1,6 +1,7 @@
 import { useState } from "react";
 
 const TERM_FILTERS = ["all", "shotef_plus(75)", "shotef_plus(45)", "shotef_plus(30)", "shotef_plus(10)", "shotef", "immediate", "custom"];
+const TERM_OPTIONS = TERM_FILTERS.filter(t => t !== "all");
 
 export default function SuppliersModal({ suppliers, addSupplier, updateSupplier, deleteSupplier, editSupplier, setEditSupplier, onClose, inline }) {
   const [filterTerm, setFilterTerm] = useState("all");
@@ -44,17 +45,29 @@ export default function SuppliersModal({ suppliers, addSupplier, updateSupplier,
             <div key={sup.id} style={{ display:"flex", alignItems:"center", gap:12, padding:"10px 0", borderBottom:"1px solid rgba(255,255,255,.04)" }}>
               {editSupplier?.id === sup.id ? (
                 <>
-                  <div style={{ flex:1, display:"flex", gap:8 }}>
-                    {["name","terms","notes"].map(k => (
-                      <input
-                        key={k}
-                        value={editSupplier[k]}
-                        className="input"
-                        style={{ padding:"6px 10px", fontSize:12 }}
-                        placeholder={k}
-                        onChange={e => setEditSupplier({ ...editSupplier, [k]: e.target.value })}
-                      />
-                    ))}
+                  <div style={{ flex:1, display:"flex", gap:8, flexWrap:"wrap" }}>
+                    <input
+                      value={editSupplier.name}
+                      className="input"
+                      style={{ padding:"6px 10px", fontSize:12, flex:"1 1 120px" }}
+                      placeholder="Supplier name"
+                      onChange={e => setEditSupplier({ ...editSupplier, name: e.target.value })}
+                    />
+                    <select
+                      value={editSupplier.terms}
+                      className="input"
+                      style={{ padding:"6px 10px", fontSize:12, flex:"1 1 100px" }}
+                      onChange={e => setEditSupplier({ ...editSupplier, terms: e.target.value })}
+                    >
+                      {TERM_OPTIONS.map(t => <option key={t} value={t}>{t}</option>)}
+                    </select>
+                    <input
+                      value={editSupplier.notes}
+                      className="input"
+                      style={{ padding:"6px 10px", fontSize:12, flex:"2 1 140px" }}
+                      placeholder="Notes (optional)"
+                      onChange={e => setEditSupplier({ ...editSupplier, notes: e.target.value })}
+                    />
                   </div>
                   <div style={{ display:"flex", gap:5, flexShrink:0 }}>
                     <button className="btn btn-success btn-sm"
@@ -72,7 +85,10 @@ export default function SuppliersModal({ suppliers, addSupplier, updateSupplier,
                   {sup.notes && <span style={{ fontSize:12, color:"var(--t3)", maxWidth:100, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{sup.notes}</span>}
                   <div style={{ display:"flex", gap:5, flexShrink:0 }}>
                     <button className="btn btn-ghost btn-sm" onClick={() => setEditSupplier({...sup})}>Edit</button>
-                    <button className="btn btn-danger btn-sm" onClick={() => { if (confirm("Delete?")) deleteSupplier(sup.id); }}>×</button>
+                    <button className="btn btn-danger btn-sm" onClick={() => {
+                      if (confirm(`Delete "${sup.name}"? This cannot be undone.`))
+                        deleteSupplier(sup.id).catch(err => alert(`Delete failed: ${err.message}`));
+                    }}>×</button>
                   </div>
                 </>
               )}
@@ -86,7 +102,7 @@ export default function SuppliersModal({ suppliers, addSupplier, updateSupplier,
         </div>
 
         <button className="btn btn-ghost" style={{ marginTop:16 }}
-          onClick={() => addSupplier({ name:"New Supplier", terms:"shotef", notes:"" }).then(row => setEditSupplier(row))}>
+          onClick={() => addSupplier({ name:"New Supplier", terms:"shotef", notes:"" }).then(row => setEditSupplier(row)).catch(err => alert(`Could not add supplier: ${err.message}`))}>
           + Add Supplier
         </button>
       </div>

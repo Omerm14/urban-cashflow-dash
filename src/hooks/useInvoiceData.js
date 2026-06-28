@@ -67,10 +67,12 @@ export const useInvoiceData = () => {
   }, []);
 
   const bulkDelete = useCallback(async ids => {
-    const { data: { session } } = await supabase.auth.getSession();
+    const { data } = await supabase.auth.getSession().catch(() => ({ data: {} }));
+    const token = data?.session?.access_token;
+    if (!token) throw new Error('Not authenticated');
     const res = await fetch('/api/invoices/bulk-delete', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session?.access_token}` },
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
       body: JSON.stringify({ ids }),
     });
     if (!res.ok) {

@@ -2,8 +2,8 @@ export default function AttachmentPreviewModal({ url, filename, onClose }) {
   const isPdf = filename?.toLowerCase().endsWith(".pdf");
 
   return (
-    <div className="modal-overlay" onClick={e => e.target === e.currentTarget && onClose()}
-      style={{ alignItems: "flex-start", paddingTop: 40 }}>
+    <div className="overlay" onClick={e => e.target === e.currentTarget && onClose()}
+      style={{ alignItems: "flex-start", paddingTop: 40, padding: 20 }}>
       <div style={{
         width: "90vw", maxWidth: 900, height: "80vh",
         background: "var(--surf)", borderRadius: 16, border: "1px solid var(--bdr2)",

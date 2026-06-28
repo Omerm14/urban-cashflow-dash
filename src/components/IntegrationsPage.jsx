@@ -908,7 +908,7 @@ function IntegrationCard({ type, integration, onRefresh, onInvoicesRefresh, onNo
               <Btn
                 variant="secondary"
                 onClick={isAtLimit ? onUpgrade : () => handleSync(true)}
-                disabled={isActive}
+                disabled={isActive || isAtLimit}
                 title={isAtLimit ? 'Invoice limit reached — upgrade your plan' : undefined}
                 style={{ fontSize: 12, ...(isAtLimit ? { opacity:.6 } : {}) }}>
                 {resyncing ? "Resyncing…" : isAtLimit ? "🔒 Resync All" : "↺ Resync All (from beginning)"}

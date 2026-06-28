@@ -377,7 +377,9 @@ function BillingSection({ plan, used, limit, remaining, onUpgrade, invoices, isM
   const [sub, setSub] = useState(null);
 
   useEffect(() => {
-    supabase.from('subscriptions').select('*').maybeSingle().then(({ data }) => setSub(data));
+    supabase.from('subscriptions').select('*').maybeSingle()
+      .then(({ data, error }) => { if (!error) setSub(data); })
+      .catch(() => {});
   }, []);
 
   const planFeatures = {
@@ -472,9 +474,11 @@ function IntegrationsSection({ session }) {
 
   const [connected, setConnected] = useState({});
   useEffect(() => {
-    supabase.from('integrations').select('integration_type, status').then(({ data }) => {
-      if (data) setConnected(Object.fromEntries(data.map(r => [r.integration_type, r.status === 'active'])));
-    });
+    supabase.from('integrations').select('integration_type, status')
+      .then(({ data, error }) => {
+        if (!error && data) setConnected(Object.fromEntries(data.map(r => [r.integration_type, r.status === 'active'])));
+      })
+      .catch(() => {});
   }, []);
 
   return (
