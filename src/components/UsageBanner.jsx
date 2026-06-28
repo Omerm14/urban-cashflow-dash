@@ -8,9 +8,9 @@ export default function UsageBanner({ plan, used, limit, remaining, onUpgrade })
   const pct = limit === Infinity ? 0 : used / limit;
   const isWarning = pct >= 0.8;
 
-  const bg     = isWarning ? 'linear-gradient(90deg,#78350f,#92400e)' : 'var(--surf2)';
-  const border = isWarning ? '1px solid #b45309' : '1px solid var(--bdr)';
-  const color  = isWarning ? '#fef3c7' : 'var(--t2)';
+  const bg     = isWarning ? 'rgba(239,68,68,.10)' : 'var(--surf2)';
+  const border = isWarning ? '1px solid rgba(239,68,68,.25)' : '1px solid var(--bdr)';
+  const color  = isWarning ? '#F87171' : 'var(--t2)';
 
   return (
     <div style={{
@@ -32,7 +32,7 @@ export default function UsageBanner({ plan, used, limit, remaining, onUpgrade })
         <button
           onClick={onUpgrade}
           style={{
-            background: isWarning ? '#f59e0b' : 'var(--primary)',
+            background: isWarning ? '#EF4444' : '#6366F1',
             border: 'none', borderRadius: 8,
             padding: '5px 12px', fontSize: 12, fontWeight: 700,
             color: isWarning ? '#1c1917' : '#fff', cursor: 'pointer',

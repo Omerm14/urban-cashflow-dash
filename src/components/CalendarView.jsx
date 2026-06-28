@@ -23,17 +23,17 @@ export default function CalendarView({ computed, calMonth, setCalMonth, color })
   const nextMonth   = () => setCalMonth(toYM(new Date(calY, calM + 1)));
   const today       = new Date();
 
-  const navBtn = { width:36, height:36, borderRadius:10, background:"#131c2e", border:"1px solid #1e2d45", color:"#94a3b8", cursor:"pointer", fontSize:16, display:"flex", alignItems:"center", justifyContent:"center" };
+  const navBtn = { width:36, height:36, borderRadius:8, background:"var(--surf)", border:"1px solid var(--bdr)", color:"var(--t2)", cursor:"pointer", fontSize:16, display:"flex", alignItems:"center", justifyContent:"center" };
 
   return (
     <div>
       <div style={{ display:"flex", alignItems:"center", gap:16, marginBottom:24 }}>
         <button onClick={prevMonth} style={navBtn}>‹</button>
         <div>
-          <div style={{ fontWeight:700, fontSize:20, color:"#f1f5f9", letterSpacing:"-0.5px" }}>
+          <div style={{ fontWeight:600, fontSize:18, color:"var(--t1)", letterSpacing:"-0.03em" }}>
             {new Date(calY, calM).toLocaleString("en-GB", { month:"long", year:"numeric" })}
           </div>
-          <div style={{ fontSize:12, color:"#475569", marginTop:2 }}>
+          <div style={{ fontSize:12, color:"var(--t2)", marginTop:2 }}>
             {allInMonth.length} invoices · {currency(monthTotal)}
           </div>
         </div>
@@ -41,7 +41,7 @@ export default function CalendarView({ computed, calMonth, setCalMonth, color })
       </div>
       <div style={{ display:"grid", gridTemplateColumns:"repeat(7,1fr)", gap:4, overflowX:"auto", minWidth:0 }}>
         {["Sun","Mon","Tue","Wed","Thu","Fri","Sat"].map(d => (
-          <div key={d} style={{ padding:"8px 4px", textAlign:"center", fontSize:11, color:"#334155", fontWeight:700, letterSpacing:".5px", textTransform:"uppercase" }}>{d}</div>
+          <div key={d} style={{ padding:"8px 4px", textAlign:"center", fontSize:11, color:"var(--t2)", fontWeight:600, letterSpacing:".5px", textTransform:"uppercase" }}>{d}</div>
         ))}
         {Array.from({ length:firstDay }).map((_, i) => <div key={`e${i}`} style={{ minHeight:88 }} />)}
         {Array.from({ length:daysInMonth }, (_, i) => i + 1).map(day => {
@@ -49,7 +49,7 @@ export default function CalendarView({ computed, calMonth, setCalMonth, color })
           const isToday = today.getDate()===day && today.getMonth()===calM && today.getFullYear()===calY;
           return (
             <div key={day} className={`cal-day${isToday?" today":""}`}>
-              <div style={{ fontSize:12, fontWeight:600, color:isToday?"#38bdf8":"#334155", marginBottom:5 }}>{day}</div>
+              <div style={{ fontSize:12, fontWeight:600, color:isToday?"#818CF8":"var(--t2)", marginBottom:5 }}>{day}</div>
               {dayInvs.slice(0, 3).map(inv => (
                 <div key={inv.id} className="chip" style={{ background:color(inv.supplier) }} title={`${inv.supplier} · ${currency(inv.amount)}`}>
                   {inv.supplier.split(" ")[0]} · {currency(inv.amount)}

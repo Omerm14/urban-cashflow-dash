@@ -175,19 +175,31 @@ export default function InvoicesGroupedView({ computed, dupeIds, updateInvoice, 
 
   return (
     <div>
-      {/* Month navigation */}
-      <div className="month-nav">
-        <button className="btn btn-ghost btn-sm" onClick={() => onMonthChange(prevMonth(selectedMonth))}>‹</button>
-        <span style={{ fontWeight:700, fontSize:16 }}>{fmtMonth(selectedMonth)}</span>
-        <button className="btn btn-ghost btn-sm" onClick={() => onMonthChange(nextMonth(selectedMonth))}>›</button>
-      </div>
+      {/* Month navigation — pill tabs */}
+      {(() => {
+        const months = [];
+        const base = toYM(new Date());
+        for (let i = -1; i <= 3; i++) {
+          const [y, m] = base.split("-").map(Number);
+          months.push(toYM(new Date(y, m - 1 + i, 1)));
+        }
+        return (
+          <div className="month-tabs" style={{ marginBottom: 14 }}>
+            {months.map(ym => (
+              <button key={ym} className={`month-tab${ym === selectedMonth ? " active" : ""}`} onClick={() => onMonthChange(ym)}>
+                {fmtMonth(ym)}
+              </button>
+            ))}
+          </div>
+        );
+      })()}
 
       {/* Progress bar */}
       {totalCount > 0 && (
         <div style={{ marginBottom:10 }}>
           <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:5 }}>
             <span style={{ fontSize:11, color:"var(--t3)" }}>{paidCount} of {totalCount} invoices paid</span>
-            <span style={{ fontSize:12, fontWeight:700, background:"var(--grad)", WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent" }}>{progress}%</span>
+            <span style={{ fontSize:12, fontWeight:700, color:"#818CF8" }}>{progress}%</span>
           </div>
           <div className="prog-track"><div className="prog-fill" style={{ width:`${progress}%` }}/></div>
         </div>

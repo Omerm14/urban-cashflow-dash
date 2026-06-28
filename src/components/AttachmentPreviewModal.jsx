@@ -13,21 +13,21 @@ export default function AttachmentPreviewModal({ url, filename, onClose }) {
           display: "flex", alignItems: "center", justifyContent: "space-between",
           padding: "14px 20px", borderBottom: "1px solid #111d2e", flexShrink: 0,
         }}>
-          <span style={{ fontSize: 13, color: "#94a3b8", fontWeight: 500 }}>
+          <span style={{ fontSize: 13, color: "var(--t3)", fontWeight: 500 }}>
             📎 {filename || "Invoice"}
           </span>
           <div style={{ display: "flex", gap: 8 }}>
             <a href={url} target="_blank" rel="noreferrer"
-              style={{ padding: "6px 12px", background: "#131c2e", border: "1px solid #1e2d45",
-                borderRadius: 8, color: "#64748b", fontSize: 12, textDecoration: "none", fontFamily: "inherit" }}>
+              style={{ padding: "6px 12px", background: "var(--surf)", border: "1px solid #1e2d45",
+                borderRadius: 8, color: "var(--t2)", fontSize: 12, textDecoration: "none", fontFamily: "inherit" }}>
               Open in new tab ↗
             </a>
             <button onClick={onClose}
-              style={{ width: 30, height: 30, borderRadius: 8, background: "#131c2e", border: "1px solid #1e2d45",
-                color: "#64748b", cursor: "pointer", fontSize: 14 }}>✕</button>
+              style={{ width: 30, height: 30, borderRadius: 8, background: "var(--surf)", border: "1px solid #1e2d45",
+                color: "var(--t2)", cursor: "pointer", fontSize: 14 }}>✕</button>
           </div>
         </div>
-        <div style={{ flex: 1, overflow: "hidden", background: "#080e1a" }}>
+        <div style={{ flex: 1, overflow: "hidden", background: "var(--bg)" }}>
           {isPdf
             ? <iframe src={url} title={filename} style={{ width: "100%", height: "100%", border: "none" }} />
             : <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>

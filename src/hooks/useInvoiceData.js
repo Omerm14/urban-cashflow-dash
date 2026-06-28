@@ -164,7 +164,8 @@ export const useInvoiceData = () => {
       outstanding: computed.filter(i => i.status !== STATUS.PAID).reduce((s, i) => s + Number(i.amount), 0),
       overdue:     computed.filter(i => i.status === STATUS.OVERDUE).reduce((s, i) => s + Number(i.amount), 0),
       paid:        computed.filter(i => i.status === STATUS.PAID).reduce((s, i) => s + Number(i.amount), 0),
-      nextMonth:   monthlyData.find(m => m.ym === nm)?.total || 0,
+      nextMonth:    monthlyData.find(m => m.ym === nm)?.total || 0,
+      overdueCount: computed.filter(i => i.status === STATUS.OVERDUE).length,
     };
   }, [computed, monthlyData]);
 

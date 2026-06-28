@@ -1,53 +1,12 @@
-export default function LogoIcon({ size = 36 }) {
+export default function LogoIcon({ size = 32 }) {
   return (
-    <svg width={size} height={size} viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <defs>
-        <linearGradient id="li-arc" x1="50" y1="10" x2="85" y2="80" gradientUnits="userSpaceOnUse">
-          <stop offset="0"   stopColor="#1d4ed8"/>
-          <stop offset="0.5" stopColor="#3b82f6"/>
-          <stop offset="1"   stopColor="#06b6d4"/>
-        </linearGradient>
-        <linearGradient id="li-arrow" x1="76" y1="68" x2="90" y2="44" gradientUnits="userSpaceOnUse">
-          <stop offset="0" stopColor="#3b82f6"/>
-          <stop offset="1" stopColor="#22d3ee"/>
-        </linearGradient>
-      </defs>
-
-      {/* C-arc: center (50,50), radius 34, opens to the right */}
-      {/* From ~1 o'clock (67,21) counterclockwise to ~4 o'clock (79,67) */}
-      <path
-        d="M 67 21 A 34 34 0 1 0 79 67"
-        stroke="url(#li-arc)"
-        strokeWidth="12"
-        strokeLinecap="round"
-        fill="none"
-      />
-
-      {/* Document body — rounded corners except top-right which is folded */}
-      <path
-        d="M 37 26 L 57 26 L 65 34 L 65 64 Q 65 66 63 66 L 37 66 Q 35 66 35 64 L 35 28 Q 35 26 37 26 Z"
-        fill="white"
-      />
-
-      {/* Fold triangle — cyan */}
-      <path d="M 57 26 L 65 34 L 57 34 Z" fill="#06b6d4"/>
-
-      {/* Document text lines — dark navy */}
-      <line x1="41" y1="44" x2="61" y2="44" stroke="#0f172a" strokeWidth="2.8" strokeLinecap="round"/>
-      <line x1="41" y1="51" x2="61" y2="51" stroke="#0f172a" strokeWidth="2.8" strokeLinecap="round"/>
-      <line x1="41" y1="58" x2="52" y2="58" stroke="#0f172a" strokeWidth="2.8" strokeLinecap="round"/>
-
-      {/* Arrow body — curved, from arc endpoint sweeping up-right */}
-      <path
-        d="M 76 68 Q 89 72 85 52"
-        stroke="url(#li-arrow)"
-        strokeWidth="5.5"
-        strokeLinecap="round"
-        fill="none"
-      />
-
-      {/* Arrowhead — solid filled triangle pointing upper-right */}
-      <path d="M 85 44 L 93 55 L 79 57 Z" fill="#22d3ee"/>
+    <svg width={size} height={size} viewBox="0 0 36 36" fill="none">
+      <rect width="36" height="36" rx="9" fill="rgba(99,102,241,.18)"/>
+      <path d="M9 18C9 13 13 9.5 18 9.5C21 9.5 23.5 10.7 25 12.7" stroke="#A5B4FC" strokeWidth="2.2" strokeLinecap="round" fill="none"/>
+      <path d="M27 18C27 23 23 26.5 18 26.5C15 26.5 12.5 25.3 11 23.3" stroke="#818CF8" strokeWidth="2.2" strokeLinecap="round" fill="none"/>
+      <circle cx="18" cy="18" r="2.6" fill="#C7D2FE"/>
+      <circle cx="25" cy="12.7" r="1.7" fill="#818CF8"/>
+      <circle cx="11" cy="23.3" r="1.7" fill="#A5B4FC"/>
     </svg>
   );
 }
