@@ -264,41 +264,52 @@ export default function Dashboard({ kpis, monthlyData, allNames, color, maxTotal
   return (
     <div style={{ animation:"slideUp .4s cubic-bezier(.16,1,.3,1)" }}>
 
-      {/* Alert banners row */}
+      {/* Alert cards row */}
       {(missingSuppliers?.length > 0 || anomalousCount > 0) && (
-        <div style={{ display: 'grid', gridTemplateColumns: missingSuppliers?.length > 0 && anomalousCount > 0 ? '1fr 1fr' : '1fr', gap: 12, marginBottom: 16 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: missingSuppliers?.length > 0 && anomalousCount > 0 ? '1fr 1fr' : '1fr', gap: 14, marginBottom: 20 }}>
 
           {missingSuppliers?.length > 0 && (
             <button
               onClick={() => setShowMissing(true)}
-              style={{ padding: '14px 18px', borderRadius: 12, background: 'rgba(249,115,22,.08)', border: '1px solid rgba(249,115,22,.3)', display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer', textAlign: 'right', fontFamily: 'inherit', transition: 'background .15s' }}
-              onMouseEnter={e => e.currentTarget.style.background = 'rgba(249,115,22,.14)'}
-              onMouseLeave={e => e.currentTarget.style.background = 'rgba(249,115,22,.08)'}>
-              <span style={{ fontSize: 26, flexShrink: 0 }}>⚠️</span>
-              <div style={{ flex: 1 }}>
-                <div style={{ fontWeight: 700, fontSize: 14, color: '#fb923c', marginBottom: 2 }}>חשבוניות חסרות</div>
-                <div style={{ fontSize: 12, color: '#fdba74' }}>
-                  {missingSuppliers.length} ספק{missingSuppliers.length !== 1 ? 'ים' : ''} קבוע{missingSuppliers.length !== 1 ? 'ים' : ''} לא שלח{missingSuppliers.length !== 1 ? 'ו' : ''} החודש
+              style={{ padding: '20px 22px', borderRadius: 14, background: 'linear-gradient(135deg, rgba(249,115,22,.13) 0%, rgba(249,115,22,.05) 100%)', border: '1px solid rgba(249,115,22,.35)', display: 'flex', alignItems: 'center', gap: 18, cursor: 'pointer', fontFamily: 'inherit', transition: 'all .18s', textAlign: 'left' }}
+              onMouseEnter={e => { e.currentTarget.style.background = 'linear-gradient(135deg, rgba(249,115,22,.2) 0%, rgba(249,115,22,.09) 100%)'; e.currentTarget.style.borderColor = 'rgba(249,115,22,.55)'; }}
+              onMouseLeave={e => { e.currentTarget.style.background = 'linear-gradient(135deg, rgba(249,115,22,.13) 0%, rgba(249,115,22,.05) 100%)'; e.currentTarget.style.borderColor = 'rgba(249,115,22,.35)'; }}>
+              {/* Big count badge */}
+              <div style={{ width: 54, height: 54, borderRadius: 14, background: 'rgba(249,115,22,.18)', border: '1px solid rgba(249,115,22,.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <span style={{ fontWeight: 900, fontSize: 26, color: '#fb923c', lineHeight: 1 }}>{missingSuppliers.length}</span>
+              </div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontWeight: 800, fontSize: 15, color: '#fb923c', marginBottom: 3, direction: 'rtl' }}>חשבוניות חסרות</div>
+                <div style={{ fontSize: 12, color: '#fdba74', direction: 'rtl' }}>
+                  ספקים קבועים לא שלחו החודש
                 </div>
               </div>
-              <span style={{ fontSize: 12, color: '#fb923c', opacity: .7 }}>לפרטים ←</span>
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3, flexShrink: 0 }}>
+                <span style={{ fontSize: 18 }}>⚠️</span>
+                <span style={{ fontSize: 10, color: 'rgba(251,146,60,.6)', fontWeight: 600, whiteSpace: 'nowrap' }}>לפרטים ←</span>
+              </div>
             </button>
           )}
 
           {anomalousCount > 0 && (
             <button
               onClick={() => setShowAnomalies(true)}
-              style={{ padding: '14px 18px', borderRadius: 12, background: 'rgba(234,179,8,.07)', border: '1px solid rgba(234,179,8,.28)', display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer', textAlign: 'right', fontFamily: 'inherit', transition: 'background .15s' }}
-              onMouseEnter={e => e.currentTarget.style.background = 'rgba(234,179,8,.13)'}
-              onMouseLeave={e => e.currentTarget.style.background = 'rgba(234,179,8,.07)'}>
-              <span style={{ fontSize: 26, flexShrink: 0 }}>📊</span>
-              <div style={{ flex: 1 }}>
-                <div style={{ fontWeight: 700, fontSize: 14, color: '#fbbf24', marginBottom: 2 }}>חשבוניות חריגות</div>
-                <div style={{ fontSize: 12, color: '#fde68a' }}>
-                  {anomalousCount} חשבונית{anomalousCount !== 1 ? 'ות' : ''} עם סכום חריג החודש
+              style={{ padding: '20px 22px', borderRadius: 14, background: 'linear-gradient(135deg, rgba(234,179,8,.11) 0%, rgba(234,179,8,.04) 100%)', border: '1px solid rgba(234,179,8,.32)', display: 'flex', alignItems: 'center', gap: 18, cursor: 'pointer', fontFamily: 'inherit', transition: 'all .18s', textAlign: 'left' }}
+              onMouseEnter={e => { e.currentTarget.style.background = 'linear-gradient(135deg, rgba(234,179,8,.18) 0%, rgba(234,179,8,.08) 100%)'; e.currentTarget.style.borderColor = 'rgba(234,179,8,.52)'; }}
+              onMouseLeave={e => { e.currentTarget.style.background = 'linear-gradient(135deg, rgba(234,179,8,.11) 0%, rgba(234,179,8,.04) 100%)'; e.currentTarget.style.borderColor = 'rgba(234,179,8,.32)'; }}>
+              <div style={{ width: 54, height: 54, borderRadius: 14, background: 'rgba(234,179,8,.15)', border: '1px solid rgba(234,179,8,.38)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <span style={{ fontWeight: 900, fontSize: 26, color: '#fbbf24', lineHeight: 1 }}>{anomalousCount}</span>
+              </div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontWeight: 800, fontSize: 15, color: '#fbbf24', marginBottom: 3, direction: 'rtl' }}>חשבוניות חריגות</div>
+                <div style={{ fontSize: 12, color: '#fde68a', direction: 'rtl' }}>
+                  סכום חריג מהממוצע החודשי
                 </div>
               </div>
-              <span style={{ fontSize: 12, color: '#fbbf24', opacity: .7 }}>לפרטים ←</span>
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3, flexShrink: 0 }}>
+                <span style={{ fontSize: 18 }}>📊</span>
+                <span style={{ fontSize: 10, color: 'rgba(251,191,36,.6)', fontWeight: 600, whiteSpace: 'nowrap' }}>לפרטים ←</span>
+              </div>
             </button>
           )}
         </div>
