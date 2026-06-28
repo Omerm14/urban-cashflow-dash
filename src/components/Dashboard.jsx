@@ -7,6 +7,13 @@ import {
 const SANS = "'IBM Plex Sans', system-ui, sans-serif";
 const MONO = "'IBM Plex Mono', monospace";
 
+// "2024-07" → "Jul '24"
+function fmtMonthShort2(ym) {
+  const [y, m] = ym.split("-").map(Number);
+  const short = new Date(y, m - 1, 1).toLocaleDateString("en-US", { month: "short" });
+  return `${short} '${String(y).slice(2)}`;
+}
+
 const SUPPLIER_COLORS = {
   "Acme Corp":  "#6366F1",
   "BuildRight": "#10B981",
@@ -38,13 +45,13 @@ function CountUp({ to, duration = 1200 }) {
 
 function Pill({ color, bg, border, children }) {
   return (
-    <span style={{ display:"inline-flex", alignItems:"center", gap:3, background:bg, color, border:`1px solid ${border}`, borderRadius:20, padding:"2px 8px", fontSize:11, fontWeight:600, fontFamily:SANS }}>
+    <span style={{ display:"inline-flex", alignItems:"center", gap:3, background:bg, color, border:`1px solid ${border}`, borderRadius:20, padding:"3px 8px", fontSize:12, fontWeight:600, fontFamily:SANS }}>
       {children}
     </span>
   );
 }
 
-function KPICard({ label, value, valueColor, iconBg, iconColor, iconPath, pill, delay, isMobile }) {
+function KPICard({ label, value, valueColor, iconBg, iconColor, iconPath, pill, context, delay, isMobile }) {
   const iconSize = isMobile ? 26 : 32;
   return (
     <div style={{
@@ -60,10 +67,13 @@ function KPICard({ label, value, valueColor, iconBg, iconColor, iconPath, pill, 
           </svg>
         </div>
       </div>
-      <div style={{ fontFamily:MONO, fontWeight:600, fontSize: isMobile ? 22 : 30, lineHeight:1, wordBreak:"break-all", color:valueColor || "var(--t1)", letterSpacing:"-0.03em", fontVariantNumeric:"tabular-nums", marginBottom: isMobile ? 8 : 10 }}>
+      <div style={{ fontFamily:SANS, fontWeight:600, fontSize: isMobile ? 22 : 30, lineHeight:1, wordBreak:"break-all", color:valueColor || "var(--t1)", letterSpacing:"-0.04em", fontVariantNumeric:"tabular-nums", marginBottom: isMobile ? 8 : 10 }}>
         <CountUp to={value} />
       </div>
-      {pill}
+      <div style={{ display:"flex", alignItems:"center", gap:5, flexWrap:"wrap" }}>
+        {pill}
+        {!isMobile && context && <span style={{ fontFamily:SANS, fontSize:11, color:"var(--t3)" }}>{context}</span>}
+      </div>
     </div>
   );
 }
@@ -101,12 +111,16 @@ export default function Dashboard({ kpis, monthlyData, allNames, color, maxTotal
   const dateLabel = today.toLocaleDateString("en-GB", { day:"numeric", month:"long", year:"numeric" });
   const monthPill = today.toLocaleDateString("en-GB", { month:"short", year:"numeric" });
 
+  const nextMonthName = kpis.nextMonthYM ? fmtMonthShort2(kpis.nextMonthYM) : "Next month";
+  const nextMonthCount = kpis.nextMonthCount ?? 0;
+
   const CARDS = [
     {
       label:"Outstanding", value:kpis.outstanding, delay:0,
       iconBg:"rgba(99,102,241,.13)", iconColor:"#818CF8",
       iconPath:<><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></>,
       pill:<Pill color="#22C55E" bg="rgba(34,197,94,.12)" border="rgba(34,197,94,.25)">↑ Active</Pill>,
+      context:"vs last month",
     },
     {
       label:"Overdue", value:kpis.overdue, valueColor:"#F87171", delay:0.06,
@@ -115,18 +129,21 @@ export default function Dashboard({ kpis, monthlyData, allNames, color, maxTotal
       pill: overdueCount > 0
         ? <Pill color="#EF4444" bg="rgba(239,68,68,.12)" border="rgba(239,68,68,.25)">{overdueCount} invoices</Pill>
         : <Pill color="#22C55E" bg="rgba(34,197,94,.12)" border="rgba(34,197,94,.25)">None</Pill>,
+      context: overdueCount > 0 ? "need action" : undefined,
     },
     {
       label:"Next Month", value:kpis.nextMonth, delay:0.12,
       iconBg:"rgba(245,158,11,.12)", iconColor:"#F59E0B",
       iconPath:<><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></>,
-      pill:<Pill color="#F59E0B" bg="rgba(245,158,11,.12)" border="rgba(245,158,11,.25)">Upcoming</Pill>,
+      pill:<Pill color="#F59E0B" bg="rgba(245,158,11,.12)" border="rgba(245,158,11,.25)">{nextMonthName}</Pill>,
+      context: nextMonthCount > 0 ? `· ${nextMonthCount} invoices` : undefined,
     },
     {
       label:"Total Paid", value:kpis.paid, delay:0.18,
       iconBg:"rgba(34,197,94,.12)", iconColor:"#22C55E",
       iconPath:<><polyline points="20 6 9 17 4 12"/></>,
       pill:<Pill color="#22C55E" bg="rgba(34,197,94,.12)" border="rgba(34,197,94,.25)">↑ Paid</Pill>,
+      context:"this year",
     },
   ];
 
@@ -178,7 +195,7 @@ export default function Dashboard({ kpis, monthlyData, allNames, color, maxTotal
             </div>
             <div>
               <div style={{ fontFamily:SANS, fontWeight:600, fontSize:15, color:"var(--t1)", letterSpacing:"-0.02em", marginBottom:4 }}>
-                Pay {fmtMonth(ctaMonth.ym)} — ready to go
+                Pay {fmtMonthShort2(ctaMonth.ym)} — you're ready
               </div>
               <div style={{ fontFamily:SANS, fontSize:13, color:"var(--t2)" }}>
                 {Object.keys(ctaMonth.sups).length} suppliers ·{" "}
@@ -263,7 +280,7 @@ export default function Dashboard({ kpis, monthlyData, allNames, color, maxTotal
               onMouseLeave={e => e.currentTarget.style.borderColor = "var(--bdr)"}
             >
               <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:10 }}>
-                <span style={{ fontFamily:SANS, fontWeight:600, fontSize:13, color:"var(--t1)", letterSpacing:"-0.02em" }}>{fmtMonth(ym)}</span>
+                <span style={{ fontFamily:SANS, fontWeight:600, fontSize:13, color:"var(--t1)", letterSpacing:"-0.02em" }}>{fmtMonthShort2(ym)}</span>
                 <span style={{ fontFamily:MONO, fontWeight:600, fontSize:13, color:"var(--t1)", fontVariantNumeric:"tabular-nums" }}>{currency(total)}</span>
               </div>
               {!isMobile && Object.entries(sups).sort((a, b) => b[1] - a[1]).slice(0, 3).map(([sup, amt]) => (
