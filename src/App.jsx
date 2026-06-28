@@ -309,7 +309,7 @@ function AppShell() {
               )}
 
               {/* Views */}
-              {view === "dashboard"    && <Dashboard kpis={kpis} monthlyData={monthlyData} allNames={allNames} color={color} maxTotal={maxTotal} onPayMonth={payMonth} />}
+              {view === "dashboard"    && <Dashboard kpis={kpis} monthlyData={monthlyData} allNames={allNames} color={color} maxTotal={maxTotal} onPayMonth={payMonth} onViewInvoices={ym => { setSelectedMonth(ym); setView("invoices"); }} />}
               {view === "invoices"     && <InvoicesView computed={computed} dupeIds={dupeIds} updateInvoice={updateInvoice} deleteInvoice={deleteInvoice} bulkMarkPaid={bulkMarkPaid} bulkMarkUnpaid={bulkMarkUnpaid} bulkDelete={bulkDelete} setEditInvoice={setEditInvoice} color={color} onViewAttachment={handleViewAttachment} preSelMonth={preSelMonth} onClearPreSel={() => setPreSelMonth(null)} />}
               {view === "calendar"     && <CalendarView computed={computed} calMonth={calMonth} setCalMonth={setCalMonth} color={color} />}
               {view === "admin"        && <AdminPage />}
@@ -337,7 +337,7 @@ function AppShell() {
           </div>
 
           {/* Modals */}
-          {showUpgradeModal && <UpgradeModal plan={plan} used={used} limit={limit} onContinueReadonly={closeUpgrade} />}
+          {showUpgradeModal && <UpgradeModal plan={plan} used={used} limit={limit} onClose={closeUpgrade} onContinueReadonly={closeUpgrade} />}
           {editInvoice   && <EditInvoiceModal editInvoice={editInvoice} setEditInvoice={setEditInvoice} suppliers={suppliers} addInvoice={addInvoice} updateInvoice={updateInvoice} getSupplier={getSupplier} onViewAttachment={handleViewAttachment} />}
           {showSuppliers && <SuppliersModal suppliers={suppliers} addSupplier={addSupplier} updateSupplier={updateSupplier} deleteSupplier={deleteSupplier} editSupplier={editSupplier} setEditSupplier={setEditSupplier} onClose={() => setShowSuppliers(false)} />}
 

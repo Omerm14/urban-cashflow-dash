@@ -175,7 +175,7 @@ export default function InvoicesGroupedView({ computed, dupeIds, updateInvoice, 
 
   return (
     <div>
-      {/* Month navigation — pill tabs */}
+      {/* Month navigation — pill tabs with amounts */}
       {(() => {
         const months = [];
         const base = toYM(new Date());
@@ -185,11 +185,20 @@ export default function InvoicesGroupedView({ computed, dupeIds, updateInvoice, 
         }
         return (
           <div className="month-tabs" style={{ marginBottom: 14 }}>
-            {months.map(ym => (
-              <button key={ym} className={`month-tab${ym === selectedMonth ? " active" : ""}`} onClick={() => onMonthChange(ym)}>
-                {fmtMonth(ym)}
-              </button>
-            ))}
+            {months.map(ym => {
+              const mTotal = computed.filter(inv => inv.dueDate && inv.dueDate.startsWith(ym)).reduce((s, i) => s + Number(i.amount), 0);
+              const isActive = ym === selectedMonth;
+              return (
+                <button key={ym} className={`month-tab${isActive ? " active" : ""}`} onClick={() => onMonthChange(ym)}>
+                  <span>{fmtMonth(ym)}</span>
+                  {mTotal > 0 && (
+                    <span style={{ fontFamily:"'IBM Plex Mono', monospace", fontSize:10, opacity:0.8, marginLeft:4 }}>
+                      ₪{Math.round(mTotal / 1000)}k
+                    </span>
+                  )}
+                </button>
+              );
+            })}
           </div>
         );
       })()}

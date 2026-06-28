@@ -11,14 +11,33 @@ const PLAN_BADGE = {
 };
 
 const NAV_ITEMS = [
-  { id: 'general',    label: 'General',       icon: '⚙️' },
-  { id: 'profile',    label: 'Profile',       icon: '👤' },
-  { id: 'billing',    label: 'Plan & Billing', icon: '💳' },
-  { id: 'integrations', label: 'Integrations', icon: '🔗' },
-  { id: 'team',       label: 'Team',          icon: '👥' },
-  { id: 'data',       label: 'Data & Export',  icon: '📦' },
-  { id: 'danger',     label: 'Danger Zone',   icon: '🗑', red: true },
+  { id: 'general',      label: 'General',       red: false, locked: false },
+  { id: 'profile',      label: 'Profile',       red: false, locked: false },
+  { id: 'billing',      label: 'Billing',       red: false, locked: false },
+  { id: 'integrations', label: 'Integrations',  red: false, locked: false },
+  { id: 'team',         label: 'Team',          red: false, locked: true  },
+  { id: 'data',         label: 'Export',        red: false, locked: false },
+  { id: 'danger',       label: 'Danger',        red: true,  locked: false },
 ];
+
+function NavIcon({ id, active, red }) {
+  const color = red ? '#EF4444' : active ? '#A5B4FC' : 'var(--t2)';
+  const w = 13, sw = 1.75;
+  const icons = {
+    general:      <><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></>,
+    profile:      <><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></>,
+    billing:      <><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></>,
+    integrations: <><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></>,
+    team:         <><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></>,
+    data:         <><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></>,
+    danger:       <><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></>,
+  };
+  return (
+    <svg width={w} height={w} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={sw} strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+      {icons[id]}
+    </svg>
+  );
+}
 
 function Alert({ msg }) {
   if (!msg) return null;
@@ -126,13 +145,13 @@ export default function SettingsPage({ user, plan, used, limit, remaining, onUpg
   }, []);
 
   const navBtn = (item) => ({
-    display: 'flex', alignItems: 'center', gap: 10, padding: '9px 12px', borderRadius: 8, border: 'none', width: '100%', textAlign: 'left',
+    display: 'flex', alignItems: 'center', gap: 8, padding: '7px 10px', borderRadius: 6, border: 'none', width: '100%', textAlign: 'left',
     background: activeSection === item.id ? (item.red ? 'var(--red-tint)' : 'var(--indigo-tint)') : 'transparent',
     color: activeSection === item.id ? (item.red ? '#F87171' : '#A5B4FC') : (item.red ? 'rgba(239,68,68,.65)' : 'var(--t2)'),
     fontWeight: activeSection === item.id ? 600 : 400,
     fontSize: 13, cursor: 'pointer', fontFamily: SANS,
-    boxShadow: activeSection === item.id ? `inset 3px 0 0 ${item.red ? 'var(--red)' : 'var(--indigo)'}` : 'none',
     transition: 'all .15s',
+    marginBottom: 1,
   });
 
   return (
@@ -158,24 +177,12 @@ export default function SettingsPage({ user, plan, used, limit, remaining, onUpg
           </div>
         ) : (
           <div style={{ width: 192, flexShrink: 0, position: 'sticky', top: 20 }}>
-            <div style={{ marginBottom: 16, padding: '16px 12px', background: 'var(--surf)', border: '1px solid var(--bdr)', borderRadius: 12, textAlign: 'center' }}>
-              <div style={{ width: 52, height: 52, borderRadius: '50%', background: 'var(--indigo)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, fontWeight: 700, color: '#fff', margin: '0 auto 10px', boxShadow: '0 4px 16px rgba(99,102,241,.35)', fontFamily: SANS }}>
-                {getInitials(user)}
-              </div>
-              <div style={{ fontWeight: 600, fontSize: 13, color: 'var(--t1)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', fontFamily: SANS }}>
-                {user?.user_metadata?.full_name || user?.email?.split('@')[0]}
-              </div>
-              <div style={{ fontSize: 11, color: 'var(--t3)', marginTop: 3, fontFamily: SANS }}>{user?.email}</div>
-              {plan && (() => {
-                const b = PLAN_BADGE[plan] || PLAN_BADGE.free;
-                return <span style={{ display: 'inline-block', marginTop: 8, fontSize: 10, fontWeight: 700, letterSpacing: '.08em', padding: '3px 9px', borderRadius: 20, background: b.bg, color: b.color, border: `1px solid ${b.border}`, fontFamily: SANS }}>{b.label}</span>;
-              })()}
-            </div>
-            <nav style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+            <nav style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
               {NAV_ITEMS.map(item => (
                 <button key={item.id} onClick={() => scrollTo(item.id)} style={navBtn(item)}>
-                  <span style={{ fontSize: 14 }}>{item.icon}</span>
-                  {item.label}
+                  <NavIcon id={item.id} active={activeSection === item.id} red={item.red} />
+                  <span style={{ flex: 1 }}>{item.label}</span>
+                  {item.locked && <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="var(--t3)" strokeWidth="2" strokeLinecap="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>}
                 </button>
               ))}
             </nav>
