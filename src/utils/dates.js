@@ -40,4 +40,5 @@ export const fmt          = d  => d ? new Date(d).toLocaleDateString("en-GB") : 
 export const toYM         = d  => { const x = new Date(d); return `${x.getFullYear()}-${String(x.getMonth()+1).padStart(2,"0")}`; };
 export const fmtMonth     = ym => { const [y,m] = ym.split("-"); return new Date(y,m-1).toLocaleString("en-GB",{month:"long",year:"numeric"}); };
 export const fmtMonthShort= ym => { const [y,m] = ym.split("-"); return new Date(y,m-1).toLocaleString("en-GB",{month:"short",year:"2-digit"}); };
-export const currency     = n  => `₪${Number(n).toLocaleString("en-IL",{minimumFractionDigits:2,maximumFractionDigits:2})}`;
+export const currency        = n  => `₪${Number(n).toLocaleString("en-IL",{minimumFractionDigits:2,maximumFractionDigits:2})}`;
+export const currencyCompact = n  => `${Math.round(Number(n)).toLocaleString("en-IL")}₪`;
