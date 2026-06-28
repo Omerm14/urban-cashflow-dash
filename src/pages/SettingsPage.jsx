@@ -165,7 +165,7 @@ export default function SettingsPage({ user, plan, used, limit, remaining, onUpg
         {/* Left nav — sticky desktop / horizontal pills mobile */}
         {isMobile ? (
           <div style={{ position: 'sticky', top: 0, zIndex: 10, background: 'var(--bg)', paddingBottom: 12, marginBottom: 8, width: '100%' }}>
-            <div style={{ display: 'flex', gap: 6, overflowX: 'auto', scrollbarWidth: 'none', paddingBottom: 4 }}>
+            <div style={{ display: 'flex', gap: 6, overflowX: 'auto', scrollbarWidth: 'none', msOverflowStyle: 'none', paddingBottom: 4 }} className="hide-scrollbar">
               {NAV_ITEMS.map(item => (
                 <button key={item.id} onClick={() => scrollTo(item.id)} style={{
                   display: 'inline-flex', alignItems: 'center', gap: 5, padding: '6px 14px', borderRadius: 20, flexShrink: 0,
@@ -438,17 +438,19 @@ function BillingSection({ plan, used, limit, remaining, onUpgrade, invoices, isM
       <Card>
         <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--t1)', marginBottom: 14 }}>Billing History</div>
         {sub ? (
-          <div style={{ borderRadius: 8, overflow: 'hidden', border: '1px solid var(--bdr)' }}>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', background: 'var(--surf2)', padding: '9px 16px' }}>
-              {['Plan', 'Status', 'Start', 'End'].map(h => (
-                <span key={h} style={{ fontSize: 11, fontWeight: 600, color: 'var(--t3)', textTransform: 'uppercase', letterSpacing: '.06em' }}>{h}</span>
-              ))}
-            </div>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', padding: '12px 16px', alignItems: 'center' }}>
-              <span style={{ fontSize: 13, fontWeight: 600, textTransform: 'capitalize' }}>{sub.plan}</span>
-              <span style={{ fontSize: 12, color: sub.status === 'active' ? 'var(--green)' : 'var(--amber)', fontWeight: 600, textTransform: 'capitalize' }}>● {sub.status}</span>
-              <span style={{ fontSize: 12, color: 'var(--t2)' }}>{sub.current_period_start ? new Date(sub.current_period_start).toLocaleDateString() : '—'}</span>
-              <span style={{ fontSize: 12, color: 'var(--t2)' }}>{sub.current_period_end ? new Date(sub.current_period_end).toLocaleDateString() : '—'}</span>
+          <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
+            <div style={{ borderRadius: 8, overflow: 'hidden', border: '1px solid var(--bdr)', minWidth: 400 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', background: 'var(--surf2)', padding: '9px 16px' }}>
+                {['Plan', 'Status', 'Start', 'End'].map(h => (
+                  <span key={h} style={{ fontSize: 11, fontWeight: 600, color: 'var(--t3)', textTransform: 'uppercase', letterSpacing: '.06em' }}>{h}</span>
+                ))}
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', padding: '12px 16px', alignItems: 'center' }}>
+                <span style={{ fontSize: 13, fontWeight: 600, textTransform: 'capitalize' }}>{sub.plan}</span>
+                <span style={{ fontSize: 12, color: sub.status === 'active' ? 'var(--green)' : 'var(--amber)', fontWeight: 600, textTransform: 'capitalize' }}>● {sub.status}</span>
+                <span style={{ fontSize: 12, color: 'var(--t2)' }}>{sub.current_period_start ? new Date(sub.current_period_start).toLocaleDateString() : '—'}</span>
+                <span style={{ fontSize: 12, color: 'var(--t2)' }}>{sub.current_period_end ? new Date(sub.current_period_end).toLocaleDateString() : '—'}</span>
+              </div>
             </div>
           </div>
         ) : (

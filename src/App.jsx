@@ -282,29 +282,31 @@ function AppShell() {
             <div className="app-content" style={{ opacity: fading ? 0 : 1, transition: "opacity .16s ease" }}>
               {/* Upload action row (hidden on settings/admin/integrations) */}
               {view !== 'settings' && view !== 'admin' && view !== 'integrations' && (
-                <div style={{ display: "flex", gap: 10, marginBottom: 24, alignItems: "center", flexWrap: "wrap" }}>
-                  <button className="btn btn-primary" style={{ fontSize: 13 }}
-                    onClick={isAtLimit ? openUpgrade : () => fileRef.current.click()}
-                    disabled={extracting || loading}>
-                    <span>+</span>
-                    {extracting ? "Extracting…" : isAtLimit ? "🔒 Upload Invoices" : "Upload Invoices"}
-                  </button>
-                  <input ref={fileRef} type="file" accept="image/*,application/pdf" multiple onChange={handleUpload} style={{ display: "none" }} />
+                <div style={{ marginBottom: 24 }}>
+                  <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+                    <button className="btn btn-primary" style={{ fontSize: 13 }}
+                      onClick={isAtLimit ? openUpgrade : () => fileRef.current.click()}
+                      disabled={extracting || loading}>
+                      <span>+</span>
+                      {extracting ? "Extracting…" : isAtLimit ? "🔒 Upload" : "Upload Invoices"}
+                    </button>
+                    <input ref={fileRef} type="file" accept="image/*,application/pdf" multiple onChange={handleUpload} style={{ display: "none" }} />
 
-                  <button className="btn btn-secondary" style={{ fontSize: 13 }} onClick={() => csvRef.current.click()}>
-                    📋 Load Supplier Sheet
-                  </button>
-                  <input ref={csvRef} type="file" accept=".csv,text/csv" onChange={handleCSV} style={{ display: "none" }} />
+                    <button className="btn btn-secondary" style={{ fontSize: 13 }} onClick={() => csvRef.current.click()}>
+                      📋 Suppliers
+                    </button>
+                    <input ref={csvRef} type="file" accept=".csv,text/csv" onChange={handleCSV} style={{ display: "none" }} />
 
+                    <div style={{ marginLeft: "auto", fontSize: 12, color: "var(--t3)", fontWeight: 500, flexShrink: 0 }}>{invoices.length} invoices</div>
+                  </div>
                   {extractMsg && (
-                    <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 16px", borderRadius: 8, animation: "fadeIn .3s",
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 12px", borderRadius: 8, animation: "fadeIn .3s", marginTop: 8,
                       background: extractMsg.ok === false ? "var(--red-tint)" : extractMsg.ok ? "var(--green-tint)" : "var(--surf2)",
                       border: `1px solid ${extractMsg.ok === false ? "var(--red-bdr)" : extractMsg.ok ? "var(--green-bdr)" : "var(--bdr2)"}`,
                       color: extractMsg.ok === false ? "var(--red)" : extractMsg.ok ? "var(--green)" : "var(--t2)", fontSize: 13 }}>
                       {extractMsg.text}
                     </div>
                   )}
-                  <div style={{ marginLeft: "auto", fontSize: 12, color: "var(--t3)", fontWeight: 500 }}>{invoices.length} invoices</div>
                 </div>
               )}
 

@@ -180,16 +180,25 @@ body{font-family:'IBM Plex Sans',system-ui,sans-serif;background:var(--bg);color
 .shimmer{background:linear-gradient(90deg,var(--surf2) 25%,#253550 50%,var(--surf2) 75%);background-size:200% 100%;animation:shimmer 1.5s infinite;border-radius:8px}
 
 /* ─── MOBILE MODAL BOTTOM SHEET ─── */
+/* ─── HIDE SCROLLBAR UTILITY ─── */
+.hide-scrollbar::-webkit-scrollbar{display:none}
+
 @media(max-width:640px){
   .modal{position:fixed;bottom:0;left:0;right:0;width:100%;max-width:100%;margin:0;border-radius:20px 20px 0 0;max-height:90vh;animation:slideUp .3s cubic-bezier(.16,1,.3,1)}
   .overlay{align-items:flex-end;padding:0}
   .batch-bar{left:16px;right:16px;transform:none;border-radius:16px;padding:10px 16px;font-size:12px}
   .stat-grid{grid-template-columns:1fr 1fr}
-  .sup-row{grid-template-columns:32px 1fr 90px}
+  /* sup-row: show checkbox + supplier+amount + status only; hide date col and action cluster wraps */
+  .sup-row{grid-template-columns:32px 1fr 80px 80px;font-size:12px}
+  .sup-row>:nth-child(3),.sup-row>:nth-child(6){display:none}
   .tbl-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
   .itbl{min-width:600px}
-  .cal-day{min-height:72px}
+  .cal-day{min-height:64px}
   .app-content{padding:14px}
+  /* Total bar stack on mobile */
+  .total-bar{flex-direction:column;align-items:flex-start;gap:8px}
+  /* Month tabs smaller on mobile */
+  .month-tab{padding:5px 11px;font-size:12px}
 }
 
 @media(max-width:900px){

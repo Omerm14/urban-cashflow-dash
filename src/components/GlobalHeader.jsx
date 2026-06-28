@@ -39,7 +39,7 @@ function NotificationPanel({ notifications, markAllRead, onClose }) {
   return (
     <div ref={ref} style={{
       position: "absolute", top: "calc(100% + 8px)", right: 0,
-      width: 340, maxHeight: 420, overflowY: "auto",
+      width: 340, maxWidth: "calc(100vw - 24px)", maxHeight: 420, overflowY: "auto",
       background: "var(--surf)", border: "1px solid var(--bdr2)",
       borderRadius: 14, boxShadow: "0 20px 50px rgba(0,0,0,.5)",
       zIndex: 300, fontFamily: SANS,
