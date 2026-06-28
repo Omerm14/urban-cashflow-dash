@@ -1,5 +1,6 @@
 import { useState, useCallback, useEffect, useRef } from "react";
 import { toYM, currency, fmtMonth } from "../utils/dates";
+import { STATUS } from "../constants";
 import InvoicesTable from "./InvoicesTable";
 import InvoicesGroupedView from "./InvoicesGroupedView";
 
@@ -31,7 +32,7 @@ export default function InvoicesView({ computed, dupeIds, updateInvoice, deleteI
   // Pre-select invoices when navigating from dashboard CTA
   useEffect(() => {
     if (!preSelMonth) return;
-    const monthInvs = computedRef.current.filter(inv => inv.dueDate && inv.dueDate.startsWith(preSelMonth) && inv.status !== "paid");
+    const monthInvs = computedRef.current.filter(inv => inv.dueDate && inv.dueDate.startsWith(preSelMonth) && inv.status !== STATUS.PAID);
     setSelectedMonth(preSelMonth);
     setViewMode("grouped");
     setSelectedIds(new Set(monthInvs.map(i => i.id)));
@@ -44,7 +45,7 @@ export default function InvoicesView({ computed, dupeIds, updateInvoice, deleteI
       if (e.target.tagName === "INPUT" || e.target.tagName === "SELECT" || e.target.tagName === "TEXTAREA") return;
       if (e.key === "a" || e.key === "A") {
         const visibleIds = computedRef.current
-          .filter(inv => inv.dueDate && inv.dueDate.startsWith(selectedMonthRef.current) && inv.status !== "paid")
+          .filter(inv => inv.dueDate && inv.dueDate.startsWith(selectedMonthRef.current) && inv.status !== STATUS.PAID)
           .map(i => i.id);
         setSelectedIds(new Set(visibleIds));
       } else if (e.key === "p" || e.key === "P") {
@@ -121,7 +122,7 @@ export default function InvoicesView({ computed, dupeIds, updateInvoice, deleteI
     clearSelection();
     setShowPayModal(false);
     const nm = nxtMonth(selectedMonth);
-    const hasNext = computed.some(inv => inv.dueDate && inv.dueDate.startsWith(nm) && !paidIds.has(inv.id) && inv.status !== "paid");
+    const hasNext = computed.some(inv => inv.dueDate && inv.dueDate.startsWith(nm) && !paidIds.has(inv.id) && inv.status !== STATUS.PAID);
     setNextMoHint(hasNext ? nm : null);
     setSuccessMsg(`${cnt} invoice${cnt !== 1 ? "s" : ""} marked paid · ${currency(total)}`);
     setShowSuccess(true);

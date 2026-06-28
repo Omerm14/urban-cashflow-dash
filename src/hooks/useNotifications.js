@@ -55,9 +55,9 @@ export const useNotifications = () => {
 
   useEffect(() => { fetch(); }, [fetch]);
 
-  const unreadCount = notifications.filter(n =>
-    !lastSeenAt || new Date(n.created_at) > new Date(lastSeenAt)
-  ).length;
+  const unreadCount = lastSeenAt
+    ? notifications.filter(n => new Date(n.created_at) > new Date(lastSeenAt)).length
+    : 0;
 
   const markAllRead = useCallback(() => {
     const now = new Date().toISOString();

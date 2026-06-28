@@ -47,6 +47,7 @@ export const usePlan = () => {
 
   useEffect(() => { refresh(); }, [refresh]);
 
+  if (plan && !(plan in PLAN_LIMITS)) console.warn(`[usePlan] Unknown plan "${plan}", defaulting to limit 20`);
   const limit       = PLAN_LIMITS[plan] ?? 20;
   const remaining   = limit === Infinity ? Infinity : Math.max(0, limit - used);
   const pct         = limit === Infinity ? 0 : used / limit;
