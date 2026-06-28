@@ -223,7 +223,7 @@ export default function Dashboard({ kpis, monthlyData, allNames, color, maxTotal
       )}
 
       {/* Chart + breakdown */}
-      <div style={{ display:"grid", gridTemplateColumns: isCompact ? "1fr" : "1fr 310px", gap:14 }}>
+      <div style={{ display:"grid", gridTemplateColumns: isCompact ? "1fr" : "minmax(0,1fr) minmax(0,310px)", gap:14 }}>
         {/* Recharts Card */}
         <div style={{ background:"var(--surf)", border:"1px solid var(--bdr)", borderRadius:12, padding:"22px 24px", minWidth:0 }}>
           <div style={{ marginBottom:20 }}>

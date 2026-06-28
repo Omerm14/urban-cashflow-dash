@@ -51,7 +51,7 @@ body{font-family:'IBM Plex Sans',system-ui,sans-serif;background:var(--bg);color
 /* ─── APP SHELL LAYOUT ─── */
 .app-shell{display:flex;flex-direction:row;height:100vh;overflow:hidden;overflow-x:hidden}
 .app-main{display:flex;flex-direction:column;flex:1;overflow:hidden;overflow-x:hidden;min-width:0}
-.app-content{flex:1;overflow-y:auto;overflow-x:hidden;padding:28px 32px}
+.app-content{flex:1;overflow-y:auto;overflow-x:hidden;padding:28px 32px;scrollbar-gutter:stable}
 @media(max-width:900px){.app-content{padding:20px 20px}}
 @media(max-width:640px){.app-content{padding:16px 16px}}
 
