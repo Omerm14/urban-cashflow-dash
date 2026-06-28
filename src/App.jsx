@@ -332,6 +332,7 @@ export default function App() {
           {/* Main content area */}
           <div className="main-area">
             <GlobalHeader
+              view={view}
               unreadCount={unreadCount}
               onBellClick={() => { setShowNotifPanel(v => !v); if (!showNotifPanel) markAllRead(); }}
             />

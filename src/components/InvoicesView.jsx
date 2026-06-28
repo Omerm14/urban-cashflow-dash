@@ -248,9 +248,9 @@ export default function InvoicesView({ computed, dupeIds, updateInvoice, deleteI
               </div>
             )}
           </div>
-          <span style={{ fontWeight:600, color:"var(--t2)" }}>{count} selected</span>
+          <span style={{ fontWeight:600, color:"#CBD5E1" }}>{count} selected</span>
           <span style={{ width:1, height:20, background:"rgba(255,255,255,.1)" }}/>
-          <span style={{ fontWeight:800, fontSize:16, color:"#fff", fontFamily:"'DM Mono',monospace" }}>
+          <span style={{ fontWeight:700, fontSize:16, color:"#fff", fontFamily:"'DM Mono',monospace" }}>
             {currency(selTotal)}
           </span>
           <button className="btn btn-primary" style={{ borderRadius:50 }} onClick={() => setShowPayModal(true)}>
