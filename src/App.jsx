@@ -423,7 +423,7 @@ export default function App() {
         )}
 
         <div style={{ opacity:fading ? 0 : 1, transition:"opacity .16s ease" }}>
-        {view === "dashboard"    && <Dashboard  kpis={kpis} monthlyData={monthlyData} allNames={allNames} color={color} maxTotal={maxTotal} onPayMonth={payMonth} missingSuppliers={missingSuppliers} anomalyMap={anomalyMap} onViewInvoices={() => setView('invoices')} />}
+        {view === "dashboard"    && <Dashboard  kpis={kpis} monthlyData={monthlyData} allNames={allNames} color={color} maxTotal={maxTotal} onPayMonth={payMonth} missingSuppliers={missingSuppliers} anomalyMap={anomalyMap} invoices={invoices} suppliers={suppliers} computed={computed} setEditInvoice={setEditInvoice} />}
         {view === "invoices"     && <InvoicesView computed={computed} dupeIds={dupeIds} anomalyMap={anomalyMap} updateInvoice={updateInvoice} deleteInvoice={deleteInvoice} bulkMarkPaid={bulkMarkPaid} bulkMarkUnpaid={bulkMarkUnpaid} bulkDelete={bulkDelete} setEditInvoice={setEditInvoice} color={color} onViewAttachment={handleViewAttachment} preSelMonth={preSelMonth} onClearPreSel={() => setPreSelMonth(null)} />}
         {view === "calendar"     && <CalendarView computed={computed} calMonth={calMonth} setCalMonth={setCalMonth} color={color} />}
         {view === "admin"        && <AdminPage />}
