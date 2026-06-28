@@ -249,7 +249,7 @@ export default function Dashboard({ kpis, monthlyData, allNames, color, maxTotal
                   <YAxis
                     axisLine={false} tickLine={false}
                     tick={{ fontFamily:MONO, fontSize:10, fill:"#4A6278" }}
-                    tickFormatter={v => v === 0 ? "" : `₪${Math.round(v/1000)}k`}
+                    tickFormatter={v => v === 0 ? "" : `${currency(0).charAt(0)}${Math.round(v/1000)}k`}
                     width={44}
                   />
                   <Tooltip content={<CustomTooltip />} cursor={{ fill:"rgba(255,255,255,.03)" }} />

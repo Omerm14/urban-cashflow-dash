@@ -62,11 +62,17 @@ export default function EditInvoiceModal({ editInvoice, setEditInvoice, supplier
             {suppliers.map(s => <option key={s.id} value={s.name}>{s.name} · {s.terms}</option>)}
           </select>
         </div>
-        <div style={{ marginBottom:24 }}>
+        <div style={{ marginBottom:14 }}>
           <div style={{ fontSize:11, fontWeight:600, color:"var(--t2)", marginBottom:6, textTransform:"uppercase", letterSpacing:".5px" }}>Status</div>
           <select value={editInvoice.status} className="input" onChange={e => setEditInvoice({...editInvoice, status:e.target.value})}>
             {Object.values(STATUS).map(s => <option key={s}>{s}</option>)}
           </select>
+        </div>
+        <div style={{ marginBottom:24 }}>
+          <div style={{ fontSize:11, fontWeight:600, color:"var(--t2)", marginBottom:6, textTransform:"uppercase", letterSpacing:".5px" }}>Notes</div>
+          <textarea value={editInvoice.notes ?? ''} className="input" rows={3} placeholder="Optional notes…"
+            style={{ resize:"vertical", minHeight:72 }}
+            onChange={e => setEditInvoice({...editInvoice, notes: e.target.value})} />
         </div>
         {/* Sync audit trail — read-only, shown only for auto-synced invoices */}
         {editInvoice.sync_source && (

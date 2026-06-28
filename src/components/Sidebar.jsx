@@ -1,3 +1,4 @@
+import { useState, useEffect } from "react";
 import { LayoutDashboard, FileText, Calendar, Zap, Users, Settings, X, LogOut } from "lucide-react";
 import LogoIcon from "./LogoIcon";
 
@@ -21,7 +22,13 @@ export default function Sidebar({
   view, setView, suppliersCount, onUpgrade, onUpload,
   mobileOpen, setMobileOpen, plan, user, onSignOut,
 }) {
-  const isDrawer = window.innerWidth <= 900;
+  const [winW, setWinW] = useState(window.innerWidth);
+  useEffect(() => {
+    const onResize = () => setWinW(window.innerWidth);
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, []);
+  const isDrawer = winW <= 900;
   const used = plan?.invoiceCount ?? 0;
   const limit = plan?.invoiceLimit ?? 20;
   const pct = Math.min(100, Math.round((used / limit) * 100));
