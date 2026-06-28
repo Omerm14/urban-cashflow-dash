@@ -1,6 +1,8 @@
 import { useState, useEffect } from "react";
 import { currency, fmtMonth, fmtMonthShort } from "../utils/dates";
 
+const FONT = "'IBM Plex Sans', system-ui, sans-serif";
+
 function CountUp({ to, duration = 1100 }) {
   const [v, setV] = useState(0);
   useEffect(() => {
@@ -19,38 +21,33 @@ function CountUp({ to, duration = 1100 }) {
   return <>{currency(v)}</>;
 }
 
-const KpiIcon = ({ type }) => {
-  const icons = {
-    outstanding: <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>,
-    overdue:     <><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></>,
-    nextMonth:   <><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></>,
-    paid:        <><polyline points="20 6 9 17 4 12"/></>,
-  };
-  const colors = {
-    outstanding: 'var(--indigo)',
-    overdue:     'var(--red)',
-    nextMonth:   'var(--amber)',
-    paid:        'var(--green)',
-  };
-  return (
-    <div style={{ width: 34, height: 34, borderRadius: 8, background: `${colors[type]}18`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={colors[type]} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        {icons[type]}
-      </svg>
-    </div>
-  );
+const KPI_META = {
+  outstanding: { label: 'Outstanding', iconBg: 'rgba(99,102,241,.13)', iconStroke: '#818CF8',
+    icon: <path d="M1 4h22v16a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V4z"/> },
+  overdue: { label: 'Overdue', iconBg: 'rgba(239,68,68,.12)', iconStroke: '#F87171',
+    icon: <><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></> },
+  nextMonth: { label: 'Next Month', iconBg: 'rgba(245,158,11,.12)', iconStroke: '#F59E0B',
+    icon: <><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></> },
+  paid: { label: 'Total Paid', iconBg: 'rgba(34,197,94,.12)', iconStroke: '#22C55E',
+    icon: <polyline points="20 6 9 17 4 12"/> },
 };
 
 function TrendPill({ curr, prev }) {
-  if (!prev) return null;
+  if (!prev || prev === 0) return null;
   const diff = curr - prev;
   const pct = Math.round(Math.abs(diff / prev) * 100);
   if (pct === 0) return null;
   const up = diff > 0;
   return (
-    <span className={`stat-trend ${up ? 'up' : 'down'}`}>
-      {up ? '↑' : '↓'} {pct}%
-    </span>
+    <div className="stat-trend">
+      <span className={`stat-trend-pill ${up ? 'up' : 'down'}`}>
+        <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round">
+          {up ? <polyline points="18 15 12 9 6 15"/> : <polyline points="6 9 12 15 18 9"/>}
+        </svg>
+        {up ? '+' : '-'}{pct}%
+      </span>
+      <span className="stat-trend-lbl">vs last month</span>
+    </div>
   );
 }
 
@@ -58,10 +55,10 @@ export default function Dashboard({ kpis, prevKpis, monthlyData, allNames, color
   const [tooltip, setTooltip] = useState(null);
 
   const stats = [
-    { label: 'Outstanding', key: 'outstanding', cls: 'stat-outstanding', type: 'outstanding' },
-    { label: 'Overdue',     key: 'overdue',     cls: 'stat-overdue',     type: 'overdue', pulse: true },
-    { label: 'Next Month',  key: 'nextMonth',   cls: 'stat-nextmonth',   type: 'nextMonth' },
-    { label: 'Total Paid',  key: 'paid',        cls: 'stat-paid',        type: 'paid' },
+    { key: 'outstanding', cls: '' },
+    { key: 'overdue',     cls: 'stat-overdue', pulse: true },
+    { key: 'nextMonth',   cls: '' },
+    { key: 'paid',        cls: '' },
   ];
 
   const ctaMonth = monthlyData[0] || null;
@@ -71,66 +68,81 @@ export default function Dashboard({ kpis, prevKpis, monthlyData, allNames, color
 
       {/* KPI Cards */}
       <div className="stat-grid" style={{ marginBottom: 20 }}>
-        {stats.map(s => (
-          <div
-            key={s.key}
-            className={`card stat-card ${s.cls}`}
-            style={s.pulse && kpis[s.key] > 0 ? { animationName: 'redPulse', animationDuration: '2.4s', animationIterationCount: 'infinite' } : {}}
-          >
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 10 }}>
-              <span className="stat-lbl">{s.label}</span>
-              <KpiIcon type={s.type} />
+        {stats.map(s => {
+          const meta = KPI_META[s.key];
+          return (
+            <div
+              key={s.key}
+              className={`card stat-card ${s.cls}`}
+              style={{
+                display: 'flex', flexDirection: 'column', gap: 14, borderRadius: 12,
+                animationName: s.pulse && kpis[s.key] > 0 ? 'redPulse' : undefined,
+                animationDuration: '2.4s', animationIterationCount: 'infinite',
+              }}
+            >
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                <span className="stat-lbl">{meta.label}</span>
+                <div style={{ width: 32, height: 32, background: meta.iconBg, borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={meta.iconStroke} strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+                    {meta.icon}
+                  </svg>
+                </div>
+              </div>
+              <div className="stat-val"><CountUp to={kpis[s.key]} /></div>
+              {prevKpis && <TrendPill curr={kpis[s.key]} prev={prevKpis[s.key]} />}
             </div>
-            <div className="stat-val"><CountUp to={kpis[s.key]} /></div>
-            {prevKpis && <TrendPill curr={kpis[s.key]} prev={prevKpis[s.key]} />}
-          </div>
-        ))}
+          );
+        })}
       </div>
 
-      {/* Pay-month CTA — prominent action card */}
+      {/* Pay CTA card */}
       {ctaMonth && onPayMonth && (
-        <div className="card" style={{ marginBottom: 20, padding: '24px 28px', cursor: 'pointer', borderColor: 'var(--indigo-border)', background: 'linear-gradient(135deg,rgba(99,102,241,.06),rgba(129,140,248,.03))' }}
-          onClick={() => onPayMonth(ctaMonth.ym)}>
+        <div className="card" style={{ marginBottom: 20, padding: '20px 24px', borderColor: 'rgba(99,102,241,.3)' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-              <div style={{ width: 48, height: 48, borderRadius: 12, background: 'var(--indigo)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                  <polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>
-                  <path d="M5 21h14"/>
+              <div style={{ width: 44, height: 44, borderRadius: 11, background: 'rgba(99,102,241,.14)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#818CF8" strokeWidth="1.75" strokeLinecap="round">
+                  <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
                 </svg>
               </div>
               <div>
-                <div style={{ fontWeight: 800, fontSize: 17, color: 'var(--t1)', marginBottom: 4, letterSpacing: '-.02em' }}>
-                  Pay {fmtMonth(ctaMonth.ym)} — ready to go
+                <div style={{ fontWeight: 600, fontSize: 15, color: 'var(--t1)', marginBottom: 4, letterSpacing: '-.02em' }}>
+                  Pay {fmtMonth(ctaMonth.ym)} — you're ready
                 </div>
-                <div style={{ color: 'var(--t2)', fontSize: 13 }}>
-                  <span style={{ fontFamily: "'DM Mono',monospace", fontWeight: 700, color: 'var(--indigo)', fontSize: 15 }}>{currency(ctaMonth.total)}</span>
-                  {' '}across{' '}
-                  <strong style={{ color: 'var(--t1)' }}>{Object.keys(ctaMonth.sups).length}</strong> supplier{Object.keys(ctaMonth.sups).length !== 1 ? 's' : ''}
+                <div style={{ fontSize: 13, color: 'var(--t2)' }}>
+                  <strong style={{ color: 'var(--t1)' }}>{Object.keys(ctaMonth.sups).length}</strong> suppliers ·{' '}
+                  <span style={{ fontWeight: 500, color: '#A5B4FC' }}>{currency(ctaMonth.total)}</span> total due
                 </div>
               </div>
             </div>
-            <button
-              className="btn btn-primary"
-              style={{ padding: '10px 24px', fontSize: 14, flexShrink: 0 }}
-              onClick={e => { e.stopPropagation(); onPayMonth(ctaMonth.ym); }}
-            >
-              Pay All Now →
-            </button>
+            <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
+              <button className="btn btn-ghost" style={{ padding: '8px 16px', fontSize: 13 }}>
+                View invoices
+              </button>
+              <button
+                className="btn btn-primary"
+                style={{ padding: '8px 20px', fontSize: 13, letterSpacing: '-.01em', boxShadow: '0 4px 18px rgba(99,102,241,.35)', display: 'flex', alignItems: 'center', gap: 6 }}
+                onClick={e => { e.stopPropagation(); onPayMonth(ctaMonth.ym); }}
+              >
+                Pay All
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><polyline points="9 18 15 12 9 6"/></svg>
+              </button>
+            </div>
           </div>
         </div>
       )}
 
-      {/* Two-column layout: chart + monthly breakdown */}
-      <div style={{ display: 'grid', gridTemplateColumns: monthlyData.length > 0 ? '1fr 280px' : '1fr', gap: 16, alignItems: 'start' }}>
+      {/* Two-column: chart + monthly breakdown */}
+      <div style={{ display: 'grid', gridTemplateColumns: monthlyData.length > 0 ? '1fr 268px' : '1fr', gap: 14, alignItems: 'start' }}>
 
         {/* Chart card */}
-        <div className="card" style={{ padding: 24 }}>
+        <div className="card" style={{ padding: '22px 24px' }}>
           <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 20 }}>
             <div>
-              <div style={{ fontWeight: 700, fontSize: 16, color: 'var(--t1)', marginBottom: 2 }}>Monthly Payment Schedule</div>
-              <div style={{ fontSize: 13, color: 'var(--t2)' }}>Unpaid invoices grouped by due month</div>
+              <div style={{ fontWeight: 600, fontSize: 14, color: '#CBD6E6', letterSpacing: '-.02em' }}>Payment Schedule</div>
+              <div style={{ fontSize: 12, color: 'var(--t2)', marginTop: 3 }}>Upcoming payments by month</div>
             </div>
+            <button className="btn btn-ghost btn-sm" style={{ fontSize: 11, fontWeight: 600 }}>{monthlyData.length} months</button>
           </div>
 
           {monthlyData.length === 0 ? (
@@ -143,12 +155,11 @@ export default function Dashboard({ kpis, prevKpis, monthlyData, allNames, color
           ) : (
             <div style={{ position: 'relative', minWidth: 0, overflow: 'hidden' }}>
               <ChartBars data={monthlyData} color={color} maxTotal={maxTotal} tooltip={tooltip} setTooltip={setTooltip} />
-              {/* Legend */}
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px 12px', marginTop: 16, paddingTop: 16, borderTop: '1px solid var(--bdr)' }}>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px 12px', marginTop: 16, paddingTop: 14, borderTop: '1px solid rgba(255,255,255,.06)' }}>
                 {allNames.map(n => (
-                  <div key={n} style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 11, color: 'var(--t2)' }}>
-                    <div style={{ width: 7, height: 7, borderRadius: '50%', background: color(n), flexShrink: 0 }} />
-                    <span style={{ maxWidth: 110, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{n}</span>
+                  <div key={n} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <div style={{ width: 6, height: 6, borderRadius: '50%', background: color(n), flexShrink: 0 }} />
+                    <span style={{ fontSize: 11, color: 'var(--t2)', maxWidth: 90, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{n}</span>
                   </div>
                 ))}
               </div>
@@ -159,29 +170,36 @@ export default function Dashboard({ kpis, prevKpis, monthlyData, allNames, color
         {/* Monthly breakdown panel */}
         {monthlyData.length > 0 && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-            {monthlyData.map(({ ym, sups, total }) => (
+            {monthlyData.map(({ ym, sups, total }, mi) => (
               <div
                 key={ym}
                 className="card"
-                style={{ cursor: 'pointer', padding: 16 }}
+                style={{ cursor: 'pointer', padding: '14px 16px' }}
                 onClick={() => onPayMonth && onPayMonth(ym)}
               >
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
-                  <span style={{ fontWeight: 700, fontSize: 13, color: 'var(--t1)' }}>{fmtMonth(ym)}</span>
-                  <span style={{ fontWeight: 700, fontSize: 13, color: 'var(--indigo)', fontFamily: "'DM Mono', monospace" }}>{currency(total)}</span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+                    <span style={{ fontWeight: 600, fontSize: 13, color: '#CBD6E6', letterSpacing: '-.02em' }}>{fmtMonth(ym)}</span>
+                    {mi === 0 && (
+                      <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: '.07em', color: '#818CF8', background: 'rgba(99,102,241,.14)', padding: '2px 7px', borderRadius: 20 }}>DUE NEXT</span>
+                    )}
+                  </div>
+                  <span style={{ fontWeight: 600, fontSize: 13, color: '#CBD6E6', fontVariantNumeric: 'tabular-nums' }}>{currency(total)}</span>
                 </div>
-                {Object.entries(sups).sort((a, b) => b[1] - a[1]).slice(0, 4).map(([sup, amt]) => (
-                  <div key={sup} style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '4px 0', borderTop: '1px solid var(--bdr)', fontSize: 12 }}>
-                    <div style={{ width: 6, height: 6, borderRadius: '50%', background: color(sup), flexShrink: 0 }} />
-                    <span style={{ flex: 1, color: 'var(--t2)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{sup}</span>
-                    <span style={{ fontWeight: 600, color: 'var(--t1)', whiteSpace: 'nowrap', fontFamily: "'DM Mono', monospace", fontSize: 11 }}>{currency(amt)}</span>
-                  </div>
-                ))}
-                {Object.keys(sups).length > 4 && (
-                  <div style={{ fontSize: 11, color: 'var(--t3)', marginTop: 4, paddingTop: 4, borderTop: '1px solid var(--bdr)' }}>
-                    +{Object.keys(sups).length - 4} more
-                  </div>
-                )}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                  {Object.entries(sups).sort((a, b) => b[1] - a[1]).slice(0, 4).map(([sup, amt]) => (
+                    <div key={sup} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '2px 0' }}>
+                      <div style={{ width: 18, height: 18, borderRadius: '50%', background: color(sup), display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 8, fontWeight: 700, color: '#fff', flexShrink: 0 }}>
+                        {sup.charAt(0).toUpperCase()}
+                      </div>
+                      <span style={{ flex: 1, fontSize: 11, color: 'var(--t2)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{sup}</span>
+                      <span style={{ fontSize: 12, fontWeight: 600, color: '#9AAFCA', whiteSpace: 'nowrap', fontVariantNumeric: 'tabular-nums' }}>{currency(amt)}</span>
+                    </div>
+                  ))}
+                  {Object.keys(sups).length > 4 && (
+                    <div style={{ fontSize: 11, color: 'var(--t3)', marginTop: 2 }}>+{Object.keys(sups).length - 4} more</div>
+                  )}
+                </div>
               </div>
             ))}
           </div>
@@ -190,13 +208,20 @@ export default function Dashboard({ kpis, prevKpis, monthlyData, allNames, color
 
       {/* Floating tooltip */}
       {tooltip && (
-        <div className="chart-tip" style={{ left: tooltip.x + 14, top: tooltip.y - 64 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
-            <div style={{ width: 8, height: 8, borderRadius: '50%', background: color(tooltip.supplier), flexShrink: 0 }} />
-            <span style={{ fontWeight: 700, color: color(tooltip.supplier), maxWidth: 180, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{tooltip.supplier}</span>
+        <div style={{
+          position: 'fixed', left: tooltip.x + 16, top: tooltip.y - 80,
+          background: '#131D2E', border: '1px solid rgba(255,255,255,.1)',
+          borderRadius: 10, padding: '12px 16px', pointerEvents: 'none', zIndex: 200,
+          boxShadow: '0 16px 48px rgba(0,0,0,.6)', minWidth: 152,
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+            <div style={{ width: 7, height: 7, borderRadius: '50%', background: color(tooltip.supplier), flexShrink: 0 }} />
+            <span style={{ fontSize: 12, fontWeight: 500, color: '#7A8FA6' }}>{tooltip.supplier}</span>
           </div>
-          <div style={{ color: '#F1F5F9', fontWeight: 800, fontSize: 14, fontFamily: "'DM Mono', monospace" }}>{currency(tooltip.amount)}</div>
-          <div style={{ color: '#94A3B8', marginTop: 2, fontSize: 11 }}>{fmtMonth(tooltip.ym)} · {Math.round((tooltip.amount / tooltip.total) * 100)}%</div>
+          <div style={{ fontSize: 22, fontWeight: 700, color: '#E2E8F0', letterSpacing: '-.03em', lineHeight: 1, fontVariantNumeric: 'tabular-nums' }}>{currency(tooltip.amount)}</div>
+          <div style={{ fontSize: 11, color: '#627488', marginTop: 5 }}>
+            {fmtMonthShort(tooltip.ym)} · {Math.round((tooltip.amount / tooltip.total) * 100)}% of total
+          </div>
         </div>
       )}
     </div>
@@ -205,59 +230,113 @@ export default function Dashboard({ kpis, prevKpis, monthlyData, allNames, color
 
 function ChartBars({ data, color, maxTotal, tooltip, setTooltip }) {
   if (!data.length) return null;
-  const H = 180, W = 72, GAP = 80, PX = 36;
-  const maxV = maxTotal * 1.2;
-  const totalW = data.length * (W + GAP) + PX * 2 - GAP;
-  const yTicks = 4;
+  const H = 172, BW = 54, GAP = 60, PX = 44, topPad = 28;
+  const maxV = maxTotal * 1.16;
+  const totalW = data.length * (BW + GAP) - GAP + PX * 2;
+  const svgH = H + topPad + 44;
 
   return (
     <div style={{ position: 'relative', overflowX: 'auto' }}>
-      <svg width="100%" viewBox={`0 0 ${totalW} ${H + 52}`} style={{ display: 'block', minWidth: 280, overflow: 'visible' }}>
-        {/* Y-axis grid lines */}
-        {Array.from({ length: yTicks }, (_, i) => {
-          const y = H - (H / yTicks) * (i + 1);
-          const val = (maxV / yTicks) * (i + 1);
-          return (
-            <g key={i}>
-              <line x1={0} y1={y} x2={totalW} y2={y} style={{ stroke: 'var(--bdr2)' }} strokeWidth="1" strokeDasharray="4 3" />
-              <text x={0} y={y - 3} textAnchor="start" fill="#94A3B8" fontSize="9" fontFamily="'DM Mono',monospace">
-                {val >= 1000 ? `₪${(val / 1000).toFixed(0)}k` : `₪${Math.round(val)}`}
-              </text>
-            </g>
-          );
-        })}
+      <svg viewBox={`0 0 ${totalW} ${svgH}`} style={{ display: 'block', width: '100%', height: 'auto', overflow: 'visible', minWidth: 280 }}>
+        <defs>
+          <filter id="barGlow" x="-60%" y="-40%" width="220%" height="200%">
+            <feGaussianBlur stdDeviation="8" result="blur"/>
+          </filter>
+          {data.map((_, mi) => {
+            const bx = PX + mi * (BW + GAP);
+            const barH = (data[mi].total / maxV) * H;
+            return (
+              <clipPath key={'cp' + mi} id={'cp' + mi}>
+                <rect x={bx} y={topPad + H - barH} width={BW} height={barH + 2} rx="7"/>
+              </clipPath>
+            );
+          })}
+        </defs>
+
+        {/* Grid lines */}
+        {[0.25, 0.5, 0.75, 1.0].map((p, i) => (
+          <line key={'g' + i}
+            x1={0} y1={topPad + H - H * p + 0.5} x2={totalW} y2={topPad + H - H * p + 0.5}
+            stroke={p >= 0.5 ? 'rgba(255,255,255,0.06)' : 'rgba(255,255,255,0.03)'}
+            strokeWidth={1}
+          />
+        ))}
+
+        {/* Y-axis labels */}
+        {[0.5, 1.0].map(p => (
+          <text key={'yl' + p}
+            x={PX - 8} y={topPad + H - H * p - 6}
+            textAnchor="end" fill="#4A6278" fontSize="10"
+            fontFamily={FONT} fontWeight="500"
+          >
+            {'₪' + Math.round(maxTotal * p / 1000) + 'k'}
+          </text>
+        ))}
+
+        {/* Baseline */}
+        <line x1={0} y1={topPad + H + 0.5} x2={totalW} y2={topPad + H + 0.5} stroke="rgba(255,255,255,0.08)" strokeWidth={1}/>
 
         {/* Bars */}
         {data.map(({ ym, sups, total }, mi) => {
-          const bx = PX + mi * (W + GAP);
-          const bh = (total / maxV) * H;
-          const by = H - bh;
-          let yoff = H;
+          const bx = PX + mi * (BW + GAP);
+          const barH = (total / maxV) * H;
+          const isFirst = mi === 0;
+          const dimmed = tooltip && tooltip.ym !== ym;
+          let yOff = topPad + H;
           const segs = Object.entries(sups).map(([sup, amt]) => {
-            const h = Math.max(1, (amt / maxV) * H);
-            yoff -= h;
-            return { sup, amt, y: yoff, h };
+            const h = Math.max(2, (amt / maxV) * H);
+            yOff -= h;
+            return { sup, amt, y: yOff, h };
           });
+
           return (
             <g key={ym}>
-              <defs><clipPath id={`cp${mi}`}><rect x={bx} y={by} width={W} height={bh} rx="5" /></clipPath></defs>
-              <text x={bx + W / 2} y={by - 6} textAnchor="middle" fill="var(--t2)" fontSize="10" fontWeight="700" fontFamily="'DM Mono',monospace">
-                {currency(total)}
+              {isFirst && (
+                <rect x={bx} y={topPad + H - barH} width={BW} height={barH}
+                  rx="7" fill="#6366F1" filter="url(#barGlow)" opacity={0.22}
+                />
+              )}
+              <text x={bx + BW / 2} y={topPad + H - barH - 9}
+                textAnchor="middle" fill={isFirst ? '#818CF8' : '#4A6278'}
+                fontSize="11" fontFamily={FONT} fontWeight="700"
+                opacity={dimmed ? 0.4 : 1}
+              >
+                {'₪' + Math.round(total / 1000) + 'k'}
               </text>
               <g clipPath={`url(#cp${mi})`}>
                 {segs.map(({ sup, amt, y, h }, si) => (
                   <rect
-                    key={si} x={bx} y={y} width={W} height={h + .5} fill={color(sup)}
-                    style={{ cursor: 'crosshair' }}
+                    key={si} x={bx} y={y} width={BW} height={h + 1.5}
+                    fill={color(sup)}
+                    opacity={dimmed ? 0.18 : (tooltip && tooltip.supplier !== sup && tooltip.ym === ym ? 0.5 : 1)}
+                    style={{ cursor: 'crosshair', transition: 'opacity .18s' }}
                     onMouseEnter={e => setTooltip({ x: e.clientX, y: e.clientY, supplier: sup, amount: amt, total, ym })}
-                    onMouseMove={e  => setTooltip(t => t ? { ...t, x: e.clientX, y: e.clientY } : t)}
+                    onMouseMove={e => setTooltip(t => t ? { ...t, x: e.clientX, y: e.clientY } : t)}
                     onMouseLeave={() => setTooltip(null)}
                   />
                 ))}
+                {segs.slice(0, -1).map(({ y }, si) => (
+                  <line key={'div' + si}
+                    x1={bx} y1={Math.round(y) + 0.5} x2={bx + BW} y2={Math.round(y) + 0.5}
+                    stroke="rgba(7,9,15,0.5)" strokeWidth={1.5}
+                    style={{ pointerEvents: 'none' }}
+                  />
+                ))}
               </g>
-              <text x={bx + W / 2} y={H + 22} textAnchor="middle" fill="#64748B" fontSize="11" fontFamily="'Plus Jakarta Sans',sans-serif" fontWeight="500">
+              <text x={bx + BW / 2} y={topPad + H + 19}
+                textAnchor="middle" fill={isFirst ? '#818CF8' : '#5A7090'}
+                fontSize="13" fontFamily={FONT} fontWeight={isFirst ? '600' : '400'}
+              >
                 {fmtMonthShort(ym)}
               </text>
+              {isFirst && (
+                <text x={bx + BW / 2} y={topPad + H + 34}
+                  textAnchor="middle" fill="#4A4FA0"
+                  fontSize="8" fontFamily={FONT} fontWeight="700" letterSpacing=".12em"
+                >
+                  DUE NOW
+                </text>
+              )}
             </g>
           );
         })}

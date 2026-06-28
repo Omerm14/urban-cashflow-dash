@@ -179,6 +179,38 @@ export default function InvoicesView({ computed, dupeIds, updateInvoice, deleteI
         )}
       </div>
 
+      {/* Month filter pills — table view */}
+      {viewMode === "table" && (() => {
+        const months = [...new Set(computed.map(i => i.dueDate?.slice(0,7)).filter(Boolean))].sort();
+        const [activeMonth, setActiveMonth] = [selectedMonth, setSelectedMonth];
+        const monthTotals = months.reduce((acc, ym) => {
+          acc[ym] = computed.filter(i => i.dueDate?.startsWith(ym)).reduce((s, i) => s + Number(i.amount), 0);
+          return acc;
+        }, {});
+        if (!months.length) return null;
+        return (
+          <div style={{ display:'flex', gap:6, flexWrap:'wrap', marginBottom:14 }}>
+            <button
+              onClick={() => setActiveMonth(null)}
+              style={{ padding:'7px 16px', background: !activeMonth ? '#6366F1' : 'rgba(255,255,255,.04)', border: !activeMonth ? 'none' : '1px solid rgba(255,255,255,.08)', borderRadius:24, fontSize:13, fontWeight: !activeMonth ? 600 : 500, color: !activeMonth ? '#fff' : 'rgba(255,255,255,.4)', cursor:'pointer', fontFamily:'inherit', transition:'all .12s' }}
+            >
+              All
+            </button>
+            {months.map(ym => {
+              const active = activeMonth === ym;
+              const label = new Date(ym + '-02').toLocaleDateString('en-US', { month: 'short', year: '2-digit' }).replace(' ', " '");
+              const total = monthTotals[ym];
+              return (
+                <button key={ym} onClick={() => setActiveMonth(active ? null : ym)}
+                  style={{ padding:'7px 16px', background: active ? '#6366F1' : 'rgba(255,255,255,.04)', border: active ? 'none' : '1px solid rgba(255,255,255,.08)', borderRadius:24, fontSize:13, fontWeight: active ? 600 : 500, color: active ? '#fff' : 'rgba(255,255,255,.4)', cursor:'pointer', fontFamily:'inherit', transition:'all .12s' }}>
+                  {label} <span style={{ opacity: active ? .65 : .7, fontWeight:400, marginLeft:4 }}>₪{Math.round(total/1000)}k</span>
+                </button>
+              );
+            })}
+          </div>
+        );
+      })()}
+
       {viewMode === "table"
         ? <InvoicesTable
             computed={sortedComputed} dupeIds={dupeIds}

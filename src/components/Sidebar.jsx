@@ -99,7 +99,7 @@ export default function Sidebar({
       <input ref={fileRef} type="file" accept="image/*,application/pdf" multiple onChange={onUpload} style={{ display: 'none' }} />
 
       {/* Main nav */}
-      <div className="sb-section">MAIN</div>
+      <div className="sb-section">MENU</div>
       {mainLinks.map(({ key, label }) => (
         <button
           key={key}
