@@ -71,6 +71,17 @@ export default function SuppliersModal({ suppliers, addSupplier, updateSupplier,
                   <span style={{ flex:1, fontSize:13.5 }}>{sup.name}</span>
                   <span style={{ background:"var(--surf2)", padding:"3px 10px", borderRadius:6, fontSize:11.5, fontWeight:600, color:"var(--t2)", fontFamily:"monospace", whiteSpace:"nowrap" }}>{sup.terms || "—"}</span>
                   {sup.notes && <span style={{ fontSize:12, color:"var(--t3)", maxWidth:100, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{sup.notes}</span>}
+                  <button
+                    title={sup.recurring ? "ספק קבוע — לחץ להסיר" : "סמן כספק קבוע"}
+                    onClick={() => updateSupplier(sup.id, { recurring: !sup.recurring })}
+                    style={{
+                      padding:"2px 9px", borderRadius:20, border:`1px solid ${sup.recurring ? "rgba(6,182,212,.4)" : "var(--bdr)"}`,
+                      background: sup.recurring ? "rgba(6,182,212,.1)" : "transparent",
+                      color: sup.recurring ? "var(--cyan)" : "var(--t3)",
+                      cursor:"pointer", fontSize:11, fontWeight:600, fontFamily:"inherit", transition:"all .15s", flexShrink:0,
+                    }}>
+                    {sup.recurring ? "✓ קבוע" : "קבוע"}
+                  </button>
                   <div style={{ display:"flex", gap:5, flexShrink:0 }}>
                     <button className="btn btn-ghost btn-sm" onClick={() => setEditSupplier({...sup})}>Edit</button>
                     <button className="btn btn-danger btn-sm" onClick={() => { if (confirm("Delete?")) deleteSupplier(sup.id); }}>×</button>

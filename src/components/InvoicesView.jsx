@@ -9,7 +9,7 @@ function nxtMonth(ym) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
 }
 
-export default function InvoicesView({ computed, dupeIds, updateInvoice, deleteInvoice, bulkMarkPaid, bulkMarkUnpaid, bulkDelete, setEditInvoice, color, onViewAttachment, preSelMonth, onClearPreSel }) {
+export default function InvoicesView({ computed, dupeIds, anomalyMap, updateInvoice, deleteInvoice, bulkMarkPaid, bulkMarkUnpaid, bulkDelete, setEditInvoice, color, onViewAttachment, preSelMonth, onClearPreSel }) {
   const [selectedIds,   setSelectedIds]   = useState(new Set());
   const [viewMode,      setViewMode]      = useState("grouped");
   const [selectedMonth, setSelectedMonth] = useState(() => toYM(new Date()));
@@ -166,7 +166,7 @@ export default function InvoicesView({ computed, dupeIds, updateInvoice, deleteI
 
       {viewMode === "table"
         ? <InvoicesTable
-            computed={computed} dupeIds={dupeIds}
+            computed={computed} dupeIds={dupeIds} anomalyMap={anomalyMap}
             updateInvoice={updateInvoice} deleteInvoice={handleDeleteInvoice}
             setEditInvoice={setEditInvoice} color={color}
             selectedIds={selectedIds} onToggleSelect={toggleSelect} onToggleAll={toggleAll}

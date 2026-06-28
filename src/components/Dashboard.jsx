@@ -19,7 +19,7 @@ function CountUp({ to, duration = 1200 }) {
   return <>{currency(v)}</>;
 }
 
-export default function Dashboard({ kpis, monthlyData, allNames, color, maxTotal, onPayMonth }) {
+export default function Dashboard({ kpis, monthlyData, allNames, color, maxTotal, onPayMonth, missingSuppliers, anomalyMap, onViewInvoices }) {
   const [tooltip, setTooltip] = useState(null);
 
   const stats = [
@@ -32,8 +32,55 @@ export default function Dashboard({ kpis, monthlyData, allNames, color, maxTotal
   // CTA banner: first upcoming month with unpaid invoices
   const ctaMonth = monthlyData[0] || null;
 
+  const anomalousInvoices = anomalyMap ? [...anomalyMap.entries()] : [];
+
   return (
     <div style={{ animation:"slideUp .4s cubic-bezier(.16,1,.3,1)" }}>
+
+      {/* Missing invoices alert */}
+      {missingSuppliers?.length > 0 && (
+        <div style={{ marginBottom:16, padding:"14px 18px", borderRadius:12, background:"rgba(249,115,22,.08)", border:"1px solid rgba(249,115,22,.3)", display:"flex", alignItems:"flex-start", gap:14, cursor:"pointer" }}
+          onClick={onViewInvoices}>
+          <span style={{ fontSize:22, flexShrink:0, marginTop:1 }}>⚠️</span>
+          <div style={{ flex:1 }}>
+            <div style={{ fontWeight:700, fontSize:14, color:"#fb923c", marginBottom:4 }}>
+              {missingSuppliers.length === 1
+                ? "ספק קבוע לא שלח חשבונית החודש"
+                : `${missingSuppliers.length} ספקים קבועים לא שלחו חשבונית החודש`}
+            </div>
+            <div style={{ display:"flex", flexWrap:"wrap", gap:"4px 8px" }}>
+              {missingSuppliers.map(name => (
+                <span key={name} style={{ fontSize:12, color:"#fdba74", background:"rgba(249,115,22,.12)", padding:"2px 9px", borderRadius:20, border:"1px solid rgba(249,115,22,.2)" }}>
+                  {name}
+                </span>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Anomalous invoices alert */}
+      {anomalousInvoices.length > 0 && (
+        <div style={{ marginBottom:16, padding:"14px 18px", borderRadius:12, background:"rgba(234,179,8,.07)", border:"1px solid rgba(234,179,8,.28)", display:"flex", alignItems:"flex-start", gap:14, cursor:"pointer" }}
+          onClick={onViewInvoices}>
+          <span style={{ fontSize:22, flexShrink:0, marginTop:1 }}>📊</span>
+          <div style={{ flex:1 }}>
+            <div style={{ fontWeight:700, fontSize:14, color:"#fbbf24", marginBottom:4 }}>
+              {anomalousInvoices.length === 1
+                ? "חשבונית אחת חריגה החודש"
+                : `${anomalousInvoices.length} חשבוניות חריגות החודש`}
+            </div>
+            <div style={{ fontSize:12, color:"#fde68a", lineHeight:1.6 }}>
+              {anomalousInvoices.slice(0, 3).map(([id, a]) => (
+                <span key={id} style={{ display:"inline-block", marginLeft:8 }}>
+                  {a.direction === 'higher' ? `↑ ${a.deviationPct}% מעל הממוצע` : `↓ ${a.deviationPct}% מתחת לממוצע`}
+                </span>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* KPI Cards */}
       <div className="stat-grid" style={{ marginBottom:20 }}>
         {stats.map(s => (
