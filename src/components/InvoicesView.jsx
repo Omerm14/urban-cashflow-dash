@@ -9,7 +9,7 @@ function nxtMonth(ym) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
 }
 
-export default function InvoicesView({ computed, dupeIds, anomalyMap, updateInvoice, deleteInvoice, bulkMarkPaid, bulkMarkUnpaid, bulkDelete, setEditInvoice, color, onViewAttachment, preSelMonth, onClearPreSel }) {
+export default function InvoicesView({ computed, dupeIds, anomalyMap, updateInvoice, deleteInvoice, bulkMarkPaid, bulkMarkUnpaid, bulkDelete, setEditInvoice, color, onViewAttachment, preSelMonth, onClearPreSel, missingSuppliers, onOpenMissing, onOpenAnomalies }) {
   const [selectedIds,   setSelectedIds]   = useState(new Set());
   const [viewMode,      setViewMode]      = useState("grouped");
   const [selectedMonth, setSelectedMonth] = useState(() => toYM(new Date()));
@@ -132,8 +132,36 @@ export default function InvoicesView({ computed, dupeIds, anomalyMap, updateInvo
   const selInvs = computed.filter(i => selectedIds.has(i.id));
   const selTotal = selInvs.reduce((s, i) => s + Number(i.amount), 0);
 
+  const anomalousCount = anomalyMap ? anomalyMap.size : 0;
+
   return (
     <div>
+      {/* Alert strip */}
+      {(missingSuppliers?.length > 0 || anomalousCount > 0) && (
+        <div style={{ display:"flex", gap:8, marginBottom:14, flexWrap:"wrap" }}>
+          {missingSuppliers?.length > 0 && (
+            <button
+              onClick={onOpenMissing}
+              style={{ display:"flex", alignItems:"center", gap:7, padding:"6px 14px", borderRadius:20, border:"1px solid rgba(249,115,22,.4)", background:"rgba(249,115,22,.1)", color:"#fb923c", cursor:"pointer", fontFamily:"inherit", fontSize:12, fontWeight:700, transition:"all .15s" }}
+              onMouseEnter={e => e.currentTarget.style.background = "rgba(249,115,22,.18)"}
+              onMouseLeave={e => e.currentTarget.style.background = "rgba(249,115,22,.1)"}>
+              <span>⚠</span>
+              <span style={{ direction:"rtl" }}>{missingSuppliers.length} ספקים חסרים החודש</span>
+            </button>
+          )}
+          {anomalousCount > 0 && (
+            <button
+              onClick={onOpenAnomalies}
+              style={{ display:"flex", alignItems:"center", gap:7, padding:"6px 14px", borderRadius:20, border:"1px solid rgba(234,179,8,.4)", background:"rgba(234,179,8,.1)", color:"#fbbf24", cursor:"pointer", fontFamily:"inherit", fontSize:12, fontWeight:700, transition:"all .15s" }}
+              onMouseEnter={e => e.currentTarget.style.background = "rgba(234,179,8,.18)"}
+              onMouseLeave={e => e.currentTarget.style.background = "rgba(234,179,8,.1)"}>
+              <span>📊</span>
+              <span style={{ direction:"rtl" }}>{anomalousCount} חשבוניות חריגות</span>
+            </button>
+          )}
+        </div>
+      )}
+
       {/* Header row */}
       <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:14, flexWrap:"wrap" }}>
         <div className="view-toggle">
@@ -173,7 +201,7 @@ export default function InvoicesView({ computed, dupeIds, anomalyMap, updateInvo
             onViewAttachment={onViewAttachment}
           />
         : <InvoicesGroupedView
-            computed={computed} dupeIds={dupeIds}
+            computed={computed} dupeIds={dupeIds} anomalyMap={anomalyMap}
             updateInvoice={updateInvoice} deleteInvoice={handleDeleteInvoice}
             setEditInvoice={setEditInvoice} color={color}
             selectedIds={selectedIds} onToggleSelect={toggleSelect} onToggleAll={toggleAll}
