@@ -4,16 +4,25 @@ const express = require('express');
 const app  = express();
 const auth = require('../server/middleware/auth');
 
-// Capture raw body for webhook signature verification before JSON parsing
-app.use((req, res, next) => {
-  if (req.path === '/api/webhook/whatsapp' && req.method === 'POST') {
-    let data = '';
-    req.on('data', chunk => { data += chunk; });
-    req.on('end', () => { req.rawBody = data; next(); });
-  } else {
-    next();
-  }
-});
+// WhatsApp webhook must be registered BEFORE global json parser —
+// it uses its own body reader to capture rawBody for HMAC verification.
+const webhook = require('../server/routes/webhook');
+app.get('/api/webhook/whatsapp', webhook.verifyWhatsApp);
+app.post('/api/webhook/whatsapp',
+  (req, res, next) => {
+    if (req.body && typeof req.body === 'object' && !Buffer.isBuffer(req.body)) return next();
+    const chunks = [];
+    req.on('data', c => chunks.push(c));
+    req.on('end', () => {
+      const buf = Buffer.concat(chunks);
+      req.rawBody = buf;
+      try { req.body = buf.length ? JSON.parse(buf.toString()) : {}; } catch { req.body = {}; }
+      next();
+    });
+    req.on('error', () => next());
+  },
+  webhook.handleWhatsApp,
+);
 
 app.use(express.json({ limit: '20mb' }));
 
@@ -46,10 +55,6 @@ app.delete('/api/invoices/:id',           auth, invoices.remove);
 app.post('/api/invoices/bulk-delete',     auth, invoices.bulkRemove);
 app.post('/api/attachments/presign',      auth, invoices.presignUpload);
 
-// WhatsApp webhook (no auth — verified by HMAC signature)
-const webhook = require('../server/routes/webhook');
-app.get('/api/webhook/whatsapp',  webhook.verifyWhatsApp);
-app.post('/api/webhook/whatsapp', webhook.handleWhatsApp);
 
 // Billing (Meshulam)
 const billing = require('../server/routes/billing');
