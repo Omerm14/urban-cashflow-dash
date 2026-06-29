@@ -757,6 +757,7 @@ function Dashboard({ invoices, onPayAllJuly, chartData, supplierNames, supplierC
 
   const isCompact = isMobile || isTablet;
   const kpiCols = isMobile ? "1fr 1fr" : isTablet ? "1fr 1fr" : "repeat(4,1fr)";
+  const [chartRange, setChartRange] = React.useState("4m");
   const chartSuppliers = supplierNames || [];
   const resolvedChartData = chartData && chartData.length > 0 ? chartData : [];
   const getColor = supplierColor || (() => "#6366F1");
@@ -829,10 +830,21 @@ function Dashboard({ invoices, onPayAllJuly, chartData, supplierNames, supplierC
               <div style={{ fontFamily: SANS, fontWeight: 600, fontSize: 14, color: T.isDark ? "#CBD6E6" : T.t1, letterSpacing: "-0.02em" }}>{t("dash_payment_schedule")}</div>
               <div style={{ fontFamily: SANS, fontSize: 12, color: T.t2, marginTop: 3 }}>{t("dash_upcoming")}</div>
             </div>
-            <button style={{ padding: "5px 12px", border: `1px solid ${T.bdr}`, borderRadius: 6, background: T.isDark ? "rgba(255,255,255,.04)" : T.surf2, fontFamily: SANS, fontSize: 11, fontWeight: 600, color: T.t2, cursor: "pointer" }}>{t("dash_4months")}</button>
+            <div style={{ display: "flex", gap: 4, background: T.isDark ? "rgba(255,255,255,.04)" : T.surf2, border: `1px solid ${T.bdr}`, borderRadius: 8, padding: 3 }}>
+              {[{ key: "1m", label: "1 month" }, { key: "4m", label: "4 months" }].map(opt => (
+                <button key={opt.key} onClick={() => setChartRange(opt.key)} style={{ padding: "4px 12px", borderRadius: 6, border: "none", background: chartRange === opt.key ? (T.isDark ? "rgba(99,102,241,.25)" : T.indigoTint) : "transparent", fontFamily: SANS, fontSize: 11, fontWeight: 600, color: chartRange === opt.key ? (T.isDark ? "#A5B4FC" : T.indigo) : T.t2, cursor: "pointer" }}>{opt.label}</button>
+              ))}
+            </div>
           </div>
-          <ResponsiveContainer width="100%" height={isMobile ? 140 : 180}>
-            <BarChart data={resolvedChartData} barSize={isMobile ? 20 : 28} barCategoryGap="40%">
+          {(() => {
+            const now2 = new Date();
+            const currentMonthKey = `${["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"][now2.getMonth()]} '${String(now2.getFullYear()).slice(2)}`;
+            const displayData = chartRange === "1m"
+              ? resolvedChartData.filter(m => m.month === currentMonthKey)
+              : resolvedChartData.slice(-4);
+            return (
+          <ResponsiveContainer width="100%" height={isMobile ? 180 : 260}>
+            <BarChart data={displayData} barSize={chartRange === "1m" ? (isMobile ? 40 : 60) : (isMobile ? 20 : 28)} barCategoryGap="40%">
               <CartesianGrid strokeDasharray="3 3" stroke={T.bdr} vertical={false} />
               <XAxis dataKey="month" tick={{ fontFamily: SANS, fontSize: isMobile ? 10 : 11, fill: T.t3 }} axisLine={false} tickLine={false} />
               <YAxis tick={{ fontFamily: SANS, fontSize: 10, fill: T.t3 }} axisLine={false} tickLine={false} tickFormatter={v => `₪${(v / 1000).toFixed(0)}k`} width={isMobile ? 32 : 38} />
@@ -842,6 +854,8 @@ function Dashboard({ invoices, onPayAllJuly, chartData, supplierNames, supplierC
               ))}
             </BarChart>
           </ResponsiveContainer>
+            );
+          })()}
           <div style={{ display: "flex", flexWrap: "wrap", gap: "10px", marginTop: 16, paddingTop: 14, borderTop: `1px solid ${T.isDark ? "rgba(255,255,255,.06)" : T.bdr}` }}>
             {chartSuppliers.map(n => (
               <div key={n} style={{ display: "flex", alignItems: "center", gap: 6 }}>
@@ -1044,7 +1058,7 @@ function GroupedView({ invoices, selectedMonth, onMonthChange, selectedIds, onTo
 
 function InvoicesView({ invoices, selectedMonth, onMonthChange, onMarkPaid, onBulkPaid, onBulkUnpaid, preSelectAll, onEditInvoice, anomalyMap, missingSuppliers }) {
   const T = useT();
-  const { isMobile } = useLayout();
+  const { isMobile, isTablet } = useLayout();
   const { t } = useLang();
   const supplierList = [...new Set(invoices.map(i => i.supplier))];
   const invColor = name => PALETTE[supplierList.indexOf(name) % PALETTE.length] || "#6366F1";
@@ -1197,12 +1211,14 @@ function InvoicesView({ invoices, selectedMonth, onMonthChange, onMarkPaid, onBu
       )}
 
       {selectedIds.size > 0 && (
-        <div style={{ position: "fixed", ...(isMobile ? { bottom: 0, left: 0, right: 0, borderRadius: "12px 12px 0 0" } : { bottom: 24, left: "calc(240px + (100vw - 240px) / 2)", transform: "translateX(-50%)", borderRadius: 50 }), background: "#0F172A", padding: isMobile ? "14px 20px" : "10px 20px", display: "flex", alignItems: "center", gap: 10, boxShadow: "0 -4px 24px rgba(0,0,0,0.3)", animation: "slideUp 0.25s cubic-bezier(.16,1,.3,1)", zIndex: 200, whiteSpace: "nowrap" }}>
-          <div style={{ width: 22, height: 22, borderRadius: "50%", background: "#6366F1", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: MONO, fontWeight: 700, fontSize: 11, color: "#fff" }}>{selectedIds.size}</div>
-          <span style={{ fontFamily: SANS, fontWeight: 500, color: "#94A3B8", fontSize: 13, flex: 1 }}>{selectedIds.size} · <span style={{ fontFamily: MONO, color: "#fff" }}>{fmt(selTotal)}</span></span>
-          <button onClick={() => { onBulkUnpaid?.([...selectedIds]); setSelectedIds(new Set()); }} style={{ padding: "7px 14px", borderRadius: 50, background: "transparent", border: "1px solid #334155", cursor: "pointer", fontFamily: SANS, fontWeight: 600, fontSize: 13, color: "#94A3B8", display: "flex", alignItems: "center", gap: 5 }}><X size={12} />Unpaid</button>
-          <button onClick={() => setShowPayConfirm(true)} style={{ padding: "7px 18px", borderRadius: 50, background: "#6366F1", border: "none", cursor: "pointer", fontFamily: SANS, fontWeight: 600, fontSize: 13, color: "#fff" }}>{t("inv_pay_selected")} →</button>
-          <button onClick={() => setSelectedIds(new Set())} style={{ background: "none", border: "none", color: "#475569", cursor: "pointer", display: "flex", alignItems: "center" }}><X size={15} /></button>
+        <div style={{ position: "fixed", bottom: isMobile ? 0 : 24, left: isMobile ? 0 : (isTablet ? 0 : 240), right: 0, display: "flex", justifyContent: "center", pointerEvents: "none", zIndex: 200, animation: "slideUp 0.25s cubic-bezier(.16,1,.3,1)" }}>
+          <div style={{ pointerEvents: "auto", background: "#0F172A", padding: isMobile ? "14px 20px" : "10px 20px", display: "flex", alignItems: "center", gap: 10, boxShadow: "0 -4px 24px rgba(0,0,0,0.3)", borderRadius: isMobile ? "12px 12px 0 0" : 50, width: isMobile ? "100%" : "auto", whiteSpace: "nowrap" }}>
+            <div style={{ width: 22, height: 22, borderRadius: "50%", background: "#6366F1", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: MONO, fontWeight: 700, fontSize: 11, color: "#fff" }}>{selectedIds.size}</div>
+            <span style={{ fontFamily: SANS, fontWeight: 500, color: "#94A3B8", fontSize: 13, flex: 1 }}>{selectedIds.size} · <span style={{ fontFamily: MONO, color: "#fff" }}>{fmt(selTotal)}</span></span>
+            <button onClick={() => { onBulkUnpaid?.([...selectedIds]); setSelectedIds(new Set()); }} style={{ padding: "7px 14px", borderRadius: 50, background: "transparent", border: "1px solid #334155", cursor: "pointer", fontFamily: SANS, fontWeight: 600, fontSize: 13, color: "#94A3B8", display: "flex", alignItems: "center", gap: 5 }}><X size={12} />Unpaid</button>
+            <button onClick={() => setShowPayConfirm(true)} style={{ padding: "7px 18px", borderRadius: 50, background: "#6366F1", border: "none", cursor: "pointer", fontFamily: SANS, fontWeight: 600, fontSize: 13, color: "#fff" }}>{t("inv_pay_selected")} →</button>
+            <button onClick={() => setSelectedIds(new Set())} style={{ background: "none", border: "none", color: "#475569", cursor: "pointer", display: "flex", alignItems: "center" }}><X size={15} /></button>
+          </div>
         </div>
       )}
 
