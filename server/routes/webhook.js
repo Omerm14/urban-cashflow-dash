@@ -31,7 +31,8 @@ exports.handleWhatsApp = async (req, res) => {
   const signature = req.headers['x-hub-signature-256'];
 
   const body = req.body;
-  if (!body?.entry?.length) return;
+  console.log('[webhook:wa] body type:', typeof body, 'keys:', body ? Object.keys(body) : 'null', 'entry len:', body?.entry?.length);
+  if (!body?.entry?.length) { console.log('[webhook:wa] no entries, raw body preview:', JSON.stringify(body)?.slice(0, 200)); return; }
 
   // Verify HMAC signature using the shared app secret
   if (rawBody && process.env.WHATSAPP_APP_SECRET) {
