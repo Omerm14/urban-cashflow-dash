@@ -766,7 +766,6 @@ function Dashboard({ invoices, onPayAllJuly, chartData, supplierNames, supplierC
               </div>
             ))}
           </div>
-        </div>
       </div>
 
       <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr 1fr" : "repeat(4,1fr)", gap: 10 }}>
