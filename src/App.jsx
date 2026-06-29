@@ -778,7 +778,7 @@ function Dashboard({ invoices, onPayAllJuly, chartData, supplierNames, supplierC
               <span style={{ fontFamily: SANS, fontWeight: 600, fontSize: 13, color: T.isDark ? "#CBD6E6" : T.t1, letterSpacing: "-0.02em" }}>{m.month}</span>
               <span style={{ fontFamily: MONO, fontWeight: 600, fontSize: 13, color: T.isDark ? "#CBD6E6" : T.t1, fontVariantNumeric: "tabular-nums" }}>{fmt(m.total)}</span>
             </div>
-            {Object.entries(m).filter(([k]) => k !== "month" && k !== "total" && k !== "_year" && k !== "_mon" && m[k] > 0)
+            {!isMobile && Object.entries(m).filter(([k]) => k !== "month" && k !== "total" && k !== "_year" && k !== "_mon" && m[k] > 0)
               .sort((a, b) => b[1] - a[1]).slice(0, 3)
               .map(([sup, amt]) => (
                 <div key={sup} style={{ display: "flex", alignItems: "center", gap: 6, padding: "2px 0" }}>
