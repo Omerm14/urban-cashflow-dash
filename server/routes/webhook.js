@@ -1,6 +1,35 @@
 const crypto   = require('crypto');
+const https    = require('https');
 const supabase  = require('../lib/supabase');
 const sync      = require('../services/syncProcessor');
+
+// Send a text reply to a WhatsApp phone number via the Cloud API
+async function sendWhatsAppReply(to, text) {
+  const token   = process.env.WHATSAPP_API_TOKEN;
+  const phoneId = process.env.WHATSAPP_PHONE_NUMBER_ID;
+  if (!token || !phoneId || !to) return;
+
+  const payload = JSON.stringify({
+    messaging_product: 'whatsapp',
+    to,
+    type: 'text',
+    text: { body: text },
+  });
+
+  return new Promise((resolve) => {
+    const req = https.request({
+      hostname: 'graph.facebook.com',
+      path:     `/v20.0/${phoneId}/messages`,
+      method:   'POST',
+      headers:  { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+    }, (res) => {
+      res.resume();
+      res.on('end', resolve);
+    });
+    req.on('error', (e) => console.error('[webhook:wa] reply send error:', e.message));
+    req.end(payload);
+  });
+}
 
 // Verify WhatsApp Cloud API webhook signature
 const verifySignature = (rawBody, signature, secret) => {
@@ -131,17 +160,18 @@ exports.handleWhatsApp = async (req, res) => {
         if (!integration) continue;
 
         console.log(`[webhook:wa] queuing job for ${msg.id}`);
-        jobs.push({ integration, media, mediaType, mimeType, msgId: msg.id });
+        jobs.push({ integration, media, mediaType, mimeType, msgId: msg.id, msgFrom: msg.from });
       }
     }
   }
 
   // Process all jobs before responding — Vercel kills async work after response is sent
-  for (const { integration, media, mediaType, mimeType, msgId } of jobs) {
+  for (const { integration, media, mediaType, mimeType, msgId, msgFrom } of jobs) {
     const filename = media.filename || `${mediaType}_${media.id}`;
     try {
       await sync.processWhatsAppMedia(integration, integration.user_id, media.id, filename, mimeType, msgId);
       console.log(`[webhook:wa] processed ${msgId}`);
+      await sendWhatsAppReply(msgFrom, '✅ החשבונית התקבלה בהצלחה!');
     } catch (err) {
       console.error(`[webhook:wa] failed ${msgId}:`, err.message);
     }
