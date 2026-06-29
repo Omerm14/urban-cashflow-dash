@@ -72,7 +72,7 @@ exports.handleWhatsApp = async (req, res) => {
             continue;
           }
 
-          const { data: integration } = await supabase
+          const { data: integration, error: dbErr } = await supabase
             .from('integrations')
             .select('*')
             .eq('type', 'whatsapp')
@@ -80,6 +80,7 @@ exports.handleWhatsApp = async (req, res) => {
             .filter('config->>inbox_code', 'eq', inboxCode)
             .maybeSingle();
 
+          console.log(`[webhook:wa] supabase lookup for ${inboxCode}:`, integration?.id || 'not found', dbErr?.message || '');
           if (!integration) {
             console.log(`[webhook:wa] unknown inbox code: ${inboxCode}`);
             continue;
