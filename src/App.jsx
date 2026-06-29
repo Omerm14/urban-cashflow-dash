@@ -739,8 +739,7 @@ function Dashboard({ invoices, onPayAllJuly, chartData, supplierNames, supplierC
         </div>
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 380px", gap: 14 }}>
-        <div style={{ background: T.surf, border: `1px solid ${T.bdr}`, borderRadius: 12, padding: "22px 24px" }}>
+      <div style={{ background: T.surf, border: `1px solid ${T.bdr}`, borderRadius: 12, padding: "22px 24px", marginBottom: 14 }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 20 }}>
             <div>
               <div style={{ fontFamily: SANS, fontWeight: 600, fontSize: 14, color: T.isDark ? "#CBD6E6" : T.t1, letterSpacing: "-0.02em" }}>Payment Schedule</div>
@@ -768,29 +767,29 @@ function Dashboard({ invoices, onPayAllJuly, chartData, supplierNames, supplierC
             ))}
           </div>
         </div>
+      </div>
 
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-          {resolvedChartData.slice(-4).map(m => (
-            <div key={m.month} onClick={() => onViewMonth?.(m.month)}
-              style={{ background: T.surf, border: `1px solid ${T.bdr}`, borderRadius: 12, padding: "10px 12px", cursor: "pointer", transition: "border-color 0.18s" }}
-              onMouseEnter={e => e.currentTarget.style.borderColor = T.isDark ? "rgba(255,255,255,.12)" : T.indigo}
-              onMouseLeave={e => e.currentTarget.style.borderColor = T.bdr}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
-                <span style={{ fontFamily: SANS, fontWeight: 600, fontSize: 12, color: T.isDark ? "#CBD6E6" : T.t1, letterSpacing: "-0.02em" }}>{m.month}</span>
-                <span style={{ fontFamily: MONO, fontWeight: 600, fontSize: 12, color: T.isDark ? "#CBD6E6" : T.t1, fontVariantNumeric: "tabular-nums" }}>{fmt(m.total)}</span>
-              </div>
-              {!isMobile && Object.entries(m).filter(([k]) => k !== "month" && k !== "total" && k !== "_year" && k !== "_mon" && m[k] > 0)
-                .sort((a, b) => b[1] - a[1]).slice(0, 3)
-                .map(([sup, amt]) => (
-                  <div key={sup} style={{ display: "flex", alignItems: "center", gap: 8, padding: "2px 0" }}>
-                    <div style={{ width: 18, height: 18, borderRadius: "50%", background: getColor(sup), display: "flex", alignItems: "center", justifyContent: "center", fontFamily: SANS, fontSize: 8, fontWeight: 700, color: "#fff", flexShrink: 0 }}>{sup.charAt(0)}</div>
-                    <span style={{ flex: 1, fontFamily: SANS, fontSize: 11, color: T.isDark ? "#7A8FA6" : T.t2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{sup}</span>
-                    <span style={{ fontFamily: MONO, fontSize: 12, fontWeight: 600, color: T.isDark ? "#9AAFCA" : T.t1, fontVariantNumeric: "tabular-nums" }}>{fmt(amt)}</span>
-                  </div>
-                ))}
+      <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr 1fr" : "repeat(4,1fr)", gap: 10 }}>
+        {resolvedChartData.slice(-4).map(m => (
+          <div key={m.month} onClick={() => onViewMonth?.(m.month)}
+            style={{ background: T.surf, border: `1px solid ${T.bdr}`, borderRadius: 12, padding: "12px 14px", cursor: "pointer", transition: "border-color 0.18s" }}
+            onMouseEnter={e => e.currentTarget.style.borderColor = T.isDark ? "rgba(255,255,255,.12)" : T.indigo}
+            onMouseLeave={e => e.currentTarget.style.borderColor = T.bdr}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+              <span style={{ fontFamily: SANS, fontWeight: 600, fontSize: 13, color: T.isDark ? "#CBD6E6" : T.t1, letterSpacing: "-0.02em" }}>{m.month}</span>
+              <span style={{ fontFamily: MONO, fontWeight: 600, fontSize: 13, color: T.isDark ? "#CBD6E6" : T.t1, fontVariantNumeric: "tabular-nums" }}>{fmt(m.total)}</span>
             </div>
-          ))}
-        </div>
+            {Object.entries(m).filter(([k]) => k !== "month" && k !== "total" && k !== "_year" && k !== "_mon" && m[k] > 0)
+              .sort((a, b) => b[1] - a[1]).slice(0, 3)
+              .map(([sup, amt]) => (
+                <div key={sup} style={{ display: "flex", alignItems: "center", gap: 6, padding: "2px 0" }}>
+                  <div style={{ width: 16, height: 16, borderRadius: "50%", background: getColor(sup), display: "flex", alignItems: "center", justifyContent: "center", fontFamily: SANS, fontSize: 7, fontWeight: 700, color: "#fff", flexShrink: 0 }}>{sup.charAt(0)}</div>
+                  <span style={{ flex: 1, fontFamily: SANS, fontSize: 11, color: T.isDark ? "#7A8FA6" : T.t2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{sup}</span>
+                  <span style={{ fontFamily: MONO, fontSize: 11, fontWeight: 600, color: T.isDark ? "#9AAFCA" : T.t1, fontVariantNumeric: "tabular-nums" }}>{fmt(amt)}</span>
+                </div>
+              ))}
+          </div>
+        ))}
       </div>
     </div>
   );
