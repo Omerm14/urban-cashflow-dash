@@ -1853,7 +1853,7 @@ export default function App() {
   const isLoggedIn = !!user;
 
   const [isDark, setIsDark] = useState(true);
-  const [lang, setLang] = useState("he");
+  const [lang, setLang] = useState("en");
   const t = useCallback((key, vars) => {
     const strings = lang === "he" ? heStrings : enStrings;
     let s = strings[key] || enStrings[key] || key;
