@@ -9,12 +9,22 @@ if (!process.env.ANTHROPIC_API_KEY) {
 const app  = express();
 const auth = require('./middleware/auth');
 
-app.use(express.json({
-  limit: '20mb',
-  verify: (req, _res, buf) => {
-    if (req.path === '/api/webhook/whatsapp') req.rawBody = buf;
+// WhatsApp webhook — registered BEFORE global json parser so it gets its own
+// body handling. express.raw() reads the body as a Buffer, preserving it for
+// HMAC verification, then we manually parse to req.body.
+const webhook = require('./routes/webhook');
+app.get('/api/webhook/whatsapp', webhook.verifyWhatsApp);
+app.post('/api/webhook/whatsapp',
+  express.raw({ type: '*/*', limit: '20mb' }),
+  (req, res, next) => {
+    req.rawBody = req.body; // Buffer
+    try { req.body = req.body.length ? JSON.parse(req.body.toString()) : {}; } catch { req.body = {}; }
+    next();
   },
-}));
+  webhook.handleWhatsApp,
+);
+
+app.use(express.json({ limit: '20mb' }));
 
 app.post('/api/extract',    auth, require('./routes/extract'));
 app.get('/api/admin/usage',      require('./routes/admin'));
@@ -44,11 +54,6 @@ const invoices = require('./routes/invoices');
 app.delete('/api/invoices/:id',           auth, invoices.remove);
 app.post('/api/invoices/bulk-delete',     auth, invoices.bulkRemove);
 app.post('/api/attachments/presign',      auth, invoices.presignUpload);
-
-// WhatsApp webhook (no auth — verified by HMAC signature)
-const webhook = require('./routes/webhook');
-app.get('/api/webhook/whatsapp',  webhook.verifyWhatsApp);
-app.post('/api/webhook/whatsapp', webhook.handleWhatsApp);
 
 // Billing — Meshulam IPN has no auth; rest uses auth middleware
 const billingRoutes = require('./routes/billing');
