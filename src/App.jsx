@@ -21,7 +21,7 @@ import {
   TrendingUp, AlertTriangle, Clock, CheckCircle2,
   ChevronRight, ChevronLeft, ChevronDown, Filter, X, Users,
   Paperclip, Trash2, Pencil, Check, Plus, Search,
-  ArrowUpRight, ArrowDownRight, Settings, Sun, Moon,
+  ArrowUpRight, ArrowDownRight, ArrowUp, ArrowDown, Settings, Sun, Moon,
   Wifi, WifiOff, RefreshCw, Globe, Download, Lock,
   Building2, CreditCard, User, Eye, EyeOff, Menu,
 } from "lucide-react";
@@ -64,35 +64,7 @@ const useLayout = () => useContext(LayoutCtx);
 const SB = { bg: "#0C1017", bdr: "rgba(255,255,255,0.07)", t1: "#CBD6E6", t2: "rgba(255,255,255,0.35)", t3: "rgba(255,255,255,0.28)" };
 
 // ── Data ──────────────────────────────────────────────────────────────────────
-const INITIAL_INVOICES = [
-  { id: 1,  supplier: "Acme Corp",  invoiceNo: "INV-2024-0891", amount: 18000, invoiceDate: "2024-06-01", dueDate: "2024-07-15", status: "unpaid"  },
-  { id: 2,  supplier: "BuildRight", invoiceNo: "INV-2024-0892", amount: 12500, invoiceDate: "2024-05-20", dueDate: "2024-07-08", status: "overdue", attachment: true },
-  { id: 3,  supplier: "TechParts",  invoiceNo: "INV-2024-0893", amount: 22000, invoiceDate: "2024-06-10", dueDate: "2024-07-22", status: "unpaid"  },
-  { id: 4,  supplier: "MediaPro",   invoiceNo: "INV-2024-0894", amount:  8400, invoiceDate: "2024-05-15", dueDate: "2024-07-30", status: "overdue" },
-  { id: 5,  supplier: "Acme Corp",  invoiceNo: "INV-2024-0895", amount:  9500, invoiceDate: "2024-06-18", dueDate: "2024-07-28", status: "unpaid"  },
-  { id: 6,  supplier: "BuildRight", invoiceNo: "INV-2024-0896", amount: 15000, invoiceDate: "2024-06-25", dueDate: "2024-08-05", status: "unpaid"  },
-  { id: 7,  supplier: "TechParts",  invoiceNo: "INV-2024-0897", amount:  6200, invoiceDate: "2024-05-01", dueDate: "2024-08-15", status: "unpaid"  },
-  { id: 8,  supplier: "MediaPro",   invoiceNo: "INV-2024-0898", amount: 11800, invoiceDate: "2024-06-05", dueDate: "2024-08-10", status: "unpaid", attachment: true },
-  { id: 9,  supplier: "Acme Corp",  invoiceNo: "INV-2024-0887", amount: 16200, invoiceDate: "2024-05-01", dueDate: "2024-06-15", status: "paid"    },
-  { id: 10, supplier: "BuildRight", invoiceNo: "INV-2024-0888", amount:  9800, invoiceDate: "2024-05-10", dueDate: "2024-06-20", status: "paid"    },
-];
-const INITIAL_SUPPLIERS = [
-  { id: 1, name: "Acme Corp",  terms: "shotef_plus(30)", notes: "Main supplier"  },
-  { id: 2, name: "BuildRight", terms: "shotef",          notes: ""               },
-  { id: 3, name: "TechParts",  terms: "shotef_plus(45)", notes: "Quarterly"      },
-  { id: 4, name: "MediaPro",   terms: "immediate",       notes: "Pay on receipt" },
-];
-const CHART_DATA = [
-  { month: "Feb", "Acme Corp": 15000, "BuildRight": 10000, "MediaPro": 13200, "TechParts": 0,     total: 38200 },
-  { month: "Mar", "Acme Corp": 20400, "BuildRight": 19000, "MediaPro": 0,     "TechParts": 22000, total: 61400 },
-  { month: "Apr", "Acme Corp": 0,     "BuildRight": 15000, "MediaPro": 14800, "TechParts": 0,     total: 29800 },
-  { month: "May", "Acme Corp": 22100, "BuildRight": 0,     "MediaPro": 15000, "TechParts": 18000, total: 55100 },
-  { month: "Jun", "Acme Corp": 16000, "BuildRight": 21300, "MediaPro": 0,     "TechParts": 10000, total: 47300 },
-  { month: "Jul", "Acme Corp": 27500, "BuildRight": 12500, "MediaPro": 8400,  "TechParts": 22000, total: 70400 },
-];
-const SUPPLIER_COLORS = {
-  "Acme Corp": "#6366F1", "BuildRight": "#10B981", "TechParts": "#F59E0B", "MediaPro": "#EF4444",
-};
+
 
 // ── Utils ─────────────────────────────────────────────────────────────────────
 const fmt = (n) => new Intl.NumberFormat("he-IL", { style: "currency", currency: "ILS", maximumFractionDigits: 0 }).format(n);
@@ -629,7 +601,6 @@ function KPICard({ label, value, valueColor, iconBg, iconColor, iconPath, pill, 
 }
 
 // ── Dashboard ─────────────────────────────────────────────────────────────────
-const ArrowUp = () => <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round"><polyline points="18 15 12 9 6 15"/></svg>;
 const GreenPill = ({ children }) => <span style={{ display: "flex", alignItems: "center", gap: 3, color: "#22C55E", fontSize: 12, fontWeight: 600, background: "rgba(34,197,94,.1)", padding: "3px 8px", borderRadius: 20, fontFamily: "'IBM Plex Sans', sans-serif" }}>{children}</span>;
 const RedPill = ({ children }) => <span style={{ color: "#F87171", fontSize: 12, fontWeight: 600, background: "rgba(239,68,68,.1)", padding: "3px 8px", borderRadius: 20, fontFamily: "'IBM Plex Sans', sans-serif" }}>{children}</span>;
 const AmberPill = ({ children }) => <span style={{ color: "#F59E0B", fontSize: 12, fontWeight: 600, background: "rgba(245,158,11,.1)", padding: "3px 8px", borderRadius: 20, fontFamily: "'IBM Plex Sans', sans-serif" }}>{children}</span>;
@@ -659,12 +630,26 @@ function Dashboard({ invoices, onPayAllJuly, chartData, supplierNames, supplierC
   const overdueCount = invoices.filter(i => i.status === "Overdue" || i.status === "overdue").length;
   const nextMonthCount = invoices.filter(i => isUnpaid(i) && i.dueDate?.startsWith(nextYM)).length;
 
+  const prevDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+  const prevYM = `${prevDate.getFullYear()}-${String(prevDate.getMonth() + 1).padStart(2, "0")}`;
+  const prevOutstanding = invoices.filter(i => isUnpaid(i) && (i.dueDate || "").startsWith(prevYM)).reduce((s, i) => s + Number(i.amount), 0);
+  const currOutstanding = invoices.filter(i => isUnpaid(i) && (i.dueDate || "").startsWith(currentYM)).reduce((s, i) => s + Number(i.amount), 0);
+  const prevPaid = invoices.filter(i => (i.status === "Paid" || i.status === "paid") && (i.invoice_date || i.invoiceDate || "").startsWith(prevYM)).reduce((s, i) => s + Number(i.amount), 0);
+  const currPaid = invoices.filter(i => (i.status === "Paid" || i.status === "paid") && (i.invoice_date || i.invoiceDate || "").startsWith(currentYM)).reduce((s, i) => s + Number(i.amount), 0);
+  const outstandingDelta = prevOutstanding > 0 ? Math.round((currOutstanding - prevOutstanding) / prevOutstanding * 100) : null;
+  const paidDelta = prevPaid > 0 ? Math.round((currPaid - prevPaid) / prevPaid * 100) : null;
+  const DeltaPill = ({ delta }) => delta === null
+    ? <span style={{ fontFamily: SANS, fontSize: 12, color: T.t3 }}>—</span>
+    : delta >= 0
+      ? <GreenPill><ArrowUp size={10} />+{delta}%</GreenPill>
+      : <RedPill><ArrowDown size={10} />{delta}%</RedPill>;
+
   const CARDS = [
     {
       label: "Outstanding", value: kpis.outstanding, delay: 0,
       iconBg: "rgba(99,102,241,.13)", iconColor: "#818CF8",
       iconPath: <><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></>,
-      pill: <GreenPill><ArrowUp />+12%</GreenPill>, context: "vs last month",
+      pill: <DeltaPill delta={outstandingDelta} />, context: "vs last month",
     },
     {
       label: "Overdue", value: kpis.overdue, valueColor: "#F87171", delay: 0.06,
@@ -682,15 +667,15 @@ function Dashboard({ invoices, onPayAllJuly, chartData, supplierNames, supplierC
       label: "Total Paid", value: kpis.paid, delay: 0.18,
       iconBg: "rgba(34,197,94,.12)", iconColor: "#22C55E",
       iconPath: <><polyline points="20 6 9 17 4 12"/></>,
-      pill: <GreenPill><ArrowUp />+28%</GreenPill>, context: "this year",
+      pill: <DeltaPill delta={paidDelta} />, context: "vs last month",
     },
   ];
 
   const isCompact = isMobile || isTablet;
   const kpiCols = isMobile ? "1fr 1fr" : isTablet ? "1fr 1fr" : "repeat(4,1fr)";
-  const chartSuppliers = supplierNames || Object.keys(SUPPLIER_COLORS);
-  const resolvedChartData = chartData && chartData.length > 0 ? chartData : CHART_DATA;
-  const getColor = supplierColor || (n => SUPPLIER_COLORS[n] || "#6366F1");
+  const chartSuppliers = supplierNames || [];
+  const resolvedChartData = chartData && chartData.length > 0 ? chartData : [];
+  const getColor = supplierColor || (() => "#6366F1");
 
   return (
     <div style={{ animation: "slideUp 0.35s cubic-bezier(.16,1,.3,1)" }}>
@@ -1372,7 +1357,7 @@ function SuppliersView({ suppliers, onAdd, onUpdate, onDelete }) {
 }
 
 // ── Settings ──────────────────────────────────────────────────────────────────
-function SettingsScreen({ onUpgrade, onSignOut, user }) {
+function SettingsScreen({ onUpgrade, onSignOut, user, invoices, suppliers, onNavigateToIntegrations }) {
   const T = useT();
   const { isMobile, isTablet } = useLayout();
   const isCompact = isMobile || isTablet;
@@ -1388,19 +1373,88 @@ function SettingsScreen({ onUpgrade, onSignOut, user }) {
 
   const [activeSection, setActiveSection] = useState("general");
   const [saved, setSaved] = useState(null);
-  const [bizName, setBizName] = useState("Apollo Trading Ltd.");
+  const [saveError, setSaveError] = useState(null);
+  const [bizName, setBizName] = useState("");
   const [currency, setCurrency] = useState("ILS");
   const [timezone, setTimezone] = useState("Asia/Jerusalem");
   const [fullName, setFullName] = useState(user?.user_metadata?.full_name || user?.email?.split("@")[0] || "");
   const [changingPw, setChangingPw] = useState(false);
+  const [pwCurrent, setPwCurrent] = useState("");
+  const [pwNew, setPwNew] = useState("");
+  const [pwConfirm, setPwConfirm] = useState("");
+  const [pwError, setPwError] = useState("");
   const [deleteInput, setDeleteInput] = useState("");
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
+  const SETTINGS_KEY = "urban_cashflow_settings";
+  useEffect(() => {
+    try {
+      const s = JSON.parse(localStorage.getItem(SETTINGS_KEY) || "{}");
+      if (s.bizName !== undefined) setBizName(s.bizName);
+      if (s.currency) setCurrency(s.currency);
+      if (s.timezone) setTimezone(s.timezone);
+    } catch {}
+  }, []);
+
   const scrollTo = (id) => { sectionRefs[id]?.current?.scrollIntoView({ behavior: "smooth", block: "start" }); setActiveSection(id); };
-  const saveSection = (id) => { setSaved(id); setTimeout(() => setSaved(null), 2000); };
+
+  const saveSection = async (id) => {
+    setSaveError(null);
+    try {
+      if (id === "general") {
+        localStorage.setItem(SETTINGS_KEY, JSON.stringify({ bizName, currency, timezone }));
+      }
+      if (id === "profile") {
+        const { error } = await supabase.auth.updateUser({ data: { full_name: fullName } });
+        if (error) { setSaveError(error.message); return; }
+      }
+      setSaved(id); setTimeout(() => setSaved(null), 2000);
+    } catch (err) { setSaveError(err.message); }
+  };
+
+  const handlePasswordChange = async () => {
+    setPwError("");
+    if (!pwNew) { setPwError("New password is required."); return; }
+    if (pwNew !== pwConfirm) { setPwError("Passwords don't match."); return; }
+    if (pwNew.length < 6) { setPwError("Password must be at least 6 characters."); return; }
+    const { error } = await supabase.auth.updateUser({ password: pwNew });
+    if (error) { setPwError(error.message); return; }
+    setChangingPw(false); setPwCurrent(""); setPwNew(""); setPwConfirm("");
+    setSaved("profile"); setTimeout(() => setSaved(null), 2000);
+  };
   const inp = { width: "100%", padding: "9px 12px", background: T.surf2, border: `1px solid ${T.bdr}`, borderRadius: 6, fontFamily: SANS, fontSize: 13, color: T.t1, outline: "none" };
   const sel = { ...inp, cursor: "pointer" };
   const { plan: settingsPlan, used, limit, pct: planPctRaw } = usePlan();
+
+  const downloadCSV = (filename, rows, cols) => {
+    const escape = v => `"${String(v ?? "").replace(/"/g, '""')}"`;
+    const csv = [cols.join(","), ...rows.map(r => cols.map(c => escape(r[c])).join(","))].join("\n");
+    const blob = new Blob([csv], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a"); a.href = url; a.download = filename; a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const exportInvoices = () => downloadCSV("invoices.csv", invoices || [], ["supplier","invoice_no","invoice_date","due_date","amount","status","notes"]);
+  const exportSuppliers = () => downloadCSV("suppliers.csv", suppliers || [], ["name","terms","notes"]);
+  const exportReport = () => {
+    const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+    const groups = {};
+    (invoices || []).forEach(inv => {
+      const d = new Date((inv.invoice_date || inv.invoiceDate || inv.dueDate || "") + "T12:00:00");
+      if (isNaN(d)) return;
+      const key = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}`;
+      const label = `${MONTHS[d.getMonth()]} ${d.getFullYear()}`;
+      if (!groups[key]) groups[key] = { month: label, total: 0, paid: 0, unpaid: 0, overdue: 0 };
+      const amt = Number(inv.amount || 0);
+      groups[key].total += amt;
+      if (inv.status === "Paid" || inv.status === "paid") groups[key].paid += amt;
+      else if (inv.status === "Overdue" || inv.status === "overdue") groups[key].overdue += amt;
+      else groups[key].unpaid += amt;
+    });
+    const rows = Object.keys(groups).sort().map(k => groups[k]);
+    downloadCSV("financial-report.csv", rows, ["month","total","paid","unpaid","overdue"]);
+  };
   const pct = Math.round((planPctRaw || 0) * 100);
 
   const NAV = [
@@ -1440,7 +1494,8 @@ function SettingsScreen({ onUpgrade, onSignOut, user }) {
     );
 
   const SaveBtn = ({ id }) => (
-    <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 4 }}>
+    <div style={{ display: "flex", justifyContent: "flex-end", alignItems: "center", gap: 10, marginTop: 4 }}>
+      {saveError && saved !== id && <span style={{ fontFamily: SANS, fontSize: 12, color: T.red }}>{saveError}</span>}
       <button onClick={() => saveSection(id)} style={{ padding: "7px 16px", background: T.indigo, border: "none", borderRadius: 6, fontFamily: SANS, fontWeight: 600, fontSize: 12, color: "#fff", cursor: "pointer", display: "flex", alignItems: "center", gap: 5 }}>
         {saved === id ? <><Check size={12} />Saved</> : "Save changes"}
       </button>
@@ -1504,12 +1559,13 @@ function SettingsScreen({ onUpgrade, onSignOut, user }) {
               <button onClick={() => setChangingPw(true)} style={{ padding: "8px 14px", background: "transparent", border: `1px solid ${T.bdr}`, borderRadius: 6, fontFamily: SANS, fontSize: 13, color: T.t1, cursor: "pointer" }}>Change password</button>
             ) : (
               <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                <input type="password" placeholder="Current password" style={inp} />
-                <input type="password" placeholder="New password" style={inp} />
-                <input type="password" placeholder="Confirm new password" style={inp} />
+                <input type="password" value={pwCurrent} onChange={e => setPwCurrent(e.target.value)} placeholder="Current password" style={inp} />
+                <input type="password" value={pwNew} onChange={e => setPwNew(e.target.value)} placeholder="New password" style={inp} />
+                <input type="password" value={pwConfirm} onChange={e => setPwConfirm(e.target.value)} placeholder="Confirm new password" style={inp} />
+                {pwError && <div style={{ fontFamily: SANS, fontSize: 12, color: T.red }}>{pwError}</div>}
                 <div style={{ display: "flex", gap: 8 }}>
-                  <button style={{ flex: 1, padding: "8px 0", background: T.indigo, border: "none", borderRadius: 6, fontFamily: SANS, fontWeight: 600, fontSize: 13, color: "#fff", cursor: "pointer" }}>Update</button>
-                  <button onClick={() => setChangingPw(false)} style={{ padding: "8px 14px", background: "transparent", border: `1px solid ${T.bdr}`, borderRadius: 6, fontFamily: SANS, fontSize: 13, color: T.t2, cursor: "pointer" }}>Cancel</button>
+                  <button onClick={handlePasswordChange} style={{ flex: 1, padding: "8px 0", background: T.indigo, border: "none", borderRadius: 6, fontFamily: SANS, fontWeight: 600, fontSize: 13, color: "#fff", cursor: "pointer" }}>Update</button>
+                  <button onClick={() => { setChangingPw(false); setPwError(""); setPwCurrent(""); setPwNew(""); setPwConfirm(""); }} style={{ padding: "8px 14px", background: "transparent", border: `1px solid ${T.bdr}`, borderRadius: 6, fontFamily: SANS, fontSize: 13, color: T.t2, cursor: "pointer" }}>Cancel</button>
                 </div>
               </div>
             )}
@@ -1538,30 +1594,19 @@ function SettingsScreen({ onUpgrade, onSignOut, user }) {
         </Section>
 
         <Section id="integrations" title="Integrations" desc="Connect invoice sources.">
-          {[
-            { label: "Google Drive",      color: "#4285F4", connected: true,  comingSoon: false },
-            { label: "Gmail",             color: "#EA4335", connected: false, comingSoon: false },
-            { label: "WhatsApp",          color: "#25D366", connected: false, comingSoon: false },
-            { label: "Green Invoice",     color: "#16A34A", connected: true,  comingSoon: false },
-            { label: "Bank / Accounting", color: T.t3,     connected: false, comingSoon: true  },
-          ].map(intg => (
-            <div key={intg.label} style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 12px", background: T.surf2, border: `1px solid ${intg.connected ? intg.color + "40" : T.bdr}`, borderLeft: `3px solid ${intg.connected ? intg.color : T.bdr}`, borderRadius: 8, marginBottom: 8 }}>
-              <div style={{ width: 28, height: 28, borderRadius: 6, background: `${intg.color}18`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                {intg.connected ? <Wifi size={12} color={intg.color} /> : <WifiOff size={12} color={T.t3} />}
-              </div>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontFamily: SANS, fontSize: 13, fontWeight: 600, color: intg.comingSoon ? T.t3 : T.t1 }}>{intg.label}</div>
-                <div style={{ fontFamily: SANS, fontSize: 11, color: T.t3 }}>{intg.comingSoon ? "Coming soon" : intg.connected ? "Connected" : "Not connected"}</div>
-              </div>
-              {intg.comingSoon ? (
-                <span style={{ fontFamily: SANS, fontSize: 11, fontWeight: 600, color: T.t3, background: T.surf3, border: `1px solid ${T.bdr}`, borderRadius: 3, padding: "2px 7px", flexShrink: 0 }}>Soon</span>
-              ) : (
-                <button style={{ padding: "4px 10px", background: intg.connected ? T.redTint : T.indigoTint, border: `1px solid ${intg.connected ? T.redBdr : T.indigoBdr}`, borderRadius: 4, color: intg.connected ? T.red : T.indigo, cursor: "pointer", fontFamily: SANS, fontSize: 11, fontWeight: 600, flexShrink: 0 }}>
-                  {intg.connected ? "Disconnect" : "Connect"}
-                </button>
-              )}
-            </div>
-          ))}
+          <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "12px 14px", background: T.surf2, border: `1px solid ${T.bdr}`, borderRadius: 8 }}>
+            <Zap size={15} color={T.t3} strokeWidth={1.5} style={{ flexShrink: 0 }} />
+            <span style={{ fontFamily: SANS, fontSize: 13, color: T.t2 }}>
+              Manage your connected services in the{" "}
+              <button
+                onClick={onNavigateToIntegrations}
+                style={{ fontFamily: SANS, fontSize: 13, fontWeight: 600, color: T.indigo, background: "none", border: "none", cursor: "pointer", padding: 0 }}
+              >
+                Integrations
+              </button>
+              {" "}tab.
+            </span>
+          </div>
         </Section>
 
         <Section id="team" title="Team & Access" desc="Invite members and manage roles.">
@@ -1582,12 +1627,12 @@ function SettingsScreen({ onUpgrade, onSignOut, user }) {
           </div>
         </Section>
 
-        <Section id="data" title="Data & Export" desc="Download your data as CSV or PDF.">
+        <Section id="data" title="Data & Export" desc="Download your data as CSV.">
           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
             {[
-              { label: "Export invoices",        hint: "All records as CSV" },
-              { label: "Export suppliers",        hint: "With payment terms" },
-              { label: "Export financial report", hint: "Monthly summary as PDF" },
+              { label: "Export invoices",        hint: `${(invoices||[]).length} records as CSV`,       fn: exportInvoices },
+              { label: "Export suppliers",        hint: `${(suppliers||[]).length} suppliers as CSV`,    fn: exportSuppliers },
+              { label: "Export financial report", hint: "Monthly summary by status as CSV",             fn: exportReport },
             ].map(item => (
               <div key={item.label} style={{ display: "flex", alignItems: "center", gap: 12, padding: "11px 13px", background: T.surf2, border: `1px solid ${T.bdr}`, borderRadius: 8 }}>
                 <Download size={14} color={T.t2} strokeWidth={1.75} />
@@ -1595,7 +1640,7 @@ function SettingsScreen({ onUpgrade, onSignOut, user }) {
                   <div style={{ fontFamily: SANS, fontSize: 13, fontWeight: 600, color: T.t1 }}>{item.label}</div>
                   {!isMobile && <div style={{ fontFamily: SANS, fontSize: 11, color: T.t3 }}>{item.hint}</div>}
                 </div>
-                <button style={{ padding: "6px 12px", background: "transparent", border: `1px solid ${T.bdr}`, borderRadius: 5, fontFamily: SANS, fontSize: 12, fontWeight: 600, color: T.t1, cursor: "pointer", flexShrink: 0 }}>Export</button>
+                <button onClick={item.fn} style={{ padding: "6px 12px", background: "transparent", border: `1px solid ${T.bdr}`, borderRadius: 5, fontFamily: SANS, fontSize: 12, fontWeight: 600, color: T.t1, cursor: "pointer", flexShrink: 0 }}>Export</button>
               </div>
             ))}
           </div>
@@ -1760,6 +1805,7 @@ export default function App() {
   const [extractMsg, setExtractMsg] = useState(null);
   const [showSearch, setShowSearch] = useState(false);
   const [appNotifs, setAppNotifs] = useState([]);
+  const [oauthResult, setOauthResult] = useState(null);
   const fileRef = useRef();
   const notifiedJobsRef = useRef(new Set());
 
@@ -1792,6 +1838,17 @@ export default function App() {
     const h = (e) => { if ((e.metaKey || e.ctrlKey) && e.key === "k") { e.preventDefault(); setShowSearch(true); } };
     document.addEventListener("keydown", h);
     return () => document.removeEventListener("keydown", h);
+  }, []);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const hashParams = new URLSearchParams(window.location.hash.replace(/^#\??/, ""));
+    const code = params.get("code") || hashParams.get("code");
+    const error = params.get("error") || hashParams.get("error");
+    if (code || error) {
+      setOauthResult({ code, error });
+      window.history.replaceState({}, "", window.location.pathname);
+    }
   }, []);
 
   const addAppNotif = useCallback((notif) => {
@@ -2024,9 +2081,11 @@ export default function App() {
                 {view === "integrations" && <IntegrationsPage
                   syncJobs={syncJobs} onStartSync={startSync} onCancelSync={cancelSync}
                   onInvoicesRefresh={refreshInvoices} isAtLimit={isAtLimit} onUpgrade={() => setShowUpgrade(true)}
+                  oauthResult={oauthResult} onClearOAuthResult={() => setOauthResult(null)}
+                  onNotificationsRefresh={() => addAppNotif({ type: "sync", icon: "✓", text: "Integration connected successfully", ts: Date.now() })}
                 />}
                 {view === "suppliers"    && <SuppliersView suppliers={suppliers} onAdd={addSupplier} onUpdate={updateSupplier} onDelete={deleteSupplier} />}
-                {view === "settings"     && <SettingsScreen onUpgrade={() => setShowUpgrade(true)} onSignOut={signOut} user={user} />}
+                {view === "settings"     && <SettingsScreen onUpgrade={() => setShowUpgrade(true)} onSignOut={signOut} user={user} invoices={invoices} suppliers={suppliers} onNavigateToIntegrations={() => setView("integrations")} />}
                 {view === "admin"        && <AdminPage />}
               </div>
             </main>
