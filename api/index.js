@@ -10,16 +10,21 @@ const webhook = require('../server/routes/webhook');
 app.get('/api/webhook/whatsapp', webhook.verifyWhatsApp);
 app.post('/api/webhook/whatsapp',
   (req, res, next) => {
+    // If body already parsed (Vercel pre-parsing) skip stream reading entirely
     if (req.body && typeof req.body === 'object' && !Buffer.isBuffer(req.body)) return next();
-    const chunks = [];
-    req.on('data', c => chunks.push(c));
-    req.on('end', () => {
-      const buf = Buffer.concat(chunks);
-      req.rawBody = buf;
-      try { req.body = buf.length ? JSON.parse(buf.toString()) : {}; } catch { req.body = {}; }
-      next();
-    });
-    req.on('error', () => next());
+    // If stream already consumed, proceed without rawBody (HMAC skipped)
+    if (!req.readable) { req.body = {}; return next(); }
+    try {
+      const chunks = [];
+      req.on('data', c => chunks.push(c));
+      req.on('end', () => {
+        const buf = Buffer.concat(chunks);
+        req.rawBody = buf;
+        try { req.body = buf.length ? JSON.parse(buf.toString()) : {}; } catch { req.body = {}; }
+        next();
+      });
+      req.on('error', () => { req.body = {}; next(); });
+    } catch { req.body = {}; next(); }
   },
   webhook.handleWhatsApp,
 );
