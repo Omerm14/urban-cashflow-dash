@@ -477,7 +477,7 @@ function SearchOverlay({ invoices, suppliers, onNavigate, onClose }) {
   );
 }
 
-function GlobalHeader({ view, isDark, onToggleTheme, onMenuOpen, onMissingAlert, onAnomalyAlert, missingCount, anomalyCount, syncJobs, onSearchOpen }) {
+function GlobalHeader({ view, isDark, onToggleTheme, onMenuOpen, onMissingAlert, onAnomalyAlert, missingCount, anomalyCount, syncJobs, appNotifs, onClearAppNotifs, onSearchOpen }) {
   const T = useT();
   const { isMobile, isTablet } = useLayout();
   const [notifOpen, setNotifOpen] = useState(false);
@@ -486,8 +486,8 @@ function GlobalHeader({ view, isDark, onToggleTheme, onMenuOpen, onMissingAlert,
   const headerBg = T.isDark ? "#0C1017" : T.surf;
   const ghostBtn = { width: 34, height: 34, display: "flex", alignItems: "center", justifyContent: "center", background: "transparent", border: `1px solid ${T.isDark ? "rgba(255,255,255,.10)" : T.bdr}`, borderRadius: 8, cursor: "pointer", color: T.isDark ? "rgba(255,255,255,.4)" : T.t2, flexShrink: 0 };
   const totalAlerts = (missingCount || 0) + (anomalyCount || 0);
-  const syncNotifs = Object.values(syncJobs || {}).filter(j => j.done || j.error).slice(0, 5);
-  const totalCount = totalAlerts + syncNotifs.length;
+  const recentAppNotifs = (appNotifs || []).slice(0, 5);
+  const totalCount = totalAlerts + recentAppNotifs.length;
 
   useEffect(() => {
     if (!notifOpen) return;
@@ -525,6 +525,7 @@ function GlobalHeader({ view, isDark, onToggleTheme, onMenuOpen, onMissingAlert,
           <div style={{ position: "absolute", top: 42, right: 0, width: 300, background: T.surf, border: `1px solid ${T.bdr2}`, borderRadius: 10, boxShadow: T.isDark ? "0 8px 32px rgba(0,0,0,0.6)" : "0 8px 32px rgba(0,0,0,0.12)", zIndex: 9999, overflow: "hidden", animation: "scaleIn 0.15s cubic-bezier(.16,1,.3,1)" }}>
             <div style={{ padding: "10px 14px 8px", borderBottom: `1px solid ${T.bdr}`, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
               <span style={{ fontFamily: SANS, fontSize: 12, fontWeight: 700, color: T.t1, letterSpacing: "-0.01em" }}>Notifications</span>
+              {recentAppNotifs.length > 0 && <button onClick={() => { onClearAppNotifs?.(); }} style={{ fontFamily: SANS, fontSize: 11, color: T.t3, background: "none", border: "none", cursor: "pointer", padding: 0 }}>Clear all</button>}
               {totalCount === 0 && <span style={{ fontFamily: SANS, fontSize: 11, color: T.t3 }}>All clear</span>}
             </div>
 
@@ -552,7 +553,7 @@ function GlobalHeader({ view, isDark, onToggleTheme, onMenuOpen, onMissingAlert,
 
             {anomalyCount > 0 && (
               <button onClick={() => { setNotifOpen(false); onAnomalyAlert?.(); }}
-                style={{ width: "100%", display: "flex", alignItems: "center", gap: 10, padding: "10px 14px", background: "transparent", border: "none", borderBottom: syncNotifs.length > 0 ? `1px solid ${T.bdr}` : "none", cursor: "pointer", textAlign: "left" }}
+                style={{ width: "100%", display: "flex", alignItems: "center", gap: 10, padding: "10px 14px", background: "transparent", border: "none", borderBottom: recentAppNotifs.length > 0 ? `1px solid ${T.bdr}` : "none", cursor: "pointer", textAlign: "left" }}
                 onMouseEnter={e => e.currentTarget.style.background = T.isDark ? "rgba(255,255,255,.04)" : T.surf2}
                 onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
                 <div style={{ width: 30, height: 30, borderRadius: 8, background: T.indigoTint, border: `1px solid ${T.indigoBdr}`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
@@ -566,22 +567,34 @@ function GlobalHeader({ view, isDark, onToggleTheme, onMenuOpen, onMissingAlert,
               </button>
             )}
 
-            {syncNotifs.map((job, i) => (
-              <div key={job.jobId || job.integrationId || i}
-                style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 14px", borderTop: i === 0 && (missingCount > 0 || anomalyCount > 0) ? `1px solid ${T.bdr}` : "none", borderBottom: i < syncNotifs.length - 1 ? `1px solid ${T.bdr}` : "none" }}>
-                <div style={{ width: 30, height: 30, borderRadius: 8, background: job.error ? T.redTint : "rgba(16,185,129,.12)", border: `1px solid ${job.error ? T.redBdr : "rgba(16,185,129,.3)"}`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                  {job.error ? <AlertTriangle size={13} color={T.red} /> : <RefreshCw size={13} color="#10B981" />}
-                </div>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontFamily: SANS, fontSize: 13, fontWeight: 600, color: T.t1 }}>
-                    {job.error ? "Sync error" : `${job.integrationId || "Drive"} sync complete`}
-                  </div>
-                  <div style={{ fontFamily: SANS, fontSize: 11, color: T.t3, marginTop: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                    {job.error ? String(job.error).slice(0, 60) : `${job.added ?? 0} invoice${job.added !== 1 ? "s" : ""} added`}
-                  </div>
-                </div>
+            {recentAppNotifs.length > 0 && (
+              <div style={{ borderTop: (missingCount > 0 || anomalyCount > 0) ? `1px solid ${T.bdr}` : "none" }}>
+                {recentAppNotifs.map((n, i) => {
+                  const isError = n.type === "error";
+                  const isUpload = n.type === "upload";
+                  const iconBg = isError ? T.redTint : isUpload ? "rgba(99,102,241,.10)" : "rgba(16,185,129,.10)";
+                  const iconBdr = isError ? T.redBdr : isUpload ? T.indigoBdr : "rgba(16,185,129,.25)";
+                  const iconColor = isError ? T.red : isUpload ? T.indigo : "#10B981";
+                  const relTime = (() => {
+                    const diff = Math.floor((Date.now() - n.ts) / 1000);
+                    if (diff < 60) return `${diff}s ago`;
+                    if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
+                    return `${Math.floor(diff / 3600)}h ago`;
+                  })();
+                  return (
+                    <div key={n.id || i} style={{ display: "flex", alignItems: "flex-start", gap: 10, padding: "10px 14px", borderBottom: i < recentAppNotifs.length - 1 ? `1px solid ${T.bdr}` : "none" }}>
+                      <div style={{ width: 30, height: 30, borderRadius: 8, background: iconBg, border: `1px solid ${iconBdr}`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, fontSize: 13 }}>
+                        {isError ? <AlertTriangle size={13} color={iconColor} /> : isUpload ? <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={iconColor} strokeWidth="2" strokeLinecap="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg> : <RefreshCw size={13} color={iconColor} />}
+                      </div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontFamily: SANS, fontSize: 12, color: T.t1, lineHeight: 1.4, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{n.text}</div>
+                        {n.ts && <div style={{ fontFamily: SANS, fontSize: 11, color: T.t3, marginTop: 2 }}>{relTime}</div>}
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
-            ))}
+            )}
           </div>
         )}
       </div>
@@ -621,7 +634,7 @@ const GreenPill = ({ children }) => <span style={{ display: "flex", alignItems: 
 const RedPill = ({ children }) => <span style={{ color: "#F87171", fontSize: 12, fontWeight: 600, background: "rgba(239,68,68,.1)", padding: "3px 8px", borderRadius: 20, fontFamily: "'IBM Plex Sans', sans-serif" }}>{children}</span>;
 const AmberPill = ({ children }) => <span style={{ color: "#F59E0B", fontSize: 12, fontWeight: 600, background: "rgba(245,158,11,.1)", padding: "3px 8px", borderRadius: 20, fontFamily: "'IBM Plex Sans', sans-serif" }}>{children}</span>;
 
-function Dashboard({ invoices, onPayAllJuly, chartData, supplierNames, supplierColor, user, onMissingAlert, onAnomalyAlert, missingSuppliers, anomalyMap }) {
+function Dashboard({ invoices, onPayAllJuly, chartData, supplierNames, supplierColor, user, onMissingAlert, onAnomalyAlert, missingSuppliers, anomalyMap, onViewMonth }) {
   const T = useT();
   const { isMobile, isTablet } = useLayout();
   const now = new Date();
@@ -734,14 +747,14 @@ function Dashboard({ invoices, onPayAllJuly, chartData, supplierNames, supplierC
           </div>
         </div>
         <div style={{ display: "flex", gap: 8, flexShrink: 0, alignSelf: isMobile ? "stretch" : "auto" }}>
-          <button style={{ padding: "8px 16px", border: `1px solid ${T.bdr2}`, borderRadius: 8, background: T.isDark ? "rgba(255,255,255,.04)" : "transparent", fontFamily: SANS, fontSize: 13, fontWeight: 500, color: T.t2, cursor: "pointer" }}>View invoices</button>
+          <button onClick={() => onViewMonth?.()} style={{ padding: "8px 16px", border: `1px solid ${T.bdr2}`, borderRadius: 8, background: T.isDark ? "rgba(255,255,255,.04)" : "transparent", fontFamily: SANS, fontSize: 13, fontWeight: 500, color: T.t2, cursor: "pointer" }}>View invoices</button>
           <button onClick={onPayAllJuly} style={{ background: T.indigo, border: "none", borderRadius: 8, padding: "8px 20px", fontFamily: SANS, fontSize: 13, fontWeight: 600, color: "#fff", cursor: "pointer", display: "flex", alignItems: "center", gap: 6, boxShadow: "0 4px 18px rgba(99,102,241,.35)", letterSpacing: "-0.01em", flex: isMobile ? 1 : "none", justifyContent: "center" }}>
             Pay All <ChevronRight size={12} strokeWidth={2.5} />
           </button>
         </div>
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: isCompact ? "1fr" : "1fr 310px", gap: 14 }}>
+      <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 310px", gap: 14 }}>
         <div style={{ background: T.surf, border: `1px solid ${T.bdr}`, borderRadius: 12, padding: "22px 24px" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 20 }}>
             <div>
@@ -773,7 +786,7 @@ function Dashboard({ invoices, onPayAllJuly, chartData, supplierNames, supplierC
 
         <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr 1fr" : "1fr", gap: 10 }}>
           {resolvedChartData.slice(-4).map(m => (
-            <div key={m.month} onClick={onPayAllJuly}
+            <div key={m.month} onClick={() => onViewMonth?.(m.month)}
               style={{ background: T.surf, border: `1px solid ${T.bdr}`, borderRadius: 12, padding: "14px 16px", cursor: "pointer", transition: "border-color 0.18s" }}
               onMouseEnter={e => e.currentTarget.style.borderColor = T.isDark ? "rgba(255,255,255,.12)" : T.indigo}
               onMouseLeave={e => e.currentTarget.style.borderColor = T.bdr}>
@@ -781,7 +794,7 @@ function Dashboard({ invoices, onPayAllJuly, chartData, supplierNames, supplierC
                 <span style={{ fontFamily: SANS, fontWeight: 600, fontSize: 13, color: T.isDark ? "#CBD6E6" : T.t1, letterSpacing: "-0.02em" }}>{m.month}</span>
                 <span style={{ fontFamily: MONO, fontWeight: 600, fontSize: 13, color: T.isDark ? "#CBD6E6" : T.t1, fontVariantNumeric: "tabular-nums" }}>{fmt(m.total)}</span>
               </div>
-              {!isMobile && Object.entries(m).filter(([k]) => k !== "month" && k !== "total" && m[k] > 0)
+              {!isMobile && Object.entries(m).filter(([k]) => k !== "month" && k !== "total" && k !== "_year" && k !== "_mon" && m[k] > 0)
                 .sort((a, b) => b[1] - a[1]).slice(0, 3)
                 .map(([sup, amt]) => (
                   <div key={sup} style={{ display: "flex", alignItems: "center", gap: 8, padding: "2px 0" }}>
@@ -1746,7 +1759,9 @@ export default function App() {
   const [extracting, setExtracting] = useState(false);
   const [extractMsg, setExtractMsg] = useState(null);
   const [showSearch, setShowSearch] = useState(false);
+  const [appNotifs, setAppNotifs] = useState([]);
   const fileRef = useRef();
+  const notifiedJobsRef = useRef(new Set());
 
   // Real invoice data
   const {
@@ -1779,6 +1794,23 @@ export default function App() {
     return () => document.removeEventListener("keydown", h);
   }, []);
 
+  const addAppNotif = useCallback((notif) => {
+    setAppNotifs(prev => [{ ...notif, id: Date.now() + Math.random() }, ...prev].slice(0, 20));
+  }, []);
+
+  useEffect(() => {
+    Object.values(syncJobs).forEach(job => {
+      const key = job.jobId || job.integrationId;
+      if (!key || notifiedJobsRef.current.has(key)) return;
+      if (job.done) {
+        notifiedJobsRef.current.add(key);
+        addAppNotif({ type: "sync", icon: "✓", text: `${job.integrationId || "Drive"} sync complete — ${job.added ?? 0} invoice${job.added !== 1 ? "s" : ""} added`, ts: Date.now() });
+      } else if (job.error) {
+        notifiedJobsRef.current.add(key);
+        addAppNotif({ type: "error", icon: "⚠", text: `Sync error: ${String(job.error).slice(0, 80)}`, ts: Date.now() });
+      }
+    });
+  }, [syncJobs, addAppNotif]);
 
   const isMobile = windowWidth < 640;
   const isTablet = windowWidth >= 640 && windowWidth < 1024;
@@ -1803,14 +1835,27 @@ export default function App() {
     return Object.values(map)
       .sort((a, b) => a._year !== b._year ? a._year - b._year : a._mon - b._mon)
       .map(m => {
-        const total = Object.entries(m)
-          .filter(([k]) => k !== "month" && k !== "_year" && k !== "_mon")
+        const { _year, _mon, ...rest } = m;
+        const total = Object.entries(rest)
+          .filter(([k]) => k !== "month")
           .reduce((s, [, v]) => s + v, 0);
-        return { ...m, total };
+        return { ...rest, total };
       });
   })();
 
   const handlePayAll = () => { setSelectedMonth(selectedMonth); setPreSelectAll(true); setView("invoices"); };
+  const handleViewMonth = (monthLabel) => {
+    if (monthLabel) {
+      // Parse "Jun '26" → "2026-06"
+      const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+      const m = monthLabel.match(/^(\w{3})\s+'(\d{2})$/);
+      if (m) {
+        const mi = MONTHS.indexOf(m[1]);
+        if (mi >= 0) setSelectedMonth(`20${m[2]}-${String(mi + 1).padStart(2, "0")}`);
+      }
+    }
+    setView("invoices");
+  };
   const handleMarkPaid = useCallback((id) => { updateInvoice(id, { status: "Paid" }); }, [updateInvoice]);
   const handleBulkPaid = useCallback((ids) => { ids.forEach(id => updateInvoice(id, { status: "Paid" })); }, [updateInvoice]);
   useEffect(() => { if (preSelectAll) { const t = setTimeout(() => setPreSelectAll(false), 100); return () => clearTimeout(t); } }, [preSelectAll]);
@@ -1903,7 +1948,7 @@ export default function App() {
         } catch (err) { errors.push(`${file.name}: ${err.message}`); }
       }));
 
-      if (added > 0) { refreshPlan(); }
+      if (added > 0) { refreshPlan(); addAppNotif({ type: "upload", icon: "📄", text: `${added} invoice${added !== 1 ? "s" : ""} uploaded from ${files.length === 1 ? files[0].name : `${files.length} files`}`, ts: Date.now() }); }
       const parts = [];
       if (added) parts.push(`${added} added`);
       if (fileSkipped.length) parts.push(`${fileSkipped.length} already uploaded`);
@@ -1967,13 +2012,13 @@ export default function App() {
             plan={plan} planUsed={planUsed} planLimit={planLimit} planPct={planPct} user={user} onSignOut={signOut} />
 
           <div style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0 }}>
-            <GlobalHeader view={view} isDark={isDark} onToggleTheme={() => setIsDark(v => !v)} onMenuOpen={() => setMobileMenuOpen(true)} onMissingAlert={() => setShowMissingModal(true)} onAnomalyAlert={() => setShowAnomalyModal(true)} missingCount={missingSuppliers?.length || 0} anomalyCount={anomalyMap?.size || 0} syncJobs={syncJobs} onSearchOpen={() => setShowSearch(true)} />
+            <GlobalHeader view={view} isDark={isDark} onToggleTheme={() => setIsDark(v => !v)} onMenuOpen={() => setMobileMenuOpen(true)} onMissingAlert={() => setShowMissingModal(true)} onAnomalyAlert={() => setShowAnomalyModal(true)} missingCount={missingSuppliers?.length || 0} anomalyCount={anomalyMap?.size || 0} syncJobs={syncJobs} appNotifs={appNotifs} onClearAppNotifs={() => setAppNotifs([])} onSearchOpen={() => setShowSearch(true)} />
             {isAtLimit && (
               <UsageBanner plan={plan} used={planUsed} limit={planLimit} remaining={planLimit - planUsed} onUpgrade={() => setShowUpgrade(true)} />
             )}
             <main style={{ flex: 1, overflowY: "auto", padding: isMobile ? "20px 16px 100px" : "28px clamp(20px,3vw,36px) 80px" }}>
               <div style={{ width: "100%" }}>
-                {view === "dashboard"    && <Dashboard invoices={invoices} onPayAllJuly={handlePayAll} chartData={chartData} supplierNames={allNames} supplierColor={getSupplierColor} user={user} onMissingAlert={() => setShowMissingModal(true)} onAnomalyAlert={() => setShowAnomalyModal(true)} missingSuppliers={missingSuppliers} anomalyMap={anomalyMap} />}
+                {view === "dashboard"    && <Dashboard invoices={invoices} onPayAllJuly={handlePayAll} chartData={chartData} supplierNames={allNames} supplierColor={getSupplierColor} user={user} onMissingAlert={() => setShowMissingModal(true)} onAnomalyAlert={() => setShowAnomalyModal(true)} missingSuppliers={missingSuppliers} anomalyMap={anomalyMap} onViewMonth={handleViewMonth} />}
                 {view === "invoices"     && <InvoicesView invoices={invoices} selectedMonth={selectedMonth} onMonthChange={setSelectedMonth} onMarkPaid={handleMarkPaid} onBulkPaid={handleBulkPaid} preSelectAll={preSelectAll} onEditInvoice={setEditInvoice} anomalyMap={anomalyMap} missingSuppliers={missingSuppliers} />}
                 {view === "calendar"     && <CalendarView computed={invoices} calMonth={calMonth} setCalMonth={setCalMonth} color={getSupplierColor} />}
                 {view === "integrations" && <IntegrationsPage
