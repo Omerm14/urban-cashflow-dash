@@ -9,21 +9,12 @@ if (!process.env.ANTHROPIC_API_KEY) {
 const app  = express();
 const auth = require('./middleware/auth');
 
-// Capture raw body for webhook signature verification before JSON parsing
-// (needed for WhatsApp HMAC verification).
-app.use((req, res, next) => {
-  const needsRaw =
-    (req.path === '/api/webhook/whatsapp' && req.method === 'POST');
-  if (needsRaw) {
-    let data = '';
-    req.on('data', chunk => { data += chunk; });
-    req.on('end', () => { req.rawBody = data; next(); });
-  } else {
-    next();
-  }
-});
-
-app.use(express.json({ limit: '20mb' }));
+app.use(express.json({
+  limit: '20mb',
+  verify: (req, _res, buf) => {
+    if (req.path === '/api/webhook/whatsapp') req.rawBody = buf;
+  },
+}));
 
 app.post('/api/extract',    auth, require('./routes/extract'));
 app.get('/api/admin/usage',      require('./routes/admin'));
