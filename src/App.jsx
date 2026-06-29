@@ -885,8 +885,9 @@ function SupplierGroup({ supplier, invoices, selectedIds, onToggleSelect, onTogg
   const [hov, setHov] = useState(false);
   const c = color || T.indigo;
   const unpaidIds = invoices.filter(i => i.status !== "Paid" && i.status !== "paid").map(i => i.id);
-  const allSel = unpaidIds.length > 0 && unpaidIds.every(id => selectedIds.has(id));
-  const someSel = !allSel && unpaidIds.some(id => selectedIds.has(id));
+  const allIds = invoices.map(i => i.id);
+  const allSel = allIds.length > 0 && allIds.every(id => selectedIds.has(id));
+  const someSel = !allSel && allIds.some(id => selectedIds.has(id));
   const total = invoices.reduce((s, i) => s + i.amount, 0);
   const checkRef = useRef(null);
   useEffect(() => { if (checkRef.current) checkRef.current.indeterminate = someSel; }, [someSel]);
@@ -895,7 +896,7 @@ function SupplierGroup({ supplier, invoices, selectedIds, onToggleSelect, onTogg
     <div style={{ background: T.surf, border: `1px solid ${T.bdr}`, borderRadius: 10, marginBottom: 10, overflow: "hidden" }}
       onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)}>
       <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "11px 14px", borderBottom: `1px solid ${T.bdr}` }}>
-        <input type="checkbox" ref={checkRef} checked={allSel} onChange={() => onToggleAll(unpaidIds)} style={{ accentColor: T.indigo, cursor: "pointer", width: 14, height: 14, flexShrink: 0 }} />
+        <input type="checkbox" ref={checkRef} checked={allSel} onChange={() => onToggleAll(allIds)} style={{ accentColor: T.indigo, cursor: "pointer", width: 14, height: 14, flexShrink: 0 }} />
         <div style={{ width: 28, height: 28, borderRadius: "50%", background: c, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: SANS, fontWeight: 700, fontSize: 12, color: "#fff", flexShrink: 0 }}>{supplier.charAt(0)}</div>
         <span style={{ fontFamily: SANS, fontWeight: 600, fontSize: 13, color: T.t1, flex: 1 }}>{supplier}</span>
         {hov && unpaidIds.length > 0 && !isMobile && (
@@ -943,7 +944,7 @@ function SupplierGroup({ supplier, invoices, selectedIds, onToggleSelect, onTogg
       </div>
       <div style={{ padding: "6px 14px", borderTop: `1px solid ${T.bdr}`, display: "flex", justifyContent: "space-between" }}>
         <label style={{ display: "flex", alignItems: "center", gap: 6, cursor: "pointer", fontFamily: SANS, fontSize: 12, color: T.t3 }}>
-          <input type="checkbox" checked={allSel} onChange={() => onToggleAll(unpaidIds)} style={{ accentColor: T.indigo, width: 12, height: 12 }} />Select all unpaid
+          <input type="checkbox" checked={allSel} onChange={() => onToggleAll(allIds)} style={{ accentColor: T.indigo, width: 12, height: 12 }} />Select all
         </label>
         <span style={{ fontFamily: SANS, fontSize: 12, color: T.t3 }}>Total: <span style={{ fontFamily: MONO, color: T.t2 }}>{fmt(total)}</span></span>
       </div>
