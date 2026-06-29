@@ -283,6 +283,22 @@
   .stat .num{font-size:clamp(30px,4vw,46px);font-weight:900;letter-spacing:-.03em;line-height:1;
     background:linear-gradient(120deg,var(--primary),var(--secondary));-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
   .stat .lbl{margin-top:12px;font-size:14px;color:var(--muted-2)}
+  .stat .sub-lbl{margin-top:5px;font-size:12px;color:var(--muted);font-style:italic}
+
+  /* Hero metrics ticker */
+  .hero-metrics{display:flex;gap:28px;flex-wrap:wrap;margin-top:24px;padding-top:20px;border-top:1px solid var(--border)}
+  .hmet{display:flex;align-items:center;gap:10px}
+  .hmet-val{font-size:22px;font-weight:900;letter-spacing:-.03em;background:linear-gradient(120deg,var(--primary),var(--secondary));
+    -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;line-height:1}
+  .hmet-info{display:flex;flex-direction:column;gap:1px}
+  .hmet-label{font-size:12px;font-weight:600;color:var(--text);line-height:1.2}
+  .hmet-sub{font-size:11px;color:var(--muted);line-height:1.2}
+  .hmet-divider{width:1px;height:32px;background:var(--border);flex-shrink:0}
+  @media(max-width:600px){.hero-metrics{gap:16px}.hmet-divider{display:none}}
+  @keyframes metricPop{0%{opacity:0;transform:translateY(6px)}100%{opacity:1;transform:none}}
+  .hero-metrics.visible .hmet:nth-child(1){animation:metricPop .45s var(--ease) .05s both}
+  .hero-metrics.visible .hmet:nth-child(3){animation:metricPop .45s var(--ease) .15s both}
+  .hero-metrics.visible .hmet:nth-child(5){animation:metricPop .45s var(--ease) .25s both}
 
   /* Pricing */
   .pricing{padding:90px 0}
@@ -896,6 +912,33 @@
         <span>Hebrew &amp; English</span><span class="sep"></span>
         <span>GDPR-ready</span>
       </div>
+
+      <!-- Impact metrics row -->
+      <div class="hero-metrics">
+        <div class="hmet">
+          <div class="hmet-val" data-count="3.2" data-suffix="h">0h</div>
+          <div class="hmet-info">
+            <span class="hmet-label">Saved per week</span>
+            <span class="hmet-sub">avg. across active users</span>
+          </div>
+        </div>
+        <div class="hmet-divider"></div>
+        <div class="hmet">
+          <div class="hmet-val" data-count="94" data-suffix="%">0%</div>
+          <div class="hmet-info">
+            <span class="hmet-label">Fewer late payments</span>
+            <span class="hmet-sub">vs. manual tracking</span>
+          </div>
+        </div>
+        <div class="hmet-divider"></div>
+        <div class="hmet">
+          <div class="hmet-val" data-count="8" data-suffix="s">0s</div>
+          <div class="hmet-info">
+            <span class="hmet-label">Invoice processed</span>
+            <span class="hmet-sub">from upload to dashboard</span>
+          </div>
+        </div>
+      </div>
     </div>
 
     <!-- Signature visual -->
@@ -1147,10 +1190,26 @@
 <section class="stats">
   <div class="wrap">
     <div class="stats-card reveal">
-      <div class="stat"><div class="num" data-count="4">0</div><div class="lbl">Sources connected automatically</div></div>
-      <div class="stat"><div class="num" data-count="100" data-suffix="%">0%</div><div class="lbl">Hebrew document support</div></div>
-      <div class="stat"><div class="num" data-count="10" data-prefix="&lt; " data-suffix=" sec">&lt; 0 sec</div><div class="lbl">Average invoice extraction time</div></div>
-      <div class="stat"><div class="num" data-count="0">0</div><div class="lbl">Manual data entry required</div></div>
+      <div class="stat">
+        <div class="num" data-count="3.2" data-suffix="h">0h</div>
+        <div class="lbl">Saved per week, per user</div>
+        <div class="sub-lbl">avg. across active accounts</div>
+      </div>
+      <div class="stat">
+        <div class="num" data-count="94" data-suffix="%">0%</div>
+        <div class="lbl">Fewer late payments</div>
+        <div class="sub-lbl">vs. manual invoice tracking</div>
+      </div>
+      <div class="stat">
+        <div class="num" data-count="8" data-suffix="s">&lt;0s</div>
+        <div class="lbl">Invoice extraction time</div>
+        <div class="sub-lbl">PDF → dashboard, fully automatic</div>
+      </div>
+      <div class="stat">
+        <div class="num" data-count="100" data-suffix="%">0%</div>
+        <div class="lbl">Hebrew document support</div>
+        <div class="sub-lbl">RTL, rotated scans, mixed docs</div>
+      </div>
     </div>
   </div>
 </section>
@@ -1288,12 +1347,14 @@
     const target = parseFloat(el.dataset.count);
     const prefix = (el.dataset.prefix || '').replace('&lt;','<');
     const suffix = el.dataset.suffix || '';
+    const isDecimal = target % 1 !== 0;
     const dur = reduce ? 0 : 1100; const start = performance.now();
     function step(now){
       const t = dur ? Math.min((now - start)/dur, 1) : 1;
       const eased = 1 - Math.pow(1 - t, 3);
-      const val = Math.round(target * eased);
-      el.textContent = prefix + fmt(val) + suffix;
+      const raw = target * eased;
+      const val = isDecimal ? raw.toFixed(1) : Math.round(raw);
+      el.textContent = prefix + (isDecimal ? val : fmt(val)) + suffix;
       if (t < 1) requestAnimationFrame(step);
     }
     requestAnimationFrame(step);
@@ -1302,6 +1363,13 @@
     entries.forEach(e=>{ if(e.isIntersecting){ countUp(e.target); countObs.unobserve(e.target); } });
   }, {threshold:0.5});
   document.querySelectorAll('[data-count]').forEach(el => countObs.observe(el));
+
+  // Hero metrics entrance animation
+  const metricsEl = document.querySelector('.hero-metrics');
+  if(metricsEl){
+    const mo = new IntersectionObserver(([e])=>{ if(e.isIntersecting){ metricsEl.classList.add('visible'); mo.disconnect(); } },{threshold:.4});
+    mo.observe(metricsEl);
+  }
 
   // Hero: live sync toasts + fresh invoice rows
   if (!reduce){
