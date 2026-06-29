@@ -592,8 +592,17 @@ exports.processWhatsAppMedia = async (integration, userId, mediaId, filename, mi
   const suppliers        = await getSuppliers(userId);
   const existingInvoices = await getExistingInvoices(userId);
 
-  return processFile(
+  const results = await processFile(
     buffer, filename || `whatsapp_${mediaId}`, mimeType, userId, suppliers, existingInvoices,
     integration.id, 'whatsapp', { wa_message_id: waMessageId, media_id: mediaId },
   );
+
+  if (results.length > 0) {
+    await supabase.from('integrations').update({
+      last_sync:  new Date().toISOString(),
+      sync_count: (integration.sync_count || 0) + results.length,
+    }).eq('id', integration.id);
+  }
+
+  return results;
 };
