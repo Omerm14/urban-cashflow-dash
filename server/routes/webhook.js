@@ -41,7 +41,8 @@ exports.handleWhatsApp = async (req, res) => {
     }
   }
 
-  (async () => {
+  // await keeps the Vercel function alive until processing completes
+  await (async () => {
     for (const entry of body.entry) {
       for (const change of (entry.changes || [])) {
         if (change.field !== 'messages') continue;
