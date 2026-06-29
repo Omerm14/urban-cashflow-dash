@@ -688,92 +688,88 @@ function Dashboard({ invoices, onPayAllJuly, chartData, supplierNames, supplierC
         {!isMobile && <div style={{ background: T.isDark ? "rgba(255,255,255,.04)" : T.surf2, border: `1px solid ${T.bdr}`, borderRadius: 8, padding: "7px 14px", fontFamily: SANS, fontSize: 12, fontWeight: 500, color: T.t2 }}>{now.toLocaleDateString("en-US", { month: "short", year: "numeric" })}</div>}
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 310px", gap: 14, alignItems: "start" }}>
-        {/* Left column: alerts, KPIs, banner, chart */}
-        <div style={{ display: "flex", flexDirection: "column", gap: 14, minWidth: 0 }}>
-          {((missingSuppliers?.length > 0) || (anomalyMap?.size > 0)) && (
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-              {missingSuppliers?.length > 0 && (
-                <div onClick={onMissingAlert} style={{ background: T.amberTint, border: `1px solid ${T.amberBdr}`, borderRadius: 10, padding: "14px 18px", display: "flex", alignItems: "center", gap: 14, cursor: "pointer" }}
-                  onMouseEnter={e => e.currentTarget.style.opacity = "0.85"} onMouseLeave={e => e.currentTarget.style.opacity = "1"}>
-                  <div style={{ width: 40, height: 40, borderRadius: 10, background: "rgba(245,158,11,0.18)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, fontSize: 20 }}>⚠️</div>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontFamily: SANS, fontWeight: 700, fontSize: 15, color: T.amber, letterSpacing: "-0.02em" }}>{missingSuppliers.length} Missing Invoices</div>
-                    <div style={{ fontFamily: SANS, fontSize: 12, color: T.t2, marginTop: 2 }}>Recurring suppliers with no invoice this month</div>
-                  </div>
-                  <span style={{ fontFamily: SANS, fontSize: 12, color: T.amber, fontWeight: 500, flexShrink: 0 }}>Details →</span>
-                </div>
-              )}
-              {anomalyMap?.size > 0 && (
-                <div onClick={onAnomalyAlert} style={{ background: T.isDark ? "rgba(99,102,241,0.08)" : T.indigoTint, border: `1px solid ${T.indigoBdr}`, borderRadius: 10, padding: "14px 18px", display: "flex", alignItems: "center", gap: 14, cursor: "pointer" }}
-                  onMouseEnter={e => e.currentTarget.style.opacity = "0.85"} onMouseLeave={e => e.currentTarget.style.opacity = "1"}>
-                  <div style={{ width: 40, height: 40, borderRadius: 10, background: "rgba(99,102,241,0.15)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, fontSize: 20 }}>📊</div>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontFamily: SANS, fontWeight: 700, fontSize: 15, color: T.isDark ? "#A5B4FC" : T.indigo, letterSpacing: "-0.02em" }}>{anomalyMap.size} Amount Anomalies</div>
-                    <div style={{ fontFamily: SANS, fontSize: 12, color: T.t2, marginTop: 2 }}>Invoices that deviate from supplier averages</div>
-                  </div>
-                  <span style={{ fontFamily: SANS, fontSize: 12, color: T.isDark ? "#818CF8" : T.indigo, fontWeight: 500, flexShrink: 0 }}>Details →</span>
-                </div>
-              )}
+      {((missingSuppliers?.length > 0) || (anomalyMap?.size > 0)) && (
+        <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 10, marginBottom: 14 }}>
+          {missingSuppliers?.length > 0 && (
+            <div onClick={onMissingAlert} style={{ background: T.amberTint, border: `1px solid ${T.amberBdr}`, borderRadius: 10, padding: "14px 18px", display: "flex", alignItems: "center", gap: 14, cursor: "pointer" }}
+              onMouseEnter={e => e.currentTarget.style.opacity = "0.85"} onMouseLeave={e => e.currentTarget.style.opacity = "1"}>
+              <div style={{ width: 40, height: 40, borderRadius: 10, background: "rgba(245,158,11,0.18)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, fontSize: 20 }}>⚠️</div>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontFamily: SANS, fontWeight: 700, fontSize: 15, color: T.amber, letterSpacing: "-0.02em" }}>{missingSuppliers.length} Missing Invoices</div>
+                <div style={{ fontFamily: SANS, fontSize: 12, color: T.t2, marginTop: 2 }}>Recurring suppliers with no invoice this month</div>
+              </div>
+              <span style={{ fontFamily: SANS, fontSize: 12, color: T.amber, fontWeight: 500, flexShrink: 0 }}>Details →</span>
             </div>
           )}
+          {anomalyMap?.size > 0 && (
+            <div onClick={onAnomalyAlert} style={{ background: T.isDark ? "rgba(99,102,241,0.08)" : T.indigoTint, border: `1px solid ${T.indigoBdr}`, borderRadius: 10, padding: "14px 18px", display: "flex", alignItems: "center", gap: 14, cursor: "pointer" }}
+              onMouseEnter={e => e.currentTarget.style.opacity = "0.85"} onMouseLeave={e => e.currentTarget.style.opacity = "1"}>
+              <div style={{ width: 40, height: 40, borderRadius: 10, background: "rgba(99,102,241,0.15)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, fontSize: 20 }}>📊</div>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontFamily: SANS, fontWeight: 700, fontSize: 15, color: T.isDark ? "#A5B4FC" : T.indigo, letterSpacing: "-0.02em" }}>{anomalyMap.size} Amount Anomalies</div>
+                <div style={{ fontFamily: SANS, fontSize: 12, color: T.t2, marginTop: 2 }}>Invoices that deviate from supplier averages</div>
+              </div>
+              <span style={{ fontFamily: SANS, fontSize: 12, color: T.isDark ? "#818CF8" : T.indigo, fontWeight: 500, flexShrink: 0 }}>Details →</span>
+            </div>
+          )}
+        </div>
+      )}
 
-          <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr 1fr" : "repeat(4,1fr)", gap: 12 }}>
-            {CARDS.map(c => <KPICard key={c.label} {...c} />)}
+      <div style={{ display: "grid", gridTemplateColumns: kpiCols, gap: 12, marginBottom: 16 }}>
+        {CARDS.map(c => <KPICard key={c.label} {...c} />)}
+      </div>
+
+      <div style={{ background: T.surf, border: `1px solid ${T.isDark ? "rgba(99,102,241,.30)" : T.indigoBdr}`, borderRadius: 12, padding: isMobile ? "14px 16px" : "20px 24px", display: "flex", alignItems: isMobile ? "flex-start" : "center", flexDirection: isMobile ? "column" : "row", justifyContent: "space-between", gap: 12, marginBottom: 16 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+          <div style={{ width: 44, height: 44, borderRadius: 11, background: T.isDark ? "rgba(99,102,241,.14)" : T.indigoTint, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={T.isDark ? "#818CF8" : T.indigo} strokeWidth="1.75" strokeLinecap="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
           </div>
-
-          <div style={{ background: T.surf, border: `1px solid ${T.isDark ? "rgba(99,102,241,.30)" : T.indigoBdr}`, borderRadius: 12, padding: isMobile ? "14px 16px" : "20px 24px", display: "flex", alignItems: isMobile ? "flex-start" : "center", flexDirection: isMobile ? "column" : "row", justifyContent: "space-between", gap: 12 }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
-              <div style={{ width: 44, height: 44, borderRadius: 11, background: T.isDark ? "rgba(99,102,241,.14)" : T.indigoTint, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={T.isDark ? "#818CF8" : T.indigo} strokeWidth="1.75" strokeLinecap="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
-              </div>
-              <div>
-                <div style={{ fontFamily: SANS, fontWeight: 600, fontSize: 15, color: T.t1, letterSpacing: "-0.02em", marginBottom: 4 }}>
-                  {currentMonthTotal > 0 ? `Pay ${currentMonthLabel} — you're ready` : `Nothing due in ${currentMonthLabel} 🎉`}
-                </div>
-                <div style={{ fontFamily: SANS, fontSize: 13, color: T.t2 }}>{currentMonthSuppliers} supplier{currentMonthSuppliers !== 1 ? "s" : ""} · <span style={{ color: T.isDark ? "#A5B4FC" : T.indigo, fontWeight: 500, fontFamily: MONO }}>{fmt(currentMonthTotal)}</span> total due</div>
-              </div>
+          <div>
+            <div style={{ fontFamily: SANS, fontWeight: 600, fontSize: 15, color: T.t1, letterSpacing: "-0.02em", marginBottom: 4 }}>
+              {currentMonthTotal > 0 ? `Pay ${currentMonthLabel} — you're ready` : `Nothing due in ${currentMonthLabel} 🎉`}
             </div>
-            <div style={{ display: "flex", gap: 8, flexShrink: 0, alignSelf: isMobile ? "stretch" : "auto" }}>
-              <button onClick={() => onViewMonth?.()} style={{ padding: "8px 16px", border: `1px solid ${T.bdr2}`, borderRadius: 8, background: T.isDark ? "rgba(255,255,255,.04)" : "transparent", fontFamily: SANS, fontSize: 13, fontWeight: 500, color: T.t2, cursor: "pointer" }}>View invoices</button>
-              <button onClick={onPayAllJuly} style={{ background: T.indigo, border: "none", borderRadius: 8, padding: "8px 20px", fontFamily: SANS, fontSize: 13, fontWeight: 600, color: "#fff", cursor: "pointer", display: "flex", alignItems: "center", gap: 6, boxShadow: "0 4px 18px rgba(99,102,241,.35)", letterSpacing: "-0.01em", flex: isMobile ? 1 : "none", justifyContent: "center" }}>
-                Pay All <ChevronRight size={12} strokeWidth={2.5} />
-              </button>
-            </div>
+            <div style={{ fontFamily: SANS, fontSize: 13, color: T.t2 }}>{currentMonthSuppliers} supplier{currentMonthSuppliers !== 1 ? "s" : ""} · <span style={{ color: T.isDark ? "#A5B4FC" : T.indigo, fontWeight: 500, fontFamily: MONO }}>{fmt(currentMonthTotal)}</span> total due</div>
           </div>
+        </div>
+        <div style={{ display: "flex", gap: 8, flexShrink: 0, alignSelf: isMobile ? "stretch" : "auto" }}>
+          <button onClick={() => onViewMonth?.()} style={{ padding: "8px 16px", border: `1px solid ${T.bdr2}`, borderRadius: 8, background: T.isDark ? "rgba(255,255,255,.04)" : "transparent", fontFamily: SANS, fontSize: 13, fontWeight: 500, color: T.t2, cursor: "pointer" }}>View invoices</button>
+          <button onClick={onPayAllJuly} style={{ background: T.indigo, border: "none", borderRadius: 8, padding: "8px 20px", fontFamily: SANS, fontSize: 13, fontWeight: 600, color: "#fff", cursor: "pointer", display: "flex", alignItems: "center", gap: 6, boxShadow: "0 4px 18px rgba(99,102,241,.35)", letterSpacing: "-0.01em", flex: isMobile ? 1 : "none", justifyContent: "center" }}>
+            Pay All <ChevronRight size={12} strokeWidth={2.5} />
+          </button>
+        </div>
+      </div>
 
-          <div style={{ background: T.surf, border: `1px solid ${T.bdr}`, borderRadius: 12, padding: "22px 24px" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 20 }}>
-              <div>
-                <div style={{ fontFamily: SANS, fontWeight: 600, fontSize: 14, color: T.isDark ? "#CBD6E6" : T.t1, letterSpacing: "-0.02em" }}>Payment Schedule</div>
-                <div style={{ fontFamily: SANS, fontSize: 12, color: T.t2, marginTop: 3 }}>Upcoming payments by month</div>
-              </div>
-              <button style={{ padding: "5px 12px", border: `1px solid ${T.bdr}`, borderRadius: 6, background: T.isDark ? "rgba(255,255,255,.04)" : T.surf2, fontFamily: SANS, fontSize: 11, fontWeight: 600, color: T.t2, cursor: "pointer" }}>4 months</button>
+      <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 310px", gap: 14 }}>
+        <div style={{ background: T.surf, border: `1px solid ${T.bdr}`, borderRadius: 12, padding: "22px 24px" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 20 }}>
+            <div>
+              <div style={{ fontFamily: SANS, fontWeight: 600, fontSize: 14, color: T.isDark ? "#CBD6E6" : T.t1, letterSpacing: "-0.02em" }}>Payment Schedule</div>
+              <div style={{ fontFamily: SANS, fontSize: 12, color: T.t2, marginTop: 3 }}>Upcoming payments by month</div>
             </div>
-            <ResponsiveContainer width="100%" height={isMobile ? 140 : 180}>
-              <BarChart data={resolvedChartData} barSize={isMobile ? 20 : 28} barCategoryGap="40%">
-                <CartesianGrid strokeDasharray="3 3" stroke={T.bdr} vertical={false} />
-                <XAxis dataKey="month" tick={{ fontFamily: SANS, fontSize: isMobile ? 10 : 11, fill: T.t3 }} axisLine={false} tickLine={false} />
-                <YAxis tick={{ fontFamily: SANS, fontSize: 10, fill: T.t3 }} axisLine={false} tickLine={false} tickFormatter={v => `₪${(v / 1000).toFixed(0)}k`} width={isMobile ? 32 : 38} />
-                <Tooltip content={<ChartTooltip />} cursor={{ fill: T.indigoTint }} />
-                {chartSuppliers.map((name, i) => (
-                  <Bar key={name} dataKey={name} stackId="a" fill={getColor(name)} radius={i === chartSuppliers.length - 1 ? [3, 3, 0, 0] : [0, 0, 0, 0]} />
-                ))}
-              </BarChart>
-            </ResponsiveContainer>
-            <div style={{ display: "flex", flexWrap: "wrap", gap: "10px", marginTop: 16, paddingTop: 14, borderTop: `1px solid ${T.isDark ? "rgba(255,255,255,.06)" : T.bdr}` }}>
-              {chartSuppliers.map(n => (
-                <div key={n} style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                  <div style={{ width: 6, height: 6, borderRadius: "50%", background: getColor(n), flexShrink: 0 }} />
-                  <span style={{ fontFamily: SANS, fontSize: 11, color: T.t2, maxWidth: 90, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{n}</span>
-                </div>
+            <button style={{ padding: "5px 12px", border: `1px solid ${T.bdr}`, borderRadius: 6, background: T.isDark ? "rgba(255,255,255,.04)" : T.surf2, fontFamily: SANS, fontSize: 11, fontWeight: 600, color: T.t2, cursor: "pointer" }}>4 months</button>
+          </div>
+          <ResponsiveContainer width="100%" height={isMobile ? 140 : 180}>
+            <BarChart data={resolvedChartData} barSize={isMobile ? 20 : 28} barCategoryGap="40%">
+              <CartesianGrid strokeDasharray="3 3" stroke={T.bdr} vertical={false} />
+              <XAxis dataKey="month" tick={{ fontFamily: SANS, fontSize: isMobile ? 10 : 11, fill: T.t3 }} axisLine={false} tickLine={false} />
+              <YAxis tick={{ fontFamily: SANS, fontSize: 10, fill: T.t3 }} axisLine={false} tickLine={false} tickFormatter={v => `₪${(v / 1000).toFixed(0)}k`} width={isMobile ? 32 : 38} />
+              <Tooltip content={<ChartTooltip />} cursor={{ fill: T.indigoTint }} />
+              {chartSuppliers.map((name, i) => (
+                <Bar key={name} dataKey={name} stackId="a" fill={getColor(name)} radius={i === chartSuppliers.length - 1 ? [3, 3, 0, 0] : [0, 0, 0, 0]} />
               ))}
-            </div>
+            </BarChart>
+          </ResponsiveContainer>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: "10px", marginTop: 16, paddingTop: 14, borderTop: `1px solid ${T.isDark ? "rgba(255,255,255,.06)" : T.bdr}` }}>
+            {chartSuppliers.map(n => (
+              <div key={n} style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                <div style={{ width: 6, height: 6, borderRadius: "50%", background: getColor(n), flexShrink: 0 }} />
+                <span style={{ fontFamily: SANS, fontSize: 11, color: T.t2, maxWidth: 90, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{n}</span>
+              </div>
+            ))}
           </div>
         </div>
 
-        {/* Right column: month summary cards */}
-        <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr 1fr" : "1fr", gap: 10 }}>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: 10 }}>
           {resolvedChartData.slice(-4).map(m => (
             <div key={m.month} onClick={() => onViewMonth?.(m.month)}
               style={{ background: T.surf, border: `1px solid ${T.bdr}`, borderRadius: 12, padding: "14px 16px", cursor: "pointer", transition: "border-color 0.18s" }}
