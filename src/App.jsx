@@ -6,9 +6,14 @@ import { useAuth }        from "./contexts/AuthContext";
 import { supabase }       from "./lib/supabase";
 import { useInvoiceData } from "./hooks/useInvoiceData";
 import { usePlan }        from "./hooks/usePlan";
+import { useSyncJob }     from "./hooks/useSyncJob";
 import CalendarView       from "./components/CalendarView";
 import EditInvoiceModal   from "./components/EditInvoiceModal";
-import { MissingSuppliersModal } from "./components/AlertModals";
+import AttachmentPreviewModal from "./components/AttachmentPreviewModal";
+import IntegrationsPage   from "./components/IntegrationsPage";
+import UsageBanner        from "./components/UsageBanner";
+import AdminPage          from "./pages/AdminPage";
+import { MissingSuppliersModal, AnomalyModal } from "./components/AlertModals";
 import { PALETTE }        from "./constants";
 import {
   LayoutDashboard, FileText, Calendar, Zap, Bell, Upload,
@@ -98,12 +103,16 @@ const fmtDate = (d) => { if (!d) return "—"; return new Date(d + "T12:00:00").
 function StatusBadge({ status }) {
   const T = useT();
   const MAP = {
+    Unpaid:  { label: "Unpaid",  bg: T.surf3,     color: T.t2,    border: T.bdr     },
     unpaid:  { label: "Unpaid",  bg: T.surf3,     color: T.t2,    border: T.bdr     },
+    Overdue: { label: "Overdue", bg: T.redTint,   color: T.red,   border: T.redBdr  },
     overdue: { label: "Overdue", bg: T.redTint,   color: T.red,   border: T.redBdr  },
+    Paid:    { label: "Paid",    bg: T.greenTint, color: T.green, border: T.greenBdr},
     paid:    { label: "Paid",    bg: T.greenTint, color: T.green, border: T.greenBdr},
+    Credit:  { label: "Credit",  bg: T.indigoTint,color: T.indigo,border: T.indigoBdr},
     credit:  { label: "Credit",  bg: T.indigoTint,color: T.indigo,border: T.indigoBdr},
   };
-  const c = MAP[status] || MAP.unpaid;
+  const c = MAP[status] || MAP.Unpaid;
   return <span style={{ display: "inline-flex", alignItems: "center", padding: "4px 10px", borderRadius: 20, fontFamily: SANS, fontSize: 11, fontWeight: 600, background: c.bg, color: c.color, whiteSpace: "nowrap" }}>{c.label}</span>;
 }
 
@@ -264,10 +273,10 @@ function LoginScreen({ onLogin }) {
 }
 
 // ── Sidebar ───────────────────────────────────────────────────────────────────
-function Sidebar({ view, setView, suppliersCount, onUpgrade, onUpload, mobileOpen, setMobileOpen }) {
+function Sidebar({ view, setView, suppliersCount, onUpgrade, onUpload, mobileOpen, setMobileOpen, plan, planUsed, planLimit, planPct, user }) {
   const { isMobile, isTablet } = useLayout();
   const isDrawer = isMobile || isTablet;
-  const used = 18, limit = 20, pct = Math.round((used / limit) * 100);
+  const used = planUsed ?? 0, limit = planLimit ?? 20, pct = planPct ?? Math.round((used / limit) * 100);
   const navigate = (id) => { setView(id); if (isDrawer) setMobileOpen(false); };
 
   const navItem = (id, label, Icon, badge, badgeRed) => {
@@ -329,7 +338,7 @@ function Sidebar({ view, setView, suppliersCount, onUpgrade, onUpload, mobileOpe
         <div style={{ padding: "12px" }}>
           <div style={{ background: "rgba(99,102,241,.08)", border: "1px solid rgba(99,102,241,.18)", borderRadius: 8, padding: "10px 12px", marginBottom: 8 }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 5 }}>
-              <span style={{ fontFamily: SANS, fontSize: 10, fontWeight: 700, color: "#818CF8", letterSpacing: "0.08em" }}>FREE PLAN</span>
+              <span style={{ fontFamily: SANS, fontSize: 10, fontWeight: 700, color: "#818CF8", letterSpacing: "0.08em" }}>{(plan || "FREE").toUpperCase()} PLAN</span>
               <button onClick={onUpgrade} style={{ fontFamily: SANS, fontSize: 10, fontWeight: 500, color: "rgba(255,255,255,.3)", background: "transparent", border: "none", cursor: "pointer", padding: 0 }}>Manage</button>
             </div>
             <div style={{ fontFamily: SANS, fontSize: 11, color: "rgba(255,255,255,.35)", marginBottom: 5, display: "flex", justifyContent: "space-between" }}>
@@ -341,9 +350,9 @@ function Sidebar({ view, setView, suppliersCount, onUpgrade, onUpload, mobileOpe
           <button onClick={() => navigate("settings")} style={{ width: "100%", display: "flex", alignItems: "center", gap: 8, padding: "6px 8px", borderRadius: 6, background: "transparent", border: "none", cursor: "pointer" }}
             onMouseEnter={e => e.currentTarget.style.background = "rgba(255,255,255,.05)"}
             onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
-            <div style={{ width: 26, height: 26, borderRadius: "50%", background: "linear-gradient(135deg,#6366F1,#818CF8)", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: SANS, fontWeight: 700, fontSize: 10, color: "#fff", flexShrink: 0 }}>AK</div>
+            <div style={{ width: 26, height: 26, borderRadius: "50%", background: "linear-gradient(135deg,#6366F1,#818CF8)", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: SANS, fontWeight: 700, fontSize: 10, color: "#fff", flexShrink: 0 }}>{(user?.email?.[0] || "U").toUpperCase()}</div>
             <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontFamily: SANS, fontSize: 12, fontWeight: 500, color: SB.t1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Alex K.</div>
+              <div style={{ fontFamily: SANS, fontSize: 12, fontWeight: 500, color: SB.t1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{user?.user_metadata?.full_name || user?.email?.split("@")[0] || "Account"}</div>
               <div style={{ fontFamily: SANS, fontSize: 10, color: SB.t2 }}>Settings</div>
             </div>
             <Settings size={12} color={SB.t2} />
@@ -355,10 +364,10 @@ function Sidebar({ view, setView, suppliersCount, onUpgrade, onUpload, mobileOpe
 }
 
 // ── Global header ─────────────────────────────────────────────────────────────
-function GlobalHeader({ view, isDark, onToggleTheme, onMenuOpen }) {
+function GlobalHeader({ view, isDark, onToggleTheme, onMenuOpen, onMissingAlert, onAnomalyAlert, missingCount, anomalyCount }) {
   const T = useT();
   const { isMobile, isTablet } = useLayout();
-  const TITLES = { dashboard: "Dashboard", invoices: "Invoices", calendar: "Calendar", integrations: "Integrations", suppliers: "Suppliers", settings: "Settings" };
+  const TITLES = { dashboard: "Dashboard", invoices: "Invoices", calendar: "Calendar", integrations: "Integrations", suppliers: "Suppliers", settings: "Settings", admin: "Admin" };
   const headerBg = T.isDark ? "#0C1017" : T.surf;
   const ghostBtn = { width: 34, height: 34, display: "flex", alignItems: "center", justifyContent: "center", background: "transparent", border: `1px solid ${T.isDark ? "rgba(255,255,255,.10)" : T.bdr}`, borderRadius: 8, cursor: "pointer", color: T.isDark ? "rgba(255,255,255,.4)" : T.t2, flexShrink: 0 };
   return (
@@ -375,9 +384,9 @@ function GlobalHeader({ view, isDark, onToggleTheme, onMenuOpen }) {
       )}
       <button onClick={() => {}} style={ghostBtn}><Globe size={13} /></button>
       <button onClick={onToggleTheme} style={ghostBtn}>{isDark ? <Sun size={14} /> : <Moon size={14} />}</button>
-      <button style={{ position: "relative", ...ghostBtn }}>
+      <button onClick={() => { if (missingCount > 0) onMissingAlert?.(); else if (anomalyCount > 0) onAnomalyAlert?.(); }} style={{ position: "relative", ...ghostBtn }}>
         <Bell size={14} />
-        <span style={{ position: "absolute", top: 7, right: 7, width: 6, height: 6, background: "#EF4444", borderRadius: "50%", border: `1.5px solid ${headerBg}` }} />
+        {(missingCount > 0 || anomalyCount > 0) && <span style={{ position: "absolute", top: 7, right: 7, width: 6, height: 6, background: "#EF4444", borderRadius: "50%", border: `1.5px solid ${headerBg}` }} />}
       </button>
     </div>
   );
@@ -415,17 +424,21 @@ const GreenPill = ({ children }) => <span style={{ display: "flex", alignItems: 
 const RedPill = ({ children }) => <span style={{ color: "#F87171", fontSize: 12, fontWeight: 600, background: "rgba(239,68,68,.1)", padding: "3px 8px", borderRadius: 20, fontFamily: "'IBM Plex Sans', sans-serif" }}>{children}</span>;
 const AmberPill = ({ children }) => <span style={{ color: "#F59E0B", fontSize: 12, fontWeight: 600, background: "rgba(245,158,11,.1)", padding: "3px 8px", borderRadius: 20, fontFamily: "'IBM Plex Sans', sans-serif" }}>{children}</span>;
 
-function Dashboard({ invoices, onPayAllJuly }) {
+function Dashboard({ invoices, onPayAllJuly, chartData, supplierNames, supplierColor }) {
   const T = useT();
   const { isMobile, isTablet } = useLayout();
+  const now = new Date();
+  const nextYM = `${now.getFullYear()}-${String(now.getMonth() + 2).padStart(2, "0")}`;
+  const nextLabel = new Date(now.getFullYear(), now.getMonth() + 1, 1).toLocaleDateString("en-US", { month: "long", year: "numeric" });
+  const isUnpaid = i => i.status !== "Paid" && i.status !== "paid";
   const kpis = {
-    outstanding: invoices.filter(i => i.status !== "paid").reduce((s, i) => s + i.amount, 0),
-    overdue:     invoices.filter(i => i.status === "overdue").reduce((s, i) => s + i.amount, 0),
-    nextMonth:   invoices.filter(i => i.status !== "paid" && i.dueDate?.startsWith("2024-08")).reduce((s, i) => s + i.amount, 0),
-    paid:        invoices.filter(i => i.status === "paid").reduce((s, i) => s + i.amount, 0),
+    outstanding: invoices.filter(isUnpaid).reduce((s, i) => s + Number(i.amount), 0),
+    overdue:     invoices.filter(i => i.status === "Overdue" || i.status === "overdue").reduce((s, i) => s + Number(i.amount), 0),
+    nextMonth:   invoices.filter(i => isUnpaid(i) && i.dueDate?.startsWith(nextYM)).reduce((s, i) => s + Number(i.amount), 0),
+    paid:        invoices.filter(i => i.status === "Paid" || i.status === "paid").reduce((s, i) => s + Number(i.amount), 0),
   };
-  const overdueCount = invoices.filter(i => i.status === "overdue").length;
-  const nextMonthCount = invoices.filter(i => i.status !== "paid" && i.dueDate?.startsWith("2024-08")).length;
+  const overdueCount = invoices.filter(i => i.status === "Overdue" || i.status === "overdue").length;
+  const nextMonthCount = invoices.filter(i => isUnpaid(i) && i.dueDate?.startsWith(nextYM)).length;
 
   const CARDS = [
     {
@@ -444,7 +457,7 @@ function Dashboard({ invoices, onPayAllJuly }) {
       label: "Next Month", value: kpis.nextMonth, delay: 0.12,
       iconBg: "rgba(245,158,11,.12)", iconColor: "#F59E0B",
       iconPath: <><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></>,
-      pill: <AmberPill>Aug 2024</AmberPill>, context: `· ${nextMonthCount} invoices`,
+      pill: <AmberPill>{nextLabel}</AmberPill>, context: `· ${nextMonthCount} invoices`,
     },
     {
       label: "Total Paid", value: kpis.paid, delay: 0.18,
@@ -456,17 +469,19 @@ function Dashboard({ invoices, onPayAllJuly }) {
 
   const isCompact = isMobile || isTablet;
   const kpiCols = isMobile ? "1fr 1fr" : isTablet ? "1fr 1fr" : "repeat(4,1fr)";
-  const supplierNames = Object.keys(SUPPLIER_COLORS);
+  const chartSuppliers = supplierNames || Object.keys(SUPPLIER_COLORS);
+  const resolvedChartData = chartData && chartData.length > 0 ? chartData : CHART_DATA;
+  const getColor = supplierColor || (n => SUPPLIER_COLORS[n] || "#6366F1");
 
   return (
     <div style={{ animation: "slideUp 0.35s cubic-bezier(.16,1,.3,1)" }}>
       <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: isMobile ? 14 : 20 }}>
         <div>
           <h1 style={{ fontFamily: SANS, fontSize: isMobile ? 17 : 21, fontWeight: 600, letterSpacing: "-0.04em", color: T.t1, margin: "0 0 3px", lineHeight: 1 }}>Dashboard</h1>
-          {!isMobile && <p style={{ fontFamily: SANS, fontSize: 13, color: T.t2, margin: 0 }}>June 28, 2024 · Here's where you stand today</p>}
+          {!isMobile && <p style={{ fontFamily: SANS, fontSize: 13, color: T.t2, margin: 0 }}>{now.toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })} · Here's where you stand today</p>}
         </div>
         <div style={{ flex: 1 }} />
-        {!isMobile && <div style={{ background: T.isDark ? "rgba(255,255,255,.04)" : T.surf2, border: `1px solid ${T.bdr}`, borderRadius: 8, padding: "7px 14px", fontFamily: SANS, fontSize: 12, fontWeight: 500, color: T.t2 }}>Jun 2024</div>}
+        {!isMobile && <div style={{ background: T.isDark ? "rgba(255,255,255,.04)" : T.surf2, border: `1px solid ${T.bdr}`, borderRadius: 8, padding: "7px 14px", fontFamily: SANS, fontSize: 12, fontWeight: 500, color: T.t2 }}>{now.toLocaleDateString("en-US", { month: "short", year: "numeric" })}</div>}
       </div>
 
       <div style={{ display: "grid", gridTemplateColumns: kpiCols, gap: 12, marginBottom: 16 }}>
@@ -501,20 +516,20 @@ function Dashboard({ invoices, onPayAllJuly }) {
             <button style={{ padding: "5px 12px", border: `1px solid ${T.bdr}`, borderRadius: 6, background: T.isDark ? "rgba(255,255,255,.04)" : T.surf2, fontFamily: SANS, fontSize: 11, fontWeight: 600, color: T.t2, cursor: "pointer" }}>4 months</button>
           </div>
           <ResponsiveContainer width="100%" height={isMobile ? 140 : 180}>
-            <BarChart data={CHART_DATA} barSize={isMobile ? 20 : 28} barCategoryGap="40%">
+            <BarChart data={resolvedChartData} barSize={isMobile ? 20 : 28} barCategoryGap="40%">
               <CartesianGrid strokeDasharray="3 3" stroke={T.bdr} vertical={false} />
               <XAxis dataKey="month" tick={{ fontFamily: SANS, fontSize: isMobile ? 10 : 11, fill: T.t3 }} axisLine={false} tickLine={false} />
               <YAxis tick={{ fontFamily: SANS, fontSize: 10, fill: T.t3 }} axisLine={false} tickLine={false} tickFormatter={v => `₪${(v / 1000).toFixed(0)}k`} width={isMobile ? 32 : 38} />
               <Tooltip content={<ChartTooltip />} cursor={{ fill: T.indigoTint }} />
-              {supplierNames.map((name, i) => (
-                <Bar key={name} dataKey={name} stackId="a" fill={SUPPLIER_COLORS[name]} radius={i === supplierNames.length - 1 ? [3, 3, 0, 0] : [0, 0, 0, 0]} />
+              {chartSuppliers.map((name, i) => (
+                <Bar key={name} dataKey={name} stackId="a" fill={getColor(name)} radius={i === chartSuppliers.length - 1 ? [3, 3, 0, 0] : [0, 0, 0, 0]} />
               ))}
             </BarChart>
           </ResponsiveContainer>
           <div style={{ display: "flex", flexWrap: "wrap", gap: "10px", marginTop: 16, paddingTop: 14, borderTop: `1px solid ${T.isDark ? "rgba(255,255,255,.06)" : T.bdr}` }}>
-            {supplierNames.map(n => (
+            {chartSuppliers.map(n => (
               <div key={n} style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                <div style={{ width: 6, height: 6, borderRadius: "50%", background: SUPPLIER_COLORS[n], flexShrink: 0 }} />
+                <div style={{ width: 6, height: 6, borderRadius: "50%", background: getColor(n), flexShrink: 0 }} />
                 <span style={{ fontFamily: SANS, fontSize: 11, color: T.t2, maxWidth: 90, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{n}</span>
               </div>
             ))}
@@ -522,7 +537,7 @@ function Dashboard({ invoices, onPayAllJuly }) {
         </div>
 
         <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr 1fr" : "1fr", gap: 10 }}>
-          {CHART_DATA.slice(-4).map(m => (
+          {resolvedChartData.slice(-4).map(m => (
             <div key={m.month} onClick={onPayAllJuly}
               style={{ background: T.surf, border: `1px solid ${T.bdr}`, borderRadius: 12, padding: "14px 16px", cursor: "pointer", transition: "border-color 0.18s" }}
               onMouseEnter={e => e.currentTarget.style.borderColor = T.isDark ? "rgba(255,255,255,.12)" : T.indigo}
@@ -535,7 +550,7 @@ function Dashboard({ invoices, onPayAllJuly }) {
                 .sort((a, b) => b[1] - a[1]).slice(0, 3)
                 .map(([sup, amt]) => (
                   <div key={sup} style={{ display: "flex", alignItems: "center", gap: 8, padding: "2px 0" }}>
-                    <div style={{ width: 18, height: 18, borderRadius: "50%", background: SUPPLIER_COLORS[sup] || T.t2, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: SANS, fontSize: 8, fontWeight: 700, color: "#fff", flexShrink: 0 }}>{sup.charAt(0)}</div>
+                    <div style={{ width: 18, height: 18, borderRadius: "50%", background: getColor(sup), display: "flex", alignItems: "center", justifyContent: "center", fontFamily: SANS, fontSize: 8, fontWeight: 700, color: "#fff", flexShrink: 0 }}>{sup.charAt(0)}</div>
                     <span style={{ flex: 1, fontFamily: SANS, fontSize: 11, color: T.isDark ? "#7A8FA6" : T.t2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{sup}</span>
                     <span style={{ fontFamily: MONO, fontSize: 12, fontWeight: 600, color: T.isDark ? "#9AAFCA" : T.t1, fontVariantNumeric: "tabular-nums" }}>{fmt(amt)}</span>
                   </div>
@@ -549,12 +564,13 @@ function Dashboard({ invoices, onPayAllJuly }) {
 }
 
 // ── Invoices ──────────────────────────────────────────────────────────────────
-function SupplierGroup({ supplier, invoices, selectedIds, onToggleSelect, onToggleAll, onMarkPaid, onPayGroup }) {
+function SupplierGroup({ supplier, invoices, selectedIds, onToggleSelect, onToggleAll, onMarkPaid, onPayGroup, onEditInvoice }) {
   const T = useT();
   const { isMobile } = useLayout();
   const [hov, setHov] = useState(false);
-  const c = SUPPLIER_COLORS[supplier] || T.t2;
-  const unpaidIds = invoices.filter(i => i.status !== "paid").map(i => i.id);
+  const supplierListLocal = [...new Set(invoices.map(i => i.supplier))];
+  const c = PALETTE[supplierListLocal.indexOf(supplier) % PALETTE.length] || T.indigo;
+  const unpaidIds = invoices.filter(i => i.status !== "Paid" && i.status !== "paid").map(i => i.id);
   const allSel = unpaidIds.length > 0 && unpaidIds.every(id => selectedIds.has(id));
   const someSel = !allSel && unpaidIds.some(id => selectedIds.has(id));
   const total = invoices.reduce((s, i) => s + i.amount, 0);
@@ -579,7 +595,7 @@ function SupplierGroup({ supplier, invoices, selectedIds, onToggleSelect, onTogg
       <div style={{ overflowX: isMobile ? "auto" : "visible" }}>
         {invoices.map(inv => {
           const isSel = selectedIds.has(inv.id);
-          const isPaid = inv.status === "paid";
+          const isPaid = inv.status === "Paid" || inv.status === "paid";
           const cols = isMobile ? "36px 1fr 100px 110px 130px" : "40px 1fr 110px 120px 110px 1fr 190px";
           return (
             <div key={inv.id} onClick={() => !isPaid && onToggleSelect(inv.id)}
@@ -591,11 +607,11 @@ function SupplierGroup({ supplier, invoices, selectedIds, onToggleSelect, onTogg
               <span style={{ fontFamily: MONO, fontWeight: 600, fontSize: 13, color: T.isDark ? "#C8D6E8" : T.t1, fontVariantNumeric: "tabular-nums" }}>{fmt(inv.amount)}</span>
               <StatusBadge status={inv.status} />
               {!isMobile && <span style={{ fontFamily: MONO, fontSize: 12, color: T.isDark ? "#627488" : T.t2, fontVariantNumeric: "tabular-nums" }}>{fmtDate(inv.invoiceDate)}</span>}
-              {!isMobile && <span style={{ fontFamily: MONO, fontSize: 12, color: inv.status === "overdue" ? "#F87171" : T.isDark ? "#627488" : T.t2, fontWeight: inv.status === "overdue" ? 600 : 400, fontVariantNumeric: "tabular-nums" }}>{fmtDate(inv.dueDate)}</span>}
+              {!isMobile && <span style={{ fontFamily: MONO, fontSize: 12, color: (inv.status === "Overdue" || inv.status === "overdue") ? "#F87171" : T.isDark ? "#627488" : T.t2, fontWeight: (inv.status === "Overdue" || inv.status === "overdue") ? 600 : 400, fontVariantNumeric: "tabular-nums" }}>{fmtDate(inv.dueDate)}</span>}
               <div style={{ display: "flex", gap: 4, justifyContent: "flex-end" }}>
                 {inv.attachment && <button onClick={e => e.stopPropagation()} style={{ padding: "2px 6px", background: "transparent", border: `1px solid ${T.bdr}`, borderRadius: 4, color: T.t2, cursor: "pointer", display: "flex", alignItems: "center" }}><Paperclip size={10} /></button>}
                 {!isPaid && <button onClick={e => { e.stopPropagation(); onMarkPaid(inv.id); }} style={{ padding: "2px 7px", background: T.greenTint, border: `1px solid ${T.greenBdr}`, borderRadius: 4, color: T.green, cursor: "pointer", fontFamily: SANS, fontSize: 11, fontWeight: 600, display: "flex", alignItems: "center", gap: 2 }}><Check size={10} />Paid</button>}
-                {!isMobile && <button onClick={e => e.stopPropagation()} style={{ padding: "2px 6px", background: "transparent", border: `1px solid ${T.bdr}`, borderRadius: 4, color: T.t2, cursor: "pointer", display: "flex", alignItems: "center" }}><Pencil size={10} /></button>}
+                {!isMobile && <button onClick={e => { e.stopPropagation(); onEditInvoice?.(inv); }} style={{ padding: "2px 6px", background: "transparent", border: `1px solid ${T.bdr}`, borderRadius: 4, color: T.t2, cursor: "pointer", display: "flex", alignItems: "center" }}><Pencil size={10} /></button>}
               </div>
             </div>
           );
@@ -611,15 +627,16 @@ function SupplierGroup({ supplier, invoices, selectedIds, onToggleSelect, onTogg
   );
 }
 
-function GroupedView({ invoices, selectedMonth, onMonthChange, selectedIds, onToggleSelect, onToggleAll, onMarkPaid, onSelectAll, onPayGroup, onAllPaid }) {
+function GroupedView({ invoices, selectedMonth, onMonthChange, selectedIds, onToggleSelect, onToggleAll, onMarkPaid, onSelectAll, onPayGroup, onAllPaid, onEditInvoice }) {
   const T = useT();
   const { isMobile } = useLayout();
   const monthInvoices = invoices.filter(inv => inv.dueDate?.startsWith(selectedMonth));
-  const unpaid = monthInvoices.filter(i => i.status !== "paid");
+  const isUnpaid = i => i.status !== "Paid" && i.status !== "paid";
+  const unpaid = monthInvoices.filter(isUnpaid);
   const paidCount = monthInvoices.length - unpaid.length;
   const progress = monthInvoices.length > 0 ? Math.round((paidCount / monthInvoices.length) * 100) : 0;
   const allPaid = monthInvoices.length > 0 && paidCount === monthInvoices.length;
-  const monthTotal = monthInvoices.reduce((s, i) => s + i.amount, 0);
+  const monthTotal = monthInvoices.reduce((s, i) => s + Number(i.amount), 0);
   const prevAllPaid = useRef(false);
   useEffect(() => { if (allPaid && !prevAllPaid.current && monthInvoices.length > 0) onAllPaid(); prevAllPaid.current = allPaid; }, [allPaid]);
   const groups = Object.entries(monthInvoices.reduce((acc, inv) => { (acc[inv.supplier] = acc[inv.supplier] || []).push(inv); return acc; }, {})).sort(([a], [b]) => a.localeCompare(b));
@@ -627,19 +644,24 @@ function GroupedView({ invoices, selectedMonth, onMonthChange, selectedIds, onTo
   return (
     <div>
       <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 14 }}>
-        {["2024-07", "2024-08", "2024-09", "2024-10"].map(ym => {
-          const active = ym === selectedMonth;
-          const mInvoices = invoices.filter(i => i.dueDate?.startsWith(ym));
-          const mTotal = mInvoices.reduce((s, i) => s + i.amount, 0);
-          const [y, m] = ym.split("-").map(Number);
-          const shortLabel = new Date(y, m - 1, 1).toLocaleDateString("en-US", { month: "short" }) + " '" + String(y).slice(2);
-          return (
-            <button key={ym} onClick={() => onMonthChange(ym)} style={{ padding: "7px 16px", background: active ? T.indigo : T.isDark ? "rgba(255,255,255,.04)" : T.surf2, border: `1px solid ${active ? "transparent" : T.isDark ? "rgba(255,255,255,.08)" : T.bdr}`, borderRadius: 24, fontFamily: SANS, fontSize: 13, fontWeight: active ? 600 : 500, color: active ? "#fff" : T.t2, cursor: "pointer", whiteSpace: "nowrap" }}>
-              {shortLabel}
-              {mTotal > 0 && <span style={{ opacity: active ? 0.65 : 0.7, fontWeight: 400, marginLeft: 4, fontFamily: MONO }}>₪{Math.round(mTotal / 1000)}k</span>}
-            </button>
-          );
-        })}
+        {(() => {
+          const yms = [...new Set(invoices.map(i => i.dueDate?.slice(0, 7)).filter(Boolean))].sort();
+          if (!yms.includes(selectedMonth)) yms.push(selectedMonth);
+          yms.sort();
+          return yms.slice(0, 8).map(ym => {
+            const active = ym === selectedMonth;
+            const mInvoices = invoices.filter(i => i.dueDate?.startsWith(ym));
+            const mTotal = mInvoices.reduce((s, i) => s + Number(i.amount), 0);
+            const [y, m] = ym.split("-").map(Number);
+            const shortLabel = new Date(y, m - 1, 1).toLocaleDateString("en-US", { month: "short" }) + " '" + String(y).slice(2);
+            return (
+              <button key={ym} onClick={() => onMonthChange(ym)} style={{ padding: "7px 16px", background: active ? T.indigo : T.isDark ? "rgba(255,255,255,.04)" : T.surf2, border: `1px solid ${active ? "transparent" : T.isDark ? "rgba(255,255,255,.08)" : T.bdr}`, borderRadius: 24, fontFamily: SANS, fontSize: 13, fontWeight: active ? 600 : 500, color: active ? "#fff" : T.t2, cursor: "pointer", whiteSpace: "nowrap" }}>
+                {shortLabel}
+                {mTotal > 0 && <span style={{ opacity: active ? 0.65 : 0.7, fontWeight: 400, marginLeft: 4, fontFamily: MONO }}>₪{Math.round(mTotal / 1000)}k</span>}
+              </button>
+            );
+          });
+        })()}
       </div>
       {monthInvoices.length > 0 && (
         <>
@@ -677,15 +699,17 @@ function GroupedView({ invoices, selectedMonth, onMonthChange, selectedIds, onTo
       {groups.map(([supplier, supInvoices]) => (
         <SupplierGroup key={supplier} supplier={supplier} invoices={supInvoices} selectedIds={selectedIds}
           onToggleSelect={onToggleSelect} onToggleAll={onToggleAll} onMarkPaid={onMarkPaid}
-          onPayGroup={ids => onSelectAll(ids)} />
+          onPayGroup={ids => onSelectAll(ids)} onEditInvoice={onEditInvoice} />
       ))}
     </div>
   );
 }
 
-function InvoicesView({ invoices, selectedMonth, onMonthChange, onMarkPaid, onBulkPaid, preSelectAll }) {
+function InvoicesView({ invoices, selectedMonth, onMonthChange, onMarkPaid, onBulkPaid, preSelectAll, onEditInvoice }) {
   const T = useT();
   const { isMobile } = useLayout();
+  const supplierList = [...new Set(invoices.map(i => i.supplier))];
+  const invColor = name => PALETTE[supplierList.indexOf(name) % PALETTE.length] || "#6366F1";
   const [viewMode, setViewMode] = useState("grouped");
   const [selectedIds, setSelectedIds] = useState(new Set());
   const [showPayConfirm, setShowPayConfirm] = useState(false);
@@ -695,7 +719,7 @@ function InvoicesView({ invoices, selectedMonth, onMonthChange, onMarkPaid, onBu
 
   useEffect(() => {
     if (preSelectAll) {
-      const ids = invoices.filter(i => i.dueDate?.startsWith(selectedMonth) && i.status !== "paid").map(i => i.id);
+      const ids = invoices.filter(i => i.dueDate?.startsWith(selectedMonth) && i.status !== "Paid" && i.status !== "paid").map(i => i.id);
       setSelectedIds(new Set(ids));
     }
   }, [preSelectAll, selectedMonth]);
@@ -732,7 +756,7 @@ function InvoicesView({ invoices, selectedMonth, onMonthChange, onMarkPaid, onBu
           selectedIds={selectedIds} onToggleSelect={toggleSelect} onToggleAll={toggleAll}
           onMarkPaid={onMarkPaid} onSelectAll={ids => setSelectedIds(new Set(ids))}
           onPayGroup={ids => { setSelectedIds(new Set(ids)); setShowPayConfirm(true); }}
-          onAllPaid={() => setShowCelebration(true)} />
+          onAllPaid={() => setShowCelebration(true)} onEditInvoice={onEditInvoice} />
       ) : (
         <div style={{ background: T.surf, border: `1px solid ${T.bdr}`, borderRadius: 10, overflow: "hidden" }}>
           <div style={{ display: "grid", gridTemplateColumns: "40px minmax(140px,1fr) 130px 90px 90px 110px 90px 52px", alignItems: "center", padding: "0 18px", height: 40, background: T.isDark ? "#0E1520" : T.surf2, borderBottom: `1px solid ${T.bdr}` }}>
@@ -753,16 +777,16 @@ function InvoicesView({ invoices, selectedMonth, onMonthChange, onMarkPaid, onBu
                   </div>
                 </div>
                 <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0 }}>
-                  <div style={{ width: 28, height: 28, borderRadius: "50%", background: SUPPLIER_COLORS[inv.supplier] || T.t2, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: SANS, fontWeight: 700, fontSize: 10, color: "#fff", flexShrink: 0 }}>{inv.supplier.charAt(0)}</div>
+                  <div style={{ width: 28, height: 28, borderRadius: "50%", background: invColor(inv.supplier), display: "flex", alignItems: "center", justifyContent: "center", fontFamily: SANS, fontWeight: 700, fontSize: 10, color: "#fff", flexShrink: 0 }}>{inv.supplier.charAt(0)}</div>
                   <span style={{ fontFamily: SANS, fontWeight: 500, fontSize: 13, color: T.isDark ? "#B8CAE0" : T.t1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{inv.supplier}</span>
                 </div>
                 <div style={{ fontFamily: MONO, fontSize: 12, color: T.t2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", paddingRight: 8, fontVariantNumeric: "tabular-nums" }}>{inv.invoiceNo}</div>
                 <div style={{ fontFamily: MONO, fontSize: 12, color: T.t2, fontVariantNumeric: "tabular-nums" }}>{fmtDate(inv.invoiceDate)}</div>
-                <div style={{ fontFamily: MONO, fontSize: 12, color: inv.status === "overdue" ? "#F87171" : T.t2, fontWeight: inv.status === "overdue" ? 600 : 400, fontVariantNumeric: "tabular-nums" }}>{fmtDate(inv.dueDate)}</div>
+                <div style={{ fontFamily: MONO, fontSize: 12, color: (inv.status === "Overdue" || inv.status === "overdue") ? "#F87171" : T.t2, fontWeight: (inv.status === "Overdue" || inv.status === "overdue") ? 600 : 400, fontVariantNumeric: "tabular-nums" }}>{fmtDate(inv.dueDate)}</div>
                 <div style={{ fontFamily: MONO, fontSize: 14, fontWeight: 600, color: T.isDark ? "#C8D6E8" : T.t1, textAlign: "right", paddingRight: 14, fontVariantNumeric: "tabular-nums" }}>{fmt(inv.amount)}</div>
                 <StatusBadge status={inv.status} />
                 <div style={{ display: "flex", justifyContent: "flex-end" }}>
-                  <button onClick={e => e.stopPropagation()} style={{ width: 26, height: 26, border: `1px solid ${T.isDark ? "rgba(255,255,255,.09)" : T.bdr}`, borderRadius: 6, background: T.isDark ? "rgba(255,255,255,.03)" : "transparent", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <button onClick={e => { e.stopPropagation(); onEditInvoice?.(inv); }} style={{ width: 26, height: 26, border: `1px solid ${T.isDark ? "rgba(255,255,255,.09)" : T.bdr}`, borderRadius: 6, background: T.isDark ? "rgba(255,255,255,.03)" : "transparent", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
                     <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke={T.isDark ? "rgba(255,255,255,.35)" : T.t2} strokeWidth="2" strokeLinecap="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
                   </button>
                 </div>
@@ -794,7 +818,7 @@ function InvoicesView({ invoices, selectedMonth, onMonthChange, onMarkPaid, onBu
             <div style={{ display: "flex", flexDirection: "column", gap: 6, maxHeight: 200, overflowY: "auto", marginBottom: 14 }}>
               {selInvs.map(inv => (
                 <div key={inv.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 12px", background: T.surf2, borderRadius: 7, border: `1px solid ${T.bdr}` }}>
-                  <div style={{ width: 26, height: 26, borderRadius: "50%", background: SUPPLIER_COLORS[inv.supplier] || T.t2, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: SANS, fontWeight: 700, fontSize: 11, color: "#fff", flexShrink: 0 }}>{inv.supplier.charAt(0)}</div>
+                  <div style={{ width: 26, height: 26, borderRadius: "50%", background: invColor(inv.supplier), display: "flex", alignItems: "center", justifyContent: "center", fontFamily: SANS, fontWeight: 700, fontSize: 11, color: "#fff", flexShrink: 0 }}>{inv.supplier.charAt(0)}</div>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ fontFamily: SANS, fontWeight: 600, fontSize: 13, color: T.t1 }}>{inv.supplier}</div>
                     <div style={{ fontFamily: MONO, fontSize: 10, color: T.t3 }}>{inv.invoiceNo}</div>
@@ -911,10 +935,9 @@ function IntegrationsView() {
 }
 
 // ── Suppliers ─────────────────────────────────────────────────────────────────
-function SuppliersView({ suppliers: init }) {
+function SuppliersView({ suppliers, onAdd, onUpdate, onDelete }) {
   const T = useT();
   const { isMobile } = useLayout();
-  const [suppliers, setSuppliers] = useState(init);
   const [filterTerm, setFilterTerm] = useState("all");
   const [editId, setEditId] = useState(null);
   const [editData, setEditData] = useState({});
@@ -942,7 +965,7 @@ function SuppliersView({ suppliers: init }) {
                 </div>
                 <div style={{ display: "flex", gap: 7 }}>
                   <input value={editData.notes ?? ""} placeholder="Notes" onChange={e => setEditData(d => ({ ...d, notes: e.target.value }))} style={inp} />
-                  <button onClick={() => { setSuppliers(prev => prev.map(s => s.id === sup.id ? { ...s, ...editData } : s)); setEditId(null); }} style={{ padding: "6px 12px", background: T.greenTint, border: `1px solid ${T.greenBdr}`, borderRadius: 5, color: T.green, cursor: "pointer", fontFamily: SANS, fontSize: 12, fontWeight: 600, display: "flex", alignItems: "center", gap: 3, flexShrink: 0 }}><Check size={11} />Save</button>
+                  <button onClick={async () => { try { await onUpdate?.(sup.id, editData); } catch {} setEditId(null); }} style={{ padding: "6px 12px", background: T.greenTint, border: `1px solid ${T.greenBdr}`, borderRadius: 5, color: T.green, cursor: "pointer", fontFamily: SANS, fontSize: 12, fontWeight: 600, display: "flex", alignItems: "center", gap: 3, flexShrink: 0 }}><Check size={11} />Save</button>
                   <button onClick={() => setEditId(null)} style={{ padding: "6px 10px", background: "transparent", border: `1px solid ${T.bdr}`, borderRadius: 5, color: T.t2, cursor: "pointer", display: "flex", alignItems: "center", flexShrink: 0 }}><X size={11} /></button>
                 </div>
               </div>
@@ -956,14 +979,14 @@ function SuppliersView({ suppliers: init }) {
                 {!isMobile && sup.notes && <span style={{ fontFamily: SANS, fontSize: 12, color: T.t3, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 140 }}>{sup.notes}</span>}
                 <div style={{ display: "flex", gap: 5, flexShrink: 0 }}>
                   <button onClick={() => { setEditId(sup.id); setEditData({ name: sup.name, terms: sup.terms, notes: sup.notes }); }} style={{ padding: "3px 8px", background: "transparent", border: `1px solid ${T.bdr}`, borderRadius: 4, color: T.t2, cursor: "pointer", fontFamily: SANS, fontSize: 11, display: "flex", alignItems: "center", gap: 3 }}><Pencil size={10} />{!isMobile && "Edit"}</button>
-                  <button onClick={() => setSuppliers(prev => prev.filter(s => s.id !== sup.id))} style={{ padding: "3px 7px", background: "transparent", border: `1px solid ${T.redBdr}`, borderRadius: 4, color: T.red, cursor: "pointer", display: "flex", alignItems: "center" }}><Trash2 size={10} /></button>
+                  <button onClick={() => onDelete?.(sup.id)} style={{ padding: "3px 7px", background: "transparent", border: `1px solid ${T.redBdr}`, borderRadius: 4, color: T.red, cursor: "pointer", display: "flex", alignItems: "center" }}><Trash2 size={10} /></button>
                 </div>
               </div>
             )}
           </div>
         ))}
       </div>
-      <button onClick={() => setSuppliers(prev => [...prev, { id: Date.now(), name: "New Supplier", terms: "shotef", notes: "" }])}
+      <button onClick={() => onAdd?.({ name: "New Supplier", terms: "shotef", notes: "" })}
         style={{ marginTop: 12, display: "flex", alignItems: "center", gap: 6, padding: "7px 14px", background: "transparent", border: `1px solid ${T.bdr}`, borderRadius: 6, color: T.t1, cursor: "pointer", fontFamily: SANS, fontSize: 13, fontWeight: 600 }}>
         <Plus size={13} />Add Supplier
       </button>
@@ -972,7 +995,7 @@ function SuppliersView({ suppliers: init }) {
 }
 
 // ── Settings ──────────────────────────────────────────────────────────────────
-function SettingsScreen({ onUpgrade, onSignOut }) {
+function SettingsScreen({ onUpgrade, onSignOut, user }) {
   const T = useT();
   const { isMobile, isTablet } = useLayout();
   const isCompact = isMobile || isTablet;
@@ -991,7 +1014,7 @@ function SettingsScreen({ onUpgrade, onSignOut }) {
   const [bizName, setBizName] = useState("Apollo Trading Ltd.");
   const [currency, setCurrency] = useState("ILS");
   const [timezone, setTimezone] = useState("Asia/Jerusalem");
-  const [fullName, setFullName] = useState("Alex Kohn");
+  const [fullName, setFullName] = useState(user?.user_metadata?.full_name || user?.email?.split("@")[0] || "");
   const [changingPw, setChangingPw] = useState(false);
   const [deleteInput, setDeleteInput] = useState("");
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -1000,7 +1023,8 @@ function SettingsScreen({ onUpgrade, onSignOut }) {
   const saveSection = (id) => { setSaved(id); setTimeout(() => setSaved(null), 2000); };
   const inp = { width: "100%", padding: "9px 12px", background: T.surf2, border: `1px solid ${T.bdr}`, borderRadius: 6, fontFamily: SANS, fontSize: 13, color: T.t1, outline: "none" };
   const sel = { ...inp, cursor: "pointer" };
-  const used = 18, limit = 20, pct = Math.round((used / limit) * 100);
+  const { plan: settingsPlan, used, limit, pct: planPctRaw } = usePlan();
+  const pct = Math.round((planPctRaw || 0) * 100);
 
   const NAV = [
     { id: "general",      label: "General",      Icon: Building2,     locked: false, danger: false },
@@ -1097,7 +1121,7 @@ function SettingsScreen({ onUpgrade, onSignOut }) {
 
         <Section id="profile" title="Profile & Account" desc="Your personal information and login credentials.">
           <Row label="Full name"><input value={fullName} onChange={e => setFullName(e.target.value)} style={inp} /></Row>
-          <Row label="Email" hint="Via Google OAuth"><input value="alex@apollotrading.co" disabled style={{ ...inp, opacity: 0.5, cursor: "not-allowed" }} /></Row>
+          <Row label="Email" hint="Via Google OAuth"><input value={user?.email || ""} disabled style={{ ...inp, opacity: 0.5, cursor: "not-allowed" }} /></Row>
           <Row label="Password">
             {!changingPw ? (
               <button onClick={() => setChangingPw(true)} style={{ padding: "8px 14px", background: "transparent", border: `1px solid ${T.bdr}`, borderRadius: 6, fontFamily: SANS, fontSize: 13, color: T.t1, cursor: "pointer" }}>Change password</button>
@@ -1121,10 +1145,10 @@ function SettingsScreen({ onUpgrade, onSignOut }) {
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 12, gap: 10 }}>
               <div>
                 <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 3 }}>
-                  <span style={{ fontFamily: SANS, fontWeight: 700, fontSize: 14, color: T.t1 }}>Free Plan</span>
-                  <span style={{ fontFamily: SANS, fontSize: 10, fontWeight: 700, padding: "2px 7px", borderRadius: 3, background: T.surf3, color: T.t3, border: `1px solid ${T.bdr}` }}>FREE</span>
+                  <span style={{ fontFamily: SANS, fontWeight: 700, fontSize: 14, color: T.t1 }}>{(settingsPlan || "free").charAt(0).toUpperCase() + (settingsPlan || "free").slice(1)} Plan</span>
+                  <span style={{ fontFamily: SANS, fontSize: 10, fontWeight: 700, padding: "2px 7px", borderRadius: 3, background: T.surf3, color: T.t3, border: `1px solid ${T.bdr}` }}>{(settingsPlan || "FREE").toUpperCase()}</span>
                 </div>
-                <div style={{ fontFamily: SANS, fontSize: 12, color: T.t2 }}>Up to 20 invoices/month</div>
+                <div style={{ fontFamily: SANS, fontSize: 12, color: T.t2 }}>Up to {limit} invoices/month</div>
               </div>
               <button onClick={onUpgrade} style={{ padding: "7px 12px", background: T.indigo, border: "none", borderRadius: 6, fontFamily: SANS, fontWeight: 600, fontSize: 12, color: "#fff", cursor: "pointer", flexShrink: 0 }}>Upgrade</button>
             </div>
@@ -1237,12 +1261,29 @@ function SettingsScreen({ onUpgrade, onSignOut }) {
 }
 
 // ── Upgrade modal ─────────────────────────────────────────────────────────────
-function UpgradeModal({ onClose }) {
+function UpgradeModal({ onClose, planUsed, planLimit, planPct }) {
   const T = useT();
   const { isMobile } = useLayout();
   const [billing, setBilling] = useState("monthly");
   const [loading, setLoading] = useState(null);
-  const used = 18, limit = 20, pct = Math.round((used / limit) * 100);
+  const [error, setError] = useState(null);
+  const used = planUsed ?? 0, limit = planLimit ?? 20, pct = planPct ?? Math.round((used / limit) * 100);
+
+  const handleSubscribe = async (tier) => {
+    setLoading(tier); setError(null);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const res = await fetch("/api/billing/subscribe", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${session?.access_token}` },
+        body: JSON.stringify({ plan: tier, billing }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Subscription failed");
+      if (data.url) window.location.href = data.url;
+      else onClose();
+    } catch (e) { setError(e.message); } finally { setLoading(null); }
+  };
   const PLANS = { basic: { monthly: 99, annual: 79 }, pro: { monthly: 199, annual: 159 } };
   const FEATURES = [
     { label: "Manual upload + OCR",  basic: true, pro: true  },
@@ -1277,13 +1318,13 @@ function UpgradeModal({ onClose }) {
           <div style={{ background: T.surf2, border: `1px solid ${T.bdr}`, borderRadius: 10, padding: 14 }}>
             <div style={{ fontFamily: SANS, fontSize: 10, fontWeight: 700, letterSpacing: "0.08em", color: T.t3, marginBottom: 5 }}>BASIC</div>
             <div style={{ marginBottom: 10 }}><span style={{ fontFamily: MONO, fontSize: 22, fontWeight: 500, color: T.t1 }}>₪{PLANS.basic[billing]}</span><span style={{ fontFamily: SANS, fontSize: 11, color: T.t3 }}>/mo</span></div>
-            <button onClick={() => setLoading("basic")} disabled={!!loading} style={{ width: "100%", padding: "9px 0", borderRadius: 6, background: T.surf, border: `1px solid ${T.bdr}`, color: T.t1, fontFamily: SANS, fontSize: 13, fontWeight: 600, cursor: loading ? "not-allowed" : "pointer", opacity: loading === "basic" ? 0.7 : 1 }}>{loading === "basic" ? "…" : "Get Basic"}</button>
+            <button onClick={() => handleSubscribe("basic")} disabled={!!loading} style={{ width: "100%", padding: "9px 0", borderRadius: 6, background: T.surf, border: `1px solid ${T.bdr}`, color: T.t1, fontFamily: SANS, fontSize: 13, fontWeight: 600, cursor: loading ? "not-allowed" : "pointer", opacity: loading === "basic" ? 0.7 : 1 }}>{loading === "basic" ? "…" : "Get Basic"}</button>
           </div>
           <div style={{ background: T.indigoTint, border: `2px solid ${T.indigo}`, borderRadius: 10, padding: 14, position: "relative" }}>
             <div style={{ position: "absolute", top: -11, left: "50%", transform: "translateX(-50%)", background: T.indigo, color: "#fff", fontFamily: SANS, fontSize: 10, fontWeight: 700, padding: "3px 10px", borderRadius: 100, whiteSpace: "nowrap" }}>Popular</div>
             <div style={{ fontFamily: SANS, fontSize: 10, fontWeight: 700, letterSpacing: "0.08em", color: T.indigo, marginBottom: 5 }}>PRO</div>
             <div style={{ marginBottom: 10 }}><span style={{ fontFamily: MONO, fontSize: 22, fontWeight: 500, color: T.t1 }}>₪{PLANS.pro[billing]}</span><span style={{ fontFamily: SANS, fontSize: 11, color: T.t3 }}>/mo</span></div>
-            <button onClick={() => setLoading("pro")} disabled={!!loading} style={{ width: "100%", padding: "9px 0", borderRadius: 6, background: T.indigo, border: "none", color: "#fff", fontFamily: SANS, fontSize: 13, fontWeight: 700, cursor: loading ? "not-allowed" : "pointer", opacity: loading === "pro" ? 0.7 : 1 }}>{loading === "pro" ? "…" : "Get Pro"}</button>
+            <button onClick={() => handleSubscribe("pro")} disabled={!!loading} style={{ width: "100%", padding: "9px 0", borderRadius: 6, background: T.indigo, border: "none", color: "#fff", fontFamily: SANS, fontSize: 13, fontWeight: 700, cursor: loading ? "not-allowed" : "pointer", opacity: loading === "pro" ? 0.7 : 1 }}>{loading === "pro" ? "…" : "Get Pro"}</button>
           </div>
         </div>
         <div style={{ background: T.surf2, border: `1px solid ${T.bdr}`, borderRadius: 8, overflow: "hidden", marginBottom: 12 }}>
@@ -1298,6 +1339,7 @@ function UpgradeModal({ onClose }) {
             </div>
           ))}
         </div>
+        {error && <div style={{ fontFamily: SANS, fontSize: 12, color: T.red, background: T.redTint, border: `1px solid ${T.redBdr}`, borderRadius: 6, padding: "8px 12px", marginBottom: 8 }}>{error}</div>}
         <button onClick={onClose} style={{ display: "block", width: "100%", background: "none", border: "none", color: T.t3, fontFamily: SANS, fontSize: 13, cursor: "pointer", padding: "6px 0", textDecoration: "underline", textDecorationStyle: "dotted" }}>Continue viewing (read-only)</button>
       </div>
     </div>
@@ -1306,7 +1348,7 @@ function UpgradeModal({ onClose }) {
 
 // ── App root ──────────────────────────────────────────────────────────────────
 export default function App() {
-  const { user, signOut } = useAuth();
+  const { user, signOut, loading: authLoading } = useAuth();
   const isLoggedIn = !!user;
 
   const [isDark, setIsDark] = useState(true);
@@ -1325,18 +1367,28 @@ export default function App() {
   const [windowWidth, setWindowWidth] = useState(typeof window !== "undefined" ? window.innerWidth : 1280);
   const [editInvoice, setEditInvoice] = useState(null);
   const [showMissingModal, setShowMissingModal] = useState(false);
+  const [showAnomalyModal, setShowAnomalyModal] = useState(false);
+  const [previewAttachment, setPreviewAttachment] = useState(null);
   const [extracting, setExtracting] = useState(false);
+  const [extractMsg, setExtractMsg] = useState(null);
   const fileRef = useRef();
 
   // Real invoice data
   const {
-    suppliers, computed: invoices, monthlyData, allNames, color,
-    missingSuppliers, addInvoice, updateInvoice, deleteInvoice,
+    suppliers, computed: invoices, allNames, color,
+    missingSuppliers, anomalyMap,
+    addInvoice, updateInvoice, deleteInvoice,
     addSupplier, updateSupplier, deleteSupplier, getSupplier,
+    refreshInvoices,
   } = useInvoiceData();
 
   // Real plan data
   const { plan, used: planUsed, limit: planLimit, pct: planPct, isAtLimit, refresh: refreshPlan } = usePlan();
+
+  // Sync jobs for IntegrationsPage
+  const { jobs: syncJobs, startSync, cancelSync } = useSyncJob({
+    onBatchDone: refreshInvoices,
+  });
 
   useEffect(() => {
     const h = () => setWindowWidth(window.innerWidth);
@@ -1345,6 +1397,15 @@ export default function App() {
   }, []);
 
   useEffect(() => { if (windowWidth >= 1024) setMobileMenuOpen(false); }, [windowWidth]);
+
+  // Auto-show missing suppliers modal once per session when data loads
+  const missingSuppliersShown = useRef(false);
+  useEffect(() => {
+    if (!missingSuppliersShown.current && missingSuppliers?.length > 0) {
+      missingSuppliersShown.current = true;
+      setShowMissingModal(true);
+    }
+  }, [missingSuppliers]);
 
   const isMobile = windowWidth < 640;
   const isTablet = windowWidth >= 640 && windowWidth < 1024;
@@ -1373,33 +1434,115 @@ export default function App() {
   const handleBulkPaid = useCallback((ids) => { ids.forEach(id => updateInvoice(id, { status: "Paid" })); }, [updateInvoice]);
   useEffect(() => { if (preSelectAll) { const t = setTimeout(() => setPreSelectAll(false), 100); return () => clearTimeout(t); } }, [preSelectAll]);
 
-  // Upload handler
+  // Upload handler — full pipeline: PDF/image → Claude extraction → dedup → R2/Supabase storage → addInvoice
   const handleUpload = useCallback(async (e) => {
     const files = Array.from(e?.target?.files || []);
     if (!files.length) return;
     setExtracting(true);
+    setExtractMsg({ text: `Processing ${files.length} file${files.length > 1 ? "s" : ""}…`, ok: null });
     try {
+      const { processPdf, fileToBase64, extractInvoice, translateSupplierName } = await import("./utils/image");
+      const { findDuplicates, isLatinOnly } = await import("./utils/invoice");
+      const { calcDueDate, correctSwappedDate } = await import("./utils/dates");
+      const { STATUS } = await import("./constants");
       const { data: { session } } = await supabase.auth.getSession();
-      for (const file of files) {
-        const formData = new FormData();
-        formData.append("file", file);
-        const res = await fetch("/api/extract", {
-          method: "POST",
-          headers: { Authorization: `Bearer ${session?.access_token}` },
-          body: formData,
-        });
-        if (res.ok) {
-          const inv = await res.json();
-          await addInvoice(inv);
+
+      const existingNames = new Set(invoices.map(i => i.source_file).filter(Boolean).map(n => n.toLowerCase()));
+      const [toExtract, fileSkipped] = files.reduce(([ok, skip], f) =>
+        existingNames.has(f.name.toLowerCase()) ? [ok, [...skip, f]] : [[...ok, f], skip], [[], []]);
+
+      const imageResults = await Promise.allSettled(
+        toExtract.map(f => f.type === "application/pdf" ? processPdf(f) : fileToBase64(f).then(img => [img]))
+      );
+      const pageUnits = [];
+      imageResults.forEach((r, i) => {
+        if (r.status === "rejected") pageUnits.push({ file: toExtract[i], error: r.reason });
+        else r.value.forEach(pageImage => pageUnits.push({ file: toExtract[i], pageImage }));
+      });
+      const extractResults = await Promise.allSettled(
+        pageUnits.map(unit => {
+          if (unit.error) return Promise.reject(new Error(`${unit.file.name}: ${unit.error.message}`));
+          return extractInvoice(unit.pageImage).then(ex => ({ file: unit.file, ex }));
+        })
+      );
+      const candidates = [], errors = [];
+      await Promise.allSettled(extractResults.map(async (r, i) => {
+        if (r.status === "rejected") { errors.push(r.reason?.message || `${pageUnits[i].file.name}: failed`); return; }
+        const { file, ex } = r.value;
+        const invoiceDate = correctSwappedDate(ex.invoiceDate) || ex.invoiceDate || "";
+        let sup = getSupplier(ex.supplier);
+        if (!sup && isLatinOnly(ex.supplier)) {
+          const hebrew = await translateSupplierName(ex.supplier);
+          if (hebrew) sup = getSupplier(hebrew) || null;
         }
-      }
+        const isCredit = ex.type === "credit";
+        const rawAmount = Math.abs(Number(ex.amount)) || 0;
+        const due = isCredit ? null : calcDueDate(invoiceDate, sup);
+        candidates.push({ file, candidate: {
+          supplier: sup?.name || ex.supplier || "",
+          invoice_no: ex.invoiceNo || "",
+          invoice_date: invoiceDate,
+          amount: isCredit ? -rawAmount : rawAmount,
+          due_date: isCredit ? "" : (due ? due.toISOString().split("T")[0] : ""),
+          status: isCredit ? STATUS.CREDIT : STATUS.UNPAID,
+          invoice_type: isCredit ? "credit" : "invoice",
+          notes: "",
+          source_file: file.name,
+        }});
+      }));
+      const withTempIds = candidates.map((c, i) => ({ ...c.candidate, id: `__new_${i}`, invoiceNo: c.candidate.invoice_no, invoiceDate: c.candidate.invoice_date }));
+      const dupeSet = findDuplicates([...invoices, ...withTempIds]);
+      const toAdd = candidates.filter((_, i) => !dupeSet.has(`__new_${i}`));
+      const contentDupes = candidates.length - toAdd.length;
+
+      let added = 0, attachmentIssues = 0;
+      await Promise.allSettled(toAdd.map(async ({ file, candidate }) => {
+        try {
+          let attachment = {};
+          try {
+            const ext = (file.name.split('.').pop() || 'bin').toLowerCase();
+            const presignRes = await fetch('/api/attachments/presign', {
+              method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session?.access_token}` },
+              body: JSON.stringify({ filename: file.name, contentType: file.type }),
+            });
+            if (presignRes.ok) {
+              const presign = await presignRes.json();
+              if (presign.backend === 'r2' && presign.uploadUrl) {
+                await fetch(presign.uploadUrl, { method: 'PUT', headers: { 'Content-Type': file.type || 'application/octet-stream' }, body: file });
+                attachment = { attachment_path: presign.key, attachment_backend: 'r2', attachment_status: 'present' };
+              } else {
+                const key = `${user.id}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+                await supabase.storage.from('attachments').upload(key, file, { contentType: file.type, upsert: true });
+                attachment = { attachment_path: key, attachment_backend: 'supabase', attachment_status: 'present' };
+              }
+            }
+          } catch { attachment = { attachment_status: 'missing' }; attachmentIssues++; }
+          await addInvoice({ ...candidate, ...attachment });
+          added++;
+        } catch (err) { errors.push(`${file.name}: ${err.message}`); }
+      }));
+
+      if (added > 0) { refreshPlan(); }
+      const parts = [];
+      if (added) parts.push(`${added} added`);
+      if (fileSkipped.length) parts.push(`${fileSkipped.length} already uploaded`);
+      if (contentDupes) parts.push(`${contentDupes} already exist`);
+      if (attachmentIssues) parts.push(`${attachmentIssues} saved without file`);
+      if (errors.length) parts.push(`${errors.length} failed: ${errors[0]}`);
+      const hasIssue = fileSkipped.length || contentDupes || attachmentIssues || errors.length;
+      setExtractMsg({ text: (added && !hasIssue ? "✓ " : "") + (parts.join(" · ") || "nothing to add"), ok: !hasIssue && added > 0 });
     } catch (err) {
-      console.error("upload error:", err);
+      setExtractMsg({ text: `Error: ${err.message}`, ok: false });
     } finally {
       setExtracting(false);
+      setTimeout(() => setExtractMsg(null), 5000);
       if (fileRef.current) fileRef.current.value = "";
     }
-  }, [addInvoice]);
+  }, [invoices, user, addInvoice, getSupplier, refreshPlan]);
+
+  if (authLoading) {
+    return <div style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: "100vh", background: "#07090F", color: "#627488", fontFamily: SANS, fontSize: 14 }}>Loading…</div>;
+  }
 
   if (!isLoggedIn) {
     return (
@@ -1429,26 +1572,40 @@ export default function App() {
             button:focus-visible { outline:2px solid ${T.indigo}; outline-offset:2px; }
           `}</style>
 
-          {/* Hidden file input for upload */}
           <input ref={fileRef} type="file" accept=".pdf,.jpg,.jpeg,.png" multiple style={{ display: "none" }} onChange={handleUpload} />
+
+          {extractMsg && (
+            <div style={{ position: "fixed", top: 16, left: "50%", transform: "translateX(-50%)", zIndex: 9999, background: extractMsg.ok === null ? T.surf : extractMsg.ok ? T.greenTint : T.redTint, border: `1px solid ${extractMsg.ok === null ? T.bdr : extractMsg.ok ? T.greenBdr : T.redBdr}`, color: extractMsg.ok === null ? T.t1 : extractMsg.ok ? T.green : T.red, padding: "10px 20px", borderRadius: 8, fontFamily: SANS, fontSize: 13, boxShadow: "0 4px 20px rgba(0,0,0,0.3)", whiteSpace: "nowrap" }}>
+              {extracting && "⟳ "}{extractMsg.text}
+            </div>
+          )}
 
           <Sidebar view={view} setView={setView} suppliersCount={suppliers.length}
             onUpgrade={() => setShowUpgrade(true)} onUpload={() => fileRef.current?.click()}
-            mobileOpen={mobileMenuOpen} setMobileOpen={setMobileMenuOpen} />
+            mobileOpen={mobileMenuOpen} setMobileOpen={setMobileMenuOpen}
+            plan={plan} planUsed={planUsed} planLimit={planLimit} planPct={planPct} user={user} />
 
           <div style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0 }}>
-            <GlobalHeader view={view} isDark={isDark} onToggleTheme={() => setIsDark(v => !v)} onMenuOpen={() => setMobileMenuOpen(true)} />
+            <GlobalHeader view={view} isDark={isDark} onToggleTheme={() => setIsDark(v => !v)} onMenuOpen={() => setMobileMenuOpen(true)} onMissingAlert={() => setShowMissingModal(true)} onAnomalyAlert={() => setShowAnomalyModal(true)} missingCount={missingSuppliers?.length || 0} anomalyCount={anomalyMap?.size || 0} />
+            {isAtLimit && (
+              <UsageBanner plan={plan} used={planUsed} limit={planLimit} remaining={planLimit - planUsed} onUpgrade={() => setShowUpgrade(true)} />
+            )}
             <main style={{ flex: 1, overflowY: "auto", padding: isMobile ? "20px 16px 100px" : "28px clamp(20px,3vw,36px) 80px" }}>
-              {view === "dashboard"    && <Dashboard invoices={invoices} onPayAllJuly={handlePayAll} />}
+              {view === "dashboard"    && <Dashboard invoices={invoices} onPayAllJuly={handlePayAll} chartData={chartData} supplierNames={allNames} supplierColor={getSupplierColor} />}
               {view === "invoices"     && <InvoicesView invoices={invoices} selectedMonth={selectedMonth} onMonthChange={setSelectedMonth} onMarkPaid={handleMarkPaid} onBulkPaid={handleBulkPaid} preSelectAll={preSelectAll} onEditInvoice={setEditInvoice} />}
               {view === "calendar"     && <CalendarView computed={invoices} calMonth={calMonth} setCalMonth={setCalMonth} color={getSupplierColor} />}
-              {view === "integrations" && <IntegrationsView />}
-              {view === "suppliers"    && <SuppliersView suppliers={suppliers} />}
-              {view === "settings"     && <SettingsScreen onUpgrade={() => setShowUpgrade(true)} onSignOut={signOut} />}
+              {view === "integrations" && <IntegrationsPage
+                syncJobs={syncJobs} onStartSync={startSync} onCancelSync={cancelSync}
+                onInvoicesRefresh={refreshInvoices} isAtLimit={isAtLimit} onUpgrade={() => setShowUpgrade(true)}
+              />}
+              {view === "suppliers"    && <SuppliersView suppliers={suppliers} onAdd={addSupplier} onUpdate={updateSupplier} onDelete={deleteSupplier} />}
+              {view === "settings"     && <SettingsScreen onUpgrade={() => setShowUpgrade(true)} onSignOut={signOut} user={user} />}
+              {view === "admin"        && <AdminPage />}
             </main>
           </div>
 
-          {showUpgrade && <UpgradeModal onClose={() => setShowUpgrade(false)} />}
+          {showUpgrade && <UpgradeModal onClose={() => setShowUpgrade(false)} planUsed={planUsed} planLimit={planLimit} planPct={planPct} />}
+
           {editInvoice && (
             <EditInvoiceModal
               editInvoice={editInvoice}
@@ -1457,14 +1614,35 @@ export default function App() {
               addInvoice={addInvoice}
               updateInvoice={updateInvoice}
               getSupplier={getSupplier}
+              onViewAttachment={att => setPreviewAttachment(att)}
+              anomaly={anomalyMap?.get(editInvoice?.id)}
             />
           )}
+
+          {previewAttachment && (
+            <AttachmentPreviewModal
+              url={previewAttachment.url}
+              filename={previewAttachment.filename}
+              onClose={() => setPreviewAttachment(null)}
+            />
+          )}
+
           {showMissingModal && missingSuppliers?.length > 0 && (
             <MissingSuppliersModal
               missingSuppliers={missingSuppliers}
               invoices={invoices}
               suppliers={suppliers}
               onClose={() => setShowMissingModal(false)}
+            />
+          )}
+
+          {showAnomalyModal && anomalyMap?.size > 0 && (
+            <AnomalyModal
+              anomalyMap={anomalyMap}
+              computed={invoices}
+              invoices={invoices}
+              onClose={() => setShowAnomalyModal(false)}
+              onEditInvoice={setEditInvoice}
             />
           )}
         </div>
