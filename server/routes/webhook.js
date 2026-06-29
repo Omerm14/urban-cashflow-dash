@@ -46,17 +46,21 @@ exports.handleWhatsApp = async (req, res) => {
   await (async () => {
     for (const entry of body.entry) {
       for (const change of (entry.changes || [])) {
+        console.log('[webhook:wa] change.field:', change.field);
         if (change.field !== 'messages') continue;
         const value = change.value || {};
+        console.log('[webhook:wa] messages count:', (value.messages || []).length, 'statuses:', (value.statuses || []).length);
 
         for (const msg of (value.messages || [])) {
           if (!msg.id) continue;
+          console.log('[webhook:wa] msg type:', msg.type, 'keys:', Object.keys(msg));
 
           const mediaType = ['image', 'document'].find(t => msg[t]);
-          if (!mediaType) continue;
+          if (!mediaType) { console.log('[webhook:wa] no media in msg, skipping'); continue; }
 
           const media    = msg[mediaType];
           const mimeType = media.mime_type;
+          console.log('[webhook:wa] mediaType:', mediaType, 'mimeType:', mimeType, 'caption:', media.caption);
 
           // Only process PDF and images
           if (mimeType !== 'application/pdf' && !mimeType.startsWith('image/')) continue;
