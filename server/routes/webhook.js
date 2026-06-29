@@ -74,10 +74,7 @@ exports.handleWhatsApp = async (req, res) => {
     }
   }
 
-  // Respond 200 before heavy processing (media download + OCR)
-  res.status(200).json({ ok: true });
-
-  // Heavy processing after response — Vercel Fluid keeps function alive
+  // Process all jobs before responding — Vercel kills async work after response is sent
   for (const { integration, media, mediaType, mimeType, msgId } of jobs) {
     const filename = media.filename || `${mediaType}_${media.id}`;
     try {
@@ -87,4 +84,6 @@ exports.handleWhatsApp = async (req, res) => {
       console.error(`[webhook:wa] failed ${msgId}:`, err.message);
     }
   }
+
+  res.status(200).json({ ok: true });
 };
