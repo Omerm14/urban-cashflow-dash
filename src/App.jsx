@@ -276,7 +276,8 @@ function LoginScreen({ onLogin }) {
 function Sidebar({ view, setView, suppliersCount, onUpgrade, onUpload, mobileOpen, setMobileOpen, plan, planUsed, planLimit, planPct, user, onSignOut }) {
   const { isMobile, isTablet } = useLayout();
   const isDrawer = isMobile || isTablet;
-  const used = planUsed ?? 0, limit = planLimit ?? 20, pct = planPct ?? Math.round((used / limit) * 100);
+  const used = planUsed ?? 0, limit = planLimit ?? 20;
+  const pct = planPct != null ? Math.round(planPct * 100) : Math.round((used / limit) * 100);
   const navigate = (id) => { setView(id); if (isDrawer) setMobileOpen(false); };
 
   const navItem = (id, label, Icon, badge, badgeRed) => {
@@ -333,6 +334,7 @@ function Sidebar({ view, setView, suppliersCount, onUpgrade, onUpload, mobileOpe
         <div style={{ padding: "0 8px" }}>
           <div style={{ fontSize: 10, fontWeight: 600, letterSpacing: "0.1em", color: SB.t3, padding: "4px 10px 8px", textTransform: "uppercase" }}>Manage</div>
           {navItem("suppliers", "Suppliers", Users, suppliersCount)}
+          {user?.user_metadata?.role === "admin" && navItem("admin", "Admin", Settings)}
         </div>
         <div style={{ flex: 1 }} />
         <div style={{ padding: "12px" }}>
@@ -373,9 +375,20 @@ function Sidebar({ view, setView, suppliersCount, onUpgrade, onUpload, mobileOpe
 function GlobalHeader({ view, isDark, onToggleTheme, onMenuOpen, onMissingAlert, onAnomalyAlert, missingCount, anomalyCount }) {
   const T = useT();
   const { isMobile, isTablet } = useLayout();
+  const [notifOpen, setNotifOpen] = useState(false);
+  const bellRef = useRef(null);
   const TITLES = { dashboard: "Dashboard", invoices: "Invoices", calendar: "Calendar", integrations: "Integrations", suppliers: "Suppliers", settings: "Settings", admin: "Admin" };
   const headerBg = T.isDark ? "#0C1017" : T.surf;
   const ghostBtn = { width: 34, height: 34, display: "flex", alignItems: "center", justifyContent: "center", background: "transparent", border: `1px solid ${T.isDark ? "rgba(255,255,255,.10)" : T.bdr}`, borderRadius: 8, cursor: "pointer", color: T.isDark ? "rgba(255,255,255,.4)" : T.t2, flexShrink: 0 };
+  const totalAlerts = (missingCount || 0) + (anomalyCount || 0);
+
+  useEffect(() => {
+    if (!notifOpen) return;
+    const handler = (e) => { if (bellRef.current && !bellRef.current.contains(e.target)) setNotifOpen(false); };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [notifOpen]);
+
   return (
     <div style={{ height: 52, background: headerBg, borderBottom: `1px solid ${T.bdr}`, display: "flex", alignItems: "center", paddingLeft: isMobile ? 14 : 24, paddingRight: isMobile ? 12 : 24, gap: 10, flexShrink: 0 }}>
       {(isMobile || isTablet) && <button onClick={onMenuOpen} style={{ ...ghostBtn, border: "none" }}><Menu size={18} /></button>}
@@ -388,12 +401,66 @@ function GlobalHeader({ view, isDark, onToggleTheme, onMenuOpen, onMissingAlert,
           <kbd style={{ fontFamily: SANS, fontSize: 10, color: T.isDark ? "rgba(255,255,255,.2)" : T.t3, background: T.isDark ? "rgba(255,255,255,.06)" : T.surf3, border: `1px solid ${T.isDark ? "rgba(255,255,255,.09)" : T.bdr}`, borderRadius: 4, padding: "2px 6px" }}>⌘K</kbd>
         </div>
       )}
-      <button onClick={() => {}} style={ghostBtn}><Globe size={13} /></button>
       <button onClick={onToggleTheme} style={ghostBtn}>{isDark ? <Sun size={14} /> : <Moon size={14} />}</button>
-      <button onClick={() => { if (missingCount > 0) onMissingAlert?.(); else if (anomalyCount > 0) onAnomalyAlert?.(); }} style={{ position: "relative", ...ghostBtn }}>
-        <Bell size={14} />
-        {(missingCount > 0 || anomalyCount > 0) && <span style={{ position: "absolute", top: 7, right: 7, width: 6, height: 6, background: "#EF4444", borderRadius: "50%", border: `1.5px solid ${headerBg}` }} />}
-      </button>
+
+      {/* Bell with notification dropdown */}
+      <div ref={bellRef} style={{ position: "relative" }}>
+        <button onClick={() => setNotifOpen(v => !v)} style={{ position: "relative", ...ghostBtn, background: notifOpen ? (T.isDark ? "rgba(255,255,255,.06)" : T.surf2) : "transparent" }}>
+          <Bell size={14} />
+          {totalAlerts > 0 && (
+            <span style={{ position: "absolute", top: 6, right: 6, minWidth: 14, height: 14, background: "#EF4444", borderRadius: 7, border: `1.5px solid ${headerBg}`, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: SANS, fontSize: 8, fontWeight: 700, color: "#fff", padding: "0 3px" }}>
+              {totalAlerts > 9 ? "9+" : totalAlerts}
+            </span>
+          )}
+        </button>
+
+        {notifOpen && (
+          <div style={{ position: "absolute", top: 42, right: 0, width: 280, background: T.surf, border: `1px solid ${T.bdr2}`, borderRadius: 10, boxShadow: T.isDark ? "0 8px 32px rgba(0,0,0,0.6)" : "0 8px 32px rgba(0,0,0,0.12)", zIndex: 9999, overflow: "hidden", animation: "scaleIn 0.15s cubic-bezier(.16,1,.3,1)" }}>
+            <div style={{ padding: "10px 14px 8px", borderBottom: `1px solid ${T.bdr}`, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <span style={{ fontFamily: SANS, fontSize: 12, fontWeight: 700, color: T.t1, letterSpacing: "-0.01em" }}>Notifications</span>
+              {totalAlerts === 0 && <span style={{ fontFamily: SANS, fontSize: 11, color: T.t3 }}>All clear</span>}
+            </div>
+
+            {totalAlerts === 0 && (
+              <div style={{ padding: "20px 14px", textAlign: "center", fontFamily: SANS, fontSize: 13, color: T.t3 }}>
+                No alerts right now
+              </div>
+            )}
+
+            {missingCount > 0 && (
+              <button onClick={() => { setNotifOpen(false); onMissingAlert?.(); }}
+                style={{ width: "100%", display: "flex", alignItems: "center", gap: 10, padding: "10px 14px", background: "transparent", border: "none", borderBottom: `1px solid ${T.bdr}`, cursor: "pointer", textAlign: "left" }}
+                onMouseEnter={e => e.currentTarget.style.background = T.isDark ? "rgba(255,255,255,.04)" : T.surf2}
+                onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
+                <div style={{ width: 30, height: 30, borderRadius: 8, background: T.amberTint, border: `1px solid ${T.amberBdr}`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                  <AlertTriangle size={14} color={T.amber} />
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontFamily: SANS, fontSize: 13, fontWeight: 600, color: T.t1 }}>Missing Invoices</div>
+                  <div style={{ fontFamily: SANS, fontSize: 11, color: T.t3, marginTop: 1 }}>{missingCount} supplier{missingCount !== 1 ? "s" : ""} haven't billed this month</div>
+                </div>
+                <ChevronRight size={13} color={T.t3} />
+              </button>
+            )}
+
+            {anomalyCount > 0 && (
+              <button onClick={() => { setNotifOpen(false); onAnomalyAlert?.(); }}
+                style={{ width: "100%", display: "flex", alignItems: "center", gap: 10, padding: "10px 14px", background: "transparent", border: "none", cursor: "pointer", textAlign: "left" }}
+                onMouseEnter={e => e.currentTarget.style.background = T.isDark ? "rgba(255,255,255,.04)" : T.surf2}
+                onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
+                <div style={{ width: 30, height: 30, borderRadius: 8, background: T.indigoTint, border: `1px solid ${T.indigoBdr}`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                  <TrendingUp size={14} color={T.indigo} />
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontFamily: SANS, fontSize: 13, fontWeight: 600, color: T.t1 }}>Anomalies Detected</div>
+                  <div style={{ fontFamily: SANS, fontSize: 11, color: T.t3, marginTop: 1 }}>{anomalyCount} invoice{anomalyCount !== 1 ? "s" : ""} outside normal range</div>
+                </div>
+                <ChevronRight size={13} color={T.t3} />
+              </button>
+            )}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
@@ -570,7 +637,7 @@ function Dashboard({ invoices, onPayAllJuly, chartData, supplierNames, supplierC
 }
 
 // ── Invoices ──────────────────────────────────────────────────────────────────
-function SupplierGroup({ supplier, invoices, selectedIds, onToggleSelect, onToggleAll, onMarkPaid, onPayGroup, onEditInvoice }) {
+function SupplierGroup({ supplier, invoices, selectedIds, onToggleSelect, onToggleAll, onMarkPaid, onPayGroup, onEditInvoice, anomalyMap }) {
   const T = useT();
   const { isMobile } = useLayout();
   const [hov, setHov] = useState(false);
@@ -602,15 +669,23 @@ function SupplierGroup({ supplier, invoices, selectedIds, onToggleSelect, onTogg
         {invoices.map(inv => {
           const isSel = selectedIds.has(inv.id);
           const isPaid = inv.status === "Paid" || inv.status === "paid";
+          const anomaly = anomalyMap?.get(inv.id);
           const cols = isMobile ? "36px 1fr 100px 110px 130px" : "40px 1fr 110px 120px 110px 1fr 190px";
           return (
             <div key={inv.id} onClick={() => !isPaid && onToggleSelect(inv.id)}
-              style={{ display: "grid", gridTemplateColumns: cols, alignItems: "center", gap: 8, padding: "8px 14px", borderTop: `1px solid ${T.bdr}`, background: isSel ? T.indigoTint : "transparent", cursor: isPaid ? "default" : "pointer", transition: "background 0.1s", minWidth: isMobile ? 460 : "auto" }}
+              style={{ display: "grid", gridTemplateColumns: cols, alignItems: "center", gap: 8, padding: "8px 14px", borderTop: `1px solid ${anomaly ? T.amberBdr : T.bdr}`, background: isSel ? T.indigoTint : anomaly ? T.amberTint : "transparent", cursor: isPaid ? "default" : "pointer", transition: "background 0.1s", minWidth: isMobile ? 460 : "auto" }}
               onMouseEnter={e => { if (!isSel && !isPaid) e.currentTarget.style.background = T.isDark ? "rgba(99,102,241,.07)" : T.surf2; }}
-              onMouseLeave={e => { e.currentTarget.style.background = isSel ? T.indigoTint : "transparent"; }}>
+              onMouseLeave={e => { e.currentTarget.style.background = isSel ? T.indigoTint : anomaly ? T.amberTint : "transparent"; }}>
               <input type="checkbox" checked={isSel} disabled={isPaid} onChange={() => onToggleSelect(inv.id)} onClick={e => e.stopPropagation()} style={{ accentColor: T.indigo, cursor: isPaid ? "default" : "pointer", width: 13, height: 13, opacity: isPaid ? 0.35 : 1 }} />
-              <span style={{ fontFamily: MONO, fontSize: 12, color: T.isDark ? "#627488" : T.t3, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontVariantNumeric: "tabular-nums" }}>{inv.invoiceNo}</span>
-              <span style={{ fontFamily: MONO, fontWeight: 600, fontSize: 13, color: T.isDark ? "#C8D6E8" : T.t1, fontVariantNumeric: "tabular-nums" }}>{fmt(inv.amount)}</span>
+              <div style={{ display: "flex", alignItems: "center", gap: 5, minWidth: 0 }}>
+                <span style={{ fontFamily: MONO, fontSize: 12, color: T.isDark ? "#627488" : T.t3, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontVariantNumeric: "tabular-nums" }}>{inv.invoiceNo}</span>
+                {anomaly && (
+                  <span title={`Amount is ${anomaly.deviationPct}% ${anomaly.direction} than usual`} style={{ display: "flex", alignItems: "center", gap: 2, padding: "1px 5px", background: T.amberTint, border: `1px solid ${T.amberBdr}`, borderRadius: 4, color: T.amber, fontFamily: SANS, fontSize: 10, fontWeight: 700, flexShrink: 0, cursor: "help" }}>
+                    <AlertTriangle size={9} />⚠ {anomaly.deviationPct}%
+                  </span>
+                )}
+              </div>
+              <span style={{ fontFamily: MONO, fontWeight: 600, fontSize: 13, color: anomaly ? T.amber : T.isDark ? "#C8D6E8" : T.t1, fontVariantNumeric: "tabular-nums" }}>{fmt(inv.amount)}</span>
               <StatusBadge status={inv.status} />
               {!isMobile && <span style={{ fontFamily: MONO, fontSize: 12, color: T.isDark ? "#627488" : T.t2, fontVariantNumeric: "tabular-nums" }}>{fmtDate(inv.invoiceDate)}</span>}
               {!isMobile && <span style={{ fontFamily: MONO, fontSize: 12, color: (inv.status === "Overdue" || inv.status === "overdue") ? "#F87171" : T.isDark ? "#627488" : T.t2, fontWeight: (inv.status === "Overdue" || inv.status === "overdue") ? 600 : 400, fontVariantNumeric: "tabular-nums" }}>{fmtDate(inv.dueDate)}</span>}
@@ -633,7 +708,7 @@ function SupplierGroup({ supplier, invoices, selectedIds, onToggleSelect, onTogg
   );
 }
 
-function GroupedView({ invoices, selectedMonth, onMonthChange, selectedIds, onToggleSelect, onToggleAll, onMarkPaid, onSelectAll, onPayGroup, onAllPaid, onEditInvoice }) {
+function GroupedView({ invoices, selectedMonth, onMonthChange, selectedIds, onToggleSelect, onToggleAll, onMarkPaid, onSelectAll, onPayGroup, onAllPaid, onEditInvoice, anomalyMap, missingSuppliers }) {
   const T = useT();
   const { isMobile } = useLayout();
   const monthInvoices = invoices.filter(inv => inv.dueDate?.startsWith(selectedMonth));
@@ -702,16 +777,25 @@ function GroupedView({ invoices, selectedMonth, onMonthChange, selectedIds, onTo
           <div style={{ fontFamily: SANS, fontSize: 13 }}>No invoices due in {fmtMonth(selectedMonth)}</div>
         </div>
       )}
+      {missingSuppliers?.length > 0 && (
+        <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 14px", background: T.amberTint, border: `1px solid ${T.amberBdr}`, borderRadius: 10, marginBottom: 10 }}>
+          <AlertTriangle size={14} color={T.amber} style={{ flexShrink: 0 }} />
+          <div style={{ flex: 1 }}>
+            <span style={{ fontFamily: SANS, fontSize: 13, fontWeight: 600, color: T.amber }}>Missing invoices this month: </span>
+            <span style={{ fontFamily: SANS, fontSize: 13, color: T.isDark ? T.amber : T.t2 }}>{missingSuppliers.join(", ")}</span>
+          </div>
+        </div>
+      )}
       {groups.map(([supplier, supInvoices]) => (
         <SupplierGroup key={supplier} supplier={supplier} invoices={supInvoices} selectedIds={selectedIds}
           onToggleSelect={onToggleSelect} onToggleAll={onToggleAll} onMarkPaid={onMarkPaid}
-          onPayGroup={ids => onSelectAll(ids)} onEditInvoice={onEditInvoice} />
+          onPayGroup={ids => onSelectAll(ids)} onEditInvoice={onEditInvoice} anomalyMap={anomalyMap} />
       ))}
     </div>
   );
 }
 
-function InvoicesView({ invoices, selectedMonth, onMonthChange, onMarkPaid, onBulkPaid, preSelectAll, onEditInvoice }) {
+function InvoicesView({ invoices, selectedMonth, onMonthChange, onMarkPaid, onBulkPaid, preSelectAll, onEditInvoice, anomalyMap, missingSuppliers }) {
   const T = useT();
   const { isMobile } = useLayout();
   const supplierList = [...new Set(invoices.map(i => i.supplier))];
@@ -762,7 +846,8 @@ function InvoicesView({ invoices, selectedMonth, onMonthChange, onMarkPaid, onBu
           selectedIds={selectedIds} onToggleSelect={toggleSelect} onToggleAll={toggleAll}
           onMarkPaid={onMarkPaid} onSelectAll={ids => setSelectedIds(new Set(ids))}
           onPayGroup={ids => { setSelectedIds(new Set(ids)); setShowPayConfirm(true); }}
-          onAllPaid={() => setShowCelebration(true)} onEditInvoice={onEditInvoice} />
+          onAllPaid={() => setShowCelebration(true)} onEditInvoice={onEditInvoice}
+          anomalyMap={anomalyMap} missingSuppliers={missingSuppliers} />
       ) : (
         <div style={{ background: T.surf, border: `1px solid ${T.bdr}`, borderRadius: 10, overflow: "hidden" }}>
           <div style={{ display: "grid", gridTemplateColumns: "40px minmax(140px,1fr) 130px 90px 90px 110px 90px 52px", alignItems: "center", padding: "0 18px", height: 40, background: T.isDark ? "#0E1520" : T.surf2, borderBottom: `1px solid ${T.bdr}` }}>
@@ -1273,7 +1358,8 @@ function UpgradeModal({ onClose, planUsed, planLimit, planPct }) {
   const [billing, setBilling] = useState("monthly");
   const [loading, setLoading] = useState(null);
   const [error, setError] = useState(null);
-  const used = planUsed ?? 0, limit = planLimit ?? 20, pct = planPct ?? Math.round((used / limit) * 100);
+  const used = planUsed ?? 0, limit = planLimit ?? 20;
+  const pct = planPct != null ? Math.round(planPct * 100) : Math.round((used / limit) * 100);
 
   const handleSubscribe = async (tier) => {
     setLoading(tier); setError(null);
@@ -1607,7 +1693,7 @@ export default function App() {
             <main style={{ flex: 1, overflowY: "auto", padding: isMobile ? "20px 16px 100px" : "28px clamp(20px,3vw,36px) 80px" }}>
               <div style={{ maxWidth: 1200, width: "100%" }}>
                 {view === "dashboard"    && <Dashboard invoices={invoices} onPayAllJuly={handlePayAll} chartData={chartData} supplierNames={allNames} supplierColor={getSupplierColor} />}
-                {view === "invoices"     && <InvoicesView invoices={invoices} selectedMonth={selectedMonth} onMonthChange={setSelectedMonth} onMarkPaid={handleMarkPaid} onBulkPaid={handleBulkPaid} preSelectAll={preSelectAll} onEditInvoice={setEditInvoice} />}
+                {view === "invoices"     && <InvoicesView invoices={invoices} selectedMonth={selectedMonth} onMonthChange={setSelectedMonth} onMarkPaid={handleMarkPaid} onBulkPaid={handleBulkPaid} preSelectAll={preSelectAll} onEditInvoice={setEditInvoice} anomalyMap={anomalyMap} missingSuppliers={missingSuppliers} />}
                 {view === "calendar"     && <CalendarView computed={invoices} calMonth={calMonth} setCalMonth={setCalMonth} color={getSupplierColor} />}
                 {view === "integrations" && <IntegrationsPage
                   syncJobs={syncJobs} onStartSync={startSync} onCancelSync={cancelSync}
