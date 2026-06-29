@@ -243,7 +243,7 @@ function LoginScreen({ onLogin }) {
               <div style={{ display: "flex", alignItems: "center", gap: 20, flexWrap: "wrap" }}>
                 {/* Gmail */}
                 <div style={{ display: "flex", alignItems: "center", gap: 8, opacity: 0.75 }}>
-                  <svg width="22" height="16" viewBox="0 0 48 36" fill="none"><path d="M0 4a4 4 0 014-4h40a4 4 0 014 4v28a4 4 0 01-4 4H4a4 4 0 01-4-4V4z" fill="#fff" fillOpacity=".06"/><path d="M4 4l20 14L44 4" stroke="#EA4335" strokeWidth="3" strokeLinecap="round"/><path d="M4 4v24h40V4" stroke="none"/><path d="M4 28V10l20 14 20-14v18" fill="none" stroke="#4285F4" strokeWidth="0"/><path fill="#EA4335" d="M4 4h40v3L24 21 4 7z"/><path fill="#34A853" d="M4 28h8V14l12 8 12-8v14h8V4L24 18 4 4z"/><path fill="#FBBC05" d="M4 4v4l8 4V4z"/><path fill="#EA4335" d="M44 4v4l-8 4V4z"/></svg>
+                  <svg width="20" height="15" viewBox="0 0 20 15" fill="none"><path d="M1 0h18a1 1 0 011 1v13a1 1 0 01-1 1H1a1 1 0 01-1-1V1a1 1 0 011-1z" fill="#fff" fillOpacity=".06"/><path d="M0 1.5L10 9l10-7.5" stroke="none"/><path fill="#4285F4" d="M0 2v11h4V6.5l6 4 6-4V13h4V2L10 8.5z"/><path fill="#EA4335" d="M0 2l10 6.5L20 2H0z"/><path fill="#34A853" d="M16 13h4V6.5z"/><path fill="#FBBC05" d="M0 13h4V6.5z"/></svg>
                   <span style={{ fontFamily: SANS, fontSize: 13, fontWeight: 600, color: "#7A90A8", letterSpacing: "-0.01em" }}>Gmail</span>
                 </div>
                 <div style={{ width: 1, height: 18, background: "rgba(255,255,255,.08)" }} />
@@ -285,9 +285,9 @@ function LoginScreen({ onLogin }) {
             {/* Credibility stats */}
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 1, borderRadius: 10, overflow: "hidden", border: "1px solid rgba(255,255,255,.07)" }}>
               {[
-                { val: "< 10s", label: "invoice read", icon: <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#6366F1" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg> },
-                { val: "100%", label: "Hebrew support", icon: <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#6366F1" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg> },
-                { val: "4 sources", label: "auto-synced", icon: <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#6366F1" strokeWidth="2" strokeLinecap="round"><path d="M4 12v-2a8 8 0 0116 0v2"/><path d="M20 16a2 2 0 01-2 2H6a2 2 0 01-2-2v-4h16v4z"/></svg> },
+                { val: "Free", label: "no credit card", icon: <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#6366F1" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg> },
+                { val: "2 min", label: "to get started", icon: <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#6366F1" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg> },
+                { val: "HE+EN", label: "bilingual", icon: <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#6366F1" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="9"/><path d="M2 12h20M12 2a15.3 15.3 0 010 20M12 2a15.3 15.3 0 000 20"/></svg> },
               ].map((s, i) => (
                 <div key={i} style={{ padding: "12px 10px", background: i === 1 ? "rgba(99,102,241,0.07)" : "rgba(255,255,255,0.02)", textAlign: "center", borderLeft: i > 0 ? "1px solid rgba(255,255,255,.07)" : "none" }}>
                   <div style={{ display: "flex", justifyContent: "center", marginBottom: 5 }}>{s.icon}</div>
