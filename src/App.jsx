@@ -1044,7 +1044,7 @@ function GroupedView({ invoices, selectedMonth, onMonthChange, selectedIds, onTo
   );
 }
 
-function InvoicesView({ invoices, selectedMonth, onMonthChange, onMarkPaid, onBulkPaid, preSelectAll, onEditInvoice, anomalyMap, missingSuppliers }) {
+function InvoicesView({ invoices, selectedMonth, onMonthChange, onMarkPaid, onBulkPaid, onBulkUnpaid, preSelectAll, onEditInvoice, anomalyMap, missingSuppliers }) {
   const T = useT();
   const { isMobile } = useLayout();
   const { t } = useLang();
@@ -1199,9 +1199,10 @@ function InvoicesView({ invoices, selectedMonth, onMonthChange, onMarkPaid, onBu
       )}
 
       {selectedIds.size > 0 && (
-        <div style={{ position: "fixed", ...(isMobile ? { bottom: 0, left: 0, right: 0, borderRadius: "12px 12px 0 0" } : { bottom: 24, left: "50%", transform: "translateX(-50%)", borderRadius: 50 }), background: "#0F172A", padding: isMobile ? "14px 20px" : "10px 20px", display: "flex", alignItems: "center", gap: 12, boxShadow: "0 -4px 24px rgba(0,0,0,0.3)", animation: "slideUp 0.25s cubic-bezier(.16,1,.3,1)", zIndex: 200, whiteSpace: "nowrap" }}>
+        <div style={{ position: "fixed", ...(isMobile ? { bottom: 0, left: 0, right: 0, borderRadius: "12px 12px 0 0" } : { bottom: 24, left: "50%", transform: "translateX(-50%)", borderRadius: 50 }), background: "#0F172A", padding: isMobile ? "14px 20px" : "10px 20px", display: "flex", alignItems: "center", gap: 10, boxShadow: "0 -4px 24px rgba(0,0,0,0.3)", animation: "slideUp 0.25s cubic-bezier(.16,1,.3,1)", zIndex: 200, whiteSpace: "nowrap" }}>
           <div style={{ width: 22, height: 22, borderRadius: "50%", background: "#6366F1", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: MONO, fontWeight: 700, fontSize: 11, color: "#fff" }}>{selectedIds.size}</div>
           <span style={{ fontFamily: SANS, fontWeight: 500, color: "#94A3B8", fontSize: 13, flex: 1 }}>{selectedIds.size} · <span style={{ fontFamily: MONO, color: "#fff" }}>{fmt(selTotal)}</span></span>
+          <button onClick={() => { onBulkUnpaid?.([...selectedIds]); setSelectedIds(new Set()); }} style={{ padding: "7px 14px", borderRadius: 50, background: "transparent", border: "1px solid #334155", cursor: "pointer", fontFamily: SANS, fontWeight: 600, fontSize: 13, color: "#94A3B8", display: "flex", alignItems: "center", gap: 5 }}><X size={12} />Unpaid</button>
           <button onClick={() => setShowPayConfirm(true)} style={{ padding: "7px 18px", borderRadius: 50, background: "#6366F1", border: "none", cursor: "pointer", fontFamily: SANS, fontWeight: 600, fontSize: 13, color: "#fff" }}>{t("inv_pay_selected")} →</button>
           <button onClick={() => setSelectedIds(new Set())} style={{ background: "none", border: "none", color: "#475569", cursor: "pointer", display: "flex", alignItems: "center" }}><X size={15} /></button>
         </div>
@@ -2015,6 +2016,7 @@ export default function App() {
     updateInvoice(id, { status: isPaid ? "Unpaid" : "Paid" });
   }, [updateInvoice, invoices]);
   const handleBulkPaid = useCallback((ids) => { ids.forEach(id => updateInvoice(id, { status: "Paid" })); }, [updateInvoice]);
+  const handleBulkUnpaid = useCallback((ids) => { ids.forEach(id => updateInvoice(id, { status: "Unpaid" })); }, [updateInvoice]);
   useEffect(() => { if (preSelectAll) { const t = setTimeout(() => setPreSelectAll(false), 100); return () => clearTimeout(t); } }, [preSelectAll]);
 
   // Upload handler — full pipeline: PDF/image → Claude extraction → dedup → R2/Supabase storage → addInvoice
@@ -2177,7 +2179,7 @@ export default function App() {
             <main style={{ flex: 1, overflowY: "auto", padding: isMobile ? "20px 16px 100px" : "28px clamp(20px,3vw,36px) 80px" }}>
               <div style={{ width: "100%" }}>
                 {view === "dashboard"    && <Dashboard invoices={invoices} onPayAllJuly={handlePayAll} chartData={chartData} supplierNames={allNames} supplierColor={getSupplierColor} user={user} onMissingAlert={() => setShowMissingModal(true)} onAnomalyAlert={() => setShowAnomalyModal(true)} missingSuppliers={missingSuppliers} anomalyMap={anomalyMap} onViewMonth={handleViewMonth} />}
-                {view === "invoices"     && <InvoicesView invoices={invoices} selectedMonth={selectedMonth} onMonthChange={setSelectedMonth} onMarkPaid={handleMarkPaid} onBulkPaid={handleBulkPaid} preSelectAll={preSelectAll} onEditInvoice={setEditInvoice} anomalyMap={anomalyMap} missingSuppliers={missingSuppliers} />}
+                {view === "invoices"     && <InvoicesView invoices={invoices} selectedMonth={selectedMonth} onMonthChange={setSelectedMonth} onMarkPaid={handleMarkPaid} onBulkPaid={handleBulkPaid} onBulkUnpaid={handleBulkUnpaid} preSelectAll={preSelectAll} onEditInvoice={setEditInvoice} anomalyMap={anomalyMap} missingSuppliers={missingSuppliers} />}
                 {view === "calendar"     && <CalendarView computed={invoices} calMonth={calMonth} setCalMonth={setCalMonth} color={getSupplierColor} />}
                 {view === "integrations" && <IntegrationsPage
                   syncJobs={syncJobs} onStartSync={startSync} onCancelSync={cancelSync}
