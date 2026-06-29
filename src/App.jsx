@@ -769,15 +769,15 @@ function Dashboard({ invoices, onPayAllJuly, chartData, supplierNames, supplierC
           </div>
         </div>
 
-        <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: 10 }}>
+        <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr 1fr" : "1fr", gap: 10 }}>
           {resolvedChartData.slice(-4).map(m => (
             <div key={m.month} onClick={() => onViewMonth?.(m.month)}
-              style={{ background: T.surf, border: `1px solid ${T.bdr}`, borderRadius: 12, padding: "14px 16px", cursor: "pointer", transition: "border-color 0.18s" }}
+              style={{ background: T.surf, border: `1px solid ${T.bdr}`, borderRadius: 12, padding: isMobile ? "10px 12px" : "14px 16px", cursor: "pointer", transition: "border-color 0.18s" }}
               onMouseEnter={e => e.currentTarget.style.borderColor = T.isDark ? "rgba(255,255,255,.12)" : T.indigo}
               onMouseLeave={e => e.currentTarget.style.borderColor = T.bdr}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
-                <span style={{ fontFamily: SANS, fontWeight: 600, fontSize: 13, color: T.isDark ? "#CBD6E6" : T.t1, letterSpacing: "-0.02em" }}>{m.month}</span>
-                <span style={{ fontFamily: MONO, fontWeight: 600, fontSize: 13, color: T.isDark ? "#CBD6E6" : T.t1, fontVariantNumeric: "tabular-nums" }}>{fmt(m.total)}</span>
+                <span style={{ fontFamily: SANS, fontWeight: 600, fontSize: isMobile ? 11 : 13, color: T.isDark ? "#CBD6E6" : T.t1, letterSpacing: "-0.02em" }}>{m.month}</span>
+                <span style={{ fontFamily: MONO, fontWeight: 600, fontSize: isMobile ? 11 : 13, color: T.isDark ? "#CBD6E6" : T.t1, fontVariantNumeric: "tabular-nums" }}>{fmt(m.total)}</span>
               </div>
               {!isMobile && Object.entries(m).filter(([k]) => k !== "month" && k !== "total" && k !== "_year" && k !== "_mon" && m[k] > 0)
                 .sort((a, b) => b[1] - a[1]).slice(0, 3)
