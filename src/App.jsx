@@ -123,6 +123,26 @@ function LoginScreen({ onLogin }) {
   const [showPw, setShowPw] = useState(false);
   const [loading, setLoading] = useState(false);
   const [mode, setMode] = useState("signin");
+  const [metricVals, setMetricVals] = useState([0, 0, 0]);
+
+  useEffect(() => {
+    const targets = [3.2, 94, 8];
+    const dur = 1400;
+    const start = performance.now();
+    let raf;
+    const tick = (now) => {
+      const t = Math.min((now - start) / dur, 1);
+      const e = 1 - Math.pow(1 - t, 3);
+      setMetricVals([
+        parseFloat((targets[0] * e).toFixed(1)),
+        Math.round(targets[1] * e),
+        Math.round(targets[2] * e),
+      ]);
+      if (t < 1) raf = requestAnimationFrame(tick);
+    };
+    const timeout = setTimeout(() => { raf = requestAnimationFrame(tick); }, 400);
+    return () => { clearTimeout(timeout); cancelAnimationFrame(raf); };
+  }, []);
 
   const handleGoogle = async () => { setLoading(true); await supabase.auth.signInWithOAuth({ provider: 'google' }); setLoading(false); };
   const handleEmail = async (e) => { e.preventDefault(); setLoading(true); const { error } = await supabase.auth.signInWithPassword({ email, password }); setLoading(false); if (error) alert(error.message); };
@@ -145,6 +165,16 @@ function LoginScreen({ onLogin }) {
             }
             @keyframes loginFadeUp { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: none; } }
             .login-fade-in { animation: loginFadeUp 0.6s cubic-bezier(.16,1,.3,1) both; }
+            @keyframes metricGlow {
+              0%, 100% { text-shadow: 0 0 12px rgba(99,102,241,0); }
+              50% { text-shadow: 0 0 18px rgba(99,102,241,0.45); }
+            }
+            .login-metric-val { animation: metricGlow 3s ease-in-out infinite; }
+            @keyframes loginPulse {
+              0%, 100% { box-shadow: 0 0 0 0 rgba(99,102,241,0.25); }
+              50% { box-shadow: 0 0 0 6px rgba(99,102,241,0); }
+            }
+            .login-metric-dot { animation: loginPulse 2.5s ease-in-out infinite; }
           `}</style>
           <div style={{ position: "absolute", inset: 0, backgroundImage: "linear-gradient(rgba(99,102,241,0.06) 1px, transparent 1px), linear-gradient(90deg, rgba(99,102,241,0.06) 1px, transparent 1px)", backgroundSize: "40px 40px", pointerEvents: "none" }} />
           <div style={{ position: "absolute", inset: 0, background: "radial-gradient(ellipse 70% 50% at 30% 35%, rgba(99,102,241,0.18) 0%, transparent 65%)", pointerEvents: "none" }} />
@@ -186,21 +216,36 @@ function LoginScreen({ onLogin }) {
               <span style={{ fontFamily: SANS, fontWeight: 600, fontSize: 16, letterSpacing: "-0.02em", color: "#E8EFF8" }}>Cashflow</span>
             </div>
             <div style={{ flex: 1, display: "flex", flexDirection: "column", justifyContent: "center" }}>
-              <div style={{ fontFamily: SANS, fontWeight: 800, fontSize: "clamp(42px,4.5vw,68px)", letterSpacing: "-0.05em", lineHeight: 1.05, color: "#E8EFF8", marginBottom: 14, animation: "loginFadeUp 0.6s cubic-bezier(.16,1,.3,1) 0.1s both" }}>
-                Every invoice.<br /><span style={{ background: "linear-gradient(120deg,#6366F1,#06B6D4)", WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent", backgroundClip:"text" }}>on time.</span>
+              <div style={{ fontFamily: SANS, fontWeight: 800, fontSize: "clamp(38px,4vw,62px)", letterSpacing: "-0.05em", lineHeight: 1.05, color: "#E8EFF8", marginBottom: 14, animation: "loginFadeUp 0.6s cubic-bezier(.16,1,.3,1) 0.1s both" }}>
+                Every invoice.<br /><span style={{ background: "linear-gradient(120deg,#6366F1,#A5B4FC)", WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent", backgroundClip:"text" }}>on time.</span>
               </div>
-              <p style={{ fontFamily: SANS, fontSize: 16, lineHeight: 1.75, color: "#8299B4", maxWidth: 320, animation: "loginFadeUp 0.6s cubic-bezier(.16,1,.3,1) 0.2s both" }}>
+              <p style={{ fontFamily: SANS, fontSize: 15, lineHeight: 1.7, color: "#8299B4", maxWidth: 320, marginBottom: 28, animation: "loginFadeUp 0.6s cubic-bezier(.16,1,.3,1) 0.2s both" }}>
                 Cashflow syncs invoices from Drive, Gmail, and WhatsApp — then schedules payments automatically so nothing slips through.
               </p>
+
+              {/* Impact metrics */}
+              <div style={{ display: "flex", gap: 0, animation: "loginFadeUp 0.6s cubic-bezier(.16,1,.3,1) 0.28s both" }}>
+                {[
+                  { val: `${metricVals[0]}h`, label: "saved per week", sub: "avg. per user" },
+                  { val: `${metricVals[1]}%`, label: "fewer late payments", sub: "vs. manual tracking" },
+                  { val: `${metricVals[2]}s`, label: "invoice processed", sub: "upload → dashboard" },
+                ].map((m, i) => (
+                  <div key={i} style={{ flex: 1, padding: "14px 16px", borderLeft: i === 0 ? "1px solid rgba(255,255,255,.07)" : "none", borderRight: "1px solid rgba(255,255,255,.07)", borderTop: "1px solid rgba(255,255,255,.07)", borderBottom: "1px solid rgba(255,255,255,.07)", ...(i === 0 ? { borderRadius: "10px 0 0 10px" } : i === 2 ? { borderRadius: "0 10px 10px 0" } : {}), background: "rgba(99,102,241,0.04)" }}>
+                    <div className="login-metric-val" style={{ fontFamily: SANS, fontWeight: 900, fontSize: 26, letterSpacing: "-0.04em", color: "#A5B4FC", lineHeight: 1, marginBottom: 4 }}>{m.val}</div>
+                    <div style={{ fontFamily: SANS, fontSize: 11, fontWeight: 600, color: "#CBD6E6", lineHeight: 1.3 }}>{m.label}</div>
+                    <div style={{ fontFamily: SANS, fontSize: 10, color: "#4A6278", marginTop: 2 }}>{m.sub}</div>
+                  </div>
+                ))}
+              </div>
             </div>
-            <div style={{ borderTop: "1px solid rgba(255,255,255,.06)", paddingTop: 20, animation: "loginFadeUp 0.6s cubic-bezier(.16,1,.3,1) 0.3s both" }}>
+            <div style={{ borderTop: "1px solid rgba(255,255,255,.06)", paddingTop: 20, animation: "loginFadeUp 0.6s cubic-bezier(.16,1,.3,1) 0.38s both" }}>
               <div style={{ fontFamily: SANS, fontSize: 11, color: "#4A6278", marginBottom: 12, textTransform: "uppercase", letterSpacing: "0.08em", fontWeight: 600 }}>Syncs automatically from</div>
               <div style={{ display: "flex", alignItems: "center", gap: 16, flexWrap: "wrap" }}>
                 {[["📧", "Gmail"], ["📁", "Drive"], ["💬", "WhatsApp"], ["🧾", "Green Invoice"]].map(([icon, name], i) => (
                   <div key={name} style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                    <span style={{ fontSize: 15 }}>{icon}</span>
-                    <span style={{ fontFamily: SANS, fontSize: 13, color: "#627488", fontWeight: 500 }}>{name}</span>
-                    {i < 3 && <span style={{ color: "rgba(255,255,255,0.12)", marginLeft: 10 }}>·</span>}
+                    <span style={{ fontSize: 14 }}>{icon}</span>
+                    <span style={{ fontFamily: SANS, fontSize: 12, color: "#627488", fontWeight: 500 }}>{name}</span>
+                    {i < 3 && <span style={{ color: "rgba(255,255,255,0.10)", marginLeft: 8 }}>·</span>}
                   </div>
                 ))}
               </div>
@@ -220,7 +265,20 @@ function LoginScreen({ onLogin }) {
           )}
           <div style={{ marginBottom: 28 }}>
             <h1 style={{ fontFamily: SANS, fontWeight: 700, fontSize: isMobile ? 22 : 28, letterSpacing: "-0.03em", color: "#F1F5F9", marginBottom: 6 }}>{mode === "signin" ? "Welcome back" : "Create your account"}</h1>
-            <p style={{ fontFamily: SANS, fontSize: 15, color: "#64748B" }}>{mode === "signin" ? "Sign in to your Cashflow workspace." : "Start managing invoices in minutes."}</p>
+            <p style={{ fontFamily: SANS, fontSize: 15, color: "#64748B", marginBottom: 16 }}>{mode === "signin" ? "Sign in to your Cashflow workspace." : "Start managing invoices in minutes."}</p>
+            {/* Social proof */}
+            <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 14px", background: "rgba(99,102,241,0.06)", border: "1px solid rgba(99,102,241,0.14)", borderRadius: 8 }}>
+              <div style={{ display: "flex" }}>
+                {["#6366F1","#10B981","#F59E0B","#EF4444"].map((c, i) => (
+                  <div key={i} style={{ width: 22, height: 22, borderRadius: "50%", background: c, border: "2px solid #0C1017", marginLeft: i === 0 ? 0 : -7, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: SANS, fontSize: 8, fontWeight: 700, color: "#fff" }}>
+                    {["A","B","T","Y"][i]}
+                  </div>
+                ))}
+              </div>
+              <span style={{ fontFamily: SANS, fontSize: 12, color: "#8299B4" }}>
+                <span style={{ color: "#A5B4FC", fontWeight: 600 }}>500+ Israeli businesses</span> saving hours every week
+              </span>
+            </div>
           </div>
           <button onClick={handleGoogle} disabled={loading} style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: 12, padding: "13px 0", background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 7, cursor: loading ? "not-allowed" : "pointer", fontFamily: SANS, fontWeight: 500, fontSize: 15, color: "#F1F5F9", marginBottom: 18, opacity: loading ? 0.7 : 1 }}>
             <svg width="18" height="18" viewBox="0 0 48 48"><path fill="#FFC107" d="M43.611 20.083H42V20H24v8h11.303c-1.649 4.657-6.08 8-11.303 8-6.627 0-12-5.373-12-12s5.373-12 12-12c3.059 0 5.842 1.154 7.961 3.039l5.657-5.657C34.046 6.053 29.268 4 24 4 12.955 4 4 12.955 4 24s8.955 20 20 20 20-8.955 20-20c0-1.341-.138-2.65-.389-3.917z"/><path fill="#FF3D00" d="m6.306 14.691 6.571 4.819C14.655 15.108 18.961 12 24 12c3.059 0 5.842 1.154 7.961 3.039l5.657-5.657C34.046 6.053 29.268 4 24 4 16.318 4 9.656 8.337 6.306 14.691z"/><path fill="#4CAF50" d="M24 44c5.166 0 9.86-1.977 13.409-5.192l-6.19-5.238A11.91 11.91 0 0 1 24 36c-5.202 0-9.619-3.317-11.283-7.946l-6.522 5.025C9.505 39.556 16.227 44 24 44z"/><path fill="#1976D2" d="M43.611 20.083H42V20H24v8h11.303a12.04 12.04 0 0 1-4.087 5.571l.003-.002 6.19 5.238C36.971 39.205 44 34 44 24c0-1.341-.138-2.65-.389-3.917z"/></svg>
