@@ -16,6 +16,8 @@ import AdminPage          from "./pages/AdminPage";
 import { MissingSuppliersModal, AnomalyModal } from "./components/AlertModals";
 import { PALETTE }        from "./constants";
 import { parseCSV }      from "./utils/invoice";
+import enStrings         from "./i18n/en";
+import heStrings         from "./i18n/he";
 import {
   LayoutDashboard, FileText, Calendar, Zap, Bell, Upload,
   TrendingUp, AlertTriangle, Clock, CheckCircle2,
@@ -59,6 +61,10 @@ const useT = () => useContext(ThemeCtx);
 // ── Layout context ────────────────────────────────────────────────────────────
 const LayoutCtx = createContext({ isMobile: false, isTablet: false });
 const useLayout = () => useContext(LayoutCtx);
+
+// ── Language context ───────────────────────────────────────────────────────────
+const LangCtx = createContext({ lang: "he", t: k => k });
+const useLang = () => useContext(LangCtx);
 
 // Sidebar always dark
 const SB = { bg: "#0C1017", bdr: "rgba(255,255,255,0.07)", t1: "#CBD6E6", t2: "rgba(255,255,255,0.35)", t3: "rgba(255,255,255,0.28)" };
@@ -258,6 +264,7 @@ function LoginScreen({ onLogin }) {
 // ── Sidebar ───────────────────────────────────────────────────────────────────
 function Sidebar({ view, setView, suppliersCount, onUpgrade, onUpload, mobileOpen, setMobileOpen, plan, planUsed, planLimit, planPct, user, onSignOut }) {
   const { isMobile, isTablet } = useLayout();
+  const { t } = useLang();
   const isDrawer = isMobile || isTablet;
   const used = planUsed ?? 0, limit = planLimit ?? 20;
   const pct = planPct != null ? Math.round(planPct * 100) : Math.round((used / limit) * 100);
@@ -277,10 +284,10 @@ function Sidebar({ view, setView, suppliersCount, onUpgrade, onUpload, mobileOpe
   };
 
   const MAIN = [
-    { id: "dashboard",    label: "Dashboard",    Icon: LayoutDashboard },
-    { id: "invoices",     label: "Invoices",     Icon: FileText        },
-    { id: "calendar",     label: "Calendar",     Icon: Calendar        },
-    { id: "integrations", label: "Integrations", Icon: Zap             },
+    { id: "dashboard",    label: t("nav_dashboard"),    Icon: LayoutDashboard },
+    { id: "invoices",     label: t("nav_invoices"),     Icon: FileText        },
+    { id: "calendar",     label: t("nav_calendar"),     Icon: Calendar        },
+    { id: "integrations", label: t("nav_integrations"), Icon: Zap             },
   ];
 
   if (isDrawer && !mobileOpen) return null;
@@ -304,7 +311,7 @@ function Sidebar({ view, setView, suppliersCount, onUpgrade, onUpload, mobileOpe
         <div style={{ padding: "0 10px 14px" }}>
           <button onClick={() => { onUpload(); if (isDrawer) setMobileOpen(false); }} style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: 7, padding: "9px 14px", borderRadius: 8, background: "#6366F1", border: "none", cursor: "pointer", fontFamily: SANS, fontWeight: 600, fontSize: 13, color: "#fff", letterSpacing: "-0.01em" }}>
             <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-            Upload Invoice
+            {t("nav_upload")}
           </button>
         </div>
         <div style={{ padding: "0 8px" }}>
@@ -316,8 +323,8 @@ function Sidebar({ view, setView, suppliersCount, onUpgrade, onUpload, mobileOpe
         <div style={{ height: 1, background: SB.bdr, margin: "8px 2px" }} />
         <div style={{ padding: "0 8px" }}>
           <div style={{ fontSize: 10, fontWeight: 600, letterSpacing: "0.1em", color: SB.t3, padding: "4px 10px 8px", textTransform: "uppercase" }}>Manage</div>
-          {navItem("suppliers", "Suppliers", Users, suppliersCount)}
-          {user?.user_metadata?.role === "admin" && navItem("admin", "Admin", Settings)}
+          {navItem("suppliers", t("nav_suppliers"), Users, suppliersCount)}
+          {user?.user_metadata?.role === "admin" && navItem("admin", t("nav_admin"), Settings)}
         </div>
         <div style={{ flex: 1 }} />
         <div style={{ padding: "12px" }}>
@@ -338,7 +345,7 @@ function Sidebar({ view, setView, suppliersCount, onUpgrade, onUpload, mobileOpe
             <div style={{ width: 26, height: 26, borderRadius: "50%", background: "linear-gradient(135deg,#6366F1,#818CF8)", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: SANS, fontWeight: 700, fontSize: 10, color: "#fff", flexShrink: 0 }}>{(user?.email?.[0] || "U").toUpperCase()}</div>
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ fontFamily: SANS, fontSize: 12, fontWeight: 500, color: SB.t1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{user?.user_metadata?.full_name || user?.email?.split("@")[0] || "Account"}</div>
-              <div style={{ fontFamily: SANS, fontSize: 10, color: SB.t2 }}>Settings</div>
+              <div style={{ fontFamily: SANS, fontSize: 10, color: SB.t2 }}>{t("nav_settings")}</div>
             </div>
             <Settings size={12} color={SB.t2} />
           </button>
@@ -358,6 +365,7 @@ function Sidebar({ view, setView, suppliersCount, onUpgrade, onUpload, mobileOpe
 // ── Search Overlay ────────────────────────────────────────────────────────────
 function SearchOverlay({ invoices, suppliers, onNavigate, onClose }) {
   const T = useT();
+  const { t } = useLang();
   const [query, setQuery] = useState("");
   const inputRef = useRef(null);
   useEffect(() => { inputRef.current?.focus(); }, []);
@@ -400,22 +408,22 @@ function SearchOverlay({ invoices, suppliers, onNavigate, onClose }) {
       <div onClick={e => e.stopPropagation()} style={{ width: "100%", maxWidth: 560, background: T.surf, border: `1px solid ${T.bdr2}`, borderRadius: 14, boxShadow: "0 20px 60px rgba(0,0,0,0.4)", overflow: "hidden", animation: "scaleIn 0.15s cubic-bezier(.16,1,.3,1)" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "14px 18px", borderBottom: `1px solid ${T.bdr}` }}>
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={T.t3} strokeWidth="2" strokeLinecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-          <input ref={inputRef} value={query} onChange={e => setQuery(e.target.value)} placeholder="Search invoices, suppliers…" style={{ flex: 1, background: "transparent", border: "none", outline: "none", fontFamily: SANS, fontSize: 15, color: T.t1 }} />
+          <input ref={inputRef} value={query} onChange={e => setQuery(e.target.value)} placeholder={t("search_placeholder")} style={{ flex: 1, background: "transparent", border: "none", outline: "none", fontFamily: SANS, fontSize: 15, color: T.t1 }} />
           <kbd onClick={onClose} style={{ fontFamily: SANS, fontSize: 11, color: T.t3, background: T.surf2, border: `1px solid ${T.bdr}`, borderRadius: 4, padding: "2px 7px", cursor: "pointer" }}>Esc</kbd>
         </div>
         {!q && (
           <div style={{ padding: "20px 18px", fontFamily: SANS, fontSize: 13, color: T.t3, textAlign: "center" }}>
-            Start typing to search invoices and suppliers
+            {t("search_placeholder")}
           </div>
         )}
         {q && !hasResults && (
           <div style={{ padding: "20px 18px", fontFamily: SANS, fontSize: 13, color: T.t3, textAlign: "center" }}>
-            No results for "{query}"
+            {t("search_no_results")}
           </div>
         )}
         {invResults.length > 0 && (
           <div>
-            <div style={{ padding: "8px 18px 4px", fontFamily: SANS, fontSize: 10, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: T.t3 }}>Invoices</div>
+            <div style={{ padding: "8px 18px 4px", fontFamily: SANS, fontSize: 10, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: T.t3 }}>{t("search_invoices")}</div>
             {invResults.map(inv => (
               <ResultItem key={inv.id}
                 icon={inv.supplier?.charAt(0) || "?"}
@@ -428,7 +436,7 @@ function SearchOverlay({ invoices, suppliers, onNavigate, onClose }) {
         )}
         {supResults.length > 0 && (
           <div style={{ borderTop: invResults.length > 0 ? `1px solid ${T.bdr}` : "none" }}>
-            <div style={{ padding: "8px 18px 4px", fontFamily: SANS, fontSize: 10, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: T.t3 }}>Suppliers</div>
+            <div style={{ padding: "8px 18px 4px", fontFamily: SANS, fontSize: 10, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: T.t3 }}>{t("search_suppliers")}</div>
             {supResults.map(sup => (
               <ResultItem key={sup.id}
                 icon={sup.name?.charAt(0) || "?"}
@@ -440,21 +448,22 @@ function SearchOverlay({ invoices, suppliers, onNavigate, onClose }) {
           </div>
         )}
         <div style={{ padding: "8px 18px", borderTop: (hasResults || q) ? `1px solid ${T.bdr}` : "none", display: "flex", gap: 16 }}>
-          <span style={{ fontFamily: SANS, fontSize: 11, color: T.t3 }}><kbd style={{ background: T.surf2, border: `1px solid ${T.bdr}`, borderRadius: 3, padding: "1px 5px", fontFamily: MONO, fontSize: 10 }}>↑↓</kbd> navigate</span>
-          <span style={{ fontFamily: SANS, fontSize: 11, color: T.t3 }}><kbd style={{ background: T.surf2, border: `1px solid ${T.bdr}`, borderRadius: 3, padding: "1px 5px", fontFamily: MONO, fontSize: 10 }}>↵</kbd> select</span>
-          <span style={{ fontFamily: SANS, fontSize: 11, color: T.t3 }}><kbd style={{ background: T.surf2, border: `1px solid ${T.bdr}`, borderRadius: 3, padding: "1px 5px", fontFamily: MONO, fontSize: 10 }}>Esc</kbd> close</span>
+          <span style={{ fontFamily: SANS, fontSize: 11, color: T.t3 }}><kbd style={{ background: T.surf2, border: `1px solid ${T.bdr}`, borderRadius: 3, padding: "1px 5px", fontFamily: MONO, fontSize: 10 }}>↑↓</kbd> {t("search_hint").split("·")[0].replace("↑↓","").trim()}</span>
+          <span style={{ fontFamily: SANS, fontSize: 11, color: T.t3 }}><kbd style={{ background: T.surf2, border: `1px solid ${T.bdr}`, borderRadius: 3, padding: "1px 5px", fontFamily: MONO, fontSize: 10 }}>↵</kbd> {t("search_hint").split("·")[1]?.trim()}</span>
+          <span style={{ fontFamily: SANS, fontSize: 11, color: T.t3 }}><kbd style={{ background: T.surf2, border: `1px solid ${T.bdr}`, borderRadius: 3, padding: "1px 5px", fontFamily: MONO, fontSize: 10 }}>Esc</kbd> {t("search_hint").split("·")[2]?.trim()}</span>
         </div>
       </div>
     </div>
   );
 }
 
-function GlobalHeader({ view, isDark, onToggleTheme, onMenuOpen, onMissingAlert, onAnomalyAlert, missingCount, anomalyCount, syncJobs, appNotifs, onClearAppNotifs, onSearchOpen }) {
+function GlobalHeader({ view, isDark, onToggleTheme, onToggleLang, lang, onMenuOpen, onMissingAlert, onAnomalyAlert, missingCount, anomalyCount, syncJobs, appNotifs, onClearAppNotifs, onSearchOpen }) {
   const T = useT();
   const { isMobile, isTablet } = useLayout();
+  const { t } = useLang();
   const [notifOpen, setNotifOpen] = useState(false);
   const bellRef = useRef(null);
-  const TITLES = { dashboard: "Dashboard", invoices: "Invoices", calendar: "Calendar", integrations: "Integrations", suppliers: "Suppliers", settings: "Settings", admin: "Admin" };
+  const TITLES = { dashboard: t("nav_dashboard"), invoices: t("nav_invoices"), calendar: t("nav_calendar"), integrations: t("nav_integrations"), suppliers: t("nav_suppliers"), settings: t("nav_settings"), admin: t("nav_admin") };
   const headerBg = T.isDark ? "#0C1017" : T.surf;
   const ghostBtn = { width: 34, height: 34, display: "flex", alignItems: "center", justifyContent: "center", background: "transparent", border: `1px solid ${T.isDark ? "rgba(255,255,255,.10)" : T.bdr}`, borderRadius: 8, cursor: "pointer", color: T.isDark ? "rgba(255,255,255,.4)" : T.t2, flexShrink: 0 };
   const totalAlerts = (missingCount || 0) + (anomalyCount || 0);
@@ -476,11 +485,12 @@ function GlobalHeader({ view, isDark, onToggleTheme, onMenuOpen, onMissingAlert,
       {!isMobile && (
         <div onClick={onSearchOpen} style={{ display: "flex", alignItems: "center", gap: 8, padding: "0 12px", background: T.isDark ? "rgba(255,255,255,.04)" : T.surf2, border: `1px solid ${T.isDark ? "rgba(255,255,255,.08)" : T.bdr}`, borderRadius: 8, height: 34, cursor: "pointer", minWidth: 180 }}>
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={T.isDark ? "rgba(255,255,255,.25)" : T.t3} strokeWidth="2" strokeLinecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-          <span style={{ fontFamily: SANS, fontSize: 13, color: T.isDark ? "rgba(255,255,255,.25)" : T.t3, flex: 1 }}>Search anything…</span>
+          <span style={{ fontFamily: SANS, fontSize: 13, color: T.isDark ? "rgba(255,255,255,.25)" : T.t3, flex: 1 }}>{t("search_placeholder")}</span>
           <kbd style={{ fontFamily: SANS, fontSize: 10, color: T.isDark ? "rgba(255,255,255,.2)" : T.t3, background: T.isDark ? "rgba(255,255,255,.06)" : T.surf3, border: `1px solid ${T.isDark ? "rgba(255,255,255,.09)" : T.bdr}`, borderRadius: 4, padding: "2px 6px" }}>⌘K</kbd>
         </div>
       )}
       <button onClick={onToggleTheme} style={ghostBtn}>{isDark ? <Sun size={14} /> : <Moon size={14} />}</button>
+      <button onClick={onToggleLang} title={lang === "he" ? "Switch to English" : "עברית"} style={{ ...ghostBtn, fontFamily: SANS, fontSize: 11, fontWeight: 700, letterSpacing: "-0.02em", color: T.isDark ? "rgba(255,255,255,.5)" : T.t2 }}>{lang === "he" ? "EN" : "עב"}</button>
 
       {/* Bell with notification dropdown */}
       <div ref={bellRef} style={{ position: "relative" }}>
@@ -496,14 +506,14 @@ function GlobalHeader({ view, isDark, onToggleTheme, onMenuOpen, onMissingAlert,
         {notifOpen && (
           <div style={{ position: "absolute", top: 42, right: 0, width: 300, background: T.surf, border: `1px solid ${T.bdr2}`, borderRadius: 10, boxShadow: T.isDark ? "0 8px 32px rgba(0,0,0,0.6)" : "0 8px 32px rgba(0,0,0,0.12)", zIndex: 9999, overflow: "hidden", animation: "scaleIn 0.15s cubic-bezier(.16,1,.3,1)" }}>
             <div style={{ padding: "10px 14px 8px", borderBottom: `1px solid ${T.bdr}`, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <span style={{ fontFamily: SANS, fontSize: 12, fontWeight: 700, color: T.t1, letterSpacing: "-0.01em" }}>Notifications</span>
-              {recentAppNotifs.length > 0 && <button onClick={() => { onClearAppNotifs?.(); }} style={{ fontFamily: SANS, fontSize: 11, color: T.t3, background: "none", border: "none", cursor: "pointer", padding: 0 }}>Clear all</button>}
-              {totalCount === 0 && <span style={{ fontFamily: SANS, fontSize: 11, color: T.t3 }}>All clear</span>}
+              <span style={{ fontFamily: SANS, fontSize: 12, fontWeight: 700, color: T.t1, letterSpacing: "-0.01em" }}>{t("notif_title")}</span>
+              {recentAppNotifs.length > 0 && <button onClick={() => { onClearAppNotifs?.(); }} style={{ fontFamily: SANS, fontSize: 11, color: T.t3, background: "none", border: "none", cursor: "pointer", padding: 0 }}>{t("notif_clear")}</button>}
+              {totalCount === 0 && <span style={{ fontFamily: SANS, fontSize: 11, color: T.t3 }}>{t("notif_all_clear")}</span>}
             </div>
 
             {totalCount === 0 && (
               <div style={{ padding: "20px 14px", textAlign: "center", fontFamily: SANS, fontSize: 13, color: T.t3 }}>
-                No notifications right now
+                {t("notif_empty")}
               </div>
             )}
 
@@ -516,8 +526,8 @@ function GlobalHeader({ view, isDark, onToggleTheme, onMenuOpen, onMissingAlert,
                   <AlertTriangle size={14} color={T.amber} />
                 </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontFamily: SANS, fontSize: 13, fontWeight: 600, color: T.t1 }}>Missing Invoices</div>
-                  <div style={{ fontFamily: SANS, fontSize: 11, color: T.t3, marginTop: 1 }}>{missingCount} supplier{missingCount !== 1 ? "s" : ""} haven't billed this month</div>
+                  <div style={{ fontFamily: SANS, fontSize: 13, fontWeight: 600, color: T.t1 }}>{t("notif_missing")}</div>
+                  <div style={{ fontFamily: SANS, fontSize: 11, color: T.t3, marginTop: 1 }}>{missingCount !== 1 ? t("notif_missing_sub_plural", { n: missingCount }) : t("notif_missing_sub", { n: missingCount })}</div>
                 </div>
                 <ChevronRight size={13} color={T.t3} />
               </button>
@@ -532,8 +542,8 @@ function GlobalHeader({ view, isDark, onToggleTheme, onMenuOpen, onMissingAlert,
                   <TrendingUp size={14} color={T.indigo} />
                 </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontFamily: SANS, fontSize: 13, fontWeight: 600, color: T.t1 }}>Anomalies Detected</div>
-                  <div style={{ fontFamily: SANS, fontSize: 11, color: T.t3, marginTop: 1 }}>{anomalyCount} invoice{anomalyCount !== 1 ? "s" : ""} outside normal range</div>
+                  <div style={{ fontFamily: SANS, fontSize: 13, fontWeight: 600, color: T.t1 }}>{t("notif_anomaly")}</div>
+                  <div style={{ fontFamily: SANS, fontSize: 11, color: T.t3, marginTop: 1 }}>{anomalyCount !== 1 ? t("notif_anomaly_sub_plural", { n: anomalyCount }) : t("notif_anomaly_sub", { n: anomalyCount })}</div>
                 </div>
                 <ChevronRight size={13} color={T.t3} />
               </button>
@@ -607,6 +617,7 @@ const AmberPill = ({ children }) => <span style={{ color: "#F59E0B", fontSize: 1
 
 function Dashboard({ invoices, onPayAllJuly, chartData, supplierNames, supplierColor, user, onMissingAlert, onAnomalyAlert, missingSuppliers, anomalyMap, onViewMonth }) {
   const T = useT();
+  const { t } = useLang();
   const { isMobile, isTablet } = useLayout();
   const now = new Date();
   const nextYM = `${now.getFullYear()}-${String(now.getMonth() + 2).padStart(2, "0")}`;
@@ -619,7 +630,7 @@ function Dashboard({ invoices, onPayAllJuly, chartData, supplierNames, supplierC
   const currentMonthTotal = currentMonthInvoices.reduce((s, i) => s + Number(i.amount || 0), 0);
   const currentMonthSuppliers = [...new Set(currentMonthInvoices.map(i => i.supplier))].length;
   const hour = now.getHours();
-  const greeting = hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
+  const greeting = hour < 12 ? t("greeting_morning") : hour < 17 ? t("greeting_afternoon") : t("greeting_evening");
   const firstName = user?.user_metadata?.full_name?.split(" ")[0] || user?.email?.split("@")[0] || "";
   const kpis = {
     outstanding: invoices.filter(isUnpaid).reduce((s, i) => s + Number(i.amount), 0),
@@ -646,28 +657,28 @@ function Dashboard({ invoices, onPayAllJuly, chartData, supplierNames, supplierC
 
   const CARDS = [
     {
-      label: "Outstanding", value: kpis.outstanding, delay: 0,
+      label: t("kpi_outstanding"), value: kpis.outstanding, delay: 0,
       iconBg: "rgba(99,102,241,.13)", iconColor: "#818CF8",
       iconPath: <><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></>,
-      pill: <DeltaPill delta={outstandingDelta} />, context: "vs last month",
+      pill: <DeltaPill delta={outstandingDelta} />, context: t("dash_vs_last"),
     },
     {
-      label: "Overdue", value: kpis.overdue, valueColor: "#F87171", delay: 0.06,
+      label: t("kpi_overdue"), value: kpis.overdue, valueColor: "#F87171", delay: 0.06,
       iconBg: "rgba(239,68,68,.12)", iconColor: "#F87171",
       iconPath: <><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></>,
-      pill: <RedPill>{overdueCount} invoices</RedPill>, context: "need action",
+      pill: <RedPill>{overdueCount} {t("kpi_invoices")}</RedPill>, context: t("kpi_need_action"),
     },
     {
-      label: "Next Month", value: kpis.nextMonth, delay: 0.12,
+      label: t("kpi_next_month"), value: kpis.nextMonth, delay: 0.12,
       iconBg: "rgba(245,158,11,.12)", iconColor: "#F59E0B",
       iconPath: <><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></>,
       pill: <AmberPill>{nextLabel}</AmberPill>, context: `· ${nextMonthCount} invoices`,
     },
     {
-      label: "Total Paid", value: kpis.paid, delay: 0.18,
+      label: t("kpi_total_paid"), value: kpis.paid, delay: 0.18,
       iconBg: "rgba(34,197,94,.12)", iconColor: "#22C55E",
       iconPath: <><polyline points="20 6 9 17 4 12"/></>,
-      pill: <DeltaPill delta={paidDelta} />, context: "vs last month",
+      pill: <DeltaPill delta={paidDelta} />, context: t("dash_vs_last"),
     },
   ];
 
@@ -695,10 +706,10 @@ function Dashboard({ invoices, onPayAllJuly, chartData, supplierNames, supplierC
               onMouseEnter={e => e.currentTarget.style.opacity = "0.85"} onMouseLeave={e => e.currentTarget.style.opacity = "1"}>
               <div style={{ width: 40, height: 40, borderRadius: 10, background: "rgba(245,158,11,0.18)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, fontSize: 20 }}>⚠️</div>
               <div style={{ flex: 1 }}>
-                <div style={{ fontFamily: SANS, fontWeight: 700, fontSize: 15, color: T.amber, letterSpacing: "-0.02em" }}>{missingSuppliers.length} Missing Invoices</div>
-                <div style={{ fontFamily: SANS, fontSize: 12, color: T.t2, marginTop: 2 }}>Recurring suppliers with no invoice this month</div>
+                <div style={{ fontFamily: SANS, fontWeight: 700, fontSize: 15, color: T.amber, letterSpacing: "-0.02em" }}>{t("dash_missing_title", { n: missingSuppliers.length })}</div>
+                <div style={{ fontFamily: SANS, fontSize: 12, color: T.t2, marginTop: 2 }}>{t("dash_missing_sub")}</div>
               </div>
-              <span style={{ fontFamily: SANS, fontSize: 12, color: T.amber, fontWeight: 500, flexShrink: 0 }}>Details →</span>
+              <span style={{ fontFamily: SANS, fontSize: 12, color: T.amber, fontWeight: 500, flexShrink: 0 }}>{t("dash_details")}</span>
             </div>
           )}
           {anomalyMap?.size > 0 && (
@@ -706,10 +717,10 @@ function Dashboard({ invoices, onPayAllJuly, chartData, supplierNames, supplierC
               onMouseEnter={e => e.currentTarget.style.opacity = "0.85"} onMouseLeave={e => e.currentTarget.style.opacity = "1"}>
               <div style={{ width: 40, height: 40, borderRadius: 10, background: "rgba(99,102,241,0.15)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, fontSize: 20 }}>📊</div>
               <div style={{ flex: 1 }}>
-                <div style={{ fontFamily: SANS, fontWeight: 700, fontSize: 15, color: T.isDark ? "#A5B4FC" : T.indigo, letterSpacing: "-0.02em" }}>{anomalyMap.size} Amount Anomalies</div>
-                <div style={{ fontFamily: SANS, fontSize: 12, color: T.t2, marginTop: 2 }}>Invoices that deviate from supplier averages</div>
+                <div style={{ fontFamily: SANS, fontWeight: 700, fontSize: 15, color: T.isDark ? "#A5B4FC" : T.indigo, letterSpacing: "-0.02em" }}>{t("dash_anomaly_title", { n: anomalyMap.size })}</div>
+                <div style={{ fontFamily: SANS, fontSize: 12, color: T.t2, marginTop: 2 }}>{t("dash_anomaly_sub")}</div>
               </div>
-              <span style={{ fontFamily: SANS, fontSize: 12, color: T.isDark ? "#818CF8" : T.indigo, fontWeight: 500, flexShrink: 0 }}>Details →</span>
+              <span style={{ fontFamily: SANS, fontSize: 12, color: T.isDark ? "#818CF8" : T.indigo, fontWeight: 500, flexShrink: 0 }}>{t("dash_details")}</span>
             </div>
           )}
         </div>
@@ -726,15 +737,15 @@ function Dashboard({ invoices, onPayAllJuly, chartData, supplierNames, supplierC
           </div>
           <div>
             <div style={{ fontFamily: SANS, fontWeight: 600, fontSize: 15, color: T.t1, letterSpacing: "-0.02em", marginBottom: 4 }}>
-              {currentMonthTotal > 0 ? `Pay ${currentMonthLabel} — you're ready` : `Nothing due in ${currentMonthLabel} 🎉`}
+              {currentMonthTotal > 0 ? t("dash_pay_ready", { month: currentMonthLabel }) : t("dash_nothing_due", { month: currentMonthLabel })}
             </div>
-            <div style={{ fontFamily: SANS, fontSize: 13, color: T.t2 }}>{currentMonthSuppliers} supplier{currentMonthSuppliers !== 1 ? "s" : ""} · <span style={{ color: T.isDark ? "#A5B4FC" : T.indigo, fontWeight: 500, fontFamily: MONO }}>{fmt(currentMonthTotal)}</span> total due</div>
+            <div style={{ fontFamily: SANS, fontSize: 13, color: T.t2 }}>{currentMonthSuppliers !== 1 ? t("dash_suppliers_plural", { n: currentMonthSuppliers }) : t("dash_suppliers", { n: currentMonthSuppliers })} · <span style={{ color: T.isDark ? "#A5B4FC" : T.indigo, fontWeight: 500, fontFamily: MONO }}>{fmt(currentMonthTotal)}</span> {t("dash_total_due")}</div>
           </div>
         </div>
         <div style={{ display: "flex", gap: 8, flexShrink: 0, alignSelf: isMobile ? "stretch" : "auto" }}>
-          <button onClick={() => onViewMonth?.()} style={{ padding: "8px 16px", border: `1px solid ${T.bdr2}`, borderRadius: 8, background: T.isDark ? "rgba(255,255,255,.04)" : "transparent", fontFamily: SANS, fontSize: 13, fontWeight: 500, color: T.t2, cursor: "pointer" }}>View invoices</button>
+          <button onClick={() => onViewMonth?.()} style={{ padding: "8px 16px", border: `1px solid ${T.bdr2}`, borderRadius: 8, background: T.isDark ? "rgba(255,255,255,.04)" : "transparent", fontFamily: SANS, fontSize: 13, fontWeight: 500, color: T.t2, cursor: "pointer" }}>{t("dash_view_invoices")}</button>
           <button onClick={onPayAllJuly} style={{ background: T.indigo, border: "none", borderRadius: 8, padding: "8px 20px", fontFamily: SANS, fontSize: 13, fontWeight: 600, color: "#fff", cursor: "pointer", display: "flex", alignItems: "center", gap: 6, boxShadow: "0 4px 18px rgba(99,102,241,.35)", letterSpacing: "-0.01em", flex: isMobile ? 1 : "none", justifyContent: "center" }}>
-            Pay All <ChevronRight size={12} strokeWidth={2.5} />
+            {t("dash_pay_all")} <ChevronRight size={12} strokeWidth={2.5} />
           </button>
         </div>
       </div>
@@ -742,10 +753,10 @@ function Dashboard({ invoices, onPayAllJuly, chartData, supplierNames, supplierC
       <div style={{ background: T.surf, border: `1px solid ${T.bdr}`, borderRadius: 12, padding: "22px 24px", marginBottom: 14 }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 20 }}>
             <div>
-              <div style={{ fontFamily: SANS, fontWeight: 600, fontSize: 14, color: T.isDark ? "#CBD6E6" : T.t1, letterSpacing: "-0.02em" }}>Payment Schedule</div>
-              <div style={{ fontFamily: SANS, fontSize: 12, color: T.t2, marginTop: 3 }}>Upcoming payments by month</div>
+              <div style={{ fontFamily: SANS, fontWeight: 600, fontSize: 14, color: T.isDark ? "#CBD6E6" : T.t1, letterSpacing: "-0.02em" }}>{t("dash_payment_schedule")}</div>
+              <div style={{ fontFamily: SANS, fontSize: 12, color: T.t2, marginTop: 3 }}>{t("dash_upcoming")}</div>
             </div>
-            <button style={{ padding: "5px 12px", border: `1px solid ${T.bdr}`, borderRadius: 6, background: T.isDark ? "rgba(255,255,255,.04)" : T.surf2, fontFamily: SANS, fontSize: 11, fontWeight: 600, color: T.t2, cursor: "pointer" }}>4 months</button>
+            <button style={{ padding: "5px 12px", border: `1px solid ${T.bdr}`, borderRadius: 6, background: T.isDark ? "rgba(255,255,255,.04)" : T.surf2, fontFamily: SANS, fontSize: 11, fontWeight: 600, color: T.t2, cursor: "pointer" }}>{t("dash_4months")}</button>
           </div>
           <ResponsiveContainer width="100%" height={isMobile ? 140 : 180}>
             <BarChart data={resolvedChartData} barSize={isMobile ? 20 : 28} barCategoryGap="40%">
@@ -958,6 +969,7 @@ function GroupedView({ invoices, selectedMonth, onMonthChange, selectedIds, onTo
 function InvoicesView({ invoices, selectedMonth, onMonthChange, onMarkPaid, onBulkPaid, preSelectAll, onEditInvoice, anomalyMap, missingSuppliers }) {
   const T = useT();
   const { isMobile } = useLayout();
+  const { t } = useLang();
   const supplierList = [...new Set(invoices.map(i => i.supplier))];
   const invColor = name => PALETTE[supplierList.indexOf(name) % PALETTE.length] || "#6366F1";
   const [viewMode, setViewMode] = useState("grouped");
@@ -1012,19 +1024,19 @@ function InvoicesView({ invoices, selectedMonth, onMonthChange, onMarkPaid, onBu
         {!isMobile && (
           <div style={{ display: "flex", background: T.surf, border: `1px solid ${T.bdr}`, borderRadius: 6, padding: 2, gap: 2 }}>
             {["grouped", "table"].map(mode => (
-              <button key={mode} onClick={() => setViewMode(mode)} style={{ padding: "4px 12px", borderRadius: 4, border: "none", cursor: "pointer", fontFamily: SANS, fontSize: 12, fontWeight: viewMode === mode ? 600 : 400, background: viewMode === mode ? T.indigoTint : "transparent", color: viewMode === mode ? T.indigo : T.t2, textTransform: "capitalize" }}>{mode}</button>
+              <button key={mode} onClick={() => setViewMode(mode)} style={{ padding: "4px 12px", borderRadius: 4, border: "none", cursor: "pointer", fontFamily: SANS, fontSize: 12, fontWeight: viewMode === mode ? 600 : 400, background: viewMode === mode ? T.indigoTint : "transparent", color: viewMode === mode ? T.indigo : T.t2, textTransform: "capitalize" }}>{mode === "grouped" ? t("inv_grouped") : t("inv_table")}</button>
             ))}
           </div>
         )}
         <div ref={filterRef} style={{ position: "relative" }}>
           <button onClick={() => setFilterOpen(v => !v)} style={{ display: "flex", alignItems: "center", gap: 5, padding: "6px 10px", borderRadius: 6, background: activeFilters > 0 ? T.indigoTint : "transparent", border: `1px solid ${activeFilters > 0 ? T.indigoBdr : T.bdr}`, color: activeFilters > 0 ? T.indigo : T.t2, cursor: "pointer", fontFamily: SANS, fontSize: 12, fontWeight: activeFilters > 0 ? 600 : 400 }}>
-            <Filter size={12} strokeWidth={1.75} />Filter{activeFilters > 0 ? ` (${activeFilters})` : ""}
+            <Filter size={12} strokeWidth={1.75} />{t("inv_filter")}{activeFilters > 0 ? ` (${activeFilters})` : ""}
           </button>
           {filterOpen && (
             <div style={{ position: "absolute", top: 36, left: 0, width: 240, background: T.surf, border: `1px solid ${T.bdr2}`, borderRadius: 10, boxShadow: T.isDark ? "0 8px 32px rgba(0,0,0,0.5)" : "0 8px 24px rgba(0,0,0,0.1)", zIndex: 200, overflow: "hidden", animation: "scaleIn 0.15s cubic-bezier(.16,1,.3,1)" }}>
               <div style={{ padding: "10px 12px 6px", display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: `1px solid ${T.bdr}` }}>
                 <span style={{ fontFamily: SANS, fontSize: 11, fontWeight: 700, color: T.t2, textTransform: "uppercase", letterSpacing: "0.06em" }}>Status</span>
-                {activeFilters > 0 && <button onClick={() => { setFilterStatuses(new Set()); setFilterSuppliers(new Set()); }} style={{ fontFamily: SANS, fontSize: 11, color: T.indigo, background: "none", border: "none", cursor: "pointer", padding: 0 }}>Clear all</button>}
+                {activeFilters > 0 && <button onClick={() => { setFilterStatuses(new Set()); setFilterSuppliers(new Set()); }} style={{ fontFamily: SANS, fontSize: 11, color: T.indigo, background: "none", border: "none", cursor: "pointer", padding: 0 }}>{t("notif_clear")}</button>}
               </div>
               <div style={{ padding: "6px 8px" }}>
                 {allStatuses.map(s => (
@@ -1033,14 +1045,14 @@ function InvoicesView({ invoices, selectedMonth, onMonthChange, onMarkPaid, onBu
                     <div style={{ width: 14, height: 14, border: `1.5px solid ${filterStatuses.has(s) ? T.indigo : T.bdr2}`, borderRadius: 3, background: filterStatuses.has(s) ? T.indigo : "transparent", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                       {filterStatuses.has(s) && <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3.5" strokeLinecap="round"><polyline points="20 6 9 17 4 12"/></svg>}
                     </div>
-                    <span style={{ fontFamily: SANS, fontSize: 12, color: filterStatuses.has(s) ? T.indigo : T.t1 }}>{s}</span>
+                    <span style={{ fontFamily: SANS, fontSize: 12, color: filterStatuses.has(s) ? T.indigo : T.t1 }}>{s === "Paid" ? t("inv_paid") : s === "Unpaid" ? t("inv_unpaid") : s === "Overdue" ? t("inv_overdue") : s === "Credit" ? t("inv_credit") : s}</span>
                   </button>
                 ))}
               </div>
               {supplierList.length > 0 && (
                 <>
                   <div style={{ padding: "6px 12px", borderTop: `1px solid ${T.bdr}` }}>
-                    <span style={{ fontFamily: SANS, fontSize: 11, fontWeight: 700, color: T.t2, textTransform: "uppercase", letterSpacing: "0.06em" }}>Supplier</span>
+                    <span style={{ fontFamily: SANS, fontSize: 11, fontWeight: 700, color: T.t2, textTransform: "uppercase", letterSpacing: "0.06em" }}>{t("inv_col_supplier")}</span>
                   </div>
                   <div style={{ padding: "6px 8px", maxHeight: 160, overflowY: "auto" }}>
                     {supplierList.map(s => (
@@ -1059,7 +1071,7 @@ function InvoicesView({ invoices, selectedMonth, onMonthChange, onMarkPaid, onBu
           )}
         </div>
         {selectedIds.size > 0 && <button onClick={() => setSelectedIds(new Set())} style={{ display: "flex", alignItems: "center", gap: 5, padding: "6px 10px", borderRadius: 6, background: "transparent", border: `1px solid ${T.redBdr}`, color: T.red, cursor: "pointer", fontFamily: SANS, fontSize: 12 }}><X size={12} />Clear</button>}
-        <div style={{ marginLeft: "auto", fontFamily: MONO, fontSize: 11, color: T.t3 }}>{filteredInvoices.length}{activeFilters > 0 ? ` of ${invoices.length}` : ""} invoices</div>
+        <div style={{ marginLeft: "auto", fontFamily: MONO, fontSize: 11, color: T.t3 }}>{filteredInvoices.length}{activeFilters > 0 ? ` / ${invoices.length}` : ""} {t("inv_invoices")}</div>
       </div>
 
       {(isMobile || viewMode === "grouped") ? (
@@ -1072,7 +1084,7 @@ function InvoicesView({ invoices, selectedMonth, onMonthChange, onMarkPaid, onBu
       ) : (
         <div style={{ background: T.surf, border: `1px solid ${T.bdr}`, borderRadius: 10, overflow: "hidden" }}>
           <div style={{ display: "grid", gridTemplateColumns: "40px minmax(140px,1fr) 130px 90px 90px 110px 90px 52px", alignItems: "center", padding: "0 18px", height: 40, background: T.isDark ? "#0E1520" : T.surf2, borderBottom: `1px solid ${T.bdr}` }}>
-            {["", "Supplier", "Invoice #", "Issued", "Due", "Amount", "Status", ""].map((h, i) => (
+            {["", t("inv_col_supplier"), t("inv_col_invoice"), t("inv_col_issued"), t("inv_col_due"), t("inv_col_amount"), t("inv_col_status"), ""].map((h, i) => (
               <div key={i} style={{ fontFamily: SANS, fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", color: T.isDark ? "rgba(255,255,255,.3)" : T.t3, textAlign: i === 5 ? "right" : "left", paddingRight: i === 5 ? 14 : 0 }}>{h}</div>
             ))}
           </div>
@@ -1112,7 +1124,7 @@ function InvoicesView({ invoices, selectedMonth, onMonthChange, onMarkPaid, onBu
         <div style={{ position: "fixed", ...(isMobile ? { bottom: 0, left: 0, right: 0, borderRadius: "12px 12px 0 0" } : { bottom: 24, left: "50%", transform: "translateX(-50%)", borderRadius: 50 }), background: "#0F172A", padding: isMobile ? "14px 20px" : "10px 20px", display: "flex", alignItems: "center", gap: 12, boxShadow: "0 -4px 24px rgba(0,0,0,0.3)", animation: "slideUp 0.25s cubic-bezier(.16,1,.3,1)", zIndex: 200, whiteSpace: "nowrap" }}>
           <div style={{ width: 22, height: 22, borderRadius: "50%", background: "#6366F1", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: MONO, fontWeight: 700, fontSize: 11, color: "#fff" }}>{selectedIds.size}</div>
           <span style={{ fontFamily: SANS, fontWeight: 500, color: "#94A3B8", fontSize: 13, flex: 1 }}>{selectedIds.size} · <span style={{ fontFamily: MONO, color: "#fff" }}>{fmt(selTotal)}</span></span>
-          <button onClick={() => setShowPayConfirm(true)} style={{ padding: "7px 18px", borderRadius: 50, background: "#6366F1", border: "none", cursor: "pointer", fontFamily: SANS, fontWeight: 600, fontSize: 13, color: "#fff" }}>Pay →</button>
+          <button onClick={() => setShowPayConfirm(true)} style={{ padding: "7px 18px", borderRadius: 50, background: "#6366F1", border: "none", cursor: "pointer", fontFamily: SANS, fontWeight: 600, fontSize: 13, color: "#fff" }}>{t("inv_pay_selected")} →</button>
           <button onClick={() => setSelectedIds(new Set())} style={{ background: "none", border: "none", color: "#475569", cursor: "pointer", display: "flex", alignItems: "center" }}><X size={15} /></button>
         </div>
       )}
@@ -1144,9 +1156,9 @@ function InvoicesView({ invoices, selectedMonth, onMonthChange, onMarkPaid, onBu
               <span style={{ fontFamily: MONO, fontWeight: 500, fontSize: 20, color: T.indigo }}>{fmt(selTotal)}</span>
             </div>
             <div style={{ display: "flex", gap: 8 }}>
-              <button onClick={() => setShowPayConfirm(false)} style={{ flex: 1, padding: "11px 0", background: "transparent", border: `1px solid ${T.bdr2}`, borderRadius: 7, color: T.t2, cursor: "pointer", fontFamily: SANS, fontWeight: 600, fontSize: 14 }}>Cancel</button>
+              <button onClick={() => setShowPayConfirm(false)} style={{ flex: 1, padding: "11px 0", background: "transparent", border: `1px solid ${T.bdr2}`, borderRadius: 7, color: T.t2, cursor: "pointer", fontFamily: SANS, fontWeight: 600, fontSize: 14 }}>{t("cancel")}</button>
               <button onClick={handleConfirmPay} style={{ flex: 2, padding: "11px 0", background: T.indigo, border: "none", borderRadius: 7, color: "#fff", cursor: "pointer", fontFamily: SANS, fontWeight: 700, fontSize: 14, display: "flex", alignItems: "center", justifyContent: "center", gap: 7 }}>
-                <Check size={15} strokeWidth={2.5} />Confirm
+                <Check size={15} strokeWidth={2.5} />{t("confirm")}
               </button>
             </div>
           </div>
@@ -1250,6 +1262,7 @@ function IntegrationsView() {
 function SuppliersView({ suppliers, onAdd, onUpdate, onDelete }) {
   const T = useT();
   const { isMobile } = useLayout();
+  const { t } = useLang();
   const [filterTerm, setFilterTerm] = useState("all");
   const [editId, setEditId] = useState(null);
   const [editData, setEditData] = useState({});
@@ -1268,7 +1281,7 @@ function SuppliersView({ suppliers, onAdd, onUpdate, onDelete }) {
     for (const row of rows) {
       if (row.name) { await onAdd?.({ name: row.name, terms: row.terms || "shotef", notes: row.notes || "" }); added++; }
     }
-    setCsvToast(`Imported ${added} supplier${added !== 1 ? "s" : ""}`);
+    setCsvToast(t("sup_imported", { n: added }));
     setTimeout(() => setCsvToast(null), 3000);
     e.target.value = "";
   };
@@ -1290,7 +1303,7 @@ function SuppliersView({ suppliers, onAdd, onUpdate, onDelete }) {
         <div style={{ marginLeft: "auto" }}>
           <button onClick={() => csvRef.current?.click()} style={{ display: "flex", alignItems: "center", gap: 5, padding: "5px 10px", borderRadius: 6, background: "transparent", border: `1px solid ${T.bdr}`, color: T.t2, cursor: "pointer", fontFamily: SANS, fontSize: 12, fontWeight: 500 }}>
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-            Import CSV
+            {t("sup_import")}
           </button>
         </div>
       </div>
@@ -1300,12 +1313,12 @@ function SuppliersView({ suppliers, onAdd, onUpdate, onDelete }) {
             {editId === sup.id ? (
               <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                 <div style={{ display: "flex", gap: 7 }}>
-                  <input value={editData.name ?? ""} placeholder="Name" onChange={e => setEditData(d => ({ ...d, name: e.target.value }))} style={inp} />
-                  <input value={editData.terms ?? ""} placeholder="Terms" onChange={e => setEditData(d => ({ ...d, terms: e.target.value }))} style={{ ...inp, maxWidth: 130 }} />
+                  <input value={editData.name ?? ""} placeholder={t("sup_name")} onChange={e => setEditData(d => ({ ...d, name: e.target.value }))} style={inp} />
+                  <input value={editData.terms ?? ""} placeholder={t("sup_terms")} onChange={e => setEditData(d => ({ ...d, terms: e.target.value }))} style={{ ...inp, maxWidth: 130 }} />
                 </div>
                 <div style={{ display: "flex", gap: 7 }}>
-                  <input value={editData.notes ?? ""} placeholder="Notes" onChange={e => setEditData(d => ({ ...d, notes: e.target.value }))} style={inp} />
-                  <button onClick={async () => { try { await onUpdate?.(sup.id, editData); } catch {} setEditId(null); }} style={{ padding: "6px 12px", background: T.greenTint, border: `1px solid ${T.greenBdr}`, borderRadius: 5, color: T.green, cursor: "pointer", fontFamily: SANS, fontSize: 12, fontWeight: 600, display: "flex", alignItems: "center", gap: 3, flexShrink: 0 }}><Check size={11} />Save</button>
+                  <input value={editData.notes ?? ""} placeholder={t("sup_notes")} onChange={e => setEditData(d => ({ ...d, notes: e.target.value }))} style={inp} />
+                  <button onClick={async () => { try { await onUpdate?.(sup.id, editData); } catch {} setEditId(null); }} style={{ padding: "6px 12px", background: T.greenTint, border: `1px solid ${T.greenBdr}`, borderRadius: 5, color: T.green, cursor: "pointer", fontFamily: SANS, fontSize: 12, fontWeight: 600, display: "flex", alignItems: "center", gap: 3, flexShrink: 0 }}><Check size={11} />{t("sup_save")}</button>
                   <button onClick={() => setEditId(null)} style={{ padding: "6px 10px", background: "transparent", border: `1px solid ${T.bdr}`, borderRadius: 5, color: T.t2, cursor: "pointer", display: "flex", alignItems: "center", flexShrink: 0 }}><X size={11} /></button>
                 </div>
               </div>
@@ -1318,7 +1331,7 @@ function SuppliersView({ suppliers, onAdd, onUpdate, onDelete }) {
                 </div>
                 {!isMobile && sup.notes && <span style={{ fontFamily: SANS, fontSize: 12, color: T.t3, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 140 }}>{sup.notes}</span>}
                 <div style={{ display: "flex", gap: 5, flexShrink: 0 }}>
-                  <button onClick={() => { setEditId(sup.id); setEditData({ name: sup.name, terms: sup.terms, notes: sup.notes }); }} style={{ padding: "3px 8px", background: "transparent", border: `1px solid ${T.bdr}`, borderRadius: 4, color: T.t2, cursor: "pointer", fontFamily: SANS, fontSize: 11, display: "flex", alignItems: "center", gap: 3 }}><Pencil size={10} />{!isMobile && "Edit"}</button>
+                  <button onClick={() => { setEditId(sup.id); setEditData({ name: sup.name, terms: sup.terms, notes: sup.notes }); }} style={{ padding: "3px 8px", background: "transparent", border: `1px solid ${T.bdr}`, borderRadius: 4, color: T.t2, cursor: "pointer", fontFamily: SANS, fontSize: 11, display: "flex", alignItems: "center", gap: 3 }}><Pencil size={10} />{!isMobile && t("sup_edit")}</button>
                   <button onClick={() => onDelete?.(sup.id)} style={{ padding: "3px 7px", background: "transparent", border: `1px solid ${T.redBdr}`, borderRadius: 4, color: T.red, cursor: "pointer", display: "flex", alignItems: "center" }}><Trash2 size={10} /></button>
                 </div>
               </div>
@@ -1342,12 +1355,12 @@ function SuppliersView({ suppliers, onAdd, onUpdate, onDelete }) {
             }}
           />
           <button onClick={() => csvRef.current?.click()} style={{ display: "flex", alignItems: "center", gap: 6, padding: "7px 14px", background: "transparent", border: `1px solid ${T.bdr2}`, borderRadius: 7, fontFamily: SANS, fontSize: 12, fontWeight: 600, color: T.t2, cursor: "pointer" }}>
-            ↑ Import CSV
+            {t("sup_import")}
           </button>
         </>); })()}
         <button onClick={() => onAdd?.({ name: "New Supplier", terms: "shotef", notes: "" })}
           style={{ display: "flex", alignItems: "center", gap: 6, padding: "7px 14px", background: "transparent", border: `1px solid ${T.bdr}`, borderRadius: 6, color: T.t1, cursor: "pointer", fontFamily: SANS, fontSize: 13, fontWeight: 600 }}>
-          <Plus size={13} />Add Supplier
+          <Plus size={13} />{t("sup_add")}
         </button>
       </div>
     </div>
@@ -1358,6 +1371,7 @@ function SuppliersView({ suppliers, onAdd, onUpdate, onDelete }) {
 function SettingsScreen({ onUpgrade, onSignOut, user, invoices, suppliers, onNavigateToIntegrations }) {
   const T = useT();
   const { isMobile, isTablet } = useLayout();
+  const { t } = useLang();
   const isCompact = isMobile || isTablet;
 
   const generalRef = useRef(null);
@@ -1456,13 +1470,13 @@ function SettingsScreen({ onUpgrade, onSignOut, user, invoices, suppliers, onNav
   const pct = Math.round((planPctRaw || 0) * 100);
 
   const NAV = [
-    { id: "general",      label: "General",      Icon: Building2,     locked: false, danger: false },
-    { id: "profile",      label: "Profile",      Icon: User,          locked: false, danger: false },
-    { id: "billing",      label: "Billing",      Icon: CreditCard,    locked: false, danger: false },
-    { id: "integrations", label: "Integrations", Icon: Zap,           locked: false, danger: false },
-    { id: "team",         label: "Team",         Icon: Users,         locked: true,  danger: false },
-    { id: "data",         label: "Export",       Icon: Download,      locked: false, danger: false },
-    { id: "danger",       label: "Danger",       Icon: AlertTriangle, locked: false, danger: true  },
+    { id: "general",      label: t("set_general"),      Icon: Building2,     locked: false, danger: false },
+    { id: "profile",      label: t("set_profile"),      Icon: User,          locked: false, danger: false },
+    { id: "billing",      label: t("set_billing"),      Icon: CreditCard,    locked: false, danger: false },
+    { id: "integrations", label: t("set_integrations"), Icon: Zap,           locked: false, danger: false },
+    { id: "team",         label: t("set_team"),         Icon: Users,         locked: true,  danger: false },
+    { id: "data",         label: t("set_export"),       Icon: Download,      locked: false, danger: false },
+    { id: "danger",       label: t("set_danger"),       Icon: AlertTriangle, locked: false, danger: true  },
   ];
 
   const Section = ({ id, title, desc, children }) => (
@@ -1495,7 +1509,7 @@ function SettingsScreen({ onUpgrade, onSignOut, user, invoices, suppliers, onNav
     <div style={{ display: "flex", justifyContent: "flex-end", alignItems: "center", gap: 10, marginTop: 4 }}>
       {saveError && saved !== id && <span style={{ fontFamily: SANS, fontSize: 12, color: T.red }}>{saveError}</span>}
       <button onClick={() => saveSection(id)} style={{ padding: "7px 16px", background: T.indigo, border: "none", borderRadius: 6, fontFamily: SANS, fontWeight: 600, fontSize: 12, color: "#fff", cursor: "pointer", display: "flex", alignItems: "center", gap: 5 }}>
-        {saved === id ? <><Check size={12} />Saved</> : "Save changes"}
+        {saved === id ? <><Check size={12} />{t("set_saved")}</> : t("set_save")}
       </button>
     </div>
   );
@@ -1527,9 +1541,9 @@ function SettingsScreen({ onUpgrade, onSignOut, user, invoices, suppliers, onNav
       )}
 
       <div style={{ flex: 1, minWidth: 0, maxWidth: isCompact ? "100%" : 560 }}>
-        <Section id="general" title="General" desc="Basic settings for your business.">
-          <Row label="Business name"><input value={bizName} onChange={e => setBizName(e.target.value)} style={inp} /></Row>
-          <Row label="Currency" hint="Used for all amounts">
+        <Section id="general" title={t("set_general")} desc="">
+          <Row label={t("set_biz_name")}><input value={bizName} onChange={e => setBizName(e.target.value)} style={inp} /></Row>
+          <Row label={t("set_currency")}>
             <select value={currency} onChange={e => setCurrency(e.target.value)} style={sel}>
               <option value="ILS">₪ Israeli New Shekel (ILS)</option>
               <option value="USD">$ US Dollar (USD)</option>
@@ -1537,7 +1551,7 @@ function SettingsScreen({ onUpgrade, onSignOut, user, invoices, suppliers, onNav
               <option value="GBP">£ British Pound (GBP)</option>
             </select>
           </Row>
-          <Row label="Timezone">
+          <Row label={t("set_timezone")}>
             <select value={timezone} onChange={e => setTimezone(e.target.value)} style={sel}>
               <option value="Asia/Jerusalem">Asia/Jerusalem (UTC+3)</option>
               <option value="UTC">UTC</option>
@@ -1549,21 +1563,21 @@ function SettingsScreen({ onUpgrade, onSignOut, user, invoices, suppliers, onNav
           <SaveBtn id="general" />
         </Section>
 
-        <Section id="profile" title="Profile & Account" desc="Your personal information and login credentials.">
-          <Row label="Full name"><input value={fullName} onChange={e => setFullName(e.target.value)} style={inp} /></Row>
-          <Row label="Email" hint="Via Google OAuth"><input value={user?.email || ""} disabled style={{ ...inp, opacity: 0.5, cursor: "not-allowed" }} /></Row>
-          <Row label="Password">
+        <Section id="profile" title={t("set_profile")} desc="">
+          <Row label={t("set_full_name")}><input value={fullName} onChange={e => setFullName(e.target.value)} style={inp} /></Row>
+          <Row label={t("set_email")}><input value={user?.email || ""} disabled style={{ ...inp, opacity: 0.5, cursor: "not-allowed" }} /></Row>
+          <Row label={t("set_change_pw")}>
             {!changingPw ? (
-              <button onClick={() => setChangingPw(true)} style={{ padding: "8px 14px", background: "transparent", border: `1px solid ${T.bdr}`, borderRadius: 6, fontFamily: SANS, fontSize: 13, color: T.t1, cursor: "pointer" }}>Change password</button>
+              <button onClick={() => setChangingPw(true)} style={{ padding: "8px 14px", background: "transparent", border: `1px solid ${T.bdr}`, borderRadius: 6, fontFamily: SANS, fontSize: 13, color: T.t1, cursor: "pointer" }}>{t("set_change_pw")}</button>
             ) : (
               <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                <input type="password" value={pwCurrent} onChange={e => setPwCurrent(e.target.value)} placeholder="Current password" style={inp} />
-                <input type="password" value={pwNew} onChange={e => setPwNew(e.target.value)} placeholder="New password" style={inp} />
-                <input type="password" value={pwConfirm} onChange={e => setPwConfirm(e.target.value)} placeholder="Confirm new password" style={inp} />
+                <input type="password" value={pwCurrent} onChange={e => setPwCurrent(e.target.value)} placeholder={t("set_current_pw")} style={inp} />
+                <input type="password" value={pwNew} onChange={e => setPwNew(e.target.value)} placeholder={t("set_new_pw")} style={inp} />
+                <input type="password" value={pwConfirm} onChange={e => setPwConfirm(e.target.value)} placeholder={t("set_confirm_pw")} style={inp} />
                 {pwError && <div style={{ fontFamily: SANS, fontSize: 12, color: T.red }}>{pwError}</div>}
                 <div style={{ display: "flex", gap: 8 }}>
-                  <button onClick={handlePasswordChange} style={{ flex: 1, padding: "8px 0", background: T.indigo, border: "none", borderRadius: 6, fontFamily: SANS, fontWeight: 600, fontSize: 13, color: "#fff", cursor: "pointer" }}>Update</button>
-                  <button onClick={() => { setChangingPw(false); setPwError(""); setPwCurrent(""); setPwNew(""); setPwConfirm(""); }} style={{ padding: "8px 14px", background: "transparent", border: `1px solid ${T.bdr}`, borderRadius: 6, fontFamily: SANS, fontSize: 13, color: T.t2, cursor: "pointer" }}>Cancel</button>
+                  <button onClick={handlePasswordChange} style={{ flex: 1, padding: "8px 0", background: T.indigo, border: "none", borderRadius: 6, fontFamily: SANS, fontWeight: 600, fontSize: 13, color: "#fff", cursor: "pointer" }}>{t("set_update_pw")}</button>
+                  <button onClick={() => { setChangingPw(false); setPwError(""); setPwCurrent(""); setPwNew(""); setPwConfirm(""); }} style={{ padding: "8px 14px", background: "transparent", border: `1px solid ${T.bdr}`, borderRadius: 6, fontFamily: SANS, fontSize: 13, color: T.t2, cursor: "pointer" }}>{t("set_cancel")}</button>
                 </div>
               </div>
             )}
@@ -1571,7 +1585,7 @@ function SettingsScreen({ onUpgrade, onSignOut, user, invoices, suppliers, onNav
           <SaveBtn id="profile" />
         </Section>
 
-        <Section id="billing" title="Billing & Plan" desc="Your current plan and usage.">
+        <Section id="billing" title={t("set_billing")} desc="">
           <div style={{ background: T.surf2, border: `1px solid ${T.bdr}`, borderRadius: 10, padding: 16, marginBottom: 14 }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 12, gap: 10 }}>
               <div>
@@ -1581,7 +1595,7 @@ function SettingsScreen({ onUpgrade, onSignOut, user, invoices, suppliers, onNav
                 </div>
                 <div style={{ fontFamily: SANS, fontSize: 12, color: T.t2 }}>Up to {limit} invoices/month</div>
               </div>
-              <button onClick={onUpgrade} style={{ padding: "7px 12px", background: T.indigo, border: "none", borderRadius: 6, fontFamily: SANS, fontWeight: 600, fontSize: 12, color: "#fff", cursor: "pointer", flexShrink: 0 }}>Upgrade</button>
+              <button onClick={onUpgrade} style={{ padding: "7px 12px", background: T.indigo, border: "none", borderRadius: 6, fontFamily: SANS, fontWeight: 600, fontSize: 12, color: "#fff", cursor: "pointer", flexShrink: 0 }}>{t("set_upgrade")}</button>
             </div>
             <div style={{ display: "flex", justifyContent: "space-between", fontFamily: SANS, fontSize: 12, color: T.t3, marginBottom: 6 }}>
               <span>Usage this month</span><span style={{ fontFamily: MONO }}>{used} / {limit}</span>
@@ -1591,23 +1605,23 @@ function SettingsScreen({ onUpgrade, onSignOut, user, invoices, suppliers, onNav
           <div style={{ fontFamily: SANS, fontSize: 13, color: T.t3 }}>Billing status: <span style={{ color: T.t2 }}>No active subscription</span></div>
         </Section>
 
-        <Section id="integrations" title="Integrations" desc="Connect invoice sources.">
+        <Section id="integrations" title={t("set_integrations")} desc="">
           <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "12px 14px", background: T.surf2, border: `1px solid ${T.bdr}`, borderRadius: 8 }}>
             <Zap size={15} color={T.t3} strokeWidth={1.5} style={{ flexShrink: 0 }} />
             <span style={{ fontFamily: SANS, fontSize: 13, color: T.t2 }}>
-              Manage your connected services in the{" "}
+              {t("set_manage_int")}{" "}
               <button
                 onClick={onNavigateToIntegrations}
                 style={{ fontFamily: SANS, fontSize: 13, fontWeight: 600, color: T.indigo, background: "none", border: "none", cursor: "pointer", padding: 0 }}
               >
-                Integrations
+                {t("set_int_tab")}
               </button>
-              {" "}tab.
+              {" "}{t("set_int_tab_suffix")}
             </span>
           </div>
         </Section>
 
-        <Section id="team" title="Team & Access" desc="Invite members and manage roles.">
+        <Section id="team" title={t("set_team")} desc="">
           <div style={{ position: "relative", borderRadius: 10, overflow: "hidden" }}>
             <div style={{ opacity: 0.2, pointerEvents: "none", userSelect: "none" }}>
               <div style={{ background: T.surf2, border: `1px solid ${T.bdr}`, borderRadius: 8, padding: "12px 13px", marginBottom: 10 }}>
@@ -1625,20 +1639,19 @@ function SettingsScreen({ onUpgrade, onSignOut, user, invoices, suppliers, onNav
           </div>
         </Section>
 
-        <Section id="data" title="Data & Export" desc="Download your data as CSV.">
+        <Section id="data" title={t("set_export")} desc="">
           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
             {[
-              { label: "Export invoices",        hint: `${(invoices||[]).length} records as CSV`,       fn: exportInvoices },
-              { label: "Export suppliers",        hint: `${(suppliers||[]).length} suppliers as CSV`,    fn: exportSuppliers },
-              { label: "Export financial report", hint: "Monthly summary by status as CSV",             fn: exportReport },
+              { label: t("set_export_invoices"),  fn: exportInvoices },
+              { label: t("set_export_suppliers"), fn: exportSuppliers },
+              { label: t("set_export_report"),    fn: exportReport },
             ].map(item => (
               <div key={item.label} style={{ display: "flex", alignItems: "center", gap: 12, padding: "11px 13px", background: T.surf2, border: `1px solid ${T.bdr}`, borderRadius: 8 }}>
                 <Download size={14} color={T.t2} strokeWidth={1.75} />
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontFamily: SANS, fontSize: 13, fontWeight: 600, color: T.t1 }}>{item.label}</div>
-                  {!isMobile && <div style={{ fontFamily: SANS, fontSize: 11, color: T.t3 }}>{item.hint}</div>}
                 </div>
-                <button onClick={item.fn} style={{ padding: "6px 12px", background: "transparent", border: `1px solid ${T.bdr}`, borderRadius: 5, fontFamily: SANS, fontSize: 12, fontWeight: 600, color: T.t1, cursor: "pointer", flexShrink: 0 }}>Export</button>
+                <button onClick={item.fn} style={{ padding: "6px 12px", background: "transparent", border: `1px solid ${T.bdr}`, borderRadius: 5, fontFamily: SANS, fontSize: 12, fontWeight: 600, color: T.t1, cursor: "pointer", flexShrink: 0 }}>{t("set_export_btn")}</button>
               </div>
             ))}
           </div>
@@ -1782,6 +1795,13 @@ export default function App() {
   const isLoggedIn = !!user;
 
   const [isDark, setIsDark] = useState(true);
+  const [lang, setLang] = useState("he");
+  const t = useCallback((key, vars) => {
+    const strings = lang === "he" ? heStrings : enStrings;
+    let s = strings[key] || enStrings[key] || key;
+    if (vars) Object.entries(vars).forEach(([k, v]) => { s = s.replace(`{${k}}`, v); });
+    return s;
+  }, [lang]);
   const [view, setView] = useState("dashboard");
   const [selectedMonth, setSelectedMonth] = useState(() => {
     const now = new Date();
@@ -2037,7 +2057,8 @@ export default function App() {
   return (
     <ThemeCtx.Provider value={T}>
       <LayoutCtx.Provider value={{ isMobile, isTablet }}>
-        <div style={{ display: "flex", minHeight: "100vh", background: T.bg, fontFamily: SANS, color: T.t1 }}>
+        <LangCtx.Provider value={{ lang, t }}>
+        <div style={{ display: "flex", minHeight: "100vh", background: T.bg, fontFamily: SANS, color: T.t1, direction: lang === "he" ? "rtl" : "ltr" }}>
           <style>{`
             @keyframes slideUp    { from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none} }
             @keyframes slideRight { from{opacity:0;transform:translateX(-100%)}to{opacity:1;transform:none} }
@@ -2067,7 +2088,7 @@ export default function App() {
             plan={plan} planUsed={planUsed} planLimit={planLimit} planPct={planPct} user={user} onSignOut={signOut} />
 
           <div style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0 }}>
-            <GlobalHeader view={view} isDark={isDark} onToggleTheme={() => setIsDark(v => !v)} onMenuOpen={() => setMobileMenuOpen(true)} onMissingAlert={() => setShowMissingModal(true)} onAnomalyAlert={() => setShowAnomalyModal(true)} missingCount={missingSuppliers?.length || 0} anomalyCount={anomalyMap?.size || 0} syncJobs={syncJobs} appNotifs={appNotifs} onClearAppNotifs={() => setAppNotifs([])} onSearchOpen={() => setShowSearch(true)} />
+            <GlobalHeader view={view} isDark={isDark} onToggleTheme={() => setIsDark(v => !v)} onToggleLang={() => setLang(l => l === "he" ? "en" : "he")} lang={lang} onMenuOpen={() => setMobileMenuOpen(true)} onMissingAlert={() => setShowMissingModal(true)} onAnomalyAlert={() => setShowAnomalyModal(true)} missingCount={missingSuppliers?.length || 0} anomalyCount={anomalyMap?.size || 0} syncJobs={syncJobs} appNotifs={appNotifs} onClearAppNotifs={() => setAppNotifs([])} onSearchOpen={() => setShowSearch(true)} />
             {isAtLimit && (
               <UsageBanner plan={plan} used={planUsed} limit={planLimit} remaining={planLimit - planUsed} onUpgrade={() => setShowUpgrade(true)} />
             )}
@@ -2140,6 +2161,7 @@ export default function App() {
             />
           )}
         </div>
+        </LangCtx.Provider>
       </LayoutCtx.Provider>
     </ThemeCtx.Provider>
   );
