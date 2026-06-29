@@ -273,7 +273,7 @@ function LoginScreen({ onLogin }) {
 }
 
 // ── Sidebar ───────────────────────────────────────────────────────────────────
-function Sidebar({ view, setView, suppliersCount, onUpgrade, onUpload, mobileOpen, setMobileOpen, plan, planUsed, planLimit, planPct, user }) {
+function Sidebar({ view, setView, suppliersCount, onUpgrade, onUpload, mobileOpen, setMobileOpen, plan, planUsed, planLimit, planPct, user, onSignOut }) {
   const { isMobile, isTablet } = useLayout();
   const isDrawer = isMobile || isTablet;
   const used = planUsed ?? 0, limit = planLimit ?? 20, pct = planPct ?? Math.round((used / limit) * 100);
@@ -356,6 +356,12 @@ function Sidebar({ view, setView, suppliersCount, onUpgrade, onUpload, mobileOpe
               <div style={{ fontFamily: SANS, fontSize: 10, color: SB.t2 }}>Settings</div>
             </div>
             <Settings size={12} color={SB.t2} />
+          </button>
+          <button onClick={onSignOut} style={{ width: "100%", display: "flex", alignItems: "center", gap: 8, padding: "6px 8px", borderRadius: 6, background: "transparent", border: "none", cursor: "pointer", marginTop: 2 }}
+            onMouseEnter={e => e.currentTarget.style.background = "rgba(239,68,68,.08)"}
+            onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="rgba(248,113,113,.6)" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+            <span style={{ fontFamily: SANS, fontSize: 12, color: "rgba(248,113,113,.6)", fontWeight: 500 }}>Sign out</span>
           </button>
         </div>
       </div>
@@ -543,7 +549,7 @@ function Dashboard({ invoices, onPayAllJuly, chartData, supplierNames, supplierC
               onMouseEnter={e => e.currentTarget.style.borderColor = T.isDark ? "rgba(255,255,255,.12)" : T.indigo}
               onMouseLeave={e => e.currentTarget.style.borderColor = T.bdr}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
-                <span style={{ fontFamily: SANS, fontWeight: 600, fontSize: 13, color: T.isDark ? "#CBD6E6" : T.t1, letterSpacing: "-0.02em" }}>{m.month} '24</span>
+                <span style={{ fontFamily: SANS, fontWeight: 600, fontSize: 13, color: T.isDark ? "#CBD6E6" : T.t1, letterSpacing: "-0.02em" }}>{m.month}</span>
                 <span style={{ fontFamily: MONO, fontWeight: 600, fontSize: 13, color: T.isDark ? "#CBD6E6" : T.t1, fontVariantNumeric: "tabular-nums" }}>{fmt(m.total)}</span>
               </div>
               {!isMobile && Object.entries(m).filter(([k]) => k !== "month" && k !== "total" && m[k] > 0)
@@ -971,7 +977,7 @@ function SuppliersView({ suppliers, onAdd, onUpdate, onDelete }) {
               </div>
             ) : (
               <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                <div style={{ width: 26, height: 26, borderRadius: "50%", background: SUPPLIER_COLORS[sup.name] || T.surf3, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: SANS, fontWeight: 700, fontSize: 11, color: SUPPLIER_COLORS[sup.name] ? "#fff" : T.t2, flexShrink: 0 }}>{sup.name.charAt(0)}</div>
+                <div style={{ width: 26, height: 26, borderRadius: "50%", background: PALETTE[idx % PALETTE.length], display: "flex", alignItems: "center", justifyContent: "center", fontFamily: SANS, fontWeight: 700, fontSize: 11, color: "#fff", flexShrink: 0 }}>{sup.name.charAt(0)}</div>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontFamily: SANS, fontSize: 13, fontWeight: 600, color: T.t1 }}>{sup.name}</div>
                   <div style={{ fontFamily: MONO, fontSize: 11, color: T.t3 }}>{sup.terms}</div>
@@ -1273,7 +1279,7 @@ function UpgradeModal({ onClose, planUsed, planLimit, planPct }) {
     setLoading(tier); setError(null);
     try {
       const { data: { session } } = await supabase.auth.getSession();
-      const res = await fetch("/api/billing/subscribe", {
+      const res = await fetch("/api/billing/checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${session?.access_token}` },
         body: JSON.stringify({ plan: tier, billing }),
@@ -1418,15 +1424,23 @@ export default function App() {
   }, [allNames]);
 
   const chartData = (() => {
+    const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
     const map = {};
     invoices.forEach(inv => {
       if (!inv.dueDate) return;
-      const d = new Date(inv.dueDate);
-      const month = d.toLocaleDateString("en-US", { month: "short" });
-      if (!map[month]) map[month] = { month };
-      map[month][inv.supplier] = (map[month][inv.supplier] || 0) + Number(inv.amount);
+      const d = new Date(inv.dueDate + "T12:00:00");
+      const key = `${MONTHS[d.getMonth()]} '${String(d.getFullYear()).slice(2)}`;
+      if (!map[key]) map[key] = { month: key, _year: d.getFullYear(), _mon: d.getMonth() };
+      map[key][inv.supplier] = (map[key][inv.supplier] || 0) + Number(inv.amount || 0);
     });
-    return Object.values(map);
+    return Object.values(map)
+      .sort((a, b) => a._year !== b._year ? a._year - b._year : a._mon - b._mon)
+      .map(m => {
+        const total = Object.entries(m)
+          .filter(([k]) => k !== "month" && k !== "_year" && k !== "_mon")
+          .reduce((s, [, v]) => s + v, 0);
+        return { ...m, total };
+      });
   })();
 
   const handlePayAll = () => { setSelectedMonth(selectedMonth); setPreSelectAll(true); setView("invoices"); };
@@ -1583,7 +1597,7 @@ export default function App() {
           <Sidebar view={view} setView={setView} suppliersCount={suppliers.length}
             onUpgrade={() => setShowUpgrade(true)} onUpload={() => fileRef.current?.click()}
             mobileOpen={mobileMenuOpen} setMobileOpen={setMobileMenuOpen}
-            plan={plan} planUsed={planUsed} planLimit={planLimit} planPct={planPct} user={user} />
+            plan={plan} planUsed={planUsed} planLimit={planLimit} planPct={planPct} user={user} onSignOut={signOut} />
 
           <div style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0 }}>
             <GlobalHeader view={view} isDark={isDark} onToggleTheme={() => setIsDark(v => !v)} onMenuOpen={() => setMobileMenuOpen(true)} onMissingAlert={() => setShowMissingModal(true)} onAnomalyAlert={() => setShowAnomalyModal(true)} missingCount={missingSuppliers?.length || 0} anomalyCount={anomalyMap?.size || 0} />
@@ -1591,16 +1605,18 @@ export default function App() {
               <UsageBanner plan={plan} used={planUsed} limit={planLimit} remaining={planLimit - planUsed} onUpgrade={() => setShowUpgrade(true)} />
             )}
             <main style={{ flex: 1, overflowY: "auto", padding: isMobile ? "20px 16px 100px" : "28px clamp(20px,3vw,36px) 80px" }}>
-              {view === "dashboard"    && <Dashboard invoices={invoices} onPayAllJuly={handlePayAll} chartData={chartData} supplierNames={allNames} supplierColor={getSupplierColor} />}
-              {view === "invoices"     && <InvoicesView invoices={invoices} selectedMonth={selectedMonth} onMonthChange={setSelectedMonth} onMarkPaid={handleMarkPaid} onBulkPaid={handleBulkPaid} preSelectAll={preSelectAll} onEditInvoice={setEditInvoice} />}
-              {view === "calendar"     && <CalendarView computed={invoices} calMonth={calMonth} setCalMonth={setCalMonth} color={getSupplierColor} />}
-              {view === "integrations" && <IntegrationsPage
-                syncJobs={syncJobs} onStartSync={startSync} onCancelSync={cancelSync}
-                onInvoicesRefresh={refreshInvoices} isAtLimit={isAtLimit} onUpgrade={() => setShowUpgrade(true)}
-              />}
-              {view === "suppliers"    && <SuppliersView suppliers={suppliers} onAdd={addSupplier} onUpdate={updateSupplier} onDelete={deleteSupplier} />}
-              {view === "settings"     && <SettingsScreen onUpgrade={() => setShowUpgrade(true)} onSignOut={signOut} user={user} />}
-              {view === "admin"        && <AdminPage />}
+              <div style={{ maxWidth: 1200, width: "100%" }}>
+                {view === "dashboard"    && <Dashboard invoices={invoices} onPayAllJuly={handlePayAll} chartData={chartData} supplierNames={allNames} supplierColor={getSupplierColor} />}
+                {view === "invoices"     && <InvoicesView invoices={invoices} selectedMonth={selectedMonth} onMonthChange={setSelectedMonth} onMarkPaid={handleMarkPaid} onBulkPaid={handleBulkPaid} preSelectAll={preSelectAll} onEditInvoice={setEditInvoice} />}
+                {view === "calendar"     && <CalendarView computed={invoices} calMonth={calMonth} setCalMonth={setCalMonth} color={getSupplierColor} />}
+                {view === "integrations" && <IntegrationsPage
+                  syncJobs={syncJobs} onStartSync={startSync} onCancelSync={cancelSync}
+                  onInvoicesRefresh={refreshInvoices} isAtLimit={isAtLimit} onUpgrade={() => setShowUpgrade(true)}
+                />}
+                {view === "suppliers"    && <SuppliersView suppliers={suppliers} onAdd={addSupplier} onUpdate={updateSupplier} onDelete={deleteSupplier} />}
+                {view === "settings"     && <SettingsScreen onUpgrade={() => setShowUpgrade(true)} onSignOut={signOut} user={user} />}
+                {view === "admin"        && <AdminPage />}
+              </div>
             </main>
           </div>
 
