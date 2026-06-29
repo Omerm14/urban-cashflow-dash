@@ -220,7 +220,7 @@ function LoginScreen({ onLogin }) {
                 Every invoice.<br /><span style={{ background: "linear-gradient(120deg,#6366F1,#A5B4FC)", WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent", backgroundClip:"text" }}>on time.</span>
               </div>
               <p style={{ fontFamily: SANS, fontSize: 15, lineHeight: 1.7, color: "#8299B4", maxWidth: 320, marginBottom: 28, animation: "loginFadeUp 0.6s cubic-bezier(.16,1,.3,1) 0.2s both" }}>
-                Cashflow syncs invoices from Drive, Gmail, and WhatsApp — then schedules payments automatically so nothing slips through.
+                Cashflow collects every invoice from Gmail, Drive, and WhatsApp automatically — so you always know what you owe, what's overdue, and what's due next.
               </p>
 
               {/* Impact metrics */}
@@ -239,13 +239,16 @@ function LoginScreen({ onLogin }) {
               </div>
             </div>
             <div style={{ borderTop: "1px solid rgba(255,255,255,.06)", paddingTop: 20, animation: "loginFadeUp 0.6s cubic-bezier(.16,1,.3,1) 0.38s both" }}>
-              <div style={{ fontFamily: SANS, fontSize: 11, color: "#4A6278", marginBottom: 12, textTransform: "uppercase", letterSpacing: "0.08em", fontWeight: 600 }}>Syncs automatically from</div>
-              <div style={{ display: "flex", alignItems: "center", gap: 16, flexWrap: "wrap" }}>
-                {[["📧", "Gmail"], ["📁", "Drive"], ["💬", "WhatsApp"], ["🧾", "Green Invoice"]].map(([icon, name], i) => (
-                  <div key={name} style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                    <span style={{ fontSize: 14 }}>{icon}</span>
-                    <span style={{ fontFamily: SANS, fontSize: 12, color: "#627488", fontWeight: 500 }}>{name}</span>
-                    {i < 3 && <span style={{ color: "rgba(255,255,255,0.10)", marginLeft: 8 }}>·</span>}
+              <div style={{ fontFamily: SANS, fontSize: 10, color: "#3D5166", marginBottom: 12, textTransform: "uppercase", letterSpacing: "0.1em", fontWeight: 700 }}>Connects with</div>
+              <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                {[
+                  { icon: <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M22 6c0-1.1-.9-2-2-2H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6z" stroke="#EA4335" strokeWidth="1.8" strokeLinejoin="round"/><path d="M2 6l10 7 10-7" stroke="#EA4335" strokeWidth="1.8" strokeLinecap="round"/></svg>, name: "Gmail", color: "rgba(234,67,53,.12)", border: "rgba(234,67,53,.2)" },
+                  { icon: <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M4 20L8.5 3h3L15 14l2.5-7h3L22 20H4z" stroke="#34A853" strokeWidth="1.8" strokeLinejoin="round" strokeLinecap="round"/></svg>, name: "Drive", color: "rgba(52,168,83,.12)", border: "rgba(52,168,83,.2)" },
+                  { icon: <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" stroke="#25D366" strokeWidth="1.8" strokeLinejoin="round"/></svg>, name: "WhatsApp", color: "rgba(37,211,102,.10)", border: "rgba(37,211,102,.2)" },
+                  { icon: <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><rect x="3" y="3" width="18" height="18" rx="2" stroke="#10B981" strokeWidth="1.8"/><path d="M7 9h10M7 12h10M7 15h6" stroke="#10B981" strokeWidth="1.8" strokeLinecap="round"/></svg>, name: "Green Invoice", color: "rgba(16,185,129,.10)", border: "rgba(16,185,129,.2)" },
+                ].map(({ icon, name, color, border }) => (
+                  <div key={name} style={{ display: "inline-flex", alignItems: "center", gap: 7, padding: "6px 12px", background: color, border: `1px solid ${border}`, borderRadius: 8, fontFamily: SANS, fontSize: 12, fontWeight: 500, color: "#8DA4B8" }}>
+                    {icon}{name}
                   </div>
                 ))}
               </div>
@@ -266,17 +269,11 @@ function LoginScreen({ onLogin }) {
           <div style={{ marginBottom: 28 }}>
             <h1 style={{ fontFamily: SANS, fontWeight: 700, fontSize: isMobile ? 22 : 28, letterSpacing: "-0.03em", color: "#F1F5F9", marginBottom: 6 }}>{mode === "signin" ? "Welcome back" : "Create your account"}</h1>
             <p style={{ fontFamily: SANS, fontSize: 15, color: "#64748B", marginBottom: 16 }}>{mode === "signin" ? "Sign in to your Cashflow workspace." : "Start managing invoices in minutes."}</p>
-            {/* Social proof */}
+            {/* Early access badge */}
             <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 14px", background: "rgba(99,102,241,0.06)", border: "1px solid rgba(99,102,241,0.14)", borderRadius: 8 }}>
-              <div style={{ display: "flex" }}>
-                {["#6366F1","#10B981","#F59E0B","#EF4444"].map((c, i) => (
-                  <div key={i} style={{ width: 22, height: 22, borderRadius: "50%", background: c, border: "2px solid #0C1017", marginLeft: i === 0 ? 0 : -7, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: SANS, fontSize: 8, fontWeight: 700, color: "#fff" }}>
-                    {["A","B","T","Y"][i]}
-                  </div>
-                ))}
-              </div>
+              <div style={{ width: 8, height: 8, borderRadius: "50%", background: "#22C55E", boxShadow: "0 0 0 3px rgba(34,197,94,0.18)", flexShrink: 0 }} />
               <span style={{ fontFamily: SANS, fontSize: 12, color: "#8299B4" }}>
-                <span style={{ color: "#A5B4FC", fontWeight: 600 }}>500+ Israeli businesses</span> saving hours every week
+                <span style={{ color: "#A5B4FC", fontWeight: 600 }}>Early access is open</span> — free while we're in beta
               </span>
             </div>
           </div>
