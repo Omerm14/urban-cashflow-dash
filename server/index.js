@@ -15,11 +15,18 @@ const auth = require('./middleware/auth');
 const webhook = require('./routes/webhook');
 app.get('/api/webhook/whatsapp', webhook.verifyWhatsApp);
 app.post('/api/webhook/whatsapp',
-  express.raw({ type: '*/*', limit: '20mb' }),
   (req, res, next) => {
-    req.rawBody = req.body; // Buffer
-    try { req.body = req.body.length ? JSON.parse(req.body.toString()) : {}; } catch { req.body = {}; }
-    next();
+    // Vercel may pre-consume the stream; if body is already an object, skip parsing
+    if (req.body && typeof req.body === 'object' && !Buffer.isBuffer(req.body)) return next();
+    const chunks = [];
+    req.on('data', c => chunks.push(c));
+    req.on('end', () => {
+      const buf = Buffer.concat(chunks);
+      req.rawBody = buf;
+      try { req.body = buf.length ? JSON.parse(buf.toString()) : {}; } catch { req.body = {}; }
+      next();
+    });
+    req.on('error', () => next()); // stream already consumed — proceed without body
   },
   webhook.handleWhatsApp,
 );
