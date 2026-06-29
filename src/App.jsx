@@ -1063,7 +1063,7 @@ function InvoicesView({ invoices, selectedMonth, onMonthChange, onMarkPaid, onBu
           )}
         </div>
         {selectedIds.size > 0 && <button onClick={() => setSelectedIds(new Set())} style={{ display: "flex", alignItems: "center", gap: 5, padding: "6px 10px", borderRadius: 6, background: "transparent", border: `1px solid ${T.redBdr}`, color: T.red, cursor: "pointer", fontFamily: SANS, fontSize: 12 }}><X size={12} />Clear</button>}
-        <div style={{ marginLeft: "auto", fontFamily: MONO, fontSize: 11, color: T.t3 }}>{filteredInvoices.length}{activeFilters > 0 ? ` / ${invoices.length}` : ""} invoices</div>
+        <div style={{ marginLeft: "auto", fontFamily: MONO, fontSize: 11, color: T.t3 }}>{filteredInvoices.length}{activeFilters > 0 ? ` of ${invoices.length}` : ""} invoices</div>
       </div>
 
       {(isMobile || viewMode === "grouped") ? (
@@ -1330,10 +1330,30 @@ function SuppliersView({ suppliers, onAdd, onUpdate, onDelete }) {
           </div>
         ))}
       </div>
-      <button onClick={() => onAdd?.({ name: "New Supplier", terms: "shotef", notes: "" })}
-        style={{ marginTop: 12, display: "flex", alignItems: "center", gap: 6, padding: "7px 14px", background: "transparent", border: `1px solid ${T.bdr}`, borderRadius: 6, color: T.t1, cursor: "pointer", fontFamily: SANS, fontSize: 13, fontWeight: 600 }}>
-        <Plus size={13} />Add Supplier
-      </button>
+      <div style={{ display: "flex", gap: 8, marginTop: 12, flexWrap: "wrap" }}>
+        {(() => { const csvRef = React.createRef(); return (<>
+          <input type="file" accept=".csv,.txt" ref={csvRef} style={{ display: "none" }}
+            onChange={async e => {
+              const file = e.target.files?.[0];
+              if (!file) return;
+              const text = await file.text();
+              const parsed = parseCSV(text);
+              if (!parsed.length) { alert("No suppliers found in CSV. Make sure it has a 'name' column."); return; }
+              let added = 0;
+              for (const s of parsed) { try { await onAdd?.({ name: s.name, terms: s.terms || "", notes: s.notes || "" }); added++; } catch {} }
+              alert(`Imported ${added} supplier${added !== 1 ? "s" : ""}.`);
+              e.target.value = "";
+            }}
+          />
+          <button onClick={() => csvRef.current?.click()} style={{ display: "flex", alignItems: "center", gap: 6, padding: "7px 14px", background: "transparent", border: `1px solid ${T.bdr2}`, borderRadius: 7, fontFamily: SANS, fontSize: 12, fontWeight: 600, color: T.t2, cursor: "pointer" }}>
+            ↑ Import CSV
+          </button>
+        </>); })()}
+        <button onClick={() => onAdd?.({ name: "New Supplier", terms: "shotef", notes: "" })}
+          style={{ display: "flex", alignItems: "center", gap: 6, padding: "7px 14px", background: "transparent", border: `1px solid ${T.bdr}`, borderRadius: 6, color: T.t1, cursor: "pointer", fontFamily: SANS, fontSize: 13, fontWeight: 600 }}>
+          <Plus size={13} />Add Supplier
+        </button>
+      </div>
     </div>
   );
 }
@@ -1646,6 +1666,15 @@ function UpgradeModal({ onClose, planUsed, planLimit, planPct }) {
         <div style={{ textAlign: "center", marginBottom: 20 }}>
           <div style={{ fontFamily: SANS, fontWeight: 700, fontSize: isMobile ? 19 : 21, letterSpacing: "-0.03em", color: T.t1, marginBottom: 6 }}>You're growing. Your plan should too.</div>
           <p style={{ fontFamily: SANS, color: T.t2, fontSize: 13, lineHeight: 1.6 }}>You've processed <strong style={{ color: T.indigo }}>{used} invoices</strong> this month — great work.</p>
+        </div>
+        <div style={{ background: T.surf2, border: `1px solid ${T.bdr}`, borderRadius: 8, padding: "12px 16px", marginBottom: 20 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+            <span style={{ fontFamily: SANS, fontSize: 13, color: T.t2 }}>Invoices this month</span>
+            <span style={{ fontFamily: SANS, fontSize: 13, fontWeight: 700, color: pct >= 100 ? T.red : pct >= 80 ? T.amber : T.t1 }}>{used} / {limit === Infinity ? "∞" : limit}</span>
+          </div>
+          <div style={{ height: 6, background: T.bdr2, borderRadius: 3, overflow: "hidden" }}>
+            <div style={{ height: "100%", width: `${Math.min(pct, 100)}%`, background: pct >= 100 ? T.red : pct >= 80 ? T.amber : T.indigo, borderRadius: 3, transition: "width 0.5s" }} />
+          </div>
         </div>
         <div style={{ marginBottom: 16 }}>
           <div style={{ display: "flex", justifyContent: "space-between", fontFamily: SANS, fontSize: 12, color: T.t3, marginBottom: 6 }}><span>{used} processed</span><span>{limit} on Free</span></div>
