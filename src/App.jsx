@@ -15,6 +15,7 @@ import UsageBanner        from "./components/UsageBanner";
 import AdminPage          from "./pages/AdminPage";
 import { MissingSuppliersModal, AnomalyModal } from "./components/AlertModals";
 import { PALETTE }        from "./constants";
+import { parseCSV }      from "./utils/invoice";
 import {
   LayoutDashboard, FileText, Calendar, Zap, Bell, Upload,
   TrendingUp, AlertTriangle, Clock, CheckCircle2,
@@ -147,7 +148,7 @@ function LoginScreen({ onLogin }) {
 
   const handleGoogle = async () => { setLoading(true); await supabase.auth.signInWithOAuth({ provider: 'google' }); setLoading(false); };
   const handleEmail = async (e) => { e.preventDefault(); setLoading(true); const { error } = await supabase.auth.signInWithPassword({ email, password }); setLoading(false); if (error) alert(error.message); };
-  const inp = { width: "100%", padding: "10px 14px", background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 7, fontFamily: SANS, fontSize: 14, color: "#F1F5F9", outline: "none" };
+  const inp = { width: "100%", padding: "12px 16px", background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 7, fontFamily: SANS, fontSize: 15, color: "#F1F5F9", outline: "none" };
 
   return (
     <div style={{ display: "flex", minHeight: "100vh" }}>
@@ -164,6 +165,8 @@ function LoginScreen({ onLogin }) {
               position: absolute;
               animation: floatCard var(--dur) ease-in-out var(--del) infinite;
             }
+            @keyframes loginFadeUp { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: none; } }
+            .login-fade-in { animation: loginFadeUp 0.6s cubic-bezier(.16,1,.3,1) both; }
           `}</style>
           <div style={{ position: "absolute", inset: 0, backgroundImage: "linear-gradient(rgba(99,102,241,0.06) 1px, transparent 1px), linear-gradient(90deg, rgba(99,102,241,0.06) 1px, transparent 1px)", backgroundSize: "40px 40px", pointerEvents: "none" }} />
           <div style={{ position: "absolute", inset: 0, background: "radial-gradient(ellipse 70% 50% at 30% 35%, rgba(99,102,241,0.18) 0%, transparent 65%)", pointerEvents: "none" }} />
@@ -178,20 +181,22 @@ function LoginScreen({ onLogin }) {
             { sup: "Tadiran",     amt: "₪34,600", status: "Due soon",  sColor: "#F59E0B",  sBg: "rgba(245,158,11,.12)", init: "ת", iColor: "#8B5CF6", left: "72%", dur: "15s", del: "3.6s",  rot: "1deg" },
             { sup: "HOT Mobile",  amt: "₪6,100",  status: "Paid",      sColor: "#22C55E",  sBg: "rgba(34,197,94,.12)",  init: "H", iColor: "#EF4444", left: "40%", dur: "11s", del: "8.2s",  rot: "-0.5deg" },
             { sup: "Strauss",     amt: "₪9,750",  status: "Unpaid",    sColor: "#7A8FA6",  sBg: "rgba(100,116,139,.1)", init: "ש", iColor: "#6366F1", left: "82%", dur: "13s", del: "5.1s",  rot: "2.5deg" },
+            { sup: "Bezeq",       amt: "₪4,300",  status: "Paid",      sColor: "#22C55E",  sBg: "rgba(34,197,94,.12)",  init: "ב", iColor: "#10B981", left: "33%", dur: "14s", del: "9.3s",  rot: "1.5deg" },
+            { sup: "Super-Pharm", amt: "₪11,200", status: "Due soon",  sColor: "#F59E0B",  sBg: "rgba(245,158,11,.12)", init: "S", iColor: "#EF4444", left: "60%", dur: "12s", del: "7.1s",  rot: "-2deg" },
           ].map((c, i) => (
             <div key={i} className="login-float-card" style={{ left: c.left, bottom: "-120px", "--dur": c.dur, "--del": c.del, "--rot": c.rot, zIndex: 1 }}>
-              <div style={{ background: "rgba(17,24,39,0.85)", border: "1px solid rgba(255,255,255,0.10)", borderRadius: 10, padding: "10px 14px", backdropFilter: "blur(12px)", minWidth: 170 }}>
+              <div style={{ background: "rgba(17,24,39,0.85)", border: "1px solid rgba(255,255,255,0.10)", borderRadius: 10, padding: "10px 14px", backdropFilter: "blur(12px)", minWidth: 200, boxShadow: "0 8px 32px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.08)" }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
                   <div style={{ width: 24, height: 24, borderRadius: "50%", background: c.iColor, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: SANS, fontWeight: 700, fontSize: 10, color: "#fff", flexShrink: 0 }}>{c.init}</div>
                   <span style={{ fontFamily: SANS, fontSize: 12, fontWeight: 500, color: "#B8CAE0" }}>{c.sup}</span>
                 </div>
-                <div style={{ fontFamily: SANS, fontSize: 18, fontWeight: 600, color: "#E8EFF8", letterSpacing: "-0.03em", fontVariantNumeric: "tabular-nums", marginBottom: 7 }}>{c.amt}</div>
+                <div style={{ fontFamily: SANS, fontSize: 22, fontWeight: 600, color: "#E8EFF8", letterSpacing: "-0.03em", fontVariantNumeric: "tabular-nums", marginBottom: 7 }}>{c.amt}</div>
                 <span style={{ fontFamily: SANS, fontSize: 10, fontWeight: 600, color: c.sColor, background: c.sBg, padding: "2px 8px", borderRadius: 20 }}>{c.status}</span>
               </div>
             </div>
           ))}
           <div style={{ position: "relative", zIndex: 3, display: "flex", flexDirection: "column", height: "100%", padding: "40px 48px 40px" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 10, animation: "loginFadeUp 0.6s cubic-bezier(.16,1,.3,1) 0s both" }}>
               <svg width="28" height="28" viewBox="0 0 36 36" fill="none">
                 <rect width="36" height="36" rx="9" fill="rgba(99,102,241,.18)"/>
                 <path d="M9 18C9 13 13 9.5 18 9.5C21 9.5 23.5 10.7 25 12.7" stroke="#A5B4FC" strokeWidth="2.2" strokeLinecap="round" fill="none"/>
@@ -203,20 +208,24 @@ function LoginScreen({ onLogin }) {
               <span style={{ fontFamily: SANS, fontWeight: 600, fontSize: 16, letterSpacing: "-0.02em", color: "#E8EFF8" }}>Cashflow</span>
             </div>
             <div style={{ flex: 1, display: "flex", flexDirection: "column", justifyContent: "center" }}>
-              <div style={{ fontFamily: SANS, fontWeight: 700, fontSize: "clamp(26px,3vw,40px)", letterSpacing: "-0.04em", lineHeight: 1.15, color: "#E8EFF8", marginBottom: 14 }}>
-                Every invoice.<br />Always on time.
+              <div style={{ fontFamily: SANS, fontWeight: 800, fontSize: "clamp(42px,4.5vw,68px)", letterSpacing: "-0.05em", lineHeight: 1.05, color: "#E8EFF8", marginBottom: 14, animation: "loginFadeUp 0.6s cubic-bezier(.16,1,.3,1) 0.1s both" }}>
+                Every invoice.<br /><span style={{ background: "linear-gradient(120deg,#6366F1,#06B6D4)", WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent", backgroundClip:"text" }}>on time.</span>
               </div>
-              <p style={{ fontFamily: SANS, fontSize: 14, lineHeight: 1.75, color: "#627488", maxWidth: 320 }}>
+              <p style={{ fontFamily: SANS, fontSize: 16, lineHeight: 1.75, color: "#8299B4", maxWidth: 320, animation: "loginFadeUp 0.6s cubic-bezier(.16,1,.3,1) 0.2s both" }}>
                 Cashflow syncs invoices from Drive, Gmail, and WhatsApp — then schedules payments automatically so nothing slips through.
               </p>
             </div>
-            <div style={{ display: "flex", gap: 0, borderTop: "1px solid rgba(255,255,255,.06)", paddingTop: 24 }}>
-              {[["₪2.4M", "processed monthly"], ["48 hrs", "saved per user"], ["4.8★", "200+ businesses"]].map(([v, l], i) => (
-                <div key={l} style={{ flex: 1, paddingRight: 16, borderRight: i < 2 ? "1px solid rgba(255,255,255,.06)" : "none", paddingLeft: i > 0 ? 16 : 0 }}>
-                  <div style={{ fontFamily: SANS, fontWeight: 700, fontSize: 20, color: "#6366F1", letterSpacing: "-0.03em", marginBottom: 3, fontVariantNumeric: "tabular-nums" }}>{v}</div>
-                  <div style={{ fontFamily: SANS, fontSize: 11, color: "#4A6278", lineHeight: 1.4 }}>{l}</div>
-                </div>
-              ))}
+            <div style={{ borderTop: "1px solid rgba(255,255,255,.06)", paddingTop: 20, animation: "loginFadeUp 0.6s cubic-bezier(.16,1,.3,1) 0.3s both" }}>
+              <div style={{ fontFamily: SANS, fontSize: 11, color: "#4A6278", marginBottom: 12, textTransform: "uppercase", letterSpacing: "0.08em", fontWeight: 600 }}>Syncs automatically from</div>
+              <div style={{ display: "flex", alignItems: "center", gap: 16, flexWrap: "wrap" }}>
+                {[["📧", "Gmail"], ["📁", "Drive"], ["💬", "WhatsApp"], ["🧾", "Green Invoice"]].map(([icon, name], i) => (
+                  <div key={name} style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                    <span style={{ fontSize: 15 }}>{icon}</span>
+                    <span style={{ fontFamily: SANS, fontSize: 13, color: "#627488", fontWeight: 500 }}>{name}</span>
+                    {i < 3 && <span style={{ color: "rgba(255,255,255,0.12)", marginLeft: 10 }}>·</span>}
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         </div>
@@ -224,7 +233,7 @@ function LoginScreen({ onLogin }) {
       <div style={{ flex: 1, background: isMobile ? "#07090F" : "#0C1017", display: "flex", alignItems: "center", justifyContent: "center", padding: isMobile ? "40px 24px" : "48px 40px", position: "relative" }}>
         {isMobile && <div style={{ position: "absolute", inset: 0, backgroundImage: "linear-gradient(rgba(99,102,241,0.05) 1px, transparent 1px), linear-gradient(90deg, rgba(99,102,241,0.05) 1px, transparent 1px)", backgroundSize: "36px 36px", pointerEvents: "none" }} />}
         {isMobile && <div style={{ position: "absolute", inset: 0, background: "radial-gradient(ellipse 80% 50% at 50% 20%, rgba(99,102,241,0.12) 0%, transparent 60%)", pointerEvents: "none" }} />}
-        <div style={{ width: "100%", maxWidth: isMobile ? "100%" : 380, position: "relative", zIndex: 1 }}>
+        <div style={{ width: "100%", maxWidth: isMobile ? "100%" : 400, position: "relative", zIndex: 1 }}>
           {isMobile && (
             <div style={{ display: "flex", alignItems: "center", gap: 9, marginBottom: 32 }}>
               <div style={{ width: 28, height: 28, borderRadius: 7, background: "#6366F1", display: "flex", alignItems: "center", justifyContent: "center" }}><TrendingUp size={13} color="#fff" strokeWidth={2.5} /></div>
@@ -232,10 +241,10 @@ function LoginScreen({ onLogin }) {
             </div>
           )}
           <div style={{ marginBottom: 28 }}>
-            <h1 style={{ fontFamily: SANS, fontWeight: 700, fontSize: isMobile ? 22 : 24, letterSpacing: "-0.03em", color: "#F1F5F9", marginBottom: 6 }}>{mode === "signin" ? "Welcome back" : "Create your account"}</h1>
-            <p style={{ fontFamily: SANS, fontSize: 14, color: "#64748B" }}>{mode === "signin" ? "Sign in to your Cashflow workspace." : "Start managing invoices in minutes."}</p>
+            <h1 style={{ fontFamily: SANS, fontWeight: 700, fontSize: isMobile ? 22 : 28, letterSpacing: "-0.03em", color: "#F1F5F9", marginBottom: 6 }}>{mode === "signin" ? "Welcome back" : "Create your account"}</h1>
+            <p style={{ fontFamily: SANS, fontSize: 15, color: "#64748B" }}>{mode === "signin" ? "Sign in to your Cashflow workspace." : "Start managing invoices in minutes."}</p>
           </div>
-          <button onClick={handleGoogle} disabled={loading} style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: 12, padding: "11px 0", background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 7, cursor: loading ? "not-allowed" : "pointer", fontFamily: SANS, fontWeight: 500, fontSize: 14, color: "#F1F5F9", marginBottom: 18, opacity: loading ? 0.7 : 1 }}>
+          <button onClick={handleGoogle} disabled={loading} style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: 12, padding: "13px 0", background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 7, cursor: loading ? "not-allowed" : "pointer", fontFamily: SANS, fontWeight: 500, fontSize: 15, color: "#F1F5F9", marginBottom: 18, opacity: loading ? 0.7 : 1 }}>
             <svg width="18" height="18" viewBox="0 0 48 48"><path fill="#FFC107" d="M43.611 20.083H42V20H24v8h11.303c-1.649 4.657-6.08 8-11.303 8-6.627 0-12-5.373-12-12s5.373-12 12-12c3.059 0 5.842 1.154 7.961 3.039l5.657-5.657C34.046 6.053 29.268 4 24 4 12.955 4 4 12.955 4 24s8.955 20 20 20 20-8.955 20-20c0-1.341-.138-2.65-.389-3.917z"/><path fill="#FF3D00" d="m6.306 14.691 6.571 4.819C14.655 15.108 18.961 12 24 12c3.059 0 5.842 1.154 7.961 3.039l5.657-5.657C34.046 6.053 29.268 4 24 4 16.318 4 9.656 8.337 6.306 14.691z"/><path fill="#4CAF50" d="M24 44c5.166 0 9.86-1.977 13.409-5.192l-6.19-5.238A11.91 11.91 0 0 1 24 36c-5.202 0-9.619-3.317-11.283-7.946l-6.522 5.025C9.505 39.556 16.227 44 24 44z"/><path fill="#1976D2" d="M43.611 20.083H42V20H24v8h11.303a12.04 12.04 0 0 1-4.087 5.571l.003-.002 6.19 5.238C36.971 39.205 44 34 44 24c0-1.341-.138-2.65-.389-3.917z"/></svg>
             {loading ? "Signing in…" : "Continue with Google"}
           </button>
@@ -246,11 +255,11 @@ function LoginScreen({ onLogin }) {
           </div>
           <form onSubmit={handleEmail} style={{ display: "flex", flexDirection: "column", gap: 12 }}>
             <div>
-              <label style={{ fontFamily: SANS, fontSize: 12, fontWeight: 500, color: "#64748B", display: "block", marginBottom: 5 }}>Email address</label>
+              <label style={{ fontFamily: SANS, fontSize: 13, fontWeight: 500, color: "#64748B", display: "block", marginBottom: 5 }}>Email address</label>
               <input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="you@company.com" required style={inp} />
             </div>
             <div>
-              <label style={{ fontFamily: SANS, fontSize: 12, fontWeight: 500, color: "#64748B", display: "block", marginBottom: 5 }}>Password</label>
+              <label style={{ fontFamily: SANS, fontSize: 13, fontWeight: 500, color: "#64748B", display: "block", marginBottom: 5 }}>Password</label>
               <div style={{ position: "relative" }}>
                 <input type={showPw ? "text" : "password"} value={password} onChange={e => setPassword(e.target.value)} placeholder="••••••••" required style={{ ...inp, paddingRight: 40 }} />
                 <button type="button" onClick={() => setShowPw(v => !v)} style={{ position: "absolute", right: 12, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", color: "#475569", cursor: "pointer", display: "flex", alignItems: "center" }}>
@@ -258,7 +267,9 @@ function LoginScreen({ onLogin }) {
                 </button>
               </div>
             </div>
-            <button type="submit" disabled={loading} style={{ padding: "11px 0", background: "#6366F1", border: "none", borderRadius: 7, fontFamily: SANS, fontWeight: 600, fontSize: 14, color: "#fff", cursor: loading ? "not-allowed" : "pointer", marginTop: 4, opacity: loading ? 0.7 : 1 }}>
+            <button type="submit" disabled={loading} style={{ padding: "13px 0", background: "linear-gradient(135deg, #6366F1, #4F46E5)", border: "none", borderRadius: 7, fontFamily: SANS, fontWeight: 600, fontSize: 15, color: "#fff", cursor: loading ? "not-allowed" : "pointer", marginTop: 4, opacity: loading ? 0.7 : 1, boxShadow: "0 4px 18px rgba(99,102,241,0.4)" }}
+              onMouseEnter={e => { if (!loading) e.currentTarget.style.filter = "brightness(1.1)"; }}
+              onMouseLeave={e => e.currentTarget.style.filter = "none"}>
               {loading ? "Signing in…" : mode === "signin" ? "Sign in" : "Create account"}
             </button>
           </form>
@@ -372,7 +383,101 @@ function Sidebar({ view, setView, suppliersCount, onUpgrade, onUpload, mobileOpe
 }
 
 // ── Global header ─────────────────────────────────────────────────────────────
-function GlobalHeader({ view, isDark, onToggleTheme, onMenuOpen, onMissingAlert, onAnomalyAlert, missingCount, anomalyCount }) {
+// ── Search Overlay ────────────────────────────────────────────────────────────
+function SearchOverlay({ invoices, suppliers, onNavigate, onClose }) {
+  const T = useT();
+  const [query, setQuery] = useState("");
+  const inputRef = useRef(null);
+  useEffect(() => { inputRef.current?.focus(); }, []);
+  useEffect(() => {
+    const handler = (e) => { if (e.key === "Escape") onClose(); };
+    document.addEventListener("keydown", handler);
+    return () => document.removeEventListener("keydown", handler);
+  }, [onClose]);
+
+  const q = query.toLowerCase().trim();
+  const invResults = q
+    ? invoices.filter(i =>
+        i.supplier?.toLowerCase().includes(q) ||
+        i.invoiceNo?.toLowerCase().includes(q) ||
+        String(i.amount || "").includes(q)
+      ).slice(0, 5)
+    : [];
+  const supResults = q
+    ? (suppliers || []).filter(s => s.name?.toLowerCase().includes(q)).slice(0, 5)
+    : [];
+  const hasResults = invResults.length > 0 || supResults.length > 0;
+
+  const ResultItem = ({ icon, title, sub, onClick }) => (
+    <button onClick={onClick}
+      style={{ width: "100%", display: "flex", alignItems: "center", gap: 12, padding: "10px 18px", background: "transparent", border: "none", cursor: "pointer", textAlign: "left" }}
+      onMouseEnter={e => e.currentTarget.style.background = T.isDark ? "rgba(255,255,255,.05)" : T.surf2}
+      onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
+      <div style={{ width: 32, height: 32, borderRadius: 8, background: T.isDark ? "rgba(255,255,255,.06)" : T.surf3, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, fontFamily: SANS, fontSize: 13, fontWeight: 700, color: T.indigo }}>
+        {icon}
+      </div>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ fontFamily: SANS, fontSize: 13, fontWeight: 600, color: T.t1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{title}</div>
+        <div style={{ fontFamily: SANS, fontSize: 11, color: T.t3 }}>{sub}</div>
+      </div>
+    </button>
+  );
+
+  return (
+    <div onClick={onClose} style={{ position: "fixed", inset: 0, zIndex: 900, background: "rgba(0,0,0,0.55)", backdropFilter: "blur(4px)", display: "flex", alignItems: "flex-start", justifyContent: "center", paddingTop: 80, animation: "fadeIn 0.15s" }}>
+      <div onClick={e => e.stopPropagation()} style={{ width: "100%", maxWidth: 560, background: T.surf, border: `1px solid ${T.bdr2}`, borderRadius: 14, boxShadow: "0 20px 60px rgba(0,0,0,0.4)", overflow: "hidden", animation: "scaleIn 0.15s cubic-bezier(.16,1,.3,1)" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "14px 18px", borderBottom: `1px solid ${T.bdr}` }}>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={T.t3} strokeWidth="2" strokeLinecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <input ref={inputRef} value={query} onChange={e => setQuery(e.target.value)} placeholder="Search invoices, suppliers…" style={{ flex: 1, background: "transparent", border: "none", outline: "none", fontFamily: SANS, fontSize: 15, color: T.t1 }} />
+          <kbd onClick={onClose} style={{ fontFamily: SANS, fontSize: 11, color: T.t3, background: T.surf2, border: `1px solid ${T.bdr}`, borderRadius: 4, padding: "2px 7px", cursor: "pointer" }}>Esc</kbd>
+        </div>
+        {!q && (
+          <div style={{ padding: "20px 18px", fontFamily: SANS, fontSize: 13, color: T.t3, textAlign: "center" }}>
+            Start typing to search invoices and suppliers
+          </div>
+        )}
+        {q && !hasResults && (
+          <div style={{ padding: "20px 18px", fontFamily: SANS, fontSize: 13, color: T.t3, textAlign: "center" }}>
+            No results for "{query}"
+          </div>
+        )}
+        {invResults.length > 0 && (
+          <div>
+            <div style={{ padding: "8px 18px 4px", fontFamily: SANS, fontSize: 10, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: T.t3 }}>Invoices</div>
+            {invResults.map(inv => (
+              <ResultItem key={inv.id}
+                icon={inv.supplier?.charAt(0) || "?"}
+                title={inv.supplier}
+                sub={`${inv.invoiceNo || ""} · ${fmt(inv.amount)} · ${inv.status || ""}`}
+                onClick={() => { onNavigate("invoices", (inv.dueDate || inv.invoice_date || "").slice(0, 7)); onClose(); }}
+              />
+            ))}
+          </div>
+        )}
+        {supResults.length > 0 && (
+          <div style={{ borderTop: invResults.length > 0 ? `1px solid ${T.bdr}` : "none" }}>
+            <div style={{ padding: "8px 18px 4px", fontFamily: SANS, fontSize: 10, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: T.t3 }}>Suppliers</div>
+            {supResults.map(sup => (
+              <ResultItem key={sup.id}
+                icon={sup.name?.charAt(0) || "?"}
+                title={sup.name}
+                sub={sup.terms || ""}
+                onClick={() => { onNavigate("suppliers"); onClose(); }}
+              />
+            ))}
+          </div>
+        )}
+        <div style={{ padding: "8px 18px", borderTop: (hasResults || q) ? `1px solid ${T.bdr}` : "none", display: "flex", gap: 16 }}>
+          <span style={{ fontFamily: SANS, fontSize: 11, color: T.t3 }}><kbd style={{ background: T.surf2, border: `1px solid ${T.bdr}`, borderRadius: 3, padding: "1px 5px", fontFamily: MONO, fontSize: 10 }}>↑↓</kbd> navigate</span>
+          <span style={{ fontFamily: SANS, fontSize: 11, color: T.t3 }}><kbd style={{ background: T.surf2, border: `1px solid ${T.bdr}`, borderRadius: 3, padding: "1px 5px", fontFamily: MONO, fontSize: 10 }}>↵</kbd> select</span>
+          <span style={{ fontFamily: SANS, fontSize: 11, color: T.t3 }}><kbd style={{ background: T.surf2, border: `1px solid ${T.bdr}`, borderRadius: 3, padding: "1px 5px", fontFamily: MONO, fontSize: 10 }}>Esc</kbd> close</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function GlobalHeader({ view, isDark, onToggleTheme, onMenuOpen, onMissingAlert, onAnomalyAlert, missingCount, anomalyCount, syncJobs, onSearchOpen }) {
   const T = useT();
   const { isMobile, isTablet } = useLayout();
   const [notifOpen, setNotifOpen] = useState(false);
@@ -381,6 +486,8 @@ function GlobalHeader({ view, isDark, onToggleTheme, onMenuOpen, onMissingAlert,
   const headerBg = T.isDark ? "#0C1017" : T.surf;
   const ghostBtn = { width: 34, height: 34, display: "flex", alignItems: "center", justifyContent: "center", background: "transparent", border: `1px solid ${T.isDark ? "rgba(255,255,255,.10)" : T.bdr}`, borderRadius: 8, cursor: "pointer", color: T.isDark ? "rgba(255,255,255,.4)" : T.t2, flexShrink: 0 };
   const totalAlerts = (missingCount || 0) + (anomalyCount || 0);
+  const syncNotifs = Object.values(syncJobs || {}).filter(j => j.done || j.error).slice(0, 5);
+  const totalCount = totalAlerts + syncNotifs.length;
 
   useEffect(() => {
     if (!notifOpen) return;
@@ -395,7 +502,7 @@ function GlobalHeader({ view, isDark, onToggleTheme, onMenuOpen, onMissingAlert,
       <span style={{ fontFamily: SANS, fontWeight: 500, fontSize: isMobile ? 14 : 15, letterSpacing: "-0.015em", color: T.isDark ? "#E8EFF8" : T.t1 }}>{TITLES[view] || ""}</span>
       <div style={{ flex: 1 }} />
       {!isMobile && (
-        <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "0 12px", background: T.isDark ? "rgba(255,255,255,.04)" : T.surf2, border: `1px solid ${T.isDark ? "rgba(255,255,255,.08)" : T.bdr}`, borderRadius: 8, height: 34, cursor: "pointer", minWidth: 180 }}>
+        <div onClick={onSearchOpen} style={{ display: "flex", alignItems: "center", gap: 8, padding: "0 12px", background: T.isDark ? "rgba(255,255,255,.04)" : T.surf2, border: `1px solid ${T.isDark ? "rgba(255,255,255,.08)" : T.bdr}`, borderRadius: 8, height: 34, cursor: "pointer", minWidth: 180 }}>
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={T.isDark ? "rgba(255,255,255,.25)" : T.t3} strokeWidth="2" strokeLinecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
           <span style={{ fontFamily: SANS, fontSize: 13, color: T.isDark ? "rgba(255,255,255,.25)" : T.t3, flex: 1 }}>Search anything…</span>
           <kbd style={{ fontFamily: SANS, fontSize: 10, color: T.isDark ? "rgba(255,255,255,.2)" : T.t3, background: T.isDark ? "rgba(255,255,255,.06)" : T.surf3, border: `1px solid ${T.isDark ? "rgba(255,255,255,.09)" : T.bdr}`, borderRadius: 4, padding: "2px 6px" }}>⌘K</kbd>
@@ -407,23 +514,23 @@ function GlobalHeader({ view, isDark, onToggleTheme, onMenuOpen, onMissingAlert,
       <div ref={bellRef} style={{ position: "relative" }}>
         <button onClick={() => setNotifOpen(v => !v)} style={{ position: "relative", ...ghostBtn, background: notifOpen ? (T.isDark ? "rgba(255,255,255,.06)" : T.surf2) : "transparent" }}>
           <Bell size={14} />
-          {totalAlerts > 0 && (
+          {totalCount > 0 && (
             <span style={{ position: "absolute", top: 6, right: 6, minWidth: 14, height: 14, background: "#EF4444", borderRadius: 7, border: `1.5px solid ${headerBg}`, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: SANS, fontSize: 8, fontWeight: 700, color: "#fff", padding: "0 3px" }}>
-              {totalAlerts > 9 ? "9+" : totalAlerts}
+              {totalCount > 9 ? "9+" : totalCount}
             </span>
           )}
         </button>
 
         {notifOpen && (
-          <div style={{ position: "absolute", top: 42, right: 0, width: 280, background: T.surf, border: `1px solid ${T.bdr2}`, borderRadius: 10, boxShadow: T.isDark ? "0 8px 32px rgba(0,0,0,0.6)" : "0 8px 32px rgba(0,0,0,0.12)", zIndex: 9999, overflow: "hidden", animation: "scaleIn 0.15s cubic-bezier(.16,1,.3,1)" }}>
+          <div style={{ position: "absolute", top: 42, right: 0, width: 300, background: T.surf, border: `1px solid ${T.bdr2}`, borderRadius: 10, boxShadow: T.isDark ? "0 8px 32px rgba(0,0,0,0.6)" : "0 8px 32px rgba(0,0,0,0.12)", zIndex: 9999, overflow: "hidden", animation: "scaleIn 0.15s cubic-bezier(.16,1,.3,1)" }}>
             <div style={{ padding: "10px 14px 8px", borderBottom: `1px solid ${T.bdr}`, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
               <span style={{ fontFamily: SANS, fontSize: 12, fontWeight: 700, color: T.t1, letterSpacing: "-0.01em" }}>Notifications</span>
-              {totalAlerts === 0 && <span style={{ fontFamily: SANS, fontSize: 11, color: T.t3 }}>All clear</span>}
+              {totalCount === 0 && <span style={{ fontFamily: SANS, fontSize: 11, color: T.t3 }}>All clear</span>}
             </div>
 
-            {totalAlerts === 0 && (
+            {totalCount === 0 && (
               <div style={{ padding: "20px 14px", textAlign: "center", fontFamily: SANS, fontSize: 13, color: T.t3 }}>
-                No alerts right now
+                No notifications right now
               </div>
             )}
 
@@ -445,7 +552,7 @@ function GlobalHeader({ view, isDark, onToggleTheme, onMenuOpen, onMissingAlert,
 
             {anomalyCount > 0 && (
               <button onClick={() => { setNotifOpen(false); onAnomalyAlert?.(); }}
-                style={{ width: "100%", display: "flex", alignItems: "center", gap: 10, padding: "10px 14px", background: "transparent", border: "none", cursor: "pointer", textAlign: "left" }}
+                style={{ width: "100%", display: "flex", alignItems: "center", gap: 10, padding: "10px 14px", background: "transparent", border: "none", borderBottom: syncNotifs.length > 0 ? `1px solid ${T.bdr}` : "none", cursor: "pointer", textAlign: "left" }}
                 onMouseEnter={e => e.currentTarget.style.background = T.isDark ? "rgba(255,255,255,.04)" : T.surf2}
                 onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
                 <div style={{ width: 30, height: 30, borderRadius: 8, background: T.indigoTint, border: `1px solid ${T.indigoBdr}`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
@@ -458,6 +565,23 @@ function GlobalHeader({ view, isDark, onToggleTheme, onMenuOpen, onMissingAlert,
                 <ChevronRight size={13} color={T.t3} />
               </button>
             )}
+
+            {syncNotifs.map((job, i) => (
+              <div key={job.jobId || job.integrationId || i}
+                style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 14px", borderTop: i === 0 && (missingCount > 0 || anomalyCount > 0) ? `1px solid ${T.bdr}` : "none", borderBottom: i < syncNotifs.length - 1 ? `1px solid ${T.bdr}` : "none" }}>
+                <div style={{ width: 30, height: 30, borderRadius: 8, background: job.error ? T.redTint : "rgba(16,185,129,.12)", border: `1px solid ${job.error ? T.redBdr : "rgba(16,185,129,.3)"}`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                  {job.error ? <AlertTriangle size={13} color={T.red} /> : <RefreshCw size={13} color="#10B981" />}
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontFamily: SANS, fontSize: 13, fontWeight: 600, color: T.t1 }}>
+                    {job.error ? "Sync error" : `${job.integrationId || "Drive"} sync complete`}
+                  </div>
+                  <div style={{ fontFamily: SANS, fontSize: 11, color: T.t3, marginTop: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                    {job.error ? String(job.error).slice(0, 60) : `${job.added ?? 0} invoice${job.added !== 1 ? "s" : ""} added`}
+                  </div>
+                </div>
+              </div>
+            ))}
           </div>
         )}
       </div>
@@ -497,13 +621,22 @@ const GreenPill = ({ children }) => <span style={{ display: "flex", alignItems: 
 const RedPill = ({ children }) => <span style={{ color: "#F87171", fontSize: 12, fontWeight: 600, background: "rgba(239,68,68,.1)", padding: "3px 8px", borderRadius: 20, fontFamily: "'IBM Plex Sans', sans-serif" }}>{children}</span>;
 const AmberPill = ({ children }) => <span style={{ color: "#F59E0B", fontSize: 12, fontWeight: 600, background: "rgba(245,158,11,.1)", padding: "3px 8px", borderRadius: 20, fontFamily: "'IBM Plex Sans', sans-serif" }}>{children}</span>;
 
-function Dashboard({ invoices, onPayAllJuly, chartData, supplierNames, supplierColor }) {
+function Dashboard({ invoices, onPayAllJuly, chartData, supplierNames, supplierColor, user, onMissingAlert, onAnomalyAlert, missingSuppliers, anomalyMap }) {
   const T = useT();
   const { isMobile, isTablet } = useLayout();
   const now = new Date();
   const nextYM = `${now.getFullYear()}-${String(now.getMonth() + 2).padStart(2, "0")}`;
   const nextLabel = new Date(now.getFullYear(), now.getMonth() + 1, 1).toLocaleDateString("en-US", { month: "long", year: "numeric" });
   const isUnpaid = i => i.status !== "Paid" && i.status !== "paid";
+  const MONTHS_SHORT = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+  const currentYM = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+  const currentMonthLabel = `${MONTHS_SHORT[now.getMonth()]} '${String(now.getFullYear()).slice(2)}`;
+  const currentMonthInvoices = invoices.filter(i => (i.invoice_date || i.invoiceDate || i.dueDate || "").startsWith(currentYM) && i.status !== "Paid" && i.status !== "paid");
+  const currentMonthTotal = currentMonthInvoices.reduce((s, i) => s + Number(i.amount || 0), 0);
+  const currentMonthSuppliers = [...new Set(currentMonthInvoices.map(i => i.supplier))].length;
+  const hour = now.getHours();
+  const greeting = hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
+  const firstName = user?.user_metadata?.full_name?.split(" ")[0] || user?.email?.split("@")[0] || "";
   const kpis = {
     outstanding: invoices.filter(isUnpaid).reduce((s, i) => s + Number(i.amount), 0),
     overdue:     invoices.filter(i => i.status === "Overdue" || i.status === "overdue").reduce((s, i) => s + Number(i.amount), 0),
@@ -550,12 +683,39 @@ function Dashboard({ invoices, onPayAllJuly, chartData, supplierNames, supplierC
     <div style={{ animation: "slideUp 0.35s cubic-bezier(.16,1,.3,1)" }}>
       <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: isMobile ? 14 : 20 }}>
         <div>
-          <h1 style={{ fontFamily: SANS, fontSize: isMobile ? 17 : 21, fontWeight: 600, letterSpacing: "-0.04em", color: T.t1, margin: "0 0 3px", lineHeight: 1 }}>Dashboard</h1>
+          <h1 style={{ fontFamily: SANS, fontSize: isMobile ? 17 : 22, fontWeight: 700, letterSpacing: "-0.04em", color: T.t1, margin: "0 0 3px", lineHeight: 1 }}>{greeting}{firstName ? `, ${firstName}` : ""} 👋</h1>
           {!isMobile && <p style={{ fontFamily: SANS, fontSize: 13, color: T.t2, margin: 0 }}>{now.toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })} · Here's where you stand today</p>}
         </div>
         <div style={{ flex: 1 }} />
         {!isMobile && <div style={{ background: T.isDark ? "rgba(255,255,255,.04)" : T.surf2, border: `1px solid ${T.bdr}`, borderRadius: 8, padding: "7px 14px", fontFamily: SANS, fontSize: 12, fontWeight: 500, color: T.t2 }}>{now.toLocaleDateString("en-US", { month: "short", year: "numeric" })}</div>}
       </div>
+
+      {((missingSuppliers?.length > 0) || (anomalyMap?.size > 0)) && (
+        <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 10, marginBottom: 14 }}>
+          {missingSuppliers?.length > 0 && (
+            <div onClick={onMissingAlert} style={{ background: T.amberTint, border: `1px solid ${T.amberBdr}`, borderRadius: 10, padding: "14px 18px", display: "flex", alignItems: "center", gap: 14, cursor: "pointer" }}
+              onMouseEnter={e => e.currentTarget.style.opacity = "0.85"} onMouseLeave={e => e.currentTarget.style.opacity = "1"}>
+              <div style={{ width: 40, height: 40, borderRadius: 10, background: "rgba(245,158,11,0.18)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, fontSize: 20 }}>⚠️</div>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontFamily: SANS, fontWeight: 700, fontSize: 15, color: T.amber, letterSpacing: "-0.02em" }}>{missingSuppliers.length} Missing Invoices</div>
+                <div style={{ fontFamily: SANS, fontSize: 12, color: T.t2, marginTop: 2 }}>Recurring suppliers with no invoice this month</div>
+              </div>
+              <span style={{ fontFamily: SANS, fontSize: 12, color: T.amber, fontWeight: 500, flexShrink: 0 }}>Details →</span>
+            </div>
+          )}
+          {anomalyMap?.size > 0 && (
+            <div onClick={onAnomalyAlert} style={{ background: T.isDark ? "rgba(99,102,241,0.08)" : T.indigoTint, border: `1px solid ${T.indigoBdr}`, borderRadius: 10, padding: "14px 18px", display: "flex", alignItems: "center", gap: 14, cursor: "pointer" }}
+              onMouseEnter={e => e.currentTarget.style.opacity = "0.85"} onMouseLeave={e => e.currentTarget.style.opacity = "1"}>
+              <div style={{ width: 40, height: 40, borderRadius: 10, background: "rgba(99,102,241,0.15)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, fontSize: 20 }}>📊</div>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontFamily: SANS, fontWeight: 700, fontSize: 15, color: T.isDark ? "#A5B4FC" : T.indigo, letterSpacing: "-0.02em" }}>{anomalyMap.size} Amount Anomalies</div>
+                <div style={{ fontFamily: SANS, fontSize: 12, color: T.t2, marginTop: 2 }}>Invoices that deviate from supplier averages</div>
+              </div>
+              <span style={{ fontFamily: SANS, fontSize: 12, color: T.isDark ? "#818CF8" : T.indigo, fontWeight: 500, flexShrink: 0 }}>Details →</span>
+            </div>
+          )}
+        </div>
+      )}
 
       <div style={{ display: "grid", gridTemplateColumns: kpiCols, gap: 12, marginBottom: 16 }}>
         {CARDS.map(c => <KPICard key={c.label} {...c} />)}
@@ -567,8 +727,10 @@ function Dashboard({ invoices, onPayAllJuly, chartData, supplierNames, supplierC
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={T.isDark ? "#818CF8" : T.indigo} strokeWidth="1.75" strokeLinecap="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
           </div>
           <div>
-            <div style={{ fontFamily: SANS, fontWeight: 600, fontSize: 15, color: T.t1, letterSpacing: "-0.02em", marginBottom: 4 }}>Pay July '24 — you're ready</div>
-            <div style={{ fontFamily: SANS, fontSize: 13, color: T.t2 }}>4 suppliers · <span style={{ color: T.isDark ? "#A5B4FC" : T.indigo, fontWeight: 500, fontFamily: MONO }}>{fmt(70400)}</span> total due</div>
+            <div style={{ fontFamily: SANS, fontWeight: 600, fontSize: 15, color: T.t1, letterSpacing: "-0.02em", marginBottom: 4 }}>
+              {currentMonthTotal > 0 ? `Pay ${currentMonthLabel} — you're ready` : `Nothing due in ${currentMonthLabel} 🎉`}
+            </div>
+            <div style={{ fontFamily: SANS, fontSize: 13, color: T.t2 }}>{currentMonthSuppliers} supplier{currentMonthSuppliers !== 1 ? "s" : ""} · <span style={{ color: T.isDark ? "#A5B4FC" : T.indigo, fontWeight: 500, fontFamily: MONO }}>{fmt(currentMonthTotal)}</span> total due</div>
           </div>
         </div>
         <div style={{ display: "flex", gap: 8, flexShrink: 0, alignSelf: isMobile ? "stretch" : "auto" }}>
@@ -808,6 +970,26 @@ function InvoicesView({ invoices, selectedMonth, onMonthChange, onMarkPaid, onBu
   const [showSuccess, setShowSuccess] = useState(false);
   const [showCelebration, setShowCelebration] = useState(false);
   const [successData, setSuccessData] = useState(null);
+  const [filterOpen, setFilterOpen] = useState(false);
+  const [filterStatuses, setFilterStatuses] = useState(new Set());
+  const [filterSuppliers, setFilterSuppliers] = useState(new Set());
+  const filterRef = useRef(null);
+  useEffect(() => {
+    if (!filterOpen) return;
+    const h = (e) => { if (filterRef.current && !filterRef.current.contains(e.target)) setFilterOpen(false); };
+    document.addEventListener("mousedown", h);
+    return () => document.removeEventListener("mousedown", h);
+  }, [filterOpen]);
+
+  const allStatuses = ["Paid", "Unpaid", "Overdue", "Credit"];
+  const toggleStatus = (s) => setFilterStatuses(prev => { const n = new Set(prev); n.has(s) ? n.delete(s) : n.add(s); return n; });
+  const toggleSupplier = (s) => setFilterSuppliers(prev => { const n = new Set(prev); n.has(s) ? n.delete(s) : n.add(s); return n; });
+  const activeFilters = filterStatuses.size + filterSuppliers.size;
+  const filteredInvoices = invoices.filter(inv => {
+    if (filterStatuses.size > 0 && !filterStatuses.has(inv.status)) return false;
+    if (filterSuppliers.size > 0 && !filterSuppliers.has(inv.supplier)) return false;
+    return true;
+  });
 
   useEffect(() => {
     if (preSelectAll) {
@@ -838,13 +1020,54 @@ function InvoicesView({ invoices, selectedMonth, onMonthChange, onMarkPaid, onBu
             ))}
           </div>
         )}
-        <button style={{ display: "flex", alignItems: "center", gap: 5, padding: "6px 10px", borderRadius: 6, background: "transparent", border: `1px solid ${T.bdr}`, color: T.t2, cursor: "pointer", fontFamily: SANS, fontSize: 12 }}><Filter size={12} strokeWidth={1.75} />Filter</button>
+        <div ref={filterRef} style={{ position: "relative" }}>
+          <button onClick={() => setFilterOpen(v => !v)} style={{ display: "flex", alignItems: "center", gap: 5, padding: "6px 10px", borderRadius: 6, background: activeFilters > 0 ? T.indigoTint : "transparent", border: `1px solid ${activeFilters > 0 ? T.indigoBdr : T.bdr}`, color: activeFilters > 0 ? T.indigo : T.t2, cursor: "pointer", fontFamily: SANS, fontSize: 12, fontWeight: activeFilters > 0 ? 600 : 400 }}>
+            <Filter size={12} strokeWidth={1.75} />Filter{activeFilters > 0 ? ` (${activeFilters})` : ""}
+          </button>
+          {filterOpen && (
+            <div style={{ position: "absolute", top: 36, left: 0, width: 240, background: T.surf, border: `1px solid ${T.bdr2}`, borderRadius: 10, boxShadow: T.isDark ? "0 8px 32px rgba(0,0,0,0.5)" : "0 8px 24px rgba(0,0,0,0.1)", zIndex: 200, overflow: "hidden", animation: "scaleIn 0.15s cubic-bezier(.16,1,.3,1)" }}>
+              <div style={{ padding: "10px 12px 6px", display: "flex", justifyContent: "space-between", alignItems: "center", borderBottom: `1px solid ${T.bdr}` }}>
+                <span style={{ fontFamily: SANS, fontSize: 11, fontWeight: 700, color: T.t2, textTransform: "uppercase", letterSpacing: "0.06em" }}>Status</span>
+                {activeFilters > 0 && <button onClick={() => { setFilterStatuses(new Set()); setFilterSuppliers(new Set()); }} style={{ fontFamily: SANS, fontSize: 11, color: T.indigo, background: "none", border: "none", cursor: "pointer", padding: 0 }}>Clear all</button>}
+              </div>
+              <div style={{ padding: "6px 8px" }}>
+                {allStatuses.map(s => (
+                  <button key={s} onClick={() => toggleStatus(s)}
+                    style={{ width: "100%", display: "flex", alignItems: "center", gap: 8, padding: "6px 8px", background: filterStatuses.has(s) ? T.indigoTint : "transparent", border: "none", borderRadius: 5, cursor: "pointer", textAlign: "left" }}>
+                    <div style={{ width: 14, height: 14, border: `1.5px solid ${filterStatuses.has(s) ? T.indigo : T.bdr2}`, borderRadius: 3, background: filterStatuses.has(s) ? T.indigo : "transparent", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                      {filterStatuses.has(s) && <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3.5" strokeLinecap="round"><polyline points="20 6 9 17 4 12"/></svg>}
+                    </div>
+                    <span style={{ fontFamily: SANS, fontSize: 12, color: filterStatuses.has(s) ? T.indigo : T.t1 }}>{s}</span>
+                  </button>
+                ))}
+              </div>
+              {supplierList.length > 0 && (
+                <>
+                  <div style={{ padding: "6px 12px", borderTop: `1px solid ${T.bdr}` }}>
+                    <span style={{ fontFamily: SANS, fontSize: 11, fontWeight: 700, color: T.t2, textTransform: "uppercase", letterSpacing: "0.06em" }}>Supplier</span>
+                  </div>
+                  <div style={{ padding: "6px 8px", maxHeight: 160, overflowY: "auto" }}>
+                    {supplierList.map(s => (
+                      <button key={s} onClick={() => toggleSupplier(s)}
+                        style={{ width: "100%", display: "flex", alignItems: "center", gap: 8, padding: "6px 8px", background: filterSuppliers.has(s) ? T.indigoTint : "transparent", border: "none", borderRadius: 5, cursor: "pointer", textAlign: "left" }}>
+                        <div style={{ width: 14, height: 14, border: `1.5px solid ${filterSuppliers.has(s) ? T.indigo : T.bdr2}`, borderRadius: 3, background: filterSuppliers.has(s) ? T.indigo : "transparent", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                          {filterSuppliers.has(s) && <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3.5" strokeLinecap="round"><polyline points="20 6 9 17 4 12"/></svg>}
+                        </div>
+                        <span style={{ fontFamily: SANS, fontSize: 12, color: filterSuppliers.has(s) ? T.indigo : T.t1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{s}</span>
+                      </button>
+                    ))}
+                  </div>
+                </>
+              )}
+            </div>
+          )}
+        </div>
         {selectedIds.size > 0 && <button onClick={() => setSelectedIds(new Set())} style={{ display: "flex", alignItems: "center", gap: 5, padding: "6px 10px", borderRadius: 6, background: "transparent", border: `1px solid ${T.redBdr}`, color: T.red, cursor: "pointer", fontFamily: SANS, fontSize: 12 }}><X size={12} />Clear</button>}
-        <div style={{ marginLeft: "auto", fontFamily: MONO, fontSize: 11, color: T.t3 }}>{invoices.length} invoices</div>
+        <div style={{ marginLeft: "auto", fontFamily: MONO, fontSize: 11, color: T.t3 }}>{filteredInvoices.length}{activeFilters > 0 ? ` / ${invoices.length}` : ""} invoices</div>
       </div>
 
       {(isMobile || viewMode === "grouped") ? (
-        <GroupedView invoices={invoices} selectedMonth={selectedMonth} onMonthChange={onMonthChange}
+        <GroupedView invoices={filteredInvoices} selectedMonth={selectedMonth} onMonthChange={onMonthChange}
           selectedIds={selectedIds} onToggleSelect={toggleSelect} onToggleAll={toggleAll}
           onMarkPaid={onMarkPaid} onSelectAll={ids => setSelectedIds(new Set(ids))}
           onPayGroup={ids => { setSelectedIds(new Set(ids)); setShowPayConfirm(true); }}
@@ -857,7 +1080,7 @@ function InvoicesView({ invoices, selectedMonth, onMonthChange, onMarkPaid, onBu
               <div key={i} style={{ fontFamily: SANS, fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", color: T.isDark ? "rgba(255,255,255,.3)" : T.t3, textAlign: i === 5 ? "right" : "left", paddingRight: i === 5 ? 14 : 0 }}>{h}</div>
             ))}
           </div>
-          {invoices.map(inv => {
+          {filteredInvoices.map(inv => {
             const isSel = selectedIds.has(inv.id);
             return (
               <div key={inv.id} onClick={() => toggleSelect(inv.id)}
@@ -1034,18 +1257,46 @@ function SuppliersView({ suppliers, onAdd, onUpdate, onDelete }) {
   const [filterTerm, setFilterTerm] = useState("all");
   const [editId, setEditId] = useState(null);
   const [editData, setEditData] = useState({});
+  const [csvToast, setCsvToast] = useState(null);
+  const csvRef = useRef(null);
   const TERMS = ["all", "shotef_plus(45)", "shotef_plus(30)", "shotef", "immediate"];
   const filtered = filterTerm === "all" ? suppliers : suppliers.filter(s => s.terms === filterTerm);
   const inp = { flex: 1, padding: "6px 10px", background: T.surf2, border: `1px solid ${T.bdr}`, borderRadius: 5, fontFamily: SANS, fontSize: 12, color: T.t1, minWidth: 0, outline: "none" };
 
+  const handleCSV = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const text = await file.text();
+    const rows = parseCSV(text);
+    let added = 0;
+    for (const row of rows) {
+      if (row.name) { await onAdd?.({ name: row.name, terms: row.terms || "shotef", notes: row.notes || "" }); added++; }
+    }
+    setCsvToast(`Imported ${added} supplier${added !== 1 ? "s" : ""}`);
+    setTimeout(() => setCsvToast(null), 3000);
+    e.target.value = "";
+  };
+
   return (
     <div style={{ animation: "slideUp 0.35s cubic-bezier(.16,1,.3,1)" }}>
-      <div style={{ display: "flex", gap: 6, marginBottom: 14, flexWrap: "wrap" }}>
+      {csvToast && (
+        <div style={{ marginBottom: 10, padding: "8px 14px", background: T.greenTint, border: `1px solid ${T.greenBdr}`, borderRadius: 7, fontFamily: SANS, fontSize: 13, color: T.green, animation: "fadeIn 0.2s" }}>
+          {csvToast}
+        </div>
+      )}
+      <input ref={csvRef} type="file" accept=".csv" style={{ display: "none" }} onChange={handleCSV} />
+      <div style={{ display: "flex", gap: 6, marginBottom: 14, flexWrap: "wrap", alignItems: "center" }}>
         {TERMS.map(t => (
           <button key={t} onClick={() => setFilterTerm(t)} style={{ padding: "4px 10px", borderRadius: 3, border: `1px solid ${filterTerm === t ? T.indigo : T.bdr}`, background: filterTerm === t ? T.indigoTint : "transparent", color: filterTerm === t ? T.indigo : T.t2, cursor: "pointer", fontFamily: SANS, fontSize: 12, fontWeight: 600 }}>
             {t === "all" ? `All (${suppliers.length})` : isMobile ? t.replace("shotef_plus(", "+").replace(")", "") : t}
           </button>
         ))}
+        <div style={{ marginLeft: "auto" }}>
+          <button onClick={() => csvRef.current?.click()} style={{ display: "flex", alignItems: "center", gap: 5, padding: "5px 10px", borderRadius: 6, background: "transparent", border: `1px solid ${T.bdr}`, color: T.t2, cursor: "pointer", fontFamily: SANS, fontSize: 12, fontWeight: 500 }}>
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+            Import CSV
+          </button>
+        </div>
       </div>
       <div style={{ background: T.surf, border: `1px solid ${T.bdr}`, borderRadius: 10, overflow: "hidden" }}>
         {filtered.map((sup, idx) => (
@@ -1465,6 +1716,7 @@ export default function App() {
   const [previewAttachment, setPreviewAttachment] = useState(null);
   const [extracting, setExtracting] = useState(false);
   const [extractMsg, setExtractMsg] = useState(null);
+  const [showSearch, setShowSearch] = useState(false);
   const fileRef = useRef();
 
   // Real invoice data
@@ -1492,14 +1744,12 @@ export default function App() {
 
   useEffect(() => { if (windowWidth >= 1024) setMobileMenuOpen(false); }, [windowWidth]);
 
-  // Auto-show missing suppliers modal once per session when data loads
-  const missingSuppliersShown = useRef(false);
   useEffect(() => {
-    if (!missingSuppliersShown.current && missingSuppliers?.length > 0) {
-      missingSuppliersShown.current = true;
-      setShowMissingModal(true);
-    }
-  }, [missingSuppliers]);
+    const h = (e) => { if ((e.metaKey || e.ctrlKey) && e.key === "k") { e.preventDefault(); setShowSearch(true); } };
+    document.addEventListener("keydown", h);
+    return () => document.removeEventListener("keydown", h);
+  }, []);
+
 
   const isMobile = windowWidth < 640;
   const isTablet = windowWidth >= 640 && windowWidth < 1024;
@@ -1688,13 +1938,13 @@ export default function App() {
             plan={plan} planUsed={planUsed} planLimit={planLimit} planPct={planPct} user={user} onSignOut={signOut} />
 
           <div style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0 }}>
-            <GlobalHeader view={view} isDark={isDark} onToggleTheme={() => setIsDark(v => !v)} onMenuOpen={() => setMobileMenuOpen(true)} onMissingAlert={() => setShowMissingModal(true)} onAnomalyAlert={() => setShowAnomalyModal(true)} missingCount={missingSuppliers?.length || 0} anomalyCount={anomalyMap?.size || 0} />
+            <GlobalHeader view={view} isDark={isDark} onToggleTheme={() => setIsDark(v => !v)} onMenuOpen={() => setMobileMenuOpen(true)} onMissingAlert={() => setShowMissingModal(true)} onAnomalyAlert={() => setShowAnomalyModal(true)} missingCount={missingSuppliers?.length || 0} anomalyCount={anomalyMap?.size || 0} syncJobs={syncJobs} onSearchOpen={() => setShowSearch(true)} />
             {isAtLimit && (
               <UsageBanner plan={plan} used={planUsed} limit={planLimit} remaining={planLimit - planUsed} onUpgrade={() => setShowUpgrade(true)} />
             )}
             <main style={{ flex: 1, overflowY: "auto", padding: isMobile ? "20px 16px 100px" : "28px clamp(20px,3vw,36px) 80px" }}>
               <div style={{ width: "100%" }}>
-                {view === "dashboard"    && <Dashboard invoices={invoices} onPayAllJuly={handlePayAll} chartData={chartData} supplierNames={allNames} supplierColor={getSupplierColor} />}
+                {view === "dashboard"    && <Dashboard invoices={invoices} onPayAllJuly={handlePayAll} chartData={chartData} supplierNames={allNames} supplierColor={getSupplierColor} user={user} onMissingAlert={() => setShowMissingModal(true)} onAnomalyAlert={() => setShowAnomalyModal(true)} missingSuppliers={missingSuppliers} anomalyMap={anomalyMap} />}
                 {view === "invoices"     && <InvoicesView invoices={invoices} selectedMonth={selectedMonth} onMonthChange={setSelectedMonth} onMarkPaid={handleMarkPaid} onBulkPaid={handleBulkPaid} preSelectAll={preSelectAll} onEditInvoice={setEditInvoice} anomalyMap={anomalyMap} missingSuppliers={missingSuppliers} />}
                 {view === "calendar"     && <CalendarView computed={invoices} calMonth={calMonth} setCalMonth={setCalMonth} color={getSupplierColor} />}
                 {view === "integrations" && <IntegrationsPage
@@ -1728,6 +1978,15 @@ export default function App() {
               url={previewAttachment.url}
               filename={previewAttachment.filename}
               onClose={() => setPreviewAttachment(null)}
+            />
+          )}
+
+          {showSearch && (
+            <SearchOverlay
+              invoices={invoices}
+              suppliers={suppliers}
+              onNavigate={(v, month) => { setView(v); if (month) setSelectedMonth(month); }}
+              onClose={() => setShowSearch(false)}
             />
           )}
 
