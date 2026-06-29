@@ -282,19 +282,17 @@ function LoginScreen({ onLogin }) {
           <div style={{ marginBottom: 28 }}>
             <h1 style={{ fontFamily: SANS, fontWeight: 700, fontSize: isMobile ? 22 : 28, letterSpacing: "-0.03em", color: "#F1F5F9", marginBottom: 6 }}>{mode === "signin" ? "Welcome back" : "Create your account"}</h1>
             <p style={{ fontFamily: SANS, fontSize: 15, color: "#64748B", marginBottom: 16 }}>{mode === "signin" ? "Sign in to your Cashflow workspace." : "Start managing invoices in minutes."}</p>
-            {/* Credibility stats */}
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 1, borderRadius: 10, overflow: "hidden", border: "1px solid rgba(255,255,255,.07)" }}>
-              {[
-                { val: "Free", label: "no credit card", icon: <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#6366F1" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg> },
-                { val: "2 min", label: "to get started", icon: <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#6366F1" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg> },
-                { val: "HE+EN", label: "bilingual", icon: <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#6366F1" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="9"/><path d="M2 12h20M12 2a15.3 15.3 0 010 20M12 2a15.3 15.3 0 000 20"/></svg> },
-              ].map((s, i) => (
-                <div key={i} style={{ padding: "12px 10px", background: i === 1 ? "rgba(99,102,241,0.07)" : "rgba(255,255,255,0.02)", textAlign: "center", borderLeft: i > 0 ? "1px solid rgba(255,255,255,.07)" : "none" }}>
-                  <div style={{ display: "flex", justifyContent: "center", marginBottom: 5 }}>{s.icon}</div>
-                  <div style={{ fontFamily: SANS, fontWeight: 800, fontSize: 15, letterSpacing: "-0.03em", color: "#C7D2FE", lineHeight: 1 }}>{s.val}</div>
-                  <div style={{ fontFamily: SANS, fontSize: 10, color: "#4A6278", marginTop: 4, lineHeight: 1.3 }}>{s.label}</div>
+            {/* Free tier callout */}
+            <div style={{ borderRadius: 10, border: "1px solid rgba(99,102,241,0.35)", background: "rgba(99,102,241,0.08)", padding: "16px 20px", display: "flex", alignItems: "center", gap: 14 }}>
+              <div style={{ width: 36, height: 36, borderRadius: 9, background: "rgba(99,102,241,0.18)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#818CF8" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+              </div>
+              <div>
+                <div style={{ fontFamily: SANS, fontWeight: 800, fontSize: 16, color: "#E0E7FF", letterSpacing: "-0.03em", lineHeight: 1.2 }}>
+                  Free up to <span style={{ color: "#A5B4FC" }}>20 invoices</span> / month
                 </div>
-              ))}
+                <div style={{ fontFamily: SANS, fontSize: 12, color: "#4A6278", marginTop: 3 }}>No credit card required · Upgrade anytime</div>
+              </div>
             </div>
           </div>
           <button onClick={handleGoogle} disabled={loading} style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: 12, padding: "13px 0", background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 7, cursor: loading ? "not-allowed" : "pointer", fontFamily: SANS, fontWeight: 500, fontSize: 15, color: "#F1F5F9", marginBottom: 18, opacity: loading ? 0.7 : 1 }}>
