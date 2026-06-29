@@ -913,11 +913,11 @@ function SupplierGroup({ supplier, invoices, selectedIds, onToggleSelect, onTogg
           const anomaly = anomalyMap?.get(inv.id);
           const cols = isMobile ? "36px 1fr 100px 110px 130px" : "40px 1fr 110px 120px 110px 1fr 190px";
           return (
-            <div key={inv.id} onClick={() => !isPaid && onToggleSelect(inv.id)}
-              style={{ display: "grid", gridTemplateColumns: cols, alignItems: "center", gap: 8, padding: "8px 14px", borderTop: `1px solid ${anomaly ? T.amberBdr : T.bdr}`, background: isSel ? T.indigoTint : anomaly ? T.amberTint : "transparent", cursor: isPaid ? "default" : "pointer", transition: "background 0.1s", minWidth: isMobile ? 460 : "auto" }}
-              onMouseEnter={e => { if (!isSel && !isPaid) e.currentTarget.style.background = T.isDark ? "rgba(99,102,241,.07)" : T.surf2; }}
+            <div key={inv.id} onClick={() => onToggleSelect(inv.id)}
+              style={{ display: "grid", gridTemplateColumns: cols, alignItems: "center", gap: 8, padding: "8px 14px", borderTop: `1px solid ${anomaly ? T.amberBdr : T.bdr}`, background: isSel ? T.indigoTint : anomaly ? T.amberTint : "transparent", cursor: "pointer", transition: "background 0.1s", minWidth: isMobile ? 460 : "auto" }}
+              onMouseEnter={e => { if (!isSel) e.currentTarget.style.background = T.isDark ? "rgba(99,102,241,.07)" : T.surf2; }}
               onMouseLeave={e => { e.currentTarget.style.background = isSel ? T.indigoTint : anomaly ? T.amberTint : "transparent"; }}>
-              <input type="checkbox" checked={isSel} disabled={isPaid} onChange={() => onToggleSelect(inv.id)} onClick={e => e.stopPropagation()} style={{ accentColor: T.indigo, cursor: isPaid ? "default" : "pointer", width: 13, height: 13, opacity: isPaid ? 0.35 : 1 }} />
+              <input type="checkbox" checked={isSel} onChange={() => onToggleSelect(inv.id)} onClick={e => e.stopPropagation()} style={{ accentColor: T.indigo, cursor: "pointer", width: 13, height: 13 }} />
               <div style={{ display: "flex", alignItems: "center", gap: 5, minWidth: 0 }}>
                 <span style={{ fontFamily: MONO, fontSize: 12, color: T.isDark ? "#627488" : T.t3, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontVariantNumeric: "tabular-nums" }}>{inv.invoiceNo}</span>
                 {anomaly && (
@@ -932,7 +932,9 @@ function SupplierGroup({ supplier, invoices, selectedIds, onToggleSelect, onTogg
               {!isMobile && <span style={{ fontFamily: MONO, fontSize: 12, color: (inv.status === "Overdue" || inv.status === "overdue") ? "#F87171" : T.isDark ? "#627488" : T.t2, fontWeight: (inv.status === "Overdue" || inv.status === "overdue") ? 600 : 400, fontVariantNumeric: "tabular-nums" }}>{fmtDate(inv.dueDate)}</span>}
               <div style={{ display: "flex", gap: 4, justifyContent: "flex-end" }}>
                 {inv.attachment && <button onClick={e => e.stopPropagation()} style={{ padding: "2px 6px", background: "transparent", border: `1px solid ${T.bdr}`, borderRadius: 4, color: T.t2, cursor: "pointer", display: "flex", alignItems: "center" }}><Paperclip size={10} /></button>}
-                {!isPaid && <button onClick={e => { e.stopPropagation(); onMarkPaid(inv.id); }} style={{ padding: "2px 7px", background: T.greenTint, border: `1px solid ${T.greenBdr}`, borderRadius: 4, color: T.green, cursor: "pointer", fontFamily: SANS, fontSize: 11, fontWeight: 600, display: "flex", alignItems: "center", gap: 2 }}><Check size={10} />Paid</button>}
+                <button onClick={e => { e.stopPropagation(); onMarkPaid(inv.id); }} style={{ padding: "2px 7px", background: isPaid ? "transparent" : T.greenTint, border: `1px solid ${isPaid ? T.bdr : T.greenBdr}`, borderRadius: 4, color: isPaid ? T.t3 : T.green, cursor: "pointer", fontFamily: SANS, fontSize: 11, fontWeight: 600, display: "flex", alignItems: "center", gap: 2 }}>
+                  {isPaid ? <><X size={10} />Unpaid</> : <><Check size={10} />Paid</>}
+                </button>
                 {!isMobile && <button onClick={e => { e.stopPropagation(); onEditInvoice?.(inv); }} style={{ padding: "2px 6px", background: "transparent", border: `1px solid ${T.bdr}`, borderRadius: 4, color: T.t2, cursor: "pointer", display: "flex", alignItems: "center" }}><Pencil size={10} /></button>}
               </div>
             </div>
@@ -2004,7 +2006,11 @@ export default function App() {
     }
     setView("invoices");
   };
-  const handleMarkPaid = useCallback((id) => { updateInvoice(id, { status: "Paid" }); }, [updateInvoice]);
+  const handleMarkPaid = useCallback((id) => {
+    const inv = invoices.find(i => i.id === id);
+    const isPaid = inv?.status === "Paid" || inv?.status === "paid";
+    updateInvoice(id, { status: isPaid ? "Unpaid" : "Paid" });
+  }, [updateInvoice, invoices]);
   const handleBulkPaid = useCallback((ids) => { ids.forEach(id => updateInvoice(id, { status: "Paid" })); }, [updateInvoice]);
   useEffect(() => { if (preSelectAll) { const t = setTimeout(() => setPreSelectAll(false), 100); return () => clearTimeout(t); } }, [preSelectAll]);
 
