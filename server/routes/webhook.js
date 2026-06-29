@@ -24,82 +24,67 @@ exports.verifyWhatsApp = (req, res) => {
 
 // POST /api/webhook/whatsapp  — incoming message handler
 exports.handleWhatsApp = async (req, res) => {
-  // Respond 200 immediately — WhatsApp retries if we don't
-  res.status(200).json({ ok: true });
-
-  const rawBody  = req.rawBody;
-  const signature = req.headers['x-hub-signature-256'];
-
   const body = req.body;
-  console.log('[webhook:wa] body type:', typeof body, 'keys:', body ? Object.keys(body) : 'null', 'entry len:', body?.entry?.length);
-  if (!body?.entry?.length) { console.log('[webhook:wa] no entries, raw body preview:', JSON.stringify(body)?.slice(0, 200)); return; }
+  console.log('[webhook:wa] received, entry len:', body?.entry?.length);
 
-  // Verify HMAC signature using the shared app secret
-  if (rawBody && process.env.WHATSAPP_APP_SECRET) {
-    if (!verifySignature(rawBody, signature, process.env.WHATSAPP_APP_SECRET)) {
-      console.warn('[webhook:wa] invalid HMAC signature — ignoring payload');
-      return;
+  if (!body?.entry?.length) {
+    return res.status(200).json({ ok: true });
+  }
+
+  // Collect all media items that need processing (fast — just DB lookups)
+  const jobs = [];
+
+  for (const entry of body.entry) {
+    for (const change of (entry.changes || [])) {
+      if (change.field !== 'messages') continue;
+      const value = change.value || {};
+
+      for (const msg of (value.messages || [])) {
+        if (!msg.id) continue;
+
+        const mediaType = ['image', 'document'].find(t => msg[t]);
+        if (!mediaType) continue;
+
+        const media    = msg[mediaType];
+        const mimeType = media.mime_type;
+
+        if (mimeType !== 'application/pdf' && !mimeType.startsWith('image/')) continue;
+
+        const inboxCode = (media.caption || '').trim().toUpperCase();
+        if (!inboxCode) {
+          console.log(`[webhook:wa] msg ${msg.id} has no caption — skipping`);
+          continue;
+        }
+
+        console.log(`[webhook:wa] looking up inbox code ${inboxCode}`);
+        const { data: integration, error: dbErr } = await supabase
+          .from('integrations')
+          .select('*')
+          .eq('type', 'whatsapp')
+          .eq('status', 'connected')
+          .filter('config->>inbox_code', 'eq', inboxCode)
+          .maybeSingle();
+
+        if (dbErr) { console.error('[webhook:wa] db error:', dbErr.message); continue; }
+        if (!integration) { console.log(`[webhook:wa] unknown inbox code: ${inboxCode}`); continue; }
+
+        console.log(`[webhook:wa] queuing job for ${msg.id} inbox ${inboxCode}`);
+        jobs.push({ integration, media, mediaType, mimeType, msgId: msg.id });
+      }
     }
   }
 
-  // await keeps the Vercel function alive until processing completes
-  await (async () => {
-    for (const entry of body.entry) {
-      for (const change of (entry.changes || [])) {
-        console.log('[webhook:wa] change.field:', change.field);
-        if (change.field !== 'messages') continue;
-        const value = change.value || {};
-        console.log('[webhook:wa] messages count:', (value.messages || []).length, 'statuses:', (value.statuses || []).length);
+  // Respond 200 before heavy processing (media download + OCR)
+  res.status(200).json({ ok: true });
 
-        for (const msg of (value.messages || [])) {
-          if (!msg.id) continue;
-          console.log('[webhook:wa] msg type:', msg.type, 'keys:', Object.keys(msg));
-
-          const mediaType = ['image', 'document'].find(t => msg[t]);
-          if (!mediaType) { console.log('[webhook:wa] no media in msg, skipping'); continue; }
-
-          const media    = msg[mediaType];
-          const mimeType = media.mime_type;
-          console.log('[webhook:wa] mediaType:', mediaType, 'mimeType:', mimeType, 'caption:', media.caption);
-
-          // Only process PDF and images
-          if (mimeType !== 'application/pdf' && !mimeType.startsWith('image/')) continue;
-
-          // Route by inbox code in caption
-          const inboxCode = (media.caption || '').trim().toUpperCase();
-          if (!inboxCode) {
-            console.log(`[webhook:wa] msg ${msg.id} has no caption/inbox code — skipping`);
-            continue;
-          }
-
-          let integration, dbErr;
-          try {
-            ({ data: integration, error: dbErr } = await supabase
-              .from('integrations')
-              .select('*')
-              .eq('type', 'whatsapp')
-              .eq('status', 'connected')
-              .filter('config->>inbox_code', 'eq', inboxCode)
-              .maybeSingle());
-          } catch (e) {
-            console.error('[webhook:wa] supabase threw:', e.message);
-            continue;
-          }
-          console.log(`[webhook:wa] supabase lookup for ${inboxCode}:`, integration?.id || 'not found', dbErr?.message || '');
-          if (!integration) {
-            console.log(`[webhook:wa] unknown inbox code: ${inboxCode}`);
-            continue;
-          }
-
-          const filename = media.filename || `${mediaType}_${media.id}`;
-          try {
-            await sync.processWhatsAppMedia(integration, integration.user_id, media.id, filename, mimeType, msg.id);
-            console.log(`[webhook:wa] processed message ${msg.id} for inbox ${inboxCode}`);
-          } catch (err) {
-            console.error(`[webhook:wa] failed to process ${msg.id}:`, err.message);
-          }
-        }
-      }
+  // Heavy processing after response — Vercel Fluid keeps function alive
+  for (const { integration, media, mediaType, mimeType, msgId } of jobs) {
+    const filename = media.filename || `${mediaType}_${media.id}`;
+    try {
+      await sync.processWhatsAppMedia(integration, integration.user_id, media.id, filename, mimeType, msgId);
+      console.log(`[webhook:wa] processed ${msgId}`);
+    } catch (err) {
+      console.error(`[webhook:wa] failed ${msgId}:`, err.message);
     }
-  })();
+  }
 };
