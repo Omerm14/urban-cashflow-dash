@@ -637,12 +637,11 @@ function Dashboard({ invoices, onPayAllJuly, chartData, supplierNames, supplierC
 }
 
 // ── Invoices ──────────────────────────────────────────────────────────────────
-function SupplierGroup({ supplier, invoices, selectedIds, onToggleSelect, onToggleAll, onMarkPaid, onPayGroup, onEditInvoice, anomalyMap }) {
+function SupplierGroup({ supplier, invoices, selectedIds, onToggleSelect, onToggleAll, onMarkPaid, onPayGroup, onEditInvoice, anomalyMap, color }) {
   const T = useT();
   const { isMobile } = useLayout();
   const [hov, setHov] = useState(false);
-  const supplierListLocal = [...new Set(invoices.map(i => i.supplier))];
-  const c = PALETTE[supplierListLocal.indexOf(supplier) % PALETTE.length] || T.indigo;
+  const c = color || T.indigo;
   const unpaidIds = invoices.filter(i => i.status !== "Paid" && i.status !== "paid").map(i => i.id);
   const allSel = unpaidIds.length > 0 && unpaidIds.every(id => selectedIds.has(id));
   const someSel = !allSel && unpaidIds.some(id => selectedIds.has(id));
@@ -720,6 +719,8 @@ function GroupedView({ invoices, selectedMonth, onMonthChange, selectedIds, onTo
   const monthTotal = monthInvoices.reduce((s, i) => s + Number(i.amount), 0);
   const prevAllPaid = useRef(false);
   useEffect(() => { if (allPaid && !prevAllPaid.current && monthInvoices.length > 0) onAllPaid(); prevAllPaid.current = allPaid; }, [allPaid]);
+  const allSupplierNames = [...new Set(invoices.map(i => i.supplier))];
+  const supplierColor = (name) => PALETTE[allSupplierNames.indexOf(name) % PALETTE.length] || "#6366F1";
   const groups = Object.entries(monthInvoices.reduce((acc, inv) => { (acc[inv.supplier] = acc[inv.supplier] || []).push(inv); return acc; }, {})).sort(([a], [b]) => a.localeCompare(b));
 
   return (
@@ -789,7 +790,8 @@ function GroupedView({ invoices, selectedMonth, onMonthChange, selectedIds, onTo
       {groups.map(([supplier, supInvoices]) => (
         <SupplierGroup key={supplier} supplier={supplier} invoices={supInvoices} selectedIds={selectedIds}
           onToggleSelect={onToggleSelect} onToggleAll={onToggleAll} onMarkPaid={onMarkPaid}
-          onPayGroup={ids => onSelectAll(ids)} onEditInvoice={onEditInvoice} anomalyMap={anomalyMap} />
+          onPayGroup={ids => onSelectAll(ids)} onEditInvoice={onEditInvoice} anomalyMap={anomalyMap}
+          color={supplierColor(supplier)} />
       ))}
     </div>
   );
@@ -1296,7 +1298,7 @@ function SettingsScreen({ onUpgrade, onSignOut, user }) {
           </div>
         </Section>
 
-        <Section id="data" title="Data & Export" desc="Download your data or reset the demo.">
+        <Section id="data" title="Data & Export" desc="Download your data as CSV or PDF.">
           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
             {[
               { label: "Export invoices",        hint: "All records as CSV" },
@@ -1691,7 +1693,7 @@ export default function App() {
               <UsageBanner plan={plan} used={planUsed} limit={planLimit} remaining={planLimit - planUsed} onUpgrade={() => setShowUpgrade(true)} />
             )}
             <main style={{ flex: 1, overflowY: "auto", padding: isMobile ? "20px 16px 100px" : "28px clamp(20px,3vw,36px) 80px" }}>
-              <div style={{ maxWidth: 1200, width: "100%" }}>
+              <div style={{ width: "100%" }}>
                 {view === "dashboard"    && <Dashboard invoices={invoices} onPayAllJuly={handlePayAll} chartData={chartData} supplierNames={allNames} supplierColor={getSupplierColor} />}
                 {view === "invoices"     && <InvoicesView invoices={invoices} selectedMonth={selectedMonth} onMonthChange={setSelectedMonth} onMarkPaid={handleMarkPaid} onBulkPaid={handleBulkPaid} preSelectAll={preSelectAll} onEditInvoice={setEditInvoice} anomalyMap={anomalyMap} missingSuppliers={missingSuppliers} />}
                 {view === "calendar"     && <CalendarView computed={invoices} calMonth={calMonth} setCalMonth={setCalMonth} color={getSupplierColor} />}
