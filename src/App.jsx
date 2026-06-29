@@ -239,26 +239,31 @@ function LoginScreen({ onLogin }) {
               </div>
             </div>
             <div style={{ borderTop: "1px solid rgba(255,255,255,.06)", paddingTop: 20, animation: "loginFadeUp 0.6s cubic-bezier(.16,1,.3,1) 0.38s both" }}>
-              <div style={{ fontFamily: SANS, fontSize: 10, color: "#3D5166", marginBottom: 14, textTransform: "uppercase", letterSpacing: "0.1em", fontWeight: 700 }}>Connects with</div>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
-                {[
-                  { name: "Gmail", sub: "Inbox sync", bg: "rgba(234,67,53,.08)", border: "rgba(234,67,53,.18)", dot: "#EA4335",
-                    logo: <svg width="20" height="20" viewBox="0 0 48 48"><path fill="#EA4335" d="M6 40V16l18 13L42 16v24H6z"/><path fill="#B0120A" d="M42 16L24 29 6 16"/><path fill="#EA4335" d="M6 16h36L24 29z"/><path fill="#FF6D6D" d="M6 16L24 29l18-13H6z" opacity=".5"/></svg> },
-                  { name: "Google Drive", sub: "File sync", bg: "rgba(52,168,83,.08)", border: "rgba(52,168,83,.18)", dot: "#34A853",
-                    logo: <svg width="20" height="20" viewBox="0 0 87.3 78"><path fill="#0066DA" d="M6.6 66.85l3.85 6.65c.8 1.4 1.95 2.5 3.3 3.3L27.5 53H0c0 1.55.4 3.1 1.2 4.5z"/><path fill="#00AC47" d="M43.65 25L29.9 1.2C28.55 2 27.4 3.1 26.6 4.5L1.2 48.5C.4 49.9 0 51.45 0 53h27.5z"/><path fill="#EA4335" d="M73.55 76.8c1.35-.8 2.5-1.9 3.3-3.3l1.6-2.75 7.65-13.25c.8-1.4 1.2-2.95 1.2-4.5H60l5.85 11.65z"/><path fill="#00832D" d="M43.65 25L57.4 1.2C56.05.4 54.5 0 52.9 0H34.4c-1.6 0-3.15.45-4.5 1.2z"/><path fill="#2684FC" d="M60 53H27.5L13.75 76.8c1.35.8 2.9 1.2 4.5 1.2h50.5c1.6 0 3.15-.4 4.5-1.2z"/><path fill="#FFBA00" d="M73.4 26.5l-12.7-22c-.8-1.4-1.95-2.5-3.3-3.3L43.65 25 60 53h27.45c0-1.55-.4-3.1-1.2-4.5z"/></svg> },
-                  { name: "WhatsApp", sub: "Message sync", bg: "rgba(37,211,102,.07)", border: "rgba(37,211,102,.18)", dot: "#25D366",
-                    logo: <svg width="20" height="20" viewBox="0 0 24 24" fill="#25D366"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M11.999 2C6.477 2 2 6.484 2 12.017c0 1.99.525 3.859 1.44 5.473L2 22l4.644-1.417A9.975 9.975 0 0011.999 22C17.522 22 22 17.516 22 11.983 22 6.46 17.522 2 11.999 2z"/></svg> },
-                  { name: "Green Invoice", sub: "Invoice import", bg: "rgba(16,185,129,.07)", border: "rgba(16,185,129,.18)", dot: "#10B981",
-                    logo: <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><rect x="3" y="2" width="14" height="18" rx="2" fill="rgba(16,185,129,.2)" stroke="#10B981" strokeWidth="1.5"/><path d="M7 7h6M7 10.5h6M7 14h4" stroke="#10B981" strokeWidth="1.5" strokeLinecap="round"/><circle cx="19" cy="19" r="4" fill="#10B981"/><path d="M17.5 19l1 1 2-2" stroke="#fff" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg> },
-                ].map(({ name, sub, bg, border, dot, logo }) => (
-                  <div key={name} style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 12px", background: bg, border: `1px solid ${border}`, borderRadius: 10 }}>
-                    <div style={{ width: 32, height: 32, borderRadius: 8, background: "rgba(255,255,255,0.04)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>{logo}</div>
-                    <div>
-                      <div style={{ fontFamily: SANS, fontSize: 12, fontWeight: 600, color: "#CBD6E6", lineHeight: 1.2 }}>{name}</div>
-                      <div style={{ fontFamily: SANS, fontSize: 10, color: "#4A6278", marginTop: 1 }}>{sub}</div>
-                    </div>
-                  </div>
-                ))}
+              <div style={{ fontFamily: SANS, fontSize: 10, color: "#3D5166", marginBottom: 16, textTransform: "uppercase", letterSpacing: "0.1em", fontWeight: 700 }}>Connects with</div>
+              <div style={{ display: "flex", alignItems: "center", gap: 20, flexWrap: "wrap" }}>
+                {/* Gmail */}
+                <div style={{ display: "flex", alignItems: "center", gap: 8, opacity: 0.75 }}>
+                  <svg width="22" height="16" viewBox="0 0 48 36" fill="none"><path d="M0 4a4 4 0 014-4h40a4 4 0 014 4v28a4 4 0 01-4 4H4a4 4 0 01-4-4V4z" fill="#fff" fillOpacity=".06"/><path d="M4 4l20 14L44 4" stroke="#EA4335" strokeWidth="3" strokeLinecap="round"/><path d="M4 4v24h40V4" stroke="none"/><path d="M4 28V10l20 14 20-14v18" fill="none" stroke="#4285F4" strokeWidth="0"/><path fill="#EA4335" d="M4 4h40v3L24 21 4 7z"/><path fill="#34A853" d="M4 28h8V14l12 8 12-8v14h8V4L24 18 4 4z"/><path fill="#FBBC05" d="M4 4v4l8 4V4z"/><path fill="#EA4335" d="M44 4v4l-8 4V4z"/></svg>
+                  <span style={{ fontFamily: SANS, fontSize: 13, fontWeight: 600, color: "#7A90A8", letterSpacing: "-0.01em" }}>Gmail</span>
+                </div>
+                <div style={{ width: 1, height: 18, background: "rgba(255,255,255,.08)" }} />
+                {/* Google Drive */}
+                <div style={{ display: "flex", alignItems: "center", gap: 8, opacity: 0.75 }}>
+                  <svg width="20" height="18" viewBox="0 0 87.3 78"><path fill="#0066DA" d="M6.6 66.85l3.85 6.65c.8 1.4 1.95 2.5 3.3 3.3L27.5 53H0c0 1.55.4 3.1 1.2 4.5z"/><path fill="#00AC47" d="M43.65 25L29.9 1.2C28.55 2 27.4 3.1 26.6 4.5L1.2 48.5C.4 49.9 0 51.45 0 53h27.5z"/><path fill="#EA4335" d="M73.55 76.8c1.35-.8 2.5-1.9 3.3-3.3l1.6-2.75 7.65-13.25c.8-1.4 1.2-2.95 1.2-4.5H60l5.85 11.65z"/><path fill="#00832D" d="M43.65 25L57.4 1.2C56.05.4 54.5 0 52.9 0H34.4c-1.6 0-3.15.45-4.5 1.2z"/><path fill="#2684FC" d="M60 53H27.5L13.75 76.8c1.35.8 2.9 1.2 4.5 1.2h50.5c1.6 0 3.15-.4 4.5-1.2z"/><path fill="#FFBA00" d="M73.4 26.5l-12.7-22c-.8-1.4-1.95-2.5-3.3-3.3L43.65 25 60 53h27.45c0-1.55-.4-3.1-1.2-4.5z"/></svg>
+                  <span style={{ fontFamily: SANS, fontSize: 13, fontWeight: 600, color: "#7A90A8", letterSpacing: "-0.01em" }}>Drive</span>
+                </div>
+                <div style={{ width: 1, height: 18, background: "rgba(255,255,255,.08)" }} />
+                {/* WhatsApp */}
+                <div style={{ display: "flex", alignItems: "center", gap: 8, opacity: 0.75 }}>
+                  <svg width="20" height="20" viewBox="0 0 24 24"><circle cx="12" cy="12" r="12" fill="#25D366"/><path fill="#fff" d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/></svg>
+                  <span style={{ fontFamily: SANS, fontSize: 13, fontWeight: 600, color: "#7A90A8", letterSpacing: "-0.01em" }}>WhatsApp</span>
+                </div>
+                <div style={{ width: 1, height: 18, background: "rgba(255,255,255,.08)" }} />
+                {/* Green Invoice */}
+                <div style={{ display: "flex", alignItems: "center", gap: 8, opacity: 0.75 }}>
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><rect width="24" height="24" rx="6" fill="#10B981"/><path d="M6 8h8M6 11.5h8M6 15h5" stroke="#fff" strokeWidth="1.8" strokeLinecap="round"/><path d="M17 14l1.5 1.5 2.5-2.5" stroke="#fff" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                  <span style={{ fontFamily: SANS, fontSize: 13, fontWeight: 600, color: "#7A90A8", letterSpacing: "-0.01em" }}>Green Invoice</span>
+                </div>
               </div>
             </div>
           </div>
@@ -277,22 +282,19 @@ function LoginScreen({ onLogin }) {
           <div style={{ marginBottom: 28 }}>
             <h1 style={{ fontFamily: SANS, fontWeight: 700, fontSize: isMobile ? 22 : 28, letterSpacing: "-0.03em", color: "#F1F5F9", marginBottom: 6 }}>{mode === "signin" ? "Welcome back" : "Create your account"}</h1>
             <p style={{ fontFamily: SANS, fontSize: 15, color: "#64748B", marginBottom: 16 }}>{mode === "signin" ? "Sign in to your Cashflow workspace." : "Start managing invoices in minutes."}</p>
-            {/* Testimonial */}
-            <div style={{ padding: "14px 16px", background: "rgba(99,102,241,0.05)", border: "1px solid rgba(99,102,241,0.13)", borderRadius: 10, position: "relative" }}>
-              <div style={{ position: "absolute", top: 12, left: 16, fontFamily: "Georgia, serif", fontSize: 28, color: "#6366F1", lineHeight: 1, opacity: 0.5 }}>"</div>
-              <p style={{ fontFamily: SANS, fontSize: 13, lineHeight: 1.6, color: "#8DA4B8", margin: "0 0 10px", paddingTop: 10 }}>
-                I used to spend Sunday nights chasing invoices across email and WhatsApp. Now I open one dashboard and I'm done in 10 minutes.
-              </p>
-              <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
-                <div style={{ width: 28, height: 28, borderRadius: "50%", background: "linear-gradient(135deg,#6366F1,#A5B4FC)", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: SANS, fontSize: 11, fontWeight: 700, color: "#fff", flexShrink: 0 }}>ד</div>
-                <div>
-                  <div style={{ fontFamily: SANS, fontSize: 12, fontWeight: 600, color: "#CBD6E6" }}>Dani Cohen</div>
-                  <div style={{ fontFamily: SANS, fontSize: 11, color: "#4A6278" }}>Owner, DC Electric</div>
+            {/* Credibility stats */}
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 1, borderRadius: 10, overflow: "hidden", border: "1px solid rgba(255,255,255,.07)" }}>
+              {[
+                { val: "< 10s", label: "invoice read", icon: <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#6366F1" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg> },
+                { val: "100%", label: "Hebrew support", icon: <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#6366F1" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg> },
+                { val: "4 sources", label: "auto-synced", icon: <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#6366F1" strokeWidth="2" strokeLinecap="round"><path d="M4 12v-2a8 8 0 0116 0v2"/><path d="M20 16a2 2 0 01-2 2H6a2 2 0 01-2-2v-4h16v4z"/></svg> },
+              ].map((s, i) => (
+                <div key={i} style={{ padding: "12px 10px", background: i === 1 ? "rgba(99,102,241,0.07)" : "rgba(255,255,255,0.02)", textAlign: "center", borderLeft: i > 0 ? "1px solid rgba(255,255,255,.07)" : "none" }}>
+                  <div style={{ display: "flex", justifyContent: "center", marginBottom: 5 }}>{s.icon}</div>
+                  <div style={{ fontFamily: SANS, fontWeight: 800, fontSize: 15, letterSpacing: "-0.03em", color: "#C7D2FE", lineHeight: 1 }}>{s.val}</div>
+                  <div style={{ fontFamily: SANS, fontSize: 10, color: "#4A6278", marginTop: 4, lineHeight: 1.3 }}>{s.label}</div>
                 </div>
-                <div style={{ marginLeft: "auto", display: "flex", gap: 2 }}>
-                  {[1,2,3,4,5].map(s => <svg key={s} width="11" height="11" viewBox="0 0 24 24" fill="#F59E0B"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>)}
-                </div>
-              </div>
+              ))}
             </div>
           </div>
           <button onClick={handleGoogle} disabled={loading} style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: 12, padding: "13px 0", background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 7, cursor: loading ? "not-allowed" : "pointer", fontFamily: SANS, fontWeight: 500, fontSize: 15, color: "#F1F5F9", marginBottom: 18, opacity: loading ? 0.7 : 1 }}>
