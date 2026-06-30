@@ -126,6 +126,8 @@ exports.googleFolders = async (req, res) => {
     const drive = google.drive({ version: 'v3', auth });
 
     const parent = req.query.parent || 'root';
+    const { isDriveId } = require('../lib/validate');
+    if (parent !== 'root' && !isDriveId(parent)) return res.status(400).json({ error: 'Invalid folder ID' });
 
     const { data: { files: folders = [] } } = await drive.files.list({
       q:        `'${parent}' in parents and mimeType='application/vnd.google-apps.folder' and trashed=false`,

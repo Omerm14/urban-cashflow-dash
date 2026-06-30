@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
+import { PLAN_FEATURES } from '../constants/plans';
 
 const PLAN_BADGE = {
   free:       { label: 'FREE',       color: '#94a3b8', bg: 'rgba(100,116,139,.15)', border: 'rgba(100,116,139,.3)',  glow: 'none' },
@@ -236,12 +237,7 @@ function BillingTab({ plan, used, limit, remaining, onUpgrade, invoices }) {
     URL.revokeObjectURL(url);
   };
 
-  const planFeatures = {
-    free:       ['20 invoices / month', '1 sync source', 'Manual upload + OCR'],
-    basic:      ['50 invoices / month', '2 sync sources', 'Email support'],
-    pro:        ['150 invoices / month', 'All 4 sources', 'Auto-sync', 'Priority support'],
-    enterprise: ['Unlimited invoices', 'All 4 sources', 'Dedicated onboarding', 'Custom SLA'],
-  };
+  const planFeatures = PLAN_FEATURES;
 
   return (
     <div>

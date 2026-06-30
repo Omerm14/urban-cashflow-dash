@@ -6,8 +6,14 @@ if (!process.env.ANTHROPIC_API_KEY) {
   process.exit(1);
 }
 
-const app  = express();
-const auth = require('./middleware/auth');
+const app       = express();
+const auth      = require('./middleware/auth');
+const rateLimit = require('express-rate-limit');
+
+// Protect expensive endpoints from abuse while allowing generous legitimate use.
+// Limits are per-IP; well above any real single-user burst.
+const extractLimiter = rateLimit({ windowMs: 60_000, max: 120, standardHeaders: true, legacyHeaders: false, message: { error: 'Too many requests, please slow down' } });
+const syncLimiter    = rateLimit({ windowMs: 60_000, max: 10,  standardHeaders: true, legacyHeaders: false, message: { error: 'Too many sync requests, please wait' } });
 
 // Capture raw body for webhook signature verification before JSON parsing
 // (needed for WhatsApp HMAC verification).
@@ -25,7 +31,7 @@ app.use((req, res, next) => {
 
 app.use(express.json({ limit: '20mb' }));
 
-app.post('/api/extract',    auth, require('./routes/extract'));
+app.post('/api/extract',    extractLimiter, auth, require('./routes/extract'));
 app.get('/api/admin/usage',      require('./routes/admin'));
 
 // Integrations
@@ -42,7 +48,7 @@ app.post('/api/integrations/green-invoice',         auth, integrations.connectGr
 app.post('/api/integrations/whatsapp',              auth, integrations.connectWhatsApp);
 app.patch('/api/integrations/:id/config',           auth, integrations.updateConfig);
 app.patch('/api/integrations/:id/auto-sync',        auth, integrations.updateAutoSync);
-app.post('/api/integrations/:id/sync',              auth, integrations.triggerSync);
+app.post('/api/integrations/:id/sync',              syncLimiter, auth, integrations.triggerSync);
 app.post('/api/sync-jobs/:jobId/process',           auth, integrations.processSyncJob);
 app.post('/api/sync-jobs/:jobId/cancel',            auth, integrations.cancelSyncJob);
 app.get('/api/notifications',                       auth, integrations.listNotifications);
