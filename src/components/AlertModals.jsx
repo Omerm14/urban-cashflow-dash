@@ -1,5 +1,50 @@
 import { currency, fmt, fmtMonthShort } from "../utils/dates";
 
+const STRINGS = {
+  en: {
+    missing_title: "Missing Invoices",
+    missing_sub: "Recurring suppliers with no invoice this month",
+    missing_footer: "A supplier is flagged if they appeared in 2+ of the last 3 months, or marked manually",
+    anomaly_title: "Invoice Anomalies",
+    anomaly_sub: "Invoices with an unusual amount compared to supplier average",
+    payment_terms: "Payment terms",
+    recurring_manual: "manually marked",
+    recurring_auto: "auto-detected",
+    last_invoice: "Last invoice",
+    monthly_avg: "Monthly average",
+    last_3_months: "last 3 months",
+    presence: "Presence",
+    months: "months",
+    invoice_amount: "Invoice amount",
+    supplier_avg: "Supplier avg (3 months)",
+    history: "History",
+    open: "Open ✎",
+    invoice_label: "Invoice",
+    average_label: "Average",
+  },
+  he: {
+    missing_title: "חשבוניות חסרות",
+    missing_sub: "ספקים קבועים שלא שלחו חשבונית החודש",
+    missing_footer: "ספק מזוהה כקבוע אם הופיע ב-2+ מתוך 3 החודשים האחרונים, או סומן ידנית",
+    anomaly_title: "חשבוניות חריגות",
+    anomaly_sub: "חשבוניות עם סכום חריג ביחס לממוצע הספק",
+    payment_terms: "תנאי תשלום",
+    recurring_manual: "קבוע ידנית",
+    recurring_auto: "זוהה אוטומטית",
+    last_invoice: "חשבונית אחרונה",
+    monthly_avg: "ממוצע חודשי",
+    last_3_months: "3 חודשים אחרונים",
+    presence: "נוכחות אחרונה",
+    months: "חודשים",
+    invoice_amount: "סכום חשבונית",
+    supplier_avg: "ממוצע ספק (3 חודשים)",
+    history: "היסטוריה",
+    open: "פתח ✎",
+    invoice_label: "חשבונית",
+    average_label: "ממוצע",
+  },
+};
+
 export function InfoBox({ label, value, sub }) {
   return (
     <div style={{ background: 'var(--surf2)', borderRadius: 8, padding: '10px 12px', border: '1px solid rgba(255,255,255,.05)' }}>
@@ -10,8 +55,9 @@ export function InfoBox({ label, value, sub }) {
   );
 }
 
-export function MissingSuppliersModal({ missingSuppliers, invoices, suppliers, onClose }) {
-  const normName = s => s?.normalize('NFC').toLowerCase().trim() || '';
+export function MissingSuppliersModal({ missingSuppliers, invoices, suppliers, onClose, lang = "en" }) {
+  const s = STRINGS[lang] || STRINGS.en;
+  const normName = n => n?.normalize('NFC').toLowerCase().trim() || '';
 
   const now = new Date();
   const pastMonths = [];
@@ -35,7 +81,7 @@ export function MissingSuppliersModal({ missingSuppliers, invoices, suppliers, o
       .map(inv => Number(inv.amount))
       .filter(a => a > 0);
     const avg = recentAmounts.length
-      ? recentAmounts.reduce((s, a) => s + a, 0) / recentAmounts.length
+      ? recentAmounts.reduce((sum, a) => sum + a, 0) / recentAmounts.length
       : null;
 
     const monthsPresent = pastMonths.filter(pm =>
@@ -50,10 +96,8 @@ export function MissingSuppliersModal({ missingSuppliers, invoices, suppliers, o
       <div className="modal" style={{ width: 560, maxHeight: '80vh', display: 'flex', flexDirection: 'column' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 18 }}>
           <div>
-            <div style={{ fontWeight: 800, fontSize: 20, color: '#fb923c' }}>⚠ חשבוניות חסרות</div>
-            <div style={{ fontSize: 13, color: 'var(--t2)', marginTop: 3 }}>
-              ספקים קבועים שלא שלחו חשבונית החודש
-            </div>
+            <div style={{ fontWeight: 800, fontSize: 20, color: '#fb923c' }}>⚠ {s.missing_title}</div>
+            <div style={{ fontSize: 13, color: 'var(--t2)', marginTop: 3 }}>{s.missing_sub}</div>
           </div>
           <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'var(--t3)', cursor: 'pointer', fontSize: 24, lineHeight: 1 }}>×</button>
         </div>
@@ -69,20 +113,22 @@ export function MissingSuppliersModal({ missingSuppliers, invoices, suppliers, o
                   <div style={{ fontWeight: 700, fontSize: 14 }}>{name}</div>
                   {sup?.terms && (
                     <div style={{ fontSize: 11, color: 'var(--t3)', marginTop: 1 }}>
-                      תנאי תשלום: <span style={{ fontFamily: 'monospace' }}>{sup.terms}</span>
-                      {sup.recurring && <span style={{ marginRight: 8, color: 'var(--cyan)', fontWeight: 600 }}> · קבוע ידנית</span>}
-                      {!sup?.recurring && <span style={{ marginRight: 8, color: 'var(--t3)' }}> · זוהה אוטומטית</span>}
+                      {s.payment_terms}: <span style={{ fontFamily: 'monospace' }}>{sup.terms}</span>
+                      {sup.recurring
+                        ? <span style={{ marginLeft: 8, color: 'var(--cyan)', fontWeight: 600 }}> · {s.recurring_manual}</span>
+                        : <span style={{ marginLeft: 8, color: 'var(--t3)' }}> · {s.recurring_auto}</span>
+                      }
                     </div>
                   )}
                 </div>
               </div>
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8 }}>
-                <InfoBox label="חשבונית אחרונה" value={lastInv ? fmt(lastInv.invoice_date) : '—'} sub={lastInv ? currency(lastInv.amount) : null} />
-                <InfoBox label="ממוצע חודשי" value={avg ? currency(avg) : '—'} sub="3 חודשים אחרונים" />
+                <InfoBox label={s.last_invoice} value={lastInv ? fmt(lastInv.invoice_date) : '—'} sub={lastInv ? currency(lastInv.amount) : null} />
+                <InfoBox label={s.monthly_avg} value={avg ? currency(avg) : '—'} sub={s.last_3_months} />
                 <InfoBox
-                  label="נוכחות אחרונה"
-                  value={`${monthsPresent.length} / 3 חודשים`}
+                  label={s.presence}
+                  value={`${monthsPresent.length} / 3 ${s.months}`}
                   sub={monthsPresent.map(pm => fmtMonthShort(pm)).join(', ') || '—'}
                 />
               </div>
@@ -91,15 +137,16 @@ export function MissingSuppliersModal({ missingSuppliers, invoices, suppliers, o
         </div>
 
         <div style={{ paddingTop: 16, borderTop: '1px solid rgba(255,255,255,.06)', marginTop: 4, fontSize: 12, color: 'var(--t3)' }}>
-          ספק מזוהה כקבוע אם הופיע ב-2+ מתוך 3 החודשים האחרונים, או סומן ידנית
+          {s.missing_footer}
         </div>
       </div>
     </div>
   );
 }
 
-export function AnomalyModal({ anomalyMap, computed, invoices, onClose, onEditInvoice }) {
-  const normName = s => s?.normalize('NFC').toLowerCase().trim() || '';
+export function AnomalyModal({ anomalyMap, computed, invoices, onClose, onEditInvoice, lang = "en" }) {
+  const s = STRINGS[lang] || STRINGS.en;
+  const normName = n => n?.normalize('NFC').toLowerCase().trim() || '';
 
   const now = new Date();
   const pastMonths = [];
@@ -129,10 +176,8 @@ export function AnomalyModal({ anomalyMap, computed, invoices, onClose, onEditIn
       <div className="modal" style={{ width: 600, maxHeight: '80vh', display: 'flex', flexDirection: 'column' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 18 }}>
           <div>
-            <div style={{ fontWeight: 800, fontSize: 20, color: '#fbbf24' }}>📊 חשבוניות חריגות</div>
-            <div style={{ fontSize: 13, color: 'var(--t2)', marginTop: 3 }}>
-              חשבוניות עם סכום חריג ביחס לממוצע הספק
-            </div>
+            <div style={{ fontWeight: 800, fontSize: 20, color: '#fbbf24' }}>📊 {s.anomaly_title}</div>
+            <div style={{ fontSize: 13, color: 'var(--t2)', marginTop: 3 }}>{s.anomaly_sub}</div>
           </div>
           <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'var(--t3)', cursor: 'pointer', fontSize: 24, lineHeight: 1 }}>×</button>
         </div>
@@ -149,29 +194,29 @@ export function AnomalyModal({ anomalyMap, computed, invoices, onClose, onEditIn
                   <div style={{ flex: 1 }}>
                     <div style={{ fontWeight: 700, fontSize: 14 }}>{inv.supplier}</div>
                     <div style={{ fontSize: 11, color: 'var(--t3)', marginTop: 1 }}>
-                      חשבונית {inv.invoiceNo || '—'} · {fmt(inv.invoiceDate)}
+                      {s.invoice_label} {inv.invoiceNo || '—'} · {fmt(inv.invoiceDate)}
                     </div>
                   </div>
                   <button
                     className="btn btn-ghost btn-sm"
                     onClick={() => { onClose(); onEditInvoice({ ...inv }); }}>
-                    פתח ✎
+                    {s.open}
                   </button>
                 </div>
 
                 <div style={{ background: 'var(--surf2)', borderRadius: 10, padding: '12px 14px', border: '1px solid rgba(255,255,255,.05)' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
                     <div>
-                      <div style={{ fontSize: 10, color: 'var(--t3)', textTransform: 'uppercase', letterSpacing: '.5px', marginBottom: 3 }}>סכום חשבונית</div>
+                      <div style={{ fontSize: 10, color: 'var(--t3)', textTransform: 'uppercase', letterSpacing: '.5px', marginBottom: 3 }}>{s.invoice_amount}</div>
                       <div style={{ fontWeight: 800, fontSize: 18, color: isHigh ? '#fbbf24' : '#60a5fa' }}>
                         {currency(inv.amount)}
-                        <span style={{ fontSize: 12, fontWeight: 600, marginRight: 6, color: isHigh ? '#fbbf24' : '#60a5fa' }}>
+                        <span style={{ fontSize: 12, fontWeight: 600, marginLeft: 6, color: isHigh ? '#fbbf24' : '#60a5fa' }}>
                           {isHigh ? '↑' : '↓'} {anomaly.deviationPct}%
                         </span>
                       </div>
                     </div>
                     <div style={{ textAlign: 'right' }}>
-                      <div style={{ fontSize: 10, color: 'var(--t3)', textTransform: 'uppercase', letterSpacing: '.5px', marginBottom: 3 }}>ממוצע ספק (3 חודשים)</div>
+                      <div style={{ fontSize: 10, color: 'var(--t3)', textTransform: 'uppercase', letterSpacing: '.5px', marginBottom: 3 }}>{s.supplier_avg}</div>
                       <div style={{ fontWeight: 700, fontSize: 15, color: 'var(--t2)' }}>{currency(anomaly.average)}</div>
                     </div>
                   </div>
@@ -183,13 +228,13 @@ export function AnomalyModal({ anomalyMap, computed, invoices, onClose, onEditIn
                     return (
                       <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                          <span style={{ fontSize: 10, color: 'var(--t3)', width: 52, flexShrink: 0 }}>ממוצע</span>
+                          <span style={{ fontSize: 10, color: 'var(--t3)', width: 52, flexShrink: 0 }}>{s.average_label}</span>
                           <div style={{ flex: 1, height: 6, background: 'rgba(255,255,255,.06)', borderRadius: 3 }}>
                             <div style={{ width: `${avgPct}%`, height: '100%', borderRadius: 3, background: 'rgba(100,116,139,.6)' }} />
                           </div>
                         </div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                          <span style={{ fontSize: 10, color: 'var(--t3)', width: 52, flexShrink: 0 }}>חשבונית</span>
+                          <span style={{ fontSize: 10, color: 'var(--t3)', width: 52, flexShrink: 0 }}>{s.invoice_label}</span>
                           <div style={{ flex: 1, height: 6, background: 'rgba(255,255,255,.06)', borderRadius: 3 }}>
                             <div style={{ width: `${curPct}%`, height: '100%', borderRadius: 3, background: isHigh ? '#f59e0b' : '#3b82f6' }} />
                           </div>
@@ -200,7 +245,7 @@ export function AnomalyModal({ anomalyMap, computed, invoices, onClose, onEditIn
 
                   {history.length > 0 && (
                     <div style={{ marginTop: 10, paddingTop: 10, borderTop: '1px solid rgba(255,255,255,.05)', display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                      <span style={{ fontSize: 10, color: 'var(--t3)', alignSelf: 'center' }}>היסטוריה:</span>
+                      <span style={{ fontSize: 10, color: 'var(--t3)', alignSelf: 'center' }}>{s.history}:</span>
                       {history.map(h => (
                         <span key={h.id} style={{ fontSize: 11, color: 'var(--t2)', background: 'rgba(255,255,255,.04)', padding: '2px 8px', borderRadius: 6 }}>
                           {fmt(h.invoice_date)} · {currency(h.amount)}

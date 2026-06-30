@@ -2246,6 +2246,7 @@ export default function App() {
               invoices={invoices}
               suppliers={suppliers}
               onClose={() => setShowMissingModal(false)}
+              lang={lang}
             />
           )}
 
@@ -2256,6 +2257,7 @@ export default function App() {
               invoices={invoices}
               onClose={() => setShowAnomalyModal(false)}
               onEditInvoice={setEditInvoice}
+              lang={lang}
             />
           )}
         </div>
