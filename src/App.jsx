@@ -622,9 +622,12 @@ function GlobalHeader({ view, isDark, onToggleTheme, onToggleLang, lang, onMenuO
               </button>
             )}
 
-            {recentAppNotifs.length > 0 && (
-              <div style={{ borderTop: (missingCount > 0 || anomalyCount > 0) ? `1px solid ${T.bdr}` : "none" }}>
-                {recentAppNotifs.map((n, i) => {
+            <div style={{ borderTop: (missingCount > 0 || anomalyCount > 0) ? `1px solid ${T.bdr}` : "none" }}>
+              <div style={{ padding: "8px 14px 4px", fontFamily: SANS, fontSize: 10, fontWeight: 700, color: T.t3, textTransform: "uppercase", letterSpacing: "0.08em" }}>Recent Activity</div>
+              {recentAppNotifs.length === 0 && (
+                <div style={{ padding: "10px 14px 14px", fontFamily: SANS, fontSize: 12, color: T.t3 }}>No activity yet — upload invoices or sync integrations.</div>
+              )}
+              {recentAppNotifs.map((n, i) => {
                   const isError = n.type === "error";
                   const isUpload = n.type === "upload";
                   const iconBg = isError ? T.redTint : isUpload ? "rgba(99,102,241,.10)" : "rgba(16,185,129,.10)";
@@ -648,8 +651,7 @@ function GlobalHeader({ view, isDark, onToggleTheme, onToggleLang, lang, onMenuO
                     </div>
                   );
                 })}
-              </div>
-            )}
+            </div>
           </div>
         )}
       </div>
@@ -778,7 +780,9 @@ function Dashboard({ invoices, onPayAllJuly, chartData, supplierNames, supplierC
           {missingSuppliers?.length > 0 && (
             <div onClick={onMissingAlert} style={{ background: T.amberTint, border: `1px solid ${T.amberBdr}`, borderRadius: 10, padding: "14px 18px", display: "flex", alignItems: "center", gap: 14, cursor: "pointer" }}
               onMouseEnter={e => e.currentTarget.style.opacity = "0.85"} onMouseLeave={e => e.currentTarget.style.opacity = "1"}>
-              <div style={{ width: 40, height: 40, borderRadius: 10, background: "rgba(245,158,11,0.18)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, fontSize: 20 }}>⚠️</div>
+              <div style={{ width: 40, height: 40, borderRadius: 10, background: "rgba(245,158,11,0.15)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#F59E0B" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7l5 5v11a2 2 0 0 1-2 2z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+              </div>
               <div style={{ flex: 1 }}>
                 <div style={{ fontFamily: SANS, fontWeight: 700, fontSize: 15, color: T.amber, letterSpacing: "-0.02em" }}>{t("dash_missing_title", { n: missingSuppliers.length })}</div>
                 <div style={{ fontFamily: SANS, fontSize: 12, color: T.t2, marginTop: 2 }}>{t("dash_missing_sub")}</div>
@@ -789,7 +793,9 @@ function Dashboard({ invoices, onPayAllJuly, chartData, supplierNames, supplierC
           {anomalyMap?.size > 0 && (
             <div onClick={onAnomalyAlert} style={{ background: T.isDark ? "rgba(99,102,241,0.08)" : T.indigoTint, border: `1px solid ${T.indigoBdr}`, borderRadius: 10, padding: "14px 18px", display: "flex", alignItems: "center", gap: 14, cursor: "pointer" }}
               onMouseEnter={e => e.currentTarget.style.opacity = "0.85"} onMouseLeave={e => e.currentTarget.style.opacity = "1"}>
-              <div style={{ width: 40, height: 40, borderRadius: 10, background: "rgba(99,102,241,0.15)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, fontSize: 20 }}>📊</div>
+              <div style={{ width: 40, height: 40, borderRadius: 10, background: "rgba(99,102,241,0.15)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={T.isDark ? "#818CF8" : T.indigo} strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+              </div>
               <div style={{ flex: 1 }}>
                 <div style={{ fontFamily: SANS, fontWeight: 700, fontSize: 15, color: T.isDark ? "#A5B4FC" : T.indigo, letterSpacing: "-0.02em" }}>{t("dash_anomaly_title", { n: anomalyMap.size })}</div>
                 <div style={{ fontFamily: SANS, fontSize: 12, color: T.t2, marginTop: 2 }}>{t("dash_anomaly_sub")}</div>

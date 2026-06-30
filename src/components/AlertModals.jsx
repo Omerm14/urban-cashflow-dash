@@ -96,7 +96,12 @@ export function MissingSuppliersModal({ missingSuppliers, invoices, suppliers, o
       <div className="modal" style={{ width: 560, maxHeight: '80vh', display: 'flex', flexDirection: 'column' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 18 }}>
           <div>
-            <div style={{ fontWeight: 800, fontSize: 20, color: '#fb923c' }}>⚠ {s.missing_title}</div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, fontWeight: 800, fontSize: 20, color: '#fb923c' }}>
+              <div style={{ width: 36, height: 36, borderRadius: 9, background: 'rgba(249,115,22,.12)', border: '1px solid rgba(249,115,22,.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#fb923c" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7l5 5v11a2 2 0 0 1-2 2z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+              </div>
+              {s.missing_title}
+            </div>
             <div style={{ fontSize: 13, color: 'var(--t2)', marginTop: 3 }}>{s.missing_sub}</div>
           </div>
           <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'var(--t3)', cursor: 'pointer', fontSize: 24, lineHeight: 1 }}>×</button>
@@ -176,7 +181,12 @@ export function AnomalyModal({ anomalyMap, computed, invoices, onClose, onEditIn
       <div className="modal" style={{ width: 600, maxHeight: '80vh', display: 'flex', flexDirection: 'column' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 18 }}>
           <div>
-            <div style={{ fontWeight: 800, fontSize: 20, color: '#fbbf24' }}>📊 {s.anomaly_title}</div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, fontWeight: 800, fontSize: 20, color: '#fbbf24' }}>
+              <div style={{ width: 36, height: 36, borderRadius: 9, background: 'rgba(234,179,8,.10)', border: '1px solid rgba(234,179,8,.22)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#fbbf24" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+              </div>
+              {s.anomaly_title}
+            </div>
             <div style={{ fontSize: 13, color: 'var(--t2)', marginTop: 3 }}>{s.anomaly_sub}</div>
           </div>
           <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'var(--t3)', cursor: 'pointer', fontSize: 24, lineHeight: 1 }}>×</button>
