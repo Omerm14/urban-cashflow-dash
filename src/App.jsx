@@ -382,7 +382,7 @@ function Sidebar({ view, setView, suppliersCount, onUpgrade, onUpload, mobileOpe
           {isDrawer && <button onClick={() => setMobileOpen(false)} style={{ background: "none", border: "none", color: SB.t2, cursor: "pointer", display: "flex", padding: 4 }}><X size={16} /></button>}
         </div>
         <div style={{ padding: "0 10px 14px" }}>
-          <button onClick={() => { onUpload(); if (isDrawer) setMobileOpen(false); }} style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: 7, padding: "9px 14px", borderRadius: 8, background: "#6366F1", border: "none", cursor: "pointer", fontFamily: SANS, fontWeight: 600, fontSize: 13, color: "#fff", letterSpacing: "-0.01em" }}>
+          <button onClick={() => { onUpload(); if (isDrawer) setMobileOpen(false); }} onMouseEnter={e => { e.currentTarget.style.background = "#7274f5"; e.currentTarget.style.boxShadow = "0 0 0 3px rgba(99,102,241,.3), 0 4px 16px rgba(99,102,241,.35)"; }} onMouseLeave={e => { e.currentTarget.style.background = "#6366F1"; e.currentTarget.style.boxShadow = "none"; }} style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "center", gap: 7, padding: "9px 14px", borderRadius: 8, background: "#6366F1", border: "none", cursor: "pointer", fontFamily: SANS, fontWeight: 600, fontSize: 13, color: "#fff", letterSpacing: "-0.01em", transition: "background 0.18s, box-shadow 0.18s" }}>
             <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
             {t("nav_upload")}
           </button>
@@ -502,7 +502,7 @@ function SearchOverlay({ invoices, suppliers, onNavigate, onClose }) {
                 icon={inv.supplier?.charAt(0) || "?"}
                 title={inv.supplier}
                 sub={`${inv.invoiceNo || ""} · ${fmt(inv.amount)} · ${inv.status || ""}`}
-                onClick={() => { onNavigate("invoices", (inv.dueDate || inv.invoice_date || "").slice(0, 7)); onClose(); }}
+                onClick={() => { onNavigate("invoices", (inv.dueDate || inv.invoice_date || "").slice(0, 7), inv.id); onClose(); }}
               />
             ))}
           </div>
@@ -660,14 +660,17 @@ function GlobalHeader({ view, isDark, onToggleTheme, onToggleLang, lang, onMenuO
 }
 
 // ── KPI Card ──────────────────────────────────────────────────────────────────
-function KPICard({ label, value, valueColor, iconBg, iconColor, iconPath, pill, context, delay }) {
+function KPICard({ label, value, valueColor, iconBg, iconColor, iconPath, pill, context, delay, onClick }) {
   const T = useT();
   const { isMobile } = useLayout();
   const pad = isMobile ? "14px 14px" : "20px";
   const numSize = isMobile ? 22 : 30;
   const gap = isMobile ? 10 : 14;
   return (
-    <div style={{ background: T.surf, border: `1px solid ${T.bdr}`, borderRadius: 12, padding: pad, display: "flex", flexDirection: "column", gap, animation: "kpiIn 0.38s ease forwards", animationDelay: `${delay}s`, opacity: 0, minWidth: 0 }}>
+    <div onClick={onClick}
+      onMouseEnter={onClick ? e => { e.currentTarget.style.borderColor = "#6366f1"; e.currentTarget.style.boxShadow = "0 0 0 1px rgba(99,102,241,.2)"; } : undefined}
+      onMouseLeave={onClick ? e => { e.currentTarget.style.borderColor = T.bdr; e.currentTarget.style.boxShadow = "none"; } : undefined}
+      style={{ background: T.surf, border: `1px solid ${T.bdr}`, borderRadius: 12, padding: pad, display: "flex", flexDirection: "column", gap, animation: "kpiIn 0.38s ease forwards", animationDelay: `${delay}s`, opacity: 0, minWidth: 0, cursor: onClick ? "pointer" : "default", transition: "border-color 0.18s, box-shadow 0.18s" }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
         <span style={{ fontFamily: SANS, fontSize: 10, fontWeight: 600, color: T.t2, letterSpacing: "0.07em", textTransform: "uppercase" }}>{label}</span>
         <div style={{ width: isMobile ? 26 : 32, height: isMobile ? 26 : 32, background: iconBg, borderRadius: 7, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
@@ -690,7 +693,7 @@ const GreenPill = ({ children }) => <span style={{ display: "flex", alignItems: 
 const RedPill = ({ children }) => <span style={{ color: "#F87171", fontSize: 12, fontWeight: 600, background: "rgba(239,68,68,.1)", padding: "3px 8px", borderRadius: 20, fontFamily: "'IBM Plex Sans', sans-serif" }}>{children}</span>;
 const AmberPill = ({ children }) => <span style={{ color: "#F59E0B", fontSize: 12, fontWeight: 600, background: "rgba(245,158,11,.1)", padding: "3px 8px", borderRadius: 20, fontFamily: "'IBM Plex Sans', sans-serif" }}>{children}</span>;
 
-function Dashboard({ invoices, onPayAllJuly, chartData, supplierNames, supplierColor, user, onMissingAlert, onAnomalyAlert, missingSuppliers, anomalyMap, onViewMonth }) {
+function Dashboard({ invoices, onPayAllJuly, chartData, supplierNames, supplierColor, user, onMissingAlert, onAnomalyAlert, missingSuppliers, anomalyMap, onViewMonth, onNavigateFiltered }) {
   const T = useT();
   const { t } = useLang();
   const { isMobile, isTablet } = useLayout();
@@ -705,7 +708,7 @@ function Dashboard({ invoices, onPayAllJuly, chartData, supplierNames, supplierC
   const currentMonthTotal = currentMonthInvoices.reduce((s, i) => s + Number(i.amount || 0), 0);
   const currentMonthSuppliers = [...new Set(currentMonthInvoices.map(i => i.supplier))].length;
   const hour = now.getHours();
-  const greeting = hour < 12 ? t("greeting_morning") : hour < 17 ? t("greeting_afternoon") : t("greeting_evening");
+  const greeting = hour < 12 ? t("greeting_morning") : hour < 17 ? t("greeting_afternoon") : hour < 21 ? t("greeting_evening") : t("greeting_night");
   const firstName = user?.user_metadata?.full_name?.split(" ")[0] || user?.email?.split("@")[0] || "";
   const kpis = {
     outstanding: invoices.filter(isUnpaid).reduce((s, i) => s + Number(i.amount), 0),
@@ -736,12 +739,14 @@ function Dashboard({ invoices, onPayAllJuly, chartData, supplierNames, supplierC
       iconBg: "rgba(99,102,241,.13)", iconColor: "#818CF8",
       iconPath: <><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></>,
       pill: <DeltaPill delta={outstandingDelta} />, context: t("dash_vs_last"),
+      onClick: () => onNavigateFiltered?.("Unpaid"),
     },
     {
       label: t("kpi_overdue"), value: kpis.overdue, valueColor: "#F87171", delay: 0.06,
       iconBg: "rgba(239,68,68,.12)", iconColor: "#F87171",
       iconPath: <><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></>,
       pill: <RedPill>{overdueCount} {t("kpi_invoices")}</RedPill>, context: t("kpi_need_action"),
+      onClick: () => onNavigateFiltered?.("Overdue"),
     },
     {
       label: t("kpi_next_month"), value: kpis.nextMonth, delay: 0.12,
@@ -754,12 +759,14 @@ function Dashboard({ invoices, onPayAllJuly, chartData, supplierNames, supplierC
       iconBg: "rgba(34,197,94,.12)", iconColor: "#22C55E",
       iconPath: <><polyline points="20 6 9 17 4 12"/></>,
       pill: <DeltaPill delta={paidDelta} />, context: t("dash_vs_last"),
+      onClick: () => onNavigateFiltered?.("Paid"),
     },
   ];
 
   const isCompact = isMobile || isTablet;
   const kpiCols = isMobile ? "1fr 1fr" : isTablet ? "1fr 1fr" : "repeat(4,1fr)";
   const [chartRange, setChartRange] = React.useState("4m");
+  const [focusedMonth, setFocusedMonth] = React.useState(null);
   const chartSuppliers = supplierNames || [];
   const resolvedChartData = chartData && chartData.length > 0 ? chartData : [];
   const getColor = supplierColor || (() => "#6366F1");
@@ -837,8 +844,11 @@ function Dashboard({ invoices, onPayAllJuly, chartData, supplierNames, supplierC
               <div style={{ fontFamily: SANS, fontSize: 12, color: T.t2, marginTop: 3 }}>{t("dash_upcoming")}</div>
             </div>
             <div style={{ display: "flex", gap: 4, background: T.isDark ? "rgba(255,255,255,.04)" : T.surf2, border: `1px solid ${T.bdr}`, borderRadius: 8, padding: 3 }}>
+              {focusedMonth && chartRange === "1m" && (
+                <button onClick={() => { setFocusedMonth(null); setChartRange("4m"); }} style={{ padding: "4px 10px", borderRadius: 6, border: "none", background: "transparent", fontFamily: SANS, fontSize: 11, fontWeight: 600, color: T.t2, cursor: "pointer" }}>← All</button>
+              )}
               {[{ key: "1m", label: "1 month" }, { key: "4m", label: "4 months" }].map(opt => (
-                <button key={opt.key} onClick={() => setChartRange(opt.key)} style={{ padding: "4px 12px", borderRadius: 6, border: "none", background: chartRange === opt.key ? (T.isDark ? "rgba(99,102,241,.25)" : T.indigoTint) : "transparent", fontFamily: SANS, fontSize: 11, fontWeight: 600, color: chartRange === opt.key ? (T.isDark ? "#A5B4FC" : T.indigo) : T.t2, cursor: "pointer" }}>{opt.label}</button>
+                <button key={opt.key} onClick={() => { setChartRange(opt.key); if (opt.key === "4m") setFocusedMonth(null); }} style={{ padding: "4px 12px", borderRadius: 6, border: "none", background: chartRange === opt.key ? (T.isDark ? "rgba(99,102,241,.25)" : T.indigoTint) : "transparent", fontFamily: SANS, fontSize: 11, fontWeight: 600, color: chartRange === opt.key ? (T.isDark ? "#A5B4FC" : T.indigo) : T.t2, cursor: "pointer" }}>{opt.label}</button>
               ))}
             </div>
           </div>
@@ -846,17 +856,17 @@ function Dashboard({ invoices, onPayAllJuly, chartData, supplierNames, supplierC
             const now2 = new Date();
             const currentMonthKey = `${["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"][now2.getMonth()]} '${String(now2.getFullYear()).slice(2)}`;
             const displayData = chartRange === "1m"
-              ? resolvedChartData.filter(m => m.month === currentMonthKey)
+              ? resolvedChartData.filter(m => m.month === (focusedMonth || currentMonthKey))
               : resolvedChartData.slice(-4);
             return (
           <ResponsiveContainer width="100%" height={isMobile ? 180 : 260}>
-            <BarChart data={displayData} barSize={chartRange === "1m" ? (isMobile ? 40 : 60) : (isMobile ? 20 : 28)} barCategoryGap="40%">
+            <BarChart data={displayData} barSize={chartRange === "1m" ? (isMobile ? 44 : 70) : (isMobile ? 28 : 42)} barCategoryGap="28%" onClick={(data) => { if (data?.activeLabel) { setFocusedMonth(data.activeLabel); setChartRange("1m"); } }}>
               <CartesianGrid strokeDasharray="3 3" stroke={T.bdr} vertical={false} />
               <XAxis dataKey="month" tick={{ fontFamily: SANS, fontSize: isMobile ? 10 : 11, fill: T.t3 }} axisLine={false} tickLine={false} />
               <YAxis tick={{ fontFamily: SANS, fontSize: 10, fill: T.t3 }} axisLine={false} tickLine={false} tickFormatter={v => `₪${(v / 1000).toFixed(0)}k`} width={isMobile ? 32 : 38} />
               <Tooltip content={<ChartTooltip />} cursor={{ fill: T.indigoTint }} />
               {chartSuppliers.map((name, i) => (
-                <Bar key={name} dataKey={name} stackId="a" fill={getColor(name)} radius={i === chartSuppliers.length - 1 ? [3, 3, 0, 0] : [0, 0, 0, 0]} />
+                <Bar key={name} dataKey={name} stackId="a" fill={getColor(name)} radius={i === chartSuppliers.length - 1 ? [3, 3, 0, 0] : [0, 0, 0, 0]} animationDuration={600} animationEasing="ease-out" />
               ))}
             </BarChart>
           </ResponsiveContainer>
@@ -1062,7 +1072,7 @@ function GroupedView({ invoices, selectedMonth, onMonthChange, selectedIds, onTo
   );
 }
 
-function InvoicesView({ invoices, selectedMonth, onMonthChange, onMarkPaid, onBulkPaid, onBulkUnpaid, preSelectAll, onEditInvoice, anomalyMap, missingSuppliers }) {
+function InvoicesView({ invoices, selectedMonth, onMonthChange, onMarkPaid, onBulkPaid, onBulkUnpaid, preSelectAll, onEditInvoice, anomalyMap, missingSuppliers, initialFilterStatus, initialSelectedId }) {
   const T = useT();
   const { isMobile, isTablet } = useLayout();
   const { t } = useLang();
@@ -1101,6 +1111,8 @@ function InvoicesView({ invoices, selectedMonth, onMonthChange, onMarkPaid, onBu
       setSelectedIds(new Set(ids));
     }
   }, [preSelectAll, selectedMonth]);
+  useEffect(() => { if (initialFilterStatus) setFilterStatuses(new Set([initialFilterStatus])); }, [initialFilterStatus]);
+  useEffect(() => { if (initialSelectedId) setSelectedIds(new Set([initialSelectedId])); }, [initialSelectedId]);
 
   const toggleSelect = useCallback((id) => { setSelectedIds(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; }); }, []);
   const toggleAll = useCallback((ids) => { setSelectedIds(prev => { const allSel = ids.every(id => prev.has(id)); const n = new Set(prev); if (allSel) ids.forEach(id => n.delete(id)); else ids.forEach(id => n.add(id)); return n; }); }, []);
@@ -1911,6 +1923,8 @@ export default function App() {
     return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
   });
   const [preSelectAll, setPreSelectAll] = useState(false);
+  const [initialFilterStatus, setInitialFilterStatus] = useState(null);
+  const [deepLinkInvoiceId, setDeepLinkInvoiceId] = useState(null);
   const [showUpgrade, setShowUpgrade] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [windowWidth, setWindowWidth] = useState(typeof window !== "undefined" ? window.innerWidth : 1280);
@@ -2038,6 +2052,7 @@ export default function App() {
   const handleBulkPaid = useCallback((ids) => { ids.forEach(id => updateInvoice(id, { status: "Paid" })); }, [updateInvoice]);
   const handleBulkUnpaid = useCallback((ids) => { ids.forEach(id => updateInvoice(id, { status: "Unpaid" })); }, [updateInvoice]);
   useEffect(() => { if (preSelectAll) { const t = setTimeout(() => setPreSelectAll(false), 100); return () => clearTimeout(t); } }, [preSelectAll]);
+  useEffect(() => { if (view !== "invoices") { setInitialFilterStatus(null); setDeepLinkInvoiceId(null); } }, [view]);
 
   // Upload handler — full pipeline: PDF/image → Claude extraction → dedup → R2/Supabase storage → addInvoice
   const handleUpload = useCallback(async (e) => {
@@ -2198,8 +2213,8 @@ export default function App() {
             )}
             <main style={{ flex: 1, overflowY: "auto", padding: isMobile ? "20px 16px 100px" : "28px clamp(20px,3vw,36px) 80px" }}>
               <div style={{ width: "100%" }}>
-                {view === "dashboard"    && <Dashboard invoices={invoices} onPayAllJuly={handlePayAll} chartData={chartData} supplierNames={allNames} supplierColor={getSupplierColor} user={user} onMissingAlert={() => setShowMissingModal(true)} onAnomalyAlert={() => setShowAnomalyModal(true)} missingSuppliers={missingSuppliers} anomalyMap={anomalyMap} onViewMonth={handleViewMonth} />}
-                {view === "invoices"     && <InvoicesView invoices={invoices} selectedMonth={selectedMonth} onMonthChange={setSelectedMonth} onMarkPaid={handleMarkPaid} onBulkPaid={handleBulkPaid} onBulkUnpaid={handleBulkUnpaid} preSelectAll={preSelectAll} onEditInvoice={setEditInvoice} anomalyMap={anomalyMap} missingSuppliers={missingSuppliers} />}
+                {view === "dashboard"    && <Dashboard invoices={invoices} onPayAllJuly={handlePayAll} chartData={chartData} supplierNames={allNames} supplierColor={getSupplierColor} user={user} onMissingAlert={() => setShowMissingModal(true)} onAnomalyAlert={() => setShowAnomalyModal(true)} missingSuppliers={missingSuppliers} anomalyMap={anomalyMap} onViewMonth={handleViewMonth} onNavigateFiltered={(status) => { setView("invoices"); setInitialFilterStatus(status); }} />}
+                {view === "invoices"     && <InvoicesView invoices={invoices} selectedMonth={selectedMonth} onMonthChange={setSelectedMonth} onMarkPaid={handleMarkPaid} onBulkPaid={handleBulkPaid} onBulkUnpaid={handleBulkUnpaid} preSelectAll={preSelectAll} onEditInvoice={setEditInvoice} anomalyMap={anomalyMap} missingSuppliers={missingSuppliers} initialFilterStatus={initialFilterStatus} initialSelectedId={deepLinkInvoiceId} />}
                 {view === "calendar"     && <CalendarView computed={invoices} calMonth={calMonth} setCalMonth={setCalMonth} color={getSupplierColor} />}
                 {view === "integrations" && <IntegrationsPage
                   syncJobs={syncJobs} onStartSync={startSync} onCancelSync={cancelSync}
@@ -2241,7 +2256,7 @@ export default function App() {
             <SearchOverlay
               invoices={invoices}
               suppliers={suppliers}
-              onNavigate={(v, month) => { setView(v); if (month) setSelectedMonth(month); }}
+              onNavigate={(v, month, invId) => { setView(v); if (month) setSelectedMonth(month); if (invId) setDeepLinkInvoiceId(invId); }}
               onClose={() => setShowSearch(false)}
             />
           )}

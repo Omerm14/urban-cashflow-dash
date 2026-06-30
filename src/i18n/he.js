@@ -13,6 +13,7 @@ const he = {
   greeting_morning: "בוקר טוב",
   greeting_afternoon: "צהריים טובים",
   greeting_evening: "ערב טוב",
+  greeting_night: "לילה טוב",
   dash_today: "הנה מצבך היום",
   dash_pay_ready: "לשלם עבור {month} — אתה מוכן",
   dash_nothing_due: "אין תשלומים עבור {month} 🎉",

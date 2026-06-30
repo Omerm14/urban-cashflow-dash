@@ -13,6 +13,7 @@ const en = {
   greeting_morning: "Good morning",
   greeting_afternoon: "Good afternoon",
   greeting_evening: "Good evening",
+  greeting_night: "Good night",
   dash_today: "Here's where you stand today",
   dash_pay_ready: "Pay {month} — you're ready",
   dash_nothing_due: "Nothing due in {month} 🎉",
