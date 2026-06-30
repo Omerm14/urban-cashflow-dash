@@ -29,7 +29,6 @@ module.exports = async (req, res) => {
     } else {
       result = await extraction.extractFromText(text, req.user.id);
     }
-    console.log('[extract] raw result:', JSON.stringify(result));
     res.json({ result });
   } catch (err) {
     console.error('Extract error:', err.message);

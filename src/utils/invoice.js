@@ -128,7 +128,7 @@ export const matchSupplier = (name, suppliers) => {
 
   // 1. Exact match (quote-normalised)
   let hit = suppliers.find(s => norm(s.name) === n);
-  if (hit) { console.log('[match]', name, '→', hit.name, '(exact)'); return hit; }
+  if (hit) return hit;
 
   // 2. Substring match — one name contains the other (no ratio gate so that short
   //    stored names like "ארגל" match longer extracted names like "ארגל אקספרס").
@@ -138,20 +138,15 @@ export const matchSupplier = (name, suppliers) => {
     const sn = norm(s.name);
     return n.includes(sn) || sn.includes(n);
   });
-  if (subMatches.length === 1) {
-    console.log('[match]', name, '→', subMatches[0].name, '(substring)');
-    return subMatches[0];
-  }
+  if (subMatches.length === 1) return subMatches[0];
   if (subMatches.length > 1) {
-    const best = subMatches.reduce((b, s) => norm(s.name).length > norm(b.name).length ? s : b);
-    console.log('[match]', name, '→', best.name, '(substring-longest)');
-    return best;
+    return subMatches.reduce((b, s) => norm(s.name).length > norm(b.name).length ? s : b);
   }
 
   // 3. Word-overlap — exclude generic business-entity suffix so that בע"מ
   //    (in any quote encoding) never drives a match on its own
   const words = n.split(/\s+/).filter(w => w.length > 2 && !STOP.has(w));
-  if (!words.length) { console.log('[match]', name, '→ null (no meaningful words)'); return null; }
+  if (!words.length) return null;
 
   let best = null, bestScore = 0, secondBest = 0;
   suppliers.forEach(s => {
@@ -161,9 +156,7 @@ export const matchSupplier = (name, suppliers) => {
     else if (score > secondBest) { secondBest = score; }
   });
 
-  const result = bestScore >= Math.ceil(words.length / 2) && bestScore > secondBest ? best : null;
-  console.log('[match]', name, '→', result?.name ?? null, `(score ${bestScore} vs ${secondBest})`);
-  return result;
+  return bestScore >= Math.ceil(words.length / 2) && bestScore > secondBest ? best : null;
 };
 
 export const parseCSV = text => {

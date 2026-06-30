@@ -82,7 +82,10 @@ exports.googleCallback = async (req, res) => {
   // Parse state first so we can redirect back to the correct frontend URL (branch/preview/local)
   let stateData = {};
   try { stateData = JSON.parse(state || '{}'); } catch { /* fall through */ }
-  const frontend = stateData.returnUrl || process.env.FRONTEND_URL || 'http://localhost:5173';
+  const allowedOrigins = (process.env.FRONTEND_URL || 'http://localhost:5173').split(',').map(s => s.trim());
+  const returnUrl = stateData.returnUrl || '';
+  const isAllowed = !returnUrl || allowedOrigins.some(origin => returnUrl.startsWith(origin));
+  const frontend = isAllowed && returnUrl ? returnUrl : (allowedOrigins[0]);
 
   if (error) return res.redirect(`${frontend}?view=integrations&oauth_error=${encodeURIComponent(error)}`);
   if (!stateData.userId) return res.redirect(`${frontend}?view=integrations&oauth_error=invalid_state`);
