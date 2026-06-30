@@ -82,11 +82,22 @@ exports.googleCallback = async (req, res) => {
   // Parse state first so we can redirect back to the correct frontend URL (branch/preview/local)
   let stateData = {};
   try { stateData = JSON.parse(state || '{}'); } catch { /* fall through */ }
-  const allowedOrigins = (process.env.FRONTEND_URL || 'http://localhost:5173').split(',').map(s => s.trim());
+  const allowedOrigins = (process.env.FRONTEND_URL || '').split(',').map(s => s.trim()).filter(Boolean);
+  if (!allowedOrigins.length) {
+    console.error('[integrations] FRONTEND_URL not set — cannot validate OAuth returnUrl');
+    return res.status(500).json({ error: 'Server misconfiguration: FRONTEND_URL not set' });
+  }
   const returnUrl = stateData.returnUrl || '';
-  const isAllowed = !returnUrl || allowedOrigins.some(origin => returnUrl.startsWith(origin));
-  const frontend = isAllowed && returnUrl ? returnUrl : (allowedOrigins[0]);
+  // Compare by exact hostname to prevent subdomain open-redirect attacks
+  const isAllowed = !returnUrl || (() => {
+    try {
+      const retHost = new URL(returnUrl).hostname;
+      return allowedOrigins.some(origin => new URL(origin).hostname === retHost);
+    } catch { return false; }
+  })();
+  const frontend = isAllowed && returnUrl ? returnUrl : allowedOrigins[0];
 
+  if (!isAllowed && returnUrl) return res.status(400).json({ error: 'Invalid returnUrl' });
   if (error) return res.redirect(`${frontend}?view=integrations&oauth_error=${encodeURIComponent(error)}`);
   if (!stateData.userId) return res.redirect(`${frontend}?view=integrations&oauth_error=invalid_state`);
 
@@ -314,6 +325,12 @@ exports.updateConfig = async (req, res) => {
 // PATCH /api/integrations/:id/auto-sync  { auto_sync_enabled, sync_frequency_min }
 exports.updateAutoSync = async (req, res) => {
   const { auto_sync_enabled, sync_frequency_min } = req.body;
+  if (sync_frequency_min !== undefined) {
+    const freq = Number(sync_frequency_min);
+    if (!Number.isInteger(freq) || freq < 5 || freq > 10080) {
+      return res.status(400).json({ error: 'sync_frequency_min must be an integer between 5 and 10080' });
+    }
+  }
   const { error } = await supabase
     .from('integrations')
     .update({ auto_sync_enabled, sync_frequency_min })

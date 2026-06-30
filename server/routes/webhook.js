@@ -33,12 +33,14 @@ exports.handleWhatsApp = async (req, res) => {
   const body = req.body;
   if (!body?.entry?.length) return;
 
-  // Verify HMAC signature using the shared app secret
-  if (rawBody && process.env.WHATSAPP_APP_SECRET) {
-    if (!verifySignature(rawBody, signature, process.env.WHATSAPP_APP_SECRET)) {
-      console.warn('[webhook:wa] invalid HMAC signature — ignoring payload');
-      return;
-    }
+  // Verify HMAC signature using the shared app secret — fail hard if secret is not configured
+  if (!process.env.WHATSAPP_APP_SECRET) {
+    console.error('[webhook:wa] WHATSAPP_APP_SECRET not set — rejecting all webhook payloads');
+    return;
+  }
+  if (!verifySignature(rawBody || '', signature, process.env.WHATSAPP_APP_SECRET)) {
+    console.warn('[webhook:wa] invalid HMAC signature — ignoring payload');
+    return;
   }
 
   (async () => {

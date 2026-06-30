@@ -9,7 +9,11 @@ exports.runSync = async (req, res) => {
   const secret = process.env.CRON_SECRET;
   const auth   = req.headers.authorization || '';
 
-  if (!secret || auth !== `Bearer ${secret}`) {
+  const expected = `Bearer ${secret || ''}`;
+  const credOk = secret &&
+    auth.length === expected.length &&
+    require('crypto').timingSafeEqual(Buffer.from(auth), Buffer.from(expected));
+  if (!credOk) {
     return res.status(401).json({ error: 'Unauthorized' });
   }
 

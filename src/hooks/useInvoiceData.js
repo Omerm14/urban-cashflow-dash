@@ -34,10 +34,10 @@ export const useInvoiceData = () => {
   }, [user]);
 
   const updateInvoice = useCallback(async (id, patch) => {
-    const { error } = await supabase.from('invoices').update(patch).eq('id', id);
+    const { error } = await supabase.from('invoices').update(patch).eq('id', id).eq('user_id', user.id);
     if (error) { console.error('updateInvoice:', error.message); throw error; }
     setInvoices(p => p.map(i => i.id === id ? { ...i, ...patch } : i));
-  }, []);
+  }, [user]);
 
   // Deletes go through the API so the original file in object storage is removed
   // alongside the row (the browser has no delete credentials for R2).
@@ -55,16 +55,16 @@ export const useInvoiceData = () => {
   }, []);
 
   const bulkMarkPaid = useCallback(async ids => {
-    const { error } = await supabase.from('invoices').update({ status: STATUS.PAID }).in('id', ids);
+    const { error } = await supabase.from('invoices').update({ status: STATUS.PAID }).in('id', ids).eq('user_id', user.id);
     if (error) { console.error('bulkMarkPaid:', error.message); throw error; }
     setInvoices(p => p.map(i => ids.includes(i.id) ? { ...i, status: STATUS.PAID } : i));
-  }, []);
+  }, [user]);
 
   const bulkMarkUnpaid = useCallback(async ids => {
-    const { error } = await supabase.from('invoices').update({ status: STATUS.UNPAID }).in('id', ids);
+    const { error } = await supabase.from('invoices').update({ status: STATUS.UNPAID }).in('id', ids).eq('user_id', user.id);
     if (error) { console.error('bulkMarkUnpaid:', error.message); throw error; }
     setInvoices(p => p.map(i => ids.includes(i.id) ? { ...i, status: STATUS.UNPAID } : i));
-  }, []);
+  }, [user]);
 
   const bulkDelete = useCallback(async ids => {
     const { data: { session } } = await supabase.auth.getSession();
@@ -89,16 +89,16 @@ export const useInvoiceData = () => {
   }, [user]);
 
   const updateSupplier = useCallback(async (id, patch) => {
-    const { error } = await supabase.from('suppliers').update(patch).eq('id', id);
+    const { error } = await supabase.from('suppliers').update(patch).eq('id', id).eq('user_id', user.id);
     if (error) { console.error('updateSupplier:', error.message); throw error; }
     setSuppliers(p => p.map(s => s.id === id ? { ...s, ...patch } : s));
-  }, []);
+  }, [user]);
 
   const deleteSupplier = useCallback(async id => {
-    const { error } = await supabase.from('suppliers').delete().eq('id', id);
+    const { error } = await supabase.from('suppliers').delete().eq('id', id).eq('user_id', user.id);
     if (error) { console.error('deleteSupplier:', error.message); throw error; }
     setSuppliers(p => p.filter(s => s.id !== id));
-  }, []);
+  }, [user]);
 
   const refreshInvoices = useCallback(async () => {
     if (!user) return;

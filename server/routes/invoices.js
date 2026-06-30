@@ -40,6 +40,7 @@ exports.remove = async (req, res) => {
 exports.bulkRemove = async (req, res) => {
   const ids = Array.isArray(req.body?.ids) ? req.body.ids : [];
   if (!ids.length) return res.status(400).json({ error: 'ids array is required' });
+  if (ids.length > 500) return res.status(400).json({ error: 'Cannot delete more than 500 invoices at once' });
 
   const { data: rows, error } = await supabase
     .from('invoices')
@@ -80,7 +81,9 @@ exports.presignUpload = async (req, res) => {
   if (backend !== 'r2') return res.json({ backend });
 
   try {
+    const ALLOWED_EXTS = new Set(['pdf', 'jpg', 'jpeg', 'png', 'webp', 'heic']);
     const ext = (filename.split('.').pop() || 'bin').toLowerCase();
+    if (!ALLOWED_EXTS.has(ext)) return res.status(400).json({ error: `File type .${ext} is not supported` });
     // Hash-named key dedups repeat uploads (incl. each page of one PDF) to one object.
     const base = fileHash || `${Date.now()}-${Math.random().toString(36).slice(2)}`;
     const key  = `${req.user.id}/${base}.${ext}`;

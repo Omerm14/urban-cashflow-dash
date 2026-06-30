@@ -16,10 +16,11 @@ const extractLimiter = rateLimit({ windowMs: 60_000, max: 120, standardHeaders: 
 const syncLimiter    = rateLimit({ windowMs: 60_000, max: 10,  standardHeaders: true, legacyHeaders: false, message: { error: 'Too many sync requests, please wait' } });
 
 // Capture raw body for webhook signature verification before JSON parsing
-// (needed for WhatsApp HMAC verification).
+// (needed for WhatsApp HMAC and Stripe signature verification).
 app.use((req, res, next) => {
   const needsRaw =
-    (req.path === '/api/webhook/whatsapp' && req.method === 'POST');
+    (req.path === '/api/webhook/whatsapp' && req.method === 'POST') ||
+    (req.path === '/api/stripe/webhook'   && req.method === 'POST');
   if (needsRaw) {
     let data = '';
     req.on('data', chunk => { data += chunk; });
@@ -69,6 +70,11 @@ app.post('/api/webhook/whatsapp', webhook.handleWhatsApp);
 const billingRoutes = require('./routes/billing');
 app.post('/api/billing/ipn', billingRoutes.ipn);
 app.use('/api/billing', auth, billingRoutes.router);
+
+// Stripe — webhook has no auth (verified by Stripe signature); rest uses auth middleware
+const stripeRoutes = require('./routes/stripe');
+app.post('/api/stripe/webhook', stripeRoutes.webhook);
+app.use('/api/stripe', auth, stripeRoutes.router);
 
 // Cron (secured by CRON_SECRET header)
 app.get('/api/cron/sync', require('./routes/cron').runSync);
