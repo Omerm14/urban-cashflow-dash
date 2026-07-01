@@ -12,7 +12,7 @@ function statusBadge(status) {
   return map[status] || map[STATUS.UNPAID];
 }
 
-export default function InvoicesTable({ computed, dupeIds, updateInvoice, deleteInvoice, setEditInvoice, color, selectedIds, onToggleSelect, onToggleAll, onViewAttachment }) {
+export default function InvoicesTable({ computed, dupeIds, anomalyMap, updateInvoice, deleteInvoice, setEditInvoice, color, selectedIds, onToggleSelect, onToggleAll, onViewAttachment }) {
   const allIds = computed.map(i => i.id);
   const allSelected = allIds.length > 0 && allIds.every(id => selectedIds.has(id));
   const someSelected = !allSelected && allIds.some(id => selectedIds.has(id));
@@ -75,7 +75,21 @@ export default function InvoicesTable({ computed, dupeIds, updateInvoice, delete
                   </div>
                 </td>
                 <td style={{ color:"var(--t2)" }}>{fmt(inv.invoiceDate)}</td>
-                <td style={{ fontWeight:700, fontSize:14 }}>{currency(inv.amount)}</td>
+                <td style={{ fontWeight:700, fontSize:14 }}>
+                  <span style={{ display:"inline-flex", alignItems:"center", gap:5 }}>
+                    {currency(inv.amount)}
+                    {anomalyMap?.get(inv.id) && (() => {
+                      const a = anomalyMap.get(inv.id);
+                      return (
+                        <span
+                          title={`${a.direction === 'higher' ? 'גבוה' : 'נמוך'} ב-${a.deviationPct}% מהממוצע של הספק (${currency(a.average)})`}
+                          style={{ color:"#fbbf24", fontSize:12, cursor:"help", flexShrink:0 }}>
+                          ⚠
+                        </span>
+                      );
+                    })()}
+                  </span>
+                </td>
                 <td>
                   {inv.dueDate
                     ? <span style={{ color:"var(--t2)" }}>{fmt(inv.dueDate)}</span>

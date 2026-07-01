@@ -1,13 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
-
-const PLAN_LIMITS = {
-  free:       20,
-  basic:      50,
-  pro:        150,
-  enterprise: Infinity,
-};
+import { PLAN_LIMITS } from '../constants/plans';
 
 export const usePlan = () => {
   const { user, session } = useAuth();

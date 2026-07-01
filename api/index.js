@@ -4,16 +4,14 @@ const express = require('express');
 const app  = express();
 const auth = require('../server/middleware/auth');
 
-// Capture raw body for webhook signature verification before JSON parsing
-app.use((req, res, next) => {
-  if (req.path === '/api/webhook/whatsapp' && req.method === 'POST') {
-    let data = '';
-    req.on('data', chunk => { data += chunk; });
-    req.on('end', () => { req.rawBody = data; next(); });
-  } else {
-    next();
-  }
-});
+// WhatsApp webhook must be registered BEFORE global json parser —
+// it uses its own body reader to capture rawBody for HMAC verification.
+const webhook = require('../server/routes/webhook');
+app.get('/api/webhook/whatsapp', webhook.verifyWhatsApp);
+app.post('/api/webhook/whatsapp',
+  express.json({ limit: '20mb', strict: false }),
+  webhook.handleWhatsApp,
+);
 
 app.use(express.json({ limit: '20mb' }));
 
@@ -46,18 +44,19 @@ app.delete('/api/invoices/:id',           auth, invoices.remove);
 app.post('/api/invoices/bulk-delete',     auth, invoices.bulkRemove);
 app.post('/api/attachments/presign',      auth, invoices.presignUpload);
 
-// WhatsApp webhook (no auth — verified by HMAC signature)
-const webhook = require('../server/routes/webhook');
-app.get('/api/webhook/whatsapp',  webhook.verifyWhatsApp);
-app.post('/api/webhook/whatsapp', webhook.handleWhatsApp);
+
+// Profile (logo upload)
+app.post('/api/profile/logo', auth, require('../server/routes/profile').uploadLogo);
 
 // Billing (Meshulam)
 const billing = require('../server/routes/billing');
 app.post('/api/billing/ipn', billing.ipn);
 app.use('/api/billing', auth, billing.router);
 
-// Account management
-app.delete('/api/account', auth, require('../server/routes/account').deleteAccount);
+// Account management (strict rate limit — permanent destructive operation)
+const rateLimit = require('express-rate-limit');
+const accountLimiter = rateLimit({ windowMs: 3_600_000, max: 3, standardHeaders: true, legacyHeaders: false, message: { error: 'Too many account operations, please wait' } });
+app.delete('/api/account', accountLimiter, auth, require('../server/routes/account').deleteAccount);
 
 // Cron (secured by CRON_SECRET header)
 app.get('/api/cron/sync', require('../server/routes/cron').runSync);

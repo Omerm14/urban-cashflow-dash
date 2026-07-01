@@ -1,6 +1,35 @@
 const crypto   = require('crypto');
+const https    = require('https');
 const supabase  = require('../lib/supabase');
 const sync      = require('../services/syncProcessor');
+
+// Send a text reply to a WhatsApp phone number via the Cloud API
+async function sendWhatsAppReply(to, text) {
+  const token   = process.env.WHATSAPP_API_TOKEN;
+  const phoneId = process.env.WHATSAPP_PHONE_NUMBER_ID;
+  if (!token || !phoneId || !to) return;
+
+  const payload = JSON.stringify({
+    messaging_product: 'whatsapp',
+    to,
+    type: 'text',
+    text: { body: text },
+  });
+
+  return new Promise((resolve) => {
+    const req = https.request({
+      hostname: 'graph.facebook.com',
+      path:     `/v20.0/${phoneId}/messages`,
+      method:   'POST',
+      headers:  { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+    }, (res) => {
+      res.resume();
+      res.on('end', resolve);
+    });
+    req.on('error', (e) => console.error('[webhook:wa] reply send error:', e.message));
+    req.end(payload);
+  });
+}
 
 // Verify WhatsApp Cloud API webhook signature
 const verifySignature = (rawBody, signature, secret) => {
@@ -18,73 +47,145 @@ exports.verifyWhatsApp = (req, res) => {
   const expected = process.env.WHATSAPP_VERIFY_TOKEN || '';
   const a = Buffer.from(`${token || ''}`);
   const b = Buffer.from(expected);
-  const tokenOk = expected && a.length === b.length && crypto.timingSafeEqual(a, b);
-  if (mode === 'subscribe' && tokenOk) {
-    return res.status(200).send(challenge);
-  }
-  res.status(403).json({ error: 'Forbidden' });
+  const ok = expected && mode === 'subscribe' && a.length === b.length && crypto.timingSafeEqual(a, b);
+  ok ? res.status(200).send(challenge) : res.status(403).json({ error: 'Forbidden' });
 };
+
+// Register/re-assign msg.from to the matched integration's whitelisted_phones.
+// If the phone was previously on a different integration, remove it from there first.
+async function registerPhone(phone, integration) {
+  if (!phone) return;
+
+  const { data: prevInt } = await supabase
+    .from('integrations')
+    .select('id, config')
+    .eq('type', 'whatsapp')
+    .eq('status', 'connected')
+    .contains('config', { whitelisted_phones: [phone] })
+    .neq('id', integration.id)
+    .maybeSingle();
+
+  if (prevInt) {
+    const filtered = (prevInt.config.whitelisted_phones || []).filter(p => p !== phone);
+    await supabase.from('integrations')
+      .update({ config: { ...prevInt.config, whitelisted_phones: filtered } })
+      .eq('id', prevInt.id);
+    console.log(`[webhook:wa] re-assigned ${phone} from integration ${prevInt.id} to ${integration.id}`);
+  }
+
+  const phones = integration.config.whitelisted_phones || [];
+  if (!phones.includes(phone)) {
+    await supabase.from('integrations')
+      .update({ config: { ...integration.config, whitelisted_phones: [...phones, phone] } })
+      .eq('id', integration.id);
+    console.log(`[webhook:wa] whitelisted ${phone} on integration ${integration.id}`);
+  }
+}
 
 // POST /api/webhook/whatsapp  — incoming message handler
 exports.handleWhatsApp = async (req, res) => {
-  // Respond 200 immediately — WhatsApp retries if we don't
-  res.status(200).json({ ok: true });
-
-  const rawBody = req.rawBody;
-  const signature = req.headers['x-hub-signature-256'];
+  if (!process.env.WHATSAPP_APP_SECRET) {
+    console.error('[webhook:wa] WHATSAPP_APP_SECRET not set — rejecting all webhook payloads');
+    return res.status(200).json({ ok: true }); // 200 so Meta doesn't disable the webhook
+  }
+  const signature = req.headers['x-hub-signature-256'] || '';
+  if (!verifySignature(req.rawBody || '', signature, process.env.WHATSAPP_APP_SECRET)) {
+    console.warn('[webhook:wa] invalid HMAC signature — ignoring payload');
+    return res.status(200).json({ ok: true });
+  }
 
   const body = req.body;
-  if (!body?.entry?.length) return;
+  console.log('[webhook:wa] received, entry len:', body?.entry?.length);
 
-  // Process each entry asynchronously after responding
-  (async () => {
-    for (const entry of body.entry) {
-      for (const change of (entry.changes || [])) {
-        if (change.field !== 'messages') continue;
-        const value = change.value || {};
-        const phone_number_id = value.metadata?.phone_number_id;
+  if (!body?.entry?.length) {
+    return res.status(200).json({ ok: true });
+  }
 
-        // Find matching integration by phone_number_id
-        const { data: integration } = await supabase
-          .from('integrations')
-          .select('*')
-          .eq('type', 'whatsapp')
-          .eq('status', 'connected')
-          .filter('config->phone_number_id', 'eq', phone_number_id)
-          .maybeSingle();
+  // Collect all media items that need processing (fast — just DB lookups)
+  const jobs = [];
 
-        if (!integration) continue;
+  for (const entry of body.entry) {
+    for (const change of (entry.changes || [])) {
+      if (change.field !== 'messages') continue;
+      const value = change.value || {};
 
-        // Verify HMAC signature now that we have the integration's secret
-        if (rawBody && integration.credentials?.webhook_secret) {
-          if (!verifySignature(rawBody, signature, integration.credentials.webhook_secret)) {
-            console.warn('[webhook:wa] invalid signature for integration', integration.id);
+      for (const msg of (value.messages || [])) {
+        if (!msg.id) continue;
+
+        const mediaType = ['image', 'document'].find(t => msg[t]);
+        if (!mediaType) continue;
+
+        const media    = msg[mediaType];
+        const mimeType = media.mime_type;
+
+        if (mimeType !== 'application/pdf' && !mimeType.startsWith('image/')) continue;
+
+        const inboxCode = (media.caption || '').trim().toUpperCase();
+        let integration = null;
+
+        if (inboxCode) {
+          // Primary routing: match by inbox code in caption
+          console.log(`[webhook:wa] looking up inbox code ${inboxCode}`);
+          const { data, error: dbErr } = await supabase
+            .from('integrations')
+            .select('*')
+            .eq('type', 'whatsapp')
+            .eq('status', 'connected')
+            .filter('config->>inbox_code', 'eq', inboxCode)
+            .maybeSingle();
+
+          if (dbErr) { console.error('[webhook:wa] db error:', dbErr.message); continue; }
+
+          if (data) {
+            integration = data;
+            // Register/re-assign this phone so future sends without caption are auto-routed
+            await registerPhone(msg.from, integration);
+          } else {
+            console.log(`[webhook:wa] unknown inbox code: ${inboxCode}`);
+          }
+        }
+
+        if (!integration && msg.from) {
+          // Fallback routing: match by whitelisted phone number
+          console.log(`[webhook:wa] no inbox code match, trying phone ${msg.from}`);
+          const { data, error: dbErr } = await supabase
+            .from('integrations')
+            .select('*')
+            .eq('type', 'whatsapp')
+            .eq('status', 'connected')
+            .contains('config', { whitelisted_phones: [msg.from] })
+            .maybeSingle();
+
+          if (dbErr) { console.error('[webhook:wa] db error (phone lookup):', dbErr.message); continue; }
+
+          if (data) {
+            integration = data;
+            console.log(`[webhook:wa] routed by phone ${msg.from} to integration ${integration.id}`);
+          } else {
+            console.log(`[webhook:wa] no match by code or phone for ${msg.from} — skipping`);
             continue;
           }
         }
 
-        for (const msg of (value.messages || [])) {
-          if (!msg.id) continue;
-          const mediaTypes = ['image', 'document', 'video'];
-          const mediaType = mediaTypes.find(t => msg[t]);
-          if (!mediaType) continue;
+        if (!integration) continue;
 
-          const media     = msg[mediaType];
-          const mediaId   = media.id;
-          const mimeType  = media.mime_type;
-          const filename  = media.filename || `${mediaType}_${mediaId}`;
-
-          // Only process PDF and image types
-          if (mimeType !== 'application/pdf' && !mimeType.startsWith('image/')) continue;
-
-          try {
-            await sync.processWhatsAppMedia(integration, integration.user_id, mediaId, filename, mimeType, msg.id);
-            console.log(`[webhook:wa] processed message ${msg.id}`);
-          } catch (err) {
-            console.error(`[webhook:wa] failed to process ${msg.id}:`, err.message);
-          }
-        }
+        console.log(`[webhook:wa] queuing job for ${msg.id}`);
+        jobs.push({ integration, media, mediaType, mimeType, msgId: msg.id, msgFrom: msg.from });
       }
     }
-  })();
+  }
+
+  // Process all jobs before responding — Vercel kills async work after response is sent
+  for (const { integration, media, mediaType, mimeType, msgId, msgFrom } of jobs) {
+    const filename = media.filename || `${mediaType}_${media.id}`;
+    try {
+      await sync.processWhatsAppMedia(integration, integration.user_id, media.id, filename, mimeType, msgId);
+      console.log(`[webhook:wa] processed ${msgId}`);
+      await sendWhatsAppReply(msgFrom, '✅ החשבונית התקבלה בהצלחה!');
+    } catch (err) {
+      console.error(`[webhook:wa] failed ${msgId}:`, err.message);
+    }
+  }
+
+  res.status(200).json({ ok: true });
 };

@@ -1,7 +1,7 @@
-import { calcDueDate } from "../utils/dates";
+import { calcDueDate, currency } from "../utils/dates";
 import { STATUS } from "../constants";
 
-export default function EditInvoiceModal({ editInvoice, setEditInvoice, suppliers, addInvoice, updateInvoice, getSupplier, onViewAttachment }) {
+export default function EditInvoiceModal({ editInvoice, setEditInvoice, suppliers, addInvoice, updateInvoice, getSupplier, onViewAttachment, anomaly }) {
   const close = () => setEditInvoice(null);
   const save  = async () => {
     const { id, ...fields } = editInvoice;
@@ -42,6 +42,16 @@ export default function EditInvoiceModal({ editInvoice, setEditInvoice, supplier
           </div>
           <button onClick={close} style={{ width:32, height:32, borderRadius:8, background:"#131c2e", border:"1px solid #1e2d45", color:"#64748b", cursor:"pointer", fontSize:16, display:"flex", alignItems:"center", justifyContent:"center" }}>✕</button>
         </div>
+        {anomaly && (
+          <div style={{ marginBottom:16, padding:"10px 14px", background:"rgba(234,179,8,.08)", borderRadius:10, border:"1px solid rgba(234,179,8,.3)", display:"flex", alignItems:"flex-start", gap:10 }}>
+            <span style={{ fontSize:16, flexShrink:0 }}>📊</span>
+            <div style={{ fontSize:12, color:"#fde68a", lineHeight:1.6 }}>
+              <strong style={{ color:"#fbbf24" }}>סכום חריג: </strong>
+              {anomaly.direction === 'higher' ? 'גבוה' : 'נמוך'} ב-{anomaly.deviationPct}% מהממוצע של הספק
+              {' '}({currency(anomaly.average)})
+            </div>
+          </div>
+        )}
         <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:14, marginBottom:14 }}>
           {[["Invoice #","invoiceNo","text"],["Invoice Date","invoiceDate","date"],["Amount","amount","number"],["Due Date (override)","dueDate","date"]].map(([label, key, type]) => (
             <div key={key}>

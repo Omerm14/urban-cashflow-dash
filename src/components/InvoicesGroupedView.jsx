@@ -39,7 +39,7 @@ function urgencyStyle(dueDate) {
 }
 
 
-function SupplierCard({ supplier, invoices, dupeIds, updateInvoice, deleteInvoice, setEditInvoice, color, selectedIds, onToggleSelect, onToggleAll, sortField, onViewAttachment, onPayGroup }) {
+function SupplierCard({ supplier, invoices, dupeIds, anomalyMap, updateInvoice, deleteInvoice, setEditInvoice, color, selectedIds, onToggleSelect, onToggleAll, sortField, onViewAttachment, onPayGroup }) {
   const [hov, setHov] = useState(false);
 
   const sorted = [...invoices].sort((a, b) => {
@@ -103,7 +103,16 @@ function SupplierCard({ supplier, invoices, dupeIds, updateInvoice, deleteInvoic
               {dupeIds.has(inv.id) && <span style={{ color:"var(--amber)", marginLeft:4, fontSize:10 }}> ⚠ DUP</span>}
             </span>
             <span style={{ color:"var(--t2)", fontSize:12 }}>{fmt(inv.invoiceDate)}</span>
-            <span style={{ fontWeight:700 }}>{currency(inv.amount)}</span>
+            <span style={{ fontWeight:700, display:"inline-flex", alignItems:"center", gap:4 }}>
+              {currency(inv.amount)}
+              {anomalyMap?.get(inv.id) && (() => {
+                const a = anomalyMap.get(inv.id);
+                return (
+                  <span title={`${a.direction === 'higher' ? 'גבוה' : 'נמוך'} ב-${a.deviationPct}% מהממוצע של הספק (${currency(a.average)})`}
+                    style={{ color:"#fbbf24", fontSize:11, cursor:"help" }}>⚠</span>
+                );
+              })()}
+            </span>
             <span className={`badge ${cls}`}>{dot}{inv.status}</span>
             <span style={{ fontSize:12, ...urgStyle }}>
               {inv.dueDate
@@ -112,9 +121,7 @@ function SupplierCard({ supplier, invoices, dupeIds, updateInvoice, deleteInvoic
               }
             </span>
             <div style={{ display:"flex", gap:5, justifyContent:"flex-end" }}>
-              {inv.attachment_path && (
-                <button className="btn btn-ghost btn-sm" title="View file" onClick={() => onViewAttachment?.(inv)}>📎</button>
-              )}
+              <button className="btn btn-ghost btn-sm" title="View file" onClick={() => onViewAttachment?.(inv)}>📎</button>
               {!isPaid && (
                 <button className="btn btn-success btn-sm" onClick={() => updateInvoice(inv.id, { status: STATUS.PAID })}>✓ Paid</button>
               )}
@@ -141,7 +148,7 @@ function SupplierCard({ supplier, invoices, dupeIds, updateInvoice, deleteInvoic
   );
 }
 
-export default function InvoicesGroupedView({ computed, dupeIds, updateInvoice, deleteInvoice, setEditInvoice, color, selectedIds, onToggleSelect, onToggleAll, selectedMonth, onMonthChange, sortField, onViewAttachment, onSelectAll }) {
+export default function InvoicesGroupedView({ computed, dupeIds, anomalyMap, updateInvoice, deleteInvoice, setEditInvoice, color, selectedIds, onToggleSelect, onToggleAll, selectedMonth, onMonthChange, sortField, onViewAttachment, onSelectAll }) {
   const [showCelebration, setShowCelebration] = useState(false);
 
   const monthInvoices = computed.filter(inv => inv.dueDate && inv.dueDate.startsWith(selectedMonth));
@@ -252,6 +259,7 @@ export default function InvoicesGroupedView({ computed, dupeIds, updateInvoice, 
           supplier={supplier}
           invoices={invoices}
           dupeIds={dupeIds}
+          anomalyMap={anomalyMap}
           updateInvoice={updateInvoice}
           deleteInvoice={deleteInvoice}
           setEditInvoice={setEditInvoice}

@@ -3,6 +3,7 @@ const crypto     = require('crypto');
 const supabase   = require('../lib/supabase');
 const storage    = require('../lib/storage');
 const { extractFromBuffer } = require('../lib/extraction');
+const { isDriveId } = require('../lib/validate');
 
 // ─── Date / due-date helpers (mirror of src/utils/dates.js) ─────────────────
 
@@ -216,13 +217,11 @@ const makeOAuth2 = credentials => {
   c.setCredentials(credentials);
   // Persist refreshed tokens back to DB automatically
   c.on('tokens', async tokens => {
-    if (tokens.refresh_token) {
-      await supabase
-        .from('integrations')
-        .update({ credentials: { ...credentials, ...tokens } })
-        .eq('user_id', credentials._userId)
-        .eq('type', credentials._type);
-    }
+    await supabase
+      .from('integrations')
+      .update({ credentials: { ...credentials, ...tokens } })
+      .eq('user_id', credentials._userId)
+      .eq('type', credentials._type);
   });
   return c;
 };
@@ -269,6 +268,7 @@ exports.syncGoogleDrive = async (integration, userId) => {
   const drive = google.drive({ version: 'v3', auth });
 
   const folderId   = integration.config?.folder_id;
+  if (folderId && !isDriveId(folderId)) throw new Error('Invalid folder_id in integration config');
   const lookback   = integration.config?.lookback_days ?? 0;
   const cutoffISO  = computeCutoff(integration.last_sync, lookback);
 
@@ -490,6 +490,7 @@ exports.discoverGoogleDriveFiles = async (integration, userId) => {
   const drive = google.drive({ version: 'v3', auth });
 
   const folderId  = integration.config?.folder_id;
+  if (folderId && !isDriveId(folderId)) throw new Error('Invalid folder_id in integration config');
   const lookback  = integration.config?.lookback_days ?? 0;
   const cutoffISO = computeCutoff(integration.last_sync, lookback);
 
@@ -560,14 +561,14 @@ exports.processGoogleDriveFileBatch = async (integration, userId, files) => {
 // ─── WhatsApp Business sync ──────────────────────────────────────────────────
 
 exports.processWhatsAppMedia = async (integration, userId, mediaId, filename, mimeType, waMessageId) => {
-  const { api_token } = integration.credentials || {};
-  if (!api_token) throw new Error('WhatsApp API token not set');
+  const api_token = process.env.WHATSAPP_API_TOKEN;
+  if (!api_token) throw new Error('WHATSAPP_API_TOKEN not configured on server');
 
-  // Check idempotency — skip if already processed
+  // Check idempotency — skip if already processed (sync_source_meta lives on invoices, not sync_events)
   const { data: existing } = await supabase
-    .from('sync_events')
+    .from('invoices')
     .select('id')
-    .eq('integration_id', integration.id)
+    .eq('user_id', userId)
     .contains('sync_source_meta', { wa_message_id: waMessageId })
     .maybeSingle();
   if (existing) {
@@ -592,8 +593,17 @@ exports.processWhatsAppMedia = async (integration, userId, mediaId, filename, mi
   const suppliers        = await getSuppliers(userId);
   const existingInvoices = await getExistingInvoices(userId);
 
-  return processFile(
+  const results = await processFile(
     buffer, filename || `whatsapp_${mediaId}`, mimeType, userId, suppliers, existingInvoices,
     integration.id, 'whatsapp', { wa_message_id: waMessageId, media_id: mediaId },
   );
+
+  if (results.length > 0) {
+    await supabase.from('integrations').update({
+      last_sync:  new Date().toISOString(),
+      sync_count: (integration.sync_count || 0) + results.length,
+    }).eq('id', integration.id);
+  }
+
+  return results;
 };

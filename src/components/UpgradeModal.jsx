@@ -1,21 +1,6 @@
 import { useState } from 'react';
 import { supabase } from '../lib/supabase';
-
-const PLAN_FEATURES = {
-  basic: [
-    'Up to 50 invoices/month',
-    '2 sync sources',
-    'Manual upload + OCR',
-    'Dashboard & calendar',
-  ],
-  pro: [
-    'Up to 150 invoices/month',
-    'All 4 sources (Gmail, Drive, WhatsApp, Green Invoice)',
-    'Auto-sync',
-    'Full audit trail',
-    'Priority support',
-  ],
-};
+import { PLAN_FEATURES } from '../constants/plans';
 
 export default function UpgradeModal({ plan, used, limit, onContinueReadonly }) {
   const [loading, setLoading] = useState(null); // 'basic' | 'pro'
