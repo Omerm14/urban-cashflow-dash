@@ -216,13 +216,11 @@ const makeOAuth2 = credentials => {
   c.setCredentials(credentials);
   // Persist refreshed tokens back to DB automatically
   c.on('tokens', async tokens => {
-    if (tokens.refresh_token) {
-      await supabase
-        .from('integrations')
-        .update({ credentials: { ...credentials, ...tokens } })
-        .eq('user_id', credentials._userId)
-        .eq('type', credentials._type);
-    }
+    await supabase
+      .from('integrations')
+      .update({ credentials: { ...credentials, ...tokens } })
+      .eq('user_id', credentials._userId)
+      .eq('type', credentials._type);
   });
   return c;
 };
