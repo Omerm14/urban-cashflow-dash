@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { BarChart3, Zap, Link2, Building2, Check, CheckCircle2, X } from 'lucide-react';
+import './onboarding.css';
 
 const SANS = "'IBM Plex Sans', system-ui, sans-serif";
 

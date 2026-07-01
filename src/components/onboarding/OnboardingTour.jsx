@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { BarChart3, Zap, Link2, Building2, ChevronRight } from 'lucide-react';
+import './onboarding.css';
 
 const SANS = "'IBM Plex Sans', system-ui, sans-serif";
 
@@ -208,8 +209,8 @@ export default function OnboardingTour({ step, onNext, onPrev, onSkip, onFinish 
   const isLast = step === STEPS.length - 1;
   const PAD = 10, GAP = 16, TW = 360;
 
-  let spotlightStyle = {};
-  let tooltipStyle = { position: 'fixed', zIndex: 2002 };
+  let spotlightStyle = null;
+  let tooltipTop = null, tooltipLeft = null;
 
   if (rect) {
     spotlightStyle = {
@@ -218,19 +219,19 @@ export default function OnboardingTour({ step, onNext, onPrev, onSkip, onFinish 
     };
     const spaceBelow = window.innerHeight - (rect.top + rect.height);
     const below = spaceBelow >= 200 || spaceBelow >= rect.top;
-    const top = below ? rect.top + rect.height + PAD + GAP : rect.top - PAD - GAP - 230;
-    let left = rect.left + rect.width / 2 - TW / 2;
-    left = Math.max(16, Math.min(left, window.innerWidth - TW - 16));
-    tooltipStyle = { ...tooltipStyle, top, left, width: TW };
+    tooltipTop = below ? rect.top + rect.height + PAD + GAP : rect.top - PAD - GAP - 230;
+    let cl = rect.left + rect.width / 2 - TW / 2;
+    tooltipLeft = Math.max(16, Math.min(cl, window.innerWidth - TW - 16));
   }
 
+  // Always show a dark overlay; spotlight cutout is provided by the ring's box-shadow
   return (
     <>
-      {/* Dark backdrop */}
-      <div style={{ position: 'fixed', inset: 0, zIndex: 2000, cursor: 'default' }} onClick={onSkip} />
+      {/* Always-visible dark overlay — ensures dimming even before rect resolves */}
+      <div style={{ position: 'fixed', inset: 0, zIndex: 2000, background: 'rgba(7,9,15,.75)', cursor: 'default' }} onClick={onSkip} />
 
-      {/* Spotlight ring */}
-      {rect && (
+      {/* Spotlight ring — provides the cutout via box-shadow */}
+      {spotlightStyle && (
         <div style={{
           position: 'fixed', zIndex: 2001, pointerEvents: 'none',
           borderRadius: 12,
@@ -240,9 +241,10 @@ export default function OnboardingTour({ step, onNext, onPrev, onSkip, onFinish 
         }} />
       )}
 
-      {/* Tooltip */}
-      <div ref={tooltipRef} style={{
-        ...tooltipStyle,
+      {/* Tooltip — only render once we have a position */}
+      {tooltipTop !== null && <div ref={tooltipRef} style={{
+        position: 'fixed', zIndex: 2002,
+        top: tooltipTop, left: tooltipLeft, width: TW,
         background: '#0E1520',
         border: '1px solid rgba(99,102,241,.25)',
         borderRadius: 16,
@@ -335,7 +337,7 @@ export default function OnboardingTour({ step, onNext, onPrev, onSkip, onFinish 
             onMouseLeave={e => e.currentTarget.style.color = T.t3}
           >Skip tour</button>
         </div>
-      </div>
+      </div>}
     </>
   );
 }
