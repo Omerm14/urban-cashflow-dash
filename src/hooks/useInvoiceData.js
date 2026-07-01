@@ -13,16 +13,19 @@ export const useInvoiceData = () => {
 
   useEffect(() => {
     if (!user) return;
+    let mounted = true;
     Promise.all([
       supabase.from('invoices').select('*').eq('user_id', user.id).order('created_at'),
       supabase.from('suppliers').select('*').eq('user_id', user.id),
     ]).then(([{ data: invs, error: ie }, { data: sups, error: se }]) => {
+      if (!mounted) return;
       if (ie) console.error('invoices load error:', ie.message);
       if (se) console.error('suppliers load error:', se.message);
       setInvoices(invs  ?? []);
       setSuppliers(sups ?? []);
       setLoading(false);
     });
+    return () => { mounted = false; };
   }, [user]);
 
   // Invoice CRUD

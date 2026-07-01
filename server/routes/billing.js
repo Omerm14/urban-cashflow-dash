@@ -72,9 +72,10 @@ async function ipn(req, res) {
   try {
     const data = req.body;
 
-    // Basic validation — confirm this is from our Meshulam account
-    if (data.userId && data.userId !== MESHULAM_USER_ID) {
-      console.warn('IPN userId mismatch', data.userId);
+    // Require Meshulam merchant userId field — reject if missing or mismatched.
+    // Without this check an attacker could omit the field and bypass merchant validation.
+    if (!data.userId || data.userId !== MESHULAM_USER_ID) {
+      console.warn('IPN userId missing or mismatch', data.userId);
       return res.status(400).send('invalid');
     }
 

@@ -108,8 +108,8 @@ router.get('/usage', async (req, res) => {
 // ─── Webhook (no auth — verified by Stripe signature) ─────────────────────────
 exports.webhook = async (req, res) => {
   if (!process.env.STRIPE_WEBHOOK_SECRET || !process.env.STRIPE_SECRET_KEY) {
-    // Stripe not configured — accept webhook silently to avoid 500 noise
-    return res.json({ received: true });
+    console.error('[stripe] STRIPE_WEBHOOK_SECRET or STRIPE_SECRET_KEY not set — rejecting webhook');
+    return res.status(400).json({ error: 'Webhook not configured' });
   }
 
   let event;

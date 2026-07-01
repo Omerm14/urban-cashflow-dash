@@ -315,6 +315,12 @@ exports.connectWhatsApp = async (req, res) => {
 // PATCH /api/integrations/:id/config  { config: {...} }
 exports.updateConfig = async (req, res) => {
   const { config } = req.body;
+  if (config === undefined || config === null || typeof config !== 'object' || Array.isArray(config)) {
+    return res.status(400).json({ error: 'config must be a JSON object' });
+  }
+  if (JSON.stringify(config).length > 8192) {
+    return res.status(400).json({ error: 'config exceeds maximum allowed size' });
+  }
   const { error } = await supabase
     .from('integrations')
     .update({ config })

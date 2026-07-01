@@ -84,8 +84,8 @@ app.get('/api/cron/migrate', require('./routes/migrate').runMigrate);
 
 // eslint-disable-next-line no-unused-vars
 app.use((err, req, res, next) => {
-  console.error('[express]', err.message);
-  if (!res.headersSent) res.status(500).json({ error: err.message || 'Internal server error' });
+  console.error('[express]', err.message, err.stack);
+  if (!res.headersSent) res.status(500).json({ error: 'Internal server error' });
 });
 
 const PORT = process.env.PORT || 3001;
