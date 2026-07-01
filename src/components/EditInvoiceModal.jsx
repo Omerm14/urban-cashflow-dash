@@ -1,5 +1,5 @@
 import { calcDueDate, currency } from "../utils/dates";
-import { STATUS } from "../constants";
+import { STATUS, DIRECTION, EXPENSE_CATEGORIES, INCOME_CATEGORIES } from "../constants";
 
 export default function EditInvoiceModal({ editInvoice, setEditInvoice, suppliers, addInvoice, updateInvoice, getSupplier, onViewAttachment, anomaly }) {
   const close = () => setEditInvoice(null);
@@ -14,6 +14,8 @@ export default function EditInvoiceModal({ editInvoice, setEditInvoice, supplier
       due_date:     fields.dueDate     ?? fields.due_date     ?? '',
       status:       fields.status,
       notes:        fields.notes       ?? '',
+      direction:    fields.direction   ?? DIRECTION.EXPENSE,
+      category:     fields.category    ?? null,
     };
     if (id) await updateInvoice(id, patch);
     else    await addInvoice(patch);
@@ -42,6 +44,26 @@ export default function EditInvoiceModal({ editInvoice, setEditInvoice, supplier
           </div>
           <button onClick={close} style={{ width:32, height:32, borderRadius:8, background:"#131c2e", border:"1px solid #1e2d45", color:"#64748b", cursor:"pointer", fontSize:16, display:"flex", alignItems:"center", justifyContent:"center" }}>✕</button>
         </div>
+        {/* Direction pill toggle — only shown for new invoices or non-synced ones */}
+        {!editInvoice.sync_source && (
+          <div style={{ marginBottom:16 }}>
+            <div style={{ fontSize:11, fontWeight:600, color:"#475569", marginBottom:8, textTransform:"uppercase", letterSpacing:".5px" }}>Type</div>
+            <div style={{ display:"flex", gap:8 }}>
+              {[{ v: DIRECTION.EXPENSE, label:"Expense" }, { v: DIRECTION.INCOME, label:"Income" }].map(({ v, label }) => {
+                const active = (editInvoice.direction ?? DIRECTION.EXPENSE) === v;
+                return (
+                  <button key={v} onClick={() => setEditInvoice({ ...editInvoice, direction: v, category: null, status: v === DIRECTION.INCOME ? STATUS.RECEIVED : STATUS.UNPAID })}
+                    style={{ flex:1, padding:"8px 0", borderRadius:8, border: active ? "1px solid #6366f1" : "1px solid #1e2d45",
+                      background: active ? "rgba(99,102,241,0.15)" : "#131c2e",
+                      color: active ? "#a5b4fc" : "#64748b", fontWeight: active ? 700 : 400,
+                      cursor:"pointer", fontSize:13, fontFamily:"inherit", transition:"all .15s" }}>
+                    {label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
         {anomaly && (
           <div style={{ marginBottom:16, padding:"10px 14px", background:"rgba(234,179,8,.08)", borderRadius:10, border:"1px solid rgba(234,179,8,.3)", display:"flex", alignItems:"flex-start", gap:10 }}>
             <span style={{ fontSize:16, flexShrink:0 }}>📊</span>
@@ -60,22 +82,45 @@ export default function EditInvoiceModal({ editInvoice, setEditInvoice, supplier
             </div>
           ))}
         </div>
-        <div style={{ marginBottom:14 }}>
-          <div style={{ fontSize:11, fontWeight:600, color:"#475569", marginBottom:6, textTransform:"uppercase", letterSpacing:".5px" }}>Supplier</div>
-          <select value={editInvoice.supplier} className="input"
-            onChange={e => {
-              const sup = getSupplier(e.target.value);
-              const due = editInvoice.invoiceDate && sup ? calcDueDate(editInvoice.invoiceDate, sup) : null;
-              setEditInvoice({ ...editInvoice, supplier:e.target.value, dueDate: due ? due.toISOString().split("T")[0] : (editInvoice.dueDate || editInvoice.due_date || '') });
-            }}>
-            <option value="">— select supplier —</option>
-            {suppliers.map(s => <option key={s.id} value={s.name}>{s.name} · {s.terms}</option>)}
-          </select>
+        <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:14, marginBottom:14 }}>
+          <div>
+            <div style={{ fontSize:11, fontWeight:600, color:"#475569", marginBottom:6, textTransform:"uppercase", letterSpacing:".5px" }}>
+              {(editInvoice.direction ?? DIRECTION.EXPENSE) === DIRECTION.INCOME ? "Customer / Source" : "Supplier"}
+            </div>
+            {(editInvoice.direction ?? DIRECTION.EXPENSE) === DIRECTION.INCOME ? (
+              <input type="text" value={editInvoice.supplier ?? ''} className="input"
+                placeholder="e.g. POS, Wolt, Event"
+                onChange={e => setEditInvoice({ ...editInvoice, supplier: e.target.value })} />
+            ) : (
+              <select value={editInvoice.supplier} className="input"
+                onChange={e => {
+                  const sup = getSupplier(e.target.value);
+                  const due = editInvoice.invoiceDate && sup ? calcDueDate(editInvoice.invoiceDate, sup) : null;
+                  setEditInvoice({ ...editInvoice, supplier:e.target.value, dueDate: due ? due.toISOString().split("T")[0] : (editInvoice.dueDate || editInvoice.due_date || '') });
+                }}>
+                <option value="">— select supplier —</option>
+                {suppliers.map(s => <option key={s.id} value={s.name}>{s.name} · {s.terms}</option>)}
+              </select>
+            )}
+          </div>
+          <div>
+            <div style={{ fontSize:11, fontWeight:600, color:"#475569", marginBottom:6, textTransform:"uppercase", letterSpacing:".5px" }}>Category</div>
+            <select value={editInvoice.category ?? ''} className="input"
+              onChange={e => setEditInvoice({ ...editInvoice, category: e.target.value || null })}>
+              <option value="">— select —</option>
+              {((editInvoice.direction ?? DIRECTION.EXPENSE) === DIRECTION.INCOME ? INCOME_CATEGORIES : EXPENSE_CATEGORIES).map(c => (
+                <option key={c.value} value={c.value}>{c.label}</option>
+              ))}
+            </select>
+          </div>
         </div>
         <div style={{ marginBottom:24 }}>
           <div style={{ fontSize:11, fontWeight:600, color:"#475569", marginBottom:6, textTransform:"uppercase", letterSpacing:".5px" }}>Status</div>
           <select value={editInvoice.status} className="input" onChange={e => setEditInvoice({...editInvoice, status:e.target.value})}>
-            {Object.values(STATUS).map(s => <option key={s}>{s}</option>)}
+            {((editInvoice.direction ?? DIRECTION.EXPENSE) === DIRECTION.INCOME
+              ? [STATUS.RECEIVED, STATUS.EXPECTED]
+              : [STATUS.UNPAID, STATUS.PAID, STATUS.OVERDUE, STATUS.CREDIT]
+            ).map(s => <option key={s}>{s}</option>)}
           </select>
         </div>
         {/* Sync audit trail — read-only, shown only for auto-synced invoices */}

@@ -14,7 +14,7 @@ import IntegrationsPage   from "./components/IntegrationsPage";
 import UsageBanner        from "./components/UsageBanner";
 import AdminPage          from "./pages/AdminPage";
 import { MissingSuppliersModal, AnomalyModal } from "./components/AlertModals";
-import { PALETTE }        from "./constants";
+import { PALETTE, EXPENSE_CATEGORIES, INCOME_CATEGORIES } from "./constants";
 import { parseCSV }      from "./utils/invoice";
 import enStrings         from "./i18n/en";
 import heStrings         from "./i18n/he";
@@ -697,12 +697,65 @@ function KPICard({ label, value, valueColor, iconBg, iconColor, iconPath, pill, 
   );
 }
 
+// ── P&L Summary Table ─────────────────────────────────────────────────────────
+function PLSummaryTable({ plData, T, isMobile }) {
+  const { months, income, expense, net } = plData;
+  const fmtM = ym => { const [y,m] = ym.split("-").map(Number); return new Date(y, m-1, 1).toLocaleDateString("en-US", { month:"short", year:"2-digit" }); };
+  const totIn  = m => Object.values(income[m]  || {}).reduce((s,v) => s+v, 0);
+  const totOut = m => Object.values(expense[m] || {}).reduce((s,v) => s+v, 0);
+  const incomeRows  = INCOME_CATEGORIES.filter(c => months.some(m => income[m]?.[c.value]));
+  const expenseRows = EXPENSE_CATEGORIES.filter(c => months.some(m => expense[m]?.[c.value]));
+  const cell = (v, color) => <td key={v} style={{ padding:"7px 12px", textAlign:"right", fontSize:12, color: color || T.t2, fontFamily:MONO, whiteSpace:"nowrap", borderBottom:`1px solid ${T.bdr}` }}>{v !== undefined ? fmt(v) : <span style={{ color:T.t3 }}>—</span>}</td>;
+  const hdr  = txt => <th style={{ padding:"7px 12px", textAlign:"right", fontSize:10, fontWeight:700, color:T.t3, textTransform:"uppercase", letterSpacing:".7px", whiteSpace:"nowrap", borderBottom:`1px solid ${T.bdr}` }}>{txt}</th>;
+
+  return (
+    <div style={{ background:T.surf, border:`1px solid ${T.bdr}`, borderRadius:12, marginBottom:16, overflow:"hidden" }}>
+      <div style={{ padding:"16px 20px 10px", fontFamily:SANS, fontWeight:700, fontSize:14, color:T.t1, letterSpacing:"-0.02em" }}>P&amp;L Summary</div>
+      <div style={{ overflowX:"auto" }}>
+        <table style={{ width:"100%", borderCollapse:"collapse", minWidth:480 }}>
+          <thead>
+            <tr><th style={{ ...{padding:"7px 12px", textAlign:"left", fontSize:10, fontWeight:700, color:T.t3, textTransform:"uppercase", letterSpacing:".7px", borderBottom:`1px solid ${T.bdr}`, minWidth:130, fontFamily:SANS} }}></th>
+              {months.map(m => hdr(fmtM(m)))}
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td colSpan={months.length+1} style={{ padding:"6px 12px", fontSize:10, fontWeight:800, color:"#22C55E", textTransform:"uppercase", letterSpacing:".8px", background:"rgba(34,197,94,.04)", fontFamily:SANS }}>Income</td></tr>
+            {incomeRows.map(c => <tr key={c.value}>
+              <td style={{ padding:"7px 12px", fontSize:12, color:T.t2, fontFamily:SANS, borderBottom:`1px solid ${T.bdr}`, paddingLeft:20 }}>{c.label}</td>
+              {months.map(m => cell(income[m]?.[c.value]))}
+            </tr>)}
+            <tr style={{ background:"rgba(34,197,94,.06)" }}>
+              <td style={{ padding:"7px 12px 7px 20px", fontSize:12, fontWeight:700, color:"#22C55E", fontFamily:SANS, borderBottom:`1px solid ${T.bdr}` }}>Total Income</td>
+              {months.map(m => <td key={m} style={{ padding:"7px 12px", textAlign:"right", fontSize:12, fontWeight:700, color:"#22C55E", fontFamily:MONO, whiteSpace:"nowrap", borderBottom:`1px solid ${T.bdr}` }}>{fmt(totIn(m))}</td>)}
+            </tr>
+
+            <tr><td colSpan={months.length+1} style={{ padding:"6px 12px", fontSize:10, fontWeight:800, color:"#F87171", textTransform:"uppercase", letterSpacing:".8px", background:"rgba(248,113,113,.04)", fontFamily:SANS }}>Expenses</td></tr>
+            {expenseRows.map(c => <tr key={c.value}>
+              <td style={{ padding:"7px 12px", fontSize:12, color:T.t2, fontFamily:SANS, borderBottom:`1px solid ${T.bdr}`, paddingLeft:20 }}>{c.label}</td>
+              {months.map(m => cell(expense[m]?.[c.value]))}
+            </tr>)}
+            <tr style={{ background:"rgba(248,113,113,.06)" }}>
+              <td style={{ padding:"7px 12px 7px 20px", fontSize:12, fontWeight:700, color:"#F87171", fontFamily:SANS, borderBottom:`1px solid ${T.bdr}` }}>Total Expenses</td>
+              {months.map(m => <td key={m} style={{ padding:"7px 12px", textAlign:"right", fontSize:12, fontWeight:700, color:"#F87171", fontFamily:MONO, whiteSpace:"nowrap", borderBottom:`1px solid ${T.bdr}` }}>{fmt(totOut(m))}</td>)}
+            </tr>
+
+            <tr style={{ background:"rgba(99,102,241,.05)", borderTop:`2px solid ${T.bdr2}` }}>
+              <td style={{ padding:"9px 12px 9px 20px", fontSize:13, fontWeight:800, color:T.t1, fontFamily:SANS }}>Net Profit</td>
+              {months.map(m => { const v = net[m] ?? 0; return <td key={m} style={{ padding:"9px 12px", textAlign:"right", fontSize:13, fontWeight:800, color: v >= 0 ? "#22C55E" : "#F87171", fontFamily:MONO, whiteSpace:"nowrap" }}>{fmt(v)}</td>; })}
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
 // ── Dashboard ─────────────────────────────────────────────────────────────────
 const GreenPill = ({ children }) => <span style={{ display: "flex", alignItems: "center", gap: 3, color: "#22C55E", fontSize: 12, fontWeight: 600, background: "rgba(34,197,94,.1)", padding: "3px 8px", borderRadius: 20, fontFamily: "'IBM Plex Sans', sans-serif" }}>{children}</span>;
 const RedPill = ({ children }) => <span style={{ color: "#F87171", fontSize: 12, fontWeight: 600, background: "rgba(239,68,68,.1)", padding: "3px 8px", borderRadius: 20, fontFamily: "'IBM Plex Sans', sans-serif" }}>{children}</span>;
 const AmberPill = ({ children }) => <span style={{ color: "#F59E0B", fontSize: 12, fontWeight: 600, background: "rgba(245,158,11,.1)", padding: "3px 8px", borderRadius: 20, fontFamily: "'IBM Plex Sans', sans-serif" }}>{children}</span>;
 
-function Dashboard({ invoices, onPayAllJuly, chartData, supplierNames, supplierColor, user, onMissingAlert, onAnomalyAlert, missingSuppliers, anomalyMap, onViewMonth, onNavigateFiltered }) {
+function Dashboard({ invoices, onPayAllJuly, chartData, supplierNames, supplierColor, user, onMissingAlert, onAnomalyAlert, missingSuppliers, anomalyMap, onViewMonth, onNavigateFiltered, cfokpis, plData }) {
   const T = useT();
   const { t } = useLang();
   const { isMobile, isTablet } = useLayout();
@@ -823,9 +876,36 @@ function Dashboard({ invoices, onPayAllJuly, chartData, supplierNames, supplierC
         </div>
       )}
 
-      <div style={{ display: "grid", gridTemplateColumns: kpiCols, gap: 12, marginBottom: 16 }}>
+      <div style={{ display: "grid", gridTemplateColumns: kpiCols, gap: 12, marginBottom: cfokpis && cfokpis.totalIncome > 0 ? 12 : 16 }}>
         {CARDS.map(c => <KPICard key={c.label} {...c} />)}
       </div>
+
+      {/* CFO KPI row — shown when income data exists */}
+      {cfokpis && cfokpis.totalIncome > 0 && (
+        <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr 1fr" : "repeat(4,1fr)", gap: 12, marginBottom: 16 }}>
+          {[
+            { label: "Total Income",   value: cfokpis.totalIncome,   color: "#22C55E", bg: "rgba(34,197,94,.08)",  border: "rgba(34,197,94,.2)",  ico: "📈" },
+            { label: "Total Expenses", value: cfokpis.totalExpenses,  color: "#F87171", bg: "rgba(248,113,113,.08)", border: "rgba(248,113,113,.2)", ico: "📉" },
+            { label: "Net Profit",     value: cfokpis.netProfit,      color: cfokpis.netProfit >= 0 ? "#22C55E" : "#F87171", bg: cfokpis.netProfit >= 0 ? "rgba(34,197,94,.08)" : "rgba(248,113,113,.08)", border: cfokpis.netProfit >= 0 ? "rgba(34,197,94,.2)" : "rgba(248,113,113,.2)", ico: "💰" },
+            { label: "Food Cost %",    value: null, pct: cfokpis.foodCostPct, color: "#F59E0B", bg: "rgba(245,158,11,.08)", border: "rgba(245,158,11,.2)", ico: "🍽️" },
+          ].map(c => (
+            <div key={c.label} style={{ background: c.bg, border: `1px solid ${c.border}`, borderRadius: 12, padding: "16px 18px" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 8 }}>
+                <span style={{ fontFamily: SANS, fontSize: 11, fontWeight: 700, color: T.t3, textTransform: "uppercase", letterSpacing: ".6px" }}>{c.label}</span>
+                <span style={{ fontSize: 16, opacity: .6 }}>{c.ico}</span>
+              </div>
+              <div style={{ fontFamily: MONO, fontSize: isMobile ? 18 : 22, fontWeight: 800, color: c.color, letterSpacing: "-0.04em" }}>
+                {c.pct !== undefined ? `${c.pct}%` : fmt(c.value)}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* P&L Summary Table — shown when income data exists */}
+      {plData && cfokpis && cfokpis.totalIncome > 0 && (
+        <PLSummaryTable plData={plData} T={T} isMobile={isMobile} />
+      )}
 
       <div style={{ background: T.surf, border: `1px solid ${T.isDark ? "rgba(99,102,241,.30)" : T.indigoBdr}`, borderRadius: 12, padding: isMobile ? "14px 16px" : "20px 24px", display: "flex", alignItems: isMobile ? "flex-start" : "center", flexDirection: isMobile ? "column" : "row", justifyContent: "space-between", gap: 12, marginBottom: 16 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
@@ -1160,6 +1240,7 @@ function InvoicesView({ invoices, selectedMonth, onMonthChange, onMarkPaid, onBu
   const { t } = useLang();
   const supplierList = [...new Set(invoices.map(i => i.supplier))];
   const invColor = name => PALETTE[supplierList.indexOf(name) % PALETTE.length] || "#6366F1";
+  const [directionTab, setDirectionTab] = useState("expense");
   const [viewMode, setViewMode] = useState("grouped");
   const [selectedIds, setSelectedIds] = useState(new Set());
   const [showPayConfirm, setShowPayConfirm] = useState(false);
@@ -1181,7 +1262,8 @@ function InvoicesView({ invoices, selectedMonth, onMonthChange, onMarkPaid, onBu
   const toggleStatus = (s) => setFilterStatuses(prev => { const n = new Set(prev); n.has(s) ? n.delete(s) : n.add(s); return n; });
   const toggleSupplier = (s) => setFilterSuppliers(prev => { const n = new Set(prev); n.has(s) ? n.delete(s) : n.add(s); return n; });
   const activeFilters = filterStatuses.size + filterSuppliers.size;
-  const filteredInvoices = invoices.filter(inv => {
+  const directionFiltered = directionTab === "all" ? invoices : invoices.filter(i => (i.direction ?? "expense") === directionTab);
+  const filteredInvoices = directionFiltered.filter(inv => {
     if (filterStatuses.size > 0 && !filterStatuses.has(inv.status)) return false;
     if (filterSuppliers.size > 0 && !filterSuppliers.has(inv.supplier)) return false;
     return true;
@@ -1210,6 +1292,22 @@ function InvoicesView({ invoices, selectedMonth, onMonthChange, onMarkPaid, onBu
 
   return (
     <div style={{ animation: "slideUp 0.35s cubic-bezier(.16,1,.3,1)" }}>
+      {/* Direction tabs: Expenses / Income / All */}
+      <div style={{ display: "flex", gap: 6, marginBottom: 14 }}>
+        {[{ v:"expense", label:"Expenses", activeColor:"#F87171", activeBg:"rgba(248,113,113,.1)", activeBdr:"rgba(248,113,113,.3)" }, { v:"income", label:"Income", activeColor:"#22C55E", activeBg:"rgba(34,197,94,.1)", activeBdr:"rgba(34,197,94,.3)" }, { v:"all", label:"All", activeColor:T.indigo, activeBg:T.indigoTint, activeBdr:T.indigoBdr }].map(({ v, label, activeColor, activeBg, activeBdr }) => (
+          <button key={v} onClick={() => { setDirectionTab(v); setSelectedIds(new Set()); }}
+            style={{ padding:"5px 14px", borderRadius:7, border:`1px solid ${directionTab === v ? activeBdr : T.bdr}`, cursor:"pointer", fontFamily:SANS, fontSize:12, fontWeight:directionTab === v ? 700 : 400, background:directionTab === v ? activeBg : "transparent", color:directionTab === v ? activeColor : T.t2, transition:"all .15s" }}>
+            {label}
+          </button>
+        ))}
+        {directionTab === "income" && (
+          <button onClick={() => onEditInvoice({ supplier:"", amount:"", invoiceDate:"", dueDate:"", status:"Received", invoiceNo:"", direction:"income", category:null })}
+            style={{ marginLeft:"auto", padding:"5px 14px", borderRadius:7, border:`1px solid rgba(34,197,94,.4)`, cursor:"pointer", fontFamily:SANS, fontSize:12, fontWeight:600, background:"rgba(34,197,94,.08)", color:"#22C55E" }}>
+            + Add Income
+          </button>
+        )}
+      </div>
+
       <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 14, flexWrap: "wrap" }}>
         {!isMobile && (
           <div style={{ display: "flex", background: T.surf, border: `1px solid ${T.bdr}`, borderRadius: 6, padding: 2, gap: 2 }}>
@@ -2071,7 +2169,7 @@ export default function App() {
     missingSuppliers, anomalyMap,
     addInvoice, updateInvoice, deleteInvoice,
     addSupplier, updateSupplier, deleteSupplier, getSupplier,
-    refreshInvoices,
+    refreshInvoices, cfokpis, plData,
   } = useInvoiceData();
 
   // Real plan data
@@ -2338,7 +2436,7 @@ export default function App() {
             )}
             <main style={{ flex: 1, overflowY: "auto", padding: isMobile ? "20px 16px 100px" : "28px clamp(20px,3vw,36px) 80px" }}>
               <div style={{ width: "100%" }}>
-                {view === "dashboard"    && <Dashboard invoices={invoices} onPayAllJuly={handlePayAll} chartData={chartData} supplierNames={allNames} supplierColor={getSupplierColor} user={user} onMissingAlert={() => setShowMissingModal(true)} onAnomalyAlert={() => setShowAnomalyModal(true)} missingSuppliers={missingSuppliers} anomalyMap={anomalyMap} onViewMonth={handleViewMonth} onNavigateFiltered={(status) => { setView("invoices"); setInitialFilterStatus(status); }} />}
+                {view === "dashboard"    && <Dashboard invoices={invoices} onPayAllJuly={handlePayAll} chartData={chartData} supplierNames={allNames} supplierColor={getSupplierColor} user={user} onMissingAlert={() => setShowMissingModal(true)} onAnomalyAlert={() => setShowAnomalyModal(true)} missingSuppliers={missingSuppliers} anomalyMap={anomalyMap} onViewMonth={handleViewMonth} onNavigateFiltered={(status) => { setView("invoices"); setInitialFilterStatus(status); }} cfokpis={cfokpis} plData={plData} />}
                 {view === "invoices"     && <InvoicesView invoices={invoices} selectedMonth={selectedMonth} onMonthChange={setSelectedMonth} onMarkPaid={handleMarkPaid} onBulkPaid={handleBulkPaid} onBulkUnpaid={handleBulkUnpaid} preSelectAll={preSelectAll} onEditInvoice={setEditInvoice} anomalyMap={anomalyMap} missingSuppliers={missingSuppliers} initialFilterStatus={initialFilterStatus} initialSelectedId={deepLinkInvoiceId} onViewAttachment={async (inv) => { try { const { data: { session } } = await supabase.auth.getSession(); const res = await fetch(`/api/invoices/${inv.id}/attachment-url`, { headers: { Authorization: `Bearer ${session?.access_token}` } }); if (res.ok) { const { url } = await res.json(); setPreviewAttachment({ url, filename: inv.source_file || inv.attachment_path?.split('/').pop() || 'invoice' }); } } catch(e) { console.error('attachment-url:', e); } }} />}
                 {view === "calendar"     && <CalendarView computed={invoices} calMonth={calMonth} setCalMonth={setCalMonth} color={getSupplierColor} />}
                 {view === "integrations" && <IntegrationsPage

@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { currency, fmtMonth, fmtMonthShort } from "../utils/dates";
+import { EXPENSE_CATEGORIES, INCOME_CATEGORIES } from "../constants";
 
 function CountUp({ to, duration = 1200 }) {
   const [v, setV] = useState(0);
@@ -19,14 +20,21 @@ function CountUp({ to, duration = 1200 }) {
   return <>{currency(v)}</>;
 }
 
-export default function Dashboard({ kpis, monthlyData, allNames, color, maxTotal, onPayMonth, missingSuppliers, anomalyMap, onOpenMissing, onOpenAnomalies }) {
+export default function Dashboard({ kpis, cfokpis, plData, monthlyData, allNames, color, maxTotal, onPayMonth, missingSuppliers, anomalyMap, onOpenMissing, onOpenAnomalies }) {
   const [tooltip, setTooltip] = useState(null);
 
-  const stats = [
-    { label:"Outstanding", key:"outstanding", cls:"stat-outstanding", ico:"💳" },
-    { label:"Overdue",     key:"overdue",     cls:"stat-overdue",     ico:"⚠️", pulse:true },
-    { label:"Next Month",  key:"nextMonth",   cls:"stat-nextmonth",   ico:"📅" },
-    { label:"Total Paid",  key:"paid",        cls:"stat-paid",        ico:"✅" },
+  const hasCfo = cfokpis && (cfokpis.totalIncome > 0 || cfokpis.totalExpenses > 0);
+
+  const stats = hasCfo ? [
+    { label:"Total Income",    val: cfokpis.totalIncome,   cls:"stat-paid",        ico:"📈" },
+    { label:"Total Expenses",  val: cfokpis.totalExpenses, cls:"stat-overdue",     ico:"📉", pulse: cfokpis.totalExpenses > cfokpis.totalIncome },
+    { label:"Net Profit",      val: cfokpis.netProfit,     cls: cfokpis.netProfit >= 0 ? "stat-paid" : "stat-overdue", ico:"💰" },
+    { label:"Food Cost %",     val: null, pct: cfokpis.foodCostPct, cls:"stat-nextmonth", ico:"🍽️" },
+  ] : [
+    { label:"Outstanding", val: kpis.outstanding, cls:"stat-outstanding", ico:"💳" },
+    { label:"Overdue",     val: kpis.overdue,     cls:"stat-overdue",     ico:"⚠️", pulse:true },
+    { label:"Next Month",  val: kpis.nextMonth,   cls:"stat-nextmonth",   ico:"📅" },
+    { label:"Total Paid",  val: kpis.paid,        cls:"stat-paid",        ico:"✅" },
   ];
 
   const ctaMonth = monthlyData[0] || null;
@@ -88,17 +96,27 @@ export default function Dashboard({ kpis, monthlyData, allNames, color, maxTotal
       {/* KPI Cards */}
       <div className="stat-grid" style={{ marginBottom:20 }}>
         {stats.map(s => (
-          <div key={s.key}
+          <div key={s.label}
             className={`card stat-card ${s.cls}`}
             style={s.pulse ? { animationName:"redPulse", animationDuration:"2.2s", animationIterationCount:"infinite" } : {}}>
             <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start" }}>
               <span className="stat-lbl">{s.label}</span>
               <span style={{ fontSize:18, opacity:.45 }}>{s.ico}</span>
             </div>
-            <div className="stat-val"><CountUp to={kpis[s.key]}/></div>
+            <div className="stat-val">
+              {s.pct !== undefined
+                ? <span>{s.pct}<span style={{ fontSize:"0.55em", fontWeight:600, marginLeft:2 }}>%</span></span>
+                : <CountUp to={s.val ?? 0}/>
+              }
+            </div>
           </div>
         ))}
       </div>
+
+      {/* P&L Summary Table — shown when income data exists */}
+      {hasCfo && plData && (
+        <PLTable plData={plData} />
+      )}
 
       {/* Pay-month CTA banner */}
       {ctaMonth && onPayMonth && (
@@ -180,6 +198,71 @@ export default function Dashboard({ kpis, monthlyData, allNames, color, maxTotal
           <div style={{ color:"var(--t3)", marginTop:2, fontSize:11 }}>{fmtMonth(tooltip.ym)} · {Math.round((tooltip.amount/tooltip.total)*100)}%</div>
         </div>
       )}
+    </div>
+  );
+}
+
+function PLTable({ plData }) {
+  const { months, income, expense, net } = plData;
+  const cellStyle = (align = "right") => ({ padding:"8px 14px", textAlign:align, fontSize:12, color:"var(--t2)", whiteSpace:"nowrap", borderBottom:"1px solid rgba(255,255,255,.04)" });
+  const headerStyle = { padding:"8px 14px", textAlign:"right", fontSize:10, fontWeight:700, color:"var(--t3)", textTransform:"uppercase", letterSpacing:".7px", whiteSpace:"nowrap" };
+  const sectionStyle = { padding:"6px 14px", fontSize:11, fontWeight:800, color:"var(--t3)", textTransform:"uppercase", letterSpacing:".7px", background:"rgba(255,255,255,.02)", borderBottom:"1px solid rgba(255,255,255,.04)" };
+
+  const incomeRows = INCOME_CATEGORIES.filter(c => months.some(m => income[m]?.[c.value]));
+  const expenseRows = EXPENSE_CATEGORIES.filter(c => months.some(m => expense[m]?.[c.value]));
+
+  const totIncome  = m => Object.values(income[m]  || {}).reduce((s,v) => s+v, 0);
+  const totExpense = m => Object.values(expense[m] || {}).reduce((s,v) => s+v, 0);
+
+  return (
+    <div className="card" style={{ marginBottom:20, overflow:"hidden" }}>
+      <div style={{ padding:"18px 20px 12px", fontWeight:800, fontSize:16 }}>P&amp;L Summary</div>
+      <div style={{ overflowX:"auto" }}>
+        <table style={{ width:"100%", borderCollapse:"collapse", minWidth:500 }}>
+          <thead>
+            <tr style={{ borderBottom:"1px solid rgba(255,255,255,.08)" }}>
+              <th style={{ ...headerStyle, textAlign:"left", minWidth:140 }}></th>
+              {months.map(m => <th key={m} style={headerStyle}>{fmtMonthShort(m)}</th>)}
+            </tr>
+          </thead>
+          <tbody>
+            {/* Income section */}
+            <tr><td colSpan={months.length+1} style={sectionStyle}>Income</td></tr>
+            {incomeRows.map(c => (
+              <tr key={c.value}>
+                <td style={{ ...cellStyle("left"), color:"var(--t2)", paddingLeft:20 }}>{c.label}</td>
+                {months.map(m => <td key={m} style={cellStyle()}>{income[m]?.[c.value] ? currency(income[m][c.value]) : <span style={{ color:"var(--t3)" }}>—</span>}</td>)}
+              </tr>
+            ))}
+            <tr style={{ background:"rgba(52,211,153,.05)" }}>
+              <td style={{ ...cellStyle("left"), fontWeight:700, color:"#34d399", paddingLeft:20 }}>TOTAL INCOME</td>
+              {months.map(m => <td key={m} style={{ ...cellStyle(), fontWeight:700, color:"#34d399" }}>{currency(totIncome(m))}</td>)}
+            </tr>
+
+            {/* Expense section */}
+            <tr><td colSpan={months.length+1} style={{ ...sectionStyle, marginTop:4 }}>Expenses</td></tr>
+            {expenseRows.map(c => (
+              <tr key={c.value}>
+                <td style={{ ...cellStyle("left"), color:"var(--t2)", paddingLeft:20 }}>{c.label}</td>
+                {months.map(m => <td key={m} style={cellStyle()}>{expense[m]?.[c.value] ? currency(expense[m][c.value]) : <span style={{ color:"var(--t3)" }}>—</span>}</td>)}
+              </tr>
+            ))}
+            <tr style={{ background:"rgba(248,113,113,.05)" }}>
+              <td style={{ ...cellStyle("left"), fontWeight:700, color:"#f87171", paddingLeft:20 }}>TOTAL EXPENSES</td>
+              {months.map(m => <td key={m} style={{ ...cellStyle(), fontWeight:700, color:"#f87171" }}>{currency(totExpense(m))}</td>)}
+            </tr>
+
+            {/* Net profit row */}
+            <tr style={{ borderTop:"2px solid rgba(255,255,255,.12)", background:"rgba(99,102,241,.05)" }}>
+              <td style={{ ...cellStyle("left"), fontWeight:800, fontSize:13, color:"var(--t1)", paddingLeft:20 }}>NET PROFIT</td>
+              {months.map(m => {
+                const v = net[m] ?? 0;
+                return <td key={m} style={{ ...cellStyle(), fontWeight:800, fontSize:13, color: v >= 0 ? "#34d399" : "#f87171" }}>{currency(v)}</td>;
+              })}
+            </tr>
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }

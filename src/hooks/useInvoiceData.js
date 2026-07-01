@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
-import { STATUS, PALETTE } from "../constants";
+import { STATUS, PALETTE, DIRECTION, EXPENSE_CATEGORIES, INCOME_CATEGORIES } from "../constants";
 import { calcDueDate, toYM } from "../utils/dates";
 import { findDuplicates, matchSupplier, getMissingSuppliers, getSupplierMonthlyAnomalies } from "../utils/invoice";
 import { supabase } from "../lib/supabase";
@@ -120,6 +120,10 @@ export const useInvoiceData = () => {
 
   const getSupplier = useCallback(name => matchSupplier(name, suppliers), [suppliers]);
 
+  const addIncomeEntry = useCallback(async data => {
+    return addInvoice({ ...data, direction: DIRECTION.INCOME });
+  }, [addInvoice]);
+
   const computed = useMemo(() => {
     const today = new Date(); today.setHours(0, 0, 0, 0);
     return invoices.map(inv => {
@@ -134,6 +138,8 @@ export const useInvoiceData = () => {
         invoiceDate: inv.invoice_date ?? inv.invoiceDate ?? '',
         dueDate:     due,
         status,
+        direction:   inv.direction ?? DIRECTION.EXPENSE,
+        category:    inv.category  ?? null,
       };
     });
   }, [invoices, suppliers]);
@@ -176,18 +182,70 @@ export const useInvoiceData = () => {
   const kpis = useMemo(() => {
     const nm = toYM(new Date(new Date().getFullYear(), new Date().getMonth() + 1, 1));
     return {
-      outstanding: computed.filter(i => i.status !== STATUS.PAID).reduce((s, i) => s + Number(i.amount), 0),
+      outstanding: computed.filter(i => i.status !== STATUS.PAID && i.direction !== DIRECTION.INCOME).reduce((s, i) => s + Number(i.amount), 0),
       overdue:     computed.filter(i => i.status === STATUS.OVERDUE).reduce((s, i) => s + Number(i.amount), 0),
-      paid:        computed.filter(i => i.status === STATUS.PAID).reduce((s, i) => s + Number(i.amount), 0),
+      paid:        computed.filter(i => i.status === STATUS.PAID && i.direction !== DIRECTION.INCOME).reduce((s, i) => s + Number(i.amount), 0),
       nextMonth:   monthlyData.find(m => m.ym === nm)?.total || 0,
     };
   }, [computed, monthlyData]);
 
+  // P&L computation: group by month × direction × category
+  const plData = useMemo(() => {
+    const now = new Date();
+    // Build last 6 months + current month list
+    const months = [];
+    for (let i = 5; i >= 0; i--) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      months.push(toYM(d));
+    }
+
+    const income  = {};  // { ym: { category: amount } }
+    const expense = {};  // { ym: { category: amount } }
+
+    months.forEach(ym => { income[ym] = {}; expense[ym] = {}; });
+
+    computed.forEach(inv => {
+      const ym = toYM(inv.invoiceDate || inv.invoice_date || inv.dueDate);
+      if (!ym || !months.includes(ym)) return;
+      const amt = Number(inv.amount) || 0;
+      if (amt <= 0 && inv.status !== STATUS.CREDIT) return;
+
+      const cat = inv.category || (inv.direction === DIRECTION.INCOME ? 'other_income' : 'other_expense');
+
+      if (inv.direction === DIRECTION.INCOME) {
+        income[ym][cat] = (income[ym][cat] || 0) + Math.abs(amt);
+      } else {
+        expense[ym][cat] = (expense[ym][cat] || 0) + Math.abs(amt);
+      }
+    });
+
+    const net = {};
+    months.forEach(ym => {
+      const totalIn  = Object.values(income[ym]).reduce((s, v) => s + v, 0);
+      const totalOut = Object.values(expense[ym]).reduce((s, v) => s + v, 0);
+      net[ym] = totalIn - totalOut;
+    });
+
+    return { months, income, expense, net };
+  }, [computed]);
+
+  // Income-aware KPIs for the CFO dashboard
+  const cfokpis = useMemo(() => {
+    const ym = currentYM;
+    const totalIncome   = Object.values(plData.income[ym]  || {}).reduce((s, v) => s + v, 0);
+    const totalExpenses = Object.values(plData.expense[ym] || {}).reduce((s, v) => s + v, 0);
+    const netProfit     = totalIncome - totalExpenses;
+    const foodBev       = (plData.expense[ym] || {})['food_bev'] || 0;
+    const foodCostPct   = totalIncome > 0 ? Math.round((foodBev / totalIncome) * 100) : 0;
+    return { totalIncome, totalExpenses, netProfit, foodCostPct };
+  }, [plData, currentYM]);
+
   return {
-    suppliers, invoices, computed, dupeIds, monthlyData, allNames, color, maxTotal, kpis, loading,
+    suppliers, invoices, computed, dupeIds, monthlyData, allNames, color, maxTotal, kpis, cfokpis, plData, loading,
     missingSuppliers, anomalyMap,
     addInvoice, updateInvoice, deleteInvoice, bulkMarkPaid, bulkMarkUnpaid, bulkDelete,
     addSupplier, updateSupplier, deleteSupplier,
+    addIncomeEntry,
     getSupplier, refreshInvoices, appendInvoices,
   };
 };

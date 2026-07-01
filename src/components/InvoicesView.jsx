@@ -1,5 +1,6 @@
 import { useState, useCallback, useEffect, useRef } from "react";
 import { toYM, currency, fmtMonth } from "../utils/dates";
+import { DIRECTION } from "../constants";
 import InvoicesTable from "./InvoicesTable";
 import InvoicesGroupedView from "./InvoicesGroupedView";
 
@@ -10,6 +11,7 @@ function nxtMonth(ym) {
 }
 
 export default function InvoicesView({ computed, dupeIds, anomalyMap, updateInvoice, deleteInvoice, bulkMarkPaid, bulkMarkUnpaid, bulkDelete, setEditInvoice, color, onViewAttachment, preSelMonth, onClearPreSel, missingSuppliers, onOpenMissing, onOpenAnomalies }) {
+  const [directionTab,  setDirectionTab]  = useState("expense");
   const [selectedIds,   setSelectedIds]   = useState(new Set());
   const [viewMode,      setViewMode]      = useState("grouped");
   const [selectedMonth, setSelectedMonth] = useState(() => toYM(new Date()));
@@ -128,6 +130,10 @@ export default function InvoicesView({ computed, dupeIds, anomalyMap, updateInvo
     setTimeout(() => setShowSuccess(false), 3200);
   }, [selectedIds, computed, bulkMarkPaid, clearSelection, selectedMonth]);
 
+  const filteredComputed = directionTab === "all"
+    ? computed
+    : computed.filter(i => (i.direction ?? DIRECTION.EXPENSE) === directionTab);
+
   const count = selectedIds.size;
   const selInvs = computed.filter(i => selectedIds.has(i.id));
   const selTotal = selInvs.reduce((s, i) => s + Number(i.amount), 0);
@@ -162,6 +168,20 @@ export default function InvoicesView({ computed, dupeIds, anomalyMap, updateInvo
         </div>
       )}
 
+      {/* Direction tabs: Expenses / Income / All */}
+      <div style={{ display:"flex", gap:6, marginBottom:14 }}>
+        {[{ v:"expense", label:"Expenses" }, { v:"income", label:"Income" }, { v:"all", label:"All" }].map(({ v, label }) => (
+          <button key={v}
+            onClick={() => { setDirectionTab(v); setSelectedIds(new Set()); }}
+            style={{ padding:"6px 16px", borderRadius:8, border:"none", cursor:"pointer", fontFamily:"inherit", fontSize:13, fontWeight:600, transition:"all .15s",
+              background: directionTab === v ? (v === "income" ? "rgba(52,211,153,.15)" : v === "expense" ? "rgba(248,113,113,.15)" : "rgba(99,102,241,.15)") : "#131c2e",
+              color: directionTab === v ? (v === "income" ? "#34d399" : v === "expense" ? "#f87171" : "#a5b4fc") : "#475569",
+            }}>
+            {label}
+          </button>
+        ))}
+      </div>
+
       {/* Header row */}
       <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:14, flexWrap:"wrap" }}>
         <div className="view-toggle">
@@ -184,9 +204,20 @@ export default function InvoicesView({ computed, dupeIds, anomalyMap, updateInvo
           </div>
         )}
 
+        {directionTab === "income" && (
+          <button
+            className="btn btn-primary btn-sm"
+            style={{ marginLeft:"auto" }}
+            onClick={() => setEditInvoice({ supplier:"", amount:"", invoiceDate:"", dueDate:"", status:"Received", invoiceNo:"", direction:"income", category:null })}>
+            + Add Income
+          </button>
+        )}
         {count > 0 && (
-          <div style={{ display:"flex", alignItems:"center", gap:8, marginLeft:"auto" }}>
-            <button className="btn btn-ghost btn-sm" onClick={handleBulkUnpaid}>↻ Mark Unpaid</button>
+          <div style={{ display:"flex", alignItems:"center", gap:8, marginLeft: directionTab === "income" ? undefined : "auto" }}>
+            {directionTab === "income"
+              ? <button className="btn btn-ghost btn-sm" onClick={handleBulkPaid}>✓ Mark Received</button>
+              : <button className="btn btn-ghost btn-sm" onClick={handleBulkUnpaid}>↻ Mark Unpaid</button>
+            }
             <button className="btn btn-danger btn-sm" onClick={handleBulkDelete}>✕ Delete</button>
           </div>
         )}
@@ -194,14 +225,15 @@ export default function InvoicesView({ computed, dupeIds, anomalyMap, updateInvo
 
       {viewMode === "table"
         ? <InvoicesTable
-            computed={computed} dupeIds={dupeIds} anomalyMap={anomalyMap}
+            computed={filteredComputed} dupeIds={dupeIds} anomalyMap={anomalyMap}
             updateInvoice={updateInvoice} deleteInvoice={handleDeleteInvoice}
             setEditInvoice={setEditInvoice} color={color}
             selectedIds={selectedIds} onToggleSelect={toggleSelect} onToggleAll={toggleAll}
             onViewAttachment={onViewAttachment}
+            directionTab={directionTab}
           />
         : <InvoicesGroupedView
-            computed={computed} dupeIds={dupeIds} anomalyMap={anomalyMap}
+            computed={filteredComputed} dupeIds={dupeIds} anomalyMap={anomalyMap}
             updateInvoice={updateInvoice} deleteInvoice={handleDeleteInvoice}
             setEditInvoice={setEditInvoice} color={color}
             selectedIds={selectedIds} onToggleSelect={toggleSelect} onToggleAll={toggleAll}
