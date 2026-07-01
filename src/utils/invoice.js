@@ -95,7 +95,7 @@ export const getSupplierMonthlyAnomalies = (invoices) => {
       .slice(0, 6)
       .map(([, v]) => v);
 
-    if (pastAmounts.length < 3) return; // not enough history
+    if (pastAmounts.length < 2) return; // not enough history
 
     const baseline = pastAmounts.reduce((s, v) => s + v, 0) / pastAmounts.length;
     const deviation = (currentTotal - baseline) / baseline;

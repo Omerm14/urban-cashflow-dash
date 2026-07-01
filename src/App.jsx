@@ -99,18 +99,27 @@ function StatusBadge({ status }) {
 function ChartTooltip({ active, payload, label }) {
   const T = useT();
   if (!active || !payload?.length) return null;
-  const filtered = payload.filter(p => p.value > 0);
-  if (!filtered.length) return null;
+  const momEntry = payload.find(p => p.dataKey === "momPct");
+  const barEntries = payload.filter(p => p.dataKey !== "momPct" && p.value > 0);
+  if (!barEntries.length && momEntry?.value == null) return null;
   return (
     <div style={{ background: T.isDark ? "#131D2E" : T.surf2, border: `1px solid ${T.bdr2}`, borderRadius: 10, padding: "12px 16px", boxShadow: T.isDark ? "0 16px 48px rgba(0,0,0,.6)" : "0 4px 12px rgba(0,0,0,0.1)", minWidth: 152 }}>
       <div style={{ fontFamily: SANS, fontSize: 11, fontWeight: 500, color: T.t2, marginBottom: 8 }}>{label}</div>
-      {filtered.map(p => (
+      {barEntries.map(p => (
         <div key={p.name} style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
           <div style={{ width: 6, height: 6, borderRadius: 1, background: p.fill, flexShrink: 0 }} />
           <span style={{ fontFamily: SANS, fontSize: 12, color: T.t2, flex: 1 }}>{p.name}</span>
           <span style={{ fontFamily: MONO, fontSize: 12, color: T.t1, fontWeight: 500 }}>{fmt(p.value)}</span>
         </div>
       ))}
+      {momEntry?.value != null && (
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderTop: `1px solid ${T.bdr}`, marginTop: 6, paddingTop: 6 }}>
+          <span style={{ fontFamily: SANS, fontSize: 11, color: T.t3 }}>vs prev month</span>
+          <span style={{ fontFamily: MONO, fontSize: 12, fontWeight: 700, color: momEntry.value >= 0 ? "#4ade80" : "#f87171" }}>
+            {momEntry.value >= 0 ? "+" : ""}{momEntry.value}%
+          </span>
+        </div>
+      )}
     </div>
   );
 }
@@ -770,6 +779,7 @@ function Dashboard({ invoices, onPayAllJuly, chartData, supplierNames, supplierC
   const chartSuppliers = supplierNames || [];
   const resolvedChartData = chartData && chartData.length > 0 ? chartData : [];
   const getColor = supplierColor || (() => "#6366F1");
+  const focusedIdx = focusedMonth ? resolvedChartData.findIndex(m => m.month === focusedMonth) : -1;
 
   return (
     <div style={{ animation: "slideUp 0.35s cubic-bezier(.16,1,.3,1)" }}>
@@ -843,13 +853,20 @@ function Dashboard({ invoices, onPayAllJuly, chartData, supplierNames, supplierC
               <div style={{ fontFamily: SANS, fontWeight: 600, fontSize: 14, color: T.isDark ? "#CBD6E6" : T.t1, letterSpacing: "-0.02em" }}>{t("dash_payment_schedule")}</div>
               <div style={{ fontFamily: SANS, fontSize: 12, color: T.t2, marginTop: 3 }}>{t("dash_upcoming")}</div>
             </div>
-            <div style={{ display: "flex", gap: 4, background: T.isDark ? "rgba(255,255,255,.04)" : T.surf2, border: `1px solid ${T.bdr}`, borderRadius: 8, padding: 3 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
               {focusedMonth && chartRange === "monthly" && (
-                <button onClick={() => { setFocusedMonth(null); }} style={{ padding: "4px 10px", borderRadius: 6, border: "none", background: "transparent", fontFamily: SANS, fontSize: 11, fontWeight: 600, color: T.t2, cursor: "pointer" }}>← All</button>
+                <div style={{ display: "flex", alignItems: "center", gap: 2, background: T.isDark ? "rgba(255,255,255,.04)" : T.surf2, border: `1px solid ${T.bdr}`, borderRadius: 8, padding: "2px 4px" }}>
+                  <button onClick={() => { if (focusedIdx > 0) setFocusedMonth(resolvedChartData[focusedIdx - 1].month); }} disabled={focusedIdx <= 0} style={{ padding: "3px 7px", borderRadius: 5, border: "none", background: "transparent", fontFamily: SANS, fontSize: 13, fontWeight: 600, color: focusedIdx <= 0 ? T.t3 : T.t2, cursor: focusedIdx <= 0 ? "default" : "pointer" }}>‹</button>
+                  <span style={{ fontFamily: SANS, fontSize: 11, fontWeight: 600, color: T.t1, padding: "0 4px", minWidth: 60, textAlign: "center" }}>{focusedMonth}</span>
+                  <button onClick={() => { if (focusedIdx < resolvedChartData.length - 1) setFocusedMonth(resolvedChartData[focusedIdx + 1].month); }} disabled={focusedIdx >= resolvedChartData.length - 1} style={{ padding: "3px 7px", borderRadius: 5, border: "none", background: "transparent", fontFamily: SANS, fontSize: 13, fontWeight: 600, color: focusedIdx >= resolvedChartData.length - 1 ? T.t3 : T.t2, cursor: focusedIdx >= resolvedChartData.length - 1 ? "default" : "pointer" }}>›</button>
+                  <button onClick={() => setFocusedMonth(null)} style={{ padding: "3px 8px", borderRadius: 5, border: "none", background: "transparent", fontFamily: SANS, fontSize: 10, fontWeight: 600, color: T.t3, cursor: "pointer", marginLeft: 2 }}>All</button>
+                </div>
               )}
-              {[{ key: "monthly", label: "Monthly" }, { key: "quarterly", label: "Quarterly" }, { key: "yearly", label: "Yearly" }].map(opt => (
-                <button key={opt.key} onClick={() => { setChartRange(opt.key); setFocusedMonth(null); }} style={{ padding: "4px 12px", borderRadius: 6, border: "none", background: chartRange === opt.key ? (T.isDark ? "rgba(99,102,241,.25)" : T.indigoTint) : "transparent", fontFamily: SANS, fontSize: 11, fontWeight: 600, color: chartRange === opt.key ? (T.isDark ? "#A5B4FC" : T.indigo) : T.t2, cursor: "pointer" }}>{opt.label}</button>
-              ))}
+              <div style={{ display: "flex", gap: 4, background: T.isDark ? "rgba(255,255,255,.04)" : T.surf2, border: `1px solid ${T.bdr}`, borderRadius: 8, padding: 3 }}>
+                {[{ key: "monthly", label: "Monthly" }, { key: "quarterly", label: "Quarterly" }, { key: "yearly", label: "Yearly" }].map(opt => (
+                  <button key={opt.key} onClick={() => { setChartRange(opt.key); setFocusedMonth(null); }} style={{ padding: "4px 12px", borderRadius: 6, border: "none", background: chartRange === opt.key ? (T.isDark ? "rgba(99,102,241,.25)" : T.indigoTint) : "transparent", fontFamily: SANS, fontSize: 11, fontWeight: 600, color: chartRange === opt.key ? (T.isDark ? "#A5B4FC" : T.indigo) : T.t2, cursor: "pointer" }}>{opt.label}</button>
+                ))}
+              </div>
             </div>
           </div>
           {(() => {
@@ -923,7 +940,7 @@ function Dashboard({ invoices, onPayAllJuly, chartData, supplierNames, supplierC
               {chartSuppliers.map((name, i) => (
                 <Bar yAxisId="left" key={name} dataKey={name} stackId="a" fill={getColor(name)} radius={i === chartSuppliers.length - 1 ? [3, 3, 0, 0] : [0, 0, 0, 0]} animationDuration={600} animationEasing="ease-out" />
               ))}
-              {hasMom && <Line yAxisId="right" type="monotone" dataKey="momPct" stroke="#6366F1" strokeWidth={2} dot={{ r: 3, fill: "#6366F1" }} connectNulls={false} animationDuration={600} />}
+              {hasMom && <Line yAxisId="right" type="monotone" dataKey="momPct" stroke="#818CF8" strokeWidth={1.5} strokeDasharray="4 3" strokeOpacity={0.8} dot={{ r: 3, fill: "transparent", stroke: "#818CF8", strokeWidth: 1.5 }} activeDot={{ r: 4, fill: "#818CF8" }} connectNulls={false} animationDuration={600} />}
             </ComposedChart>
           </ResponsiveContainer>
             );
@@ -1258,7 +1275,7 @@ function InvoicesView({ invoices, selectedMonth, onMonthChange, onMarkPaid, onBu
           anomalyMap={anomalyMap} missingSuppliers={missingSuppliers} />
       ) : (
         <div style={{ background: T.surf, border: `1px solid ${T.bdr}`, borderRadius: 10, overflow: "hidden" }}>
-          <div style={{ display: "grid", gridTemplateColumns: "40px minmax(140px,1fr) 130px 90px 90px 110px 70px 90px 52px", alignItems: "center", padding: "0 18px", height: 40, background: T.isDark ? "#0E1520" : T.surf2, borderBottom: `1px solid ${T.bdr}` }}>
+          <div style={{ display: "grid", gridTemplateColumns: "40px minmax(140px,1fr) 130px 90px 90px 110px 70px 90px 80px", alignItems: "center", padding: "0 18px", height: 40, background: T.isDark ? "#0E1520" : T.surf2, borderBottom: `1px solid ${T.bdr}` }}>
             {["", t("inv_col_supplier"), t("inv_col_invoice"), t("inv_col_issued"), t("inv_col_due"), t("inv_col_amount"), "Source", t("inv_col_status"), ""].map((h, i) => (
               <div key={i} style={{ fontFamily: SANS, fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", color: T.isDark ? "rgba(255,255,255,.3)" : T.t3, textAlign: i === 5 ? "right" : "left", paddingRight: i === 5 ? 14 : 0 }}>{h}</div>
             ))}
@@ -1268,7 +1285,7 @@ function InvoicesView({ invoices, selectedMonth, onMonthChange, onMarkPaid, onBu
             const srcInfo = SOURCE_LABELS[inv.sync_source];
             return (
               <div key={inv.id} onClick={() => toggleSelect(inv.id)}
-                style={{ display: "grid", gridTemplateColumns: "40px minmax(140px,1fr) 130px 90px 90px 110px 70px 90px 52px", alignItems: "center", padding: "0 18px", height: 52, borderBottom: `1px solid ${T.isDark ? "rgba(255,255,255,.04)" : T.bdr}`, background: isSel ? T.indigoTint : "transparent", cursor: "pointer", transition: "background 0.1s" }}
+                style={{ display: "grid", gridTemplateColumns: "40px minmax(140px,1fr) 130px 90px 90px 110px 70px 90px 80px", alignItems: "center", padding: "0 18px", height: 52, borderBottom: `1px solid ${T.isDark ? "rgba(255,255,255,.04)" : T.bdr}`, background: isSel ? T.indigoTint : "transparent", cursor: "pointer", transition: "background 0.1s" }}
                 onMouseEnter={e => { if (!isSel) e.currentTarget.style.background = T.isDark ? "rgba(99,102,241,.07)" : T.surf2; }}
                 onMouseLeave={e => { e.currentTarget.style.background = isSel ? T.indigoTint : "transparent"; }}>
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "center" }}>
@@ -1289,7 +1306,12 @@ function InvoicesView({ invoices, selectedMonth, onMonthChange, onMarkPaid, onBu
                   <span style={{ fontFamily: SANS, fontSize: 10, color: T.t3, fontWeight: 500 }}>{srcInfo ? srcInfo.label : "Manual"}</span>
                 </div>
                 <StatusBadge status={inv.status} />
-                <div style={{ display: "flex", justifyContent: "flex-end" }}>
+                <div style={{ display: "flex", justifyContent: "flex-end", gap: 4 }}>
+                  {inv.attachment_path && (
+                    <button onClick={e => { e.stopPropagation(); onViewAttachment?.(inv); }} title="Preview" style={{ width: 26, height: 26, border: `1px solid ${T.isDark ? "rgba(255,255,255,.09)" : T.bdr}`, borderRadius: 6, background: T.isDark ? "rgba(255,255,255,.03)" : "transparent", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                      <Paperclip size={11} strokeWidth={1.75} color={T.isDark ? "rgba(255,255,255,.35)" : T.t2} />
+                    </button>
+                  )}
                   <button onClick={e => { e.stopPropagation(); onEditInvoice?.(inv); }} style={{ width: 26, height: 26, border: `1px solid ${T.isDark ? "rgba(255,255,255,.09)" : T.bdr}`, borderRadius: 6, background: T.isDark ? "rgba(255,255,255,.03)" : "transparent", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
                     <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke={T.isDark ? "rgba(255,255,255,.35)" : T.t2} strokeWidth="2" strokeLinecap="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
                   </button>
