@@ -414,12 +414,14 @@ exports.triggerSync = async (req, res) => {
       return res.json({ ok: true, ...result });
     } catch (err) {
       console.error('[integrations] sync discover error:', err.message);
+      const isInvalidGrant = err.message?.includes('invalid_grant');
       await supabase.from('integrations').update({
-        status: 'error', error_message: err.message,
-        error_count: (integration.error_count || 0) + 1,
+        status:        isInvalidGrant ? 'disconnected' : 'error',
+        error_message: isInvalidGrant ? 'Google authorization expired. Please reconnect.' : err.message,
+        error_count:   isInvalidGrant ? 0 : (integration.error_count || 0) + 1,
         last_error_at: new Date().toISOString(),
       }).eq('id', integration.id);
-      return res.status(500).json({ error: err.message });
+      return res.status(isInvalidGrant ? 401 : 500).json({ error: isInvalidGrant ? 'invalid_grant' : err.message });
     }
   }
 
@@ -439,13 +441,14 @@ exports.triggerSync = async (req, res) => {
     res.json({ ok: true, jobId: null, ...result });
   } catch (err) {
     console.error('[integrations] sync error:', err.message);
+    const isInvalidGrant = err.message?.includes('invalid_grant');
     await supabase.from('integrations').update({
-      status:        'error',
-      error_message: err.message,
-      error_count:   (integration.error_count || 0) + 1,
+      status:        isInvalidGrant ? 'disconnected' : 'error',
+      error_message: isInvalidGrant ? 'Google authorization expired. Please reconnect.' : err.message,
+      error_count:   isInvalidGrant ? 0 : (integration.error_count || 0) + 1,
       last_error_at: new Date().toISOString(),
     }).eq('id', integration.id);
-    res.status(500).json({ error: err.message });
+    res.status(isInvalidGrant ? 401 : 500).json({ error: isInvalidGrant ? 'invalid_grant' : err.message });
   }
 };
 
