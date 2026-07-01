@@ -84,6 +84,9 @@ app.delete('/api/invoices/:id',           auth, invoices.remove);
 app.post('/api/invoices/bulk-delete',     auth, invoices.bulkRemove);
 app.post('/api/attachments/presign',      auth, invoices.presignUpload);
 
+// Profile (logo upload)
+app.post('/api/profile/logo', auth, require('./routes/profile').uploadLogo);
+
 // Billing — Meshulam IPN has no auth; rest uses auth middleware
 const billingRoutes = require('./routes/billing');
 app.post('/api/billing/ipn', billingRoutes.ipn);

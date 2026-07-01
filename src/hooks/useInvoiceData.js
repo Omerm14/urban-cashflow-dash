@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { STATUS, PALETTE } from "../constants";
 import { calcDueDate, toYM } from "../utils/dates";
-import { findDuplicates, matchSupplier, getMissingSuppliers, getAmountAnomaly } from "../utils/invoice";
+import { findDuplicates, matchSupplier, getMissingSuppliers, getSupplierMonthlyAnomalies } from "../utils/invoice";
 import { supabase } from "../lib/supabase";
 import { useAuth } from "../contexts/AuthContext";
 
@@ -150,15 +150,7 @@ export const useInvoiceData = () => {
     [invoices, suppliers, currentYM]
   );
 
-  const anomalyMap = useMemo(() => {
-    const map = new Map();
-    computed.forEach(inv => {
-      if (inv.status === 'Credit' || Number(inv.amount) < 0) return;
-      const result = getAmountAnomaly(inv, invoices);
-      if (result) map.set(inv.id, result);
-    });
-    return map;
-  }, [computed, invoices]);
+  const anomalyMap = useMemo(() => getSupplierMonthlyAnomalies(invoices), [invoices]);
 
   const monthlyData = useMemo(() => {
     const map = {};

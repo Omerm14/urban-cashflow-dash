@@ -45,6 +45,9 @@ app.post('/api/invoices/bulk-delete',     auth, invoices.bulkRemove);
 app.post('/api/attachments/presign',      auth, invoices.presignUpload);
 
 
+// Profile (logo upload)
+app.post('/api/profile/logo', auth, require('../server/routes/profile').uploadLogo);
+
 // Billing (Meshulam)
 const billing = require('../server/routes/billing');
 app.post('/api/billing/ipn', billing.ipn);
