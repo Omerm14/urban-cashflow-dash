@@ -854,12 +854,12 @@ function Dashboard({ invoices, onPayAllJuly, chartData, supplierNames, supplierC
               <div style={{ fontFamily: SANS, fontSize: 12, color: T.t2, marginTop: 3 }}>{t("dash_upcoming")}</div>
             </div>
             <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-              {focusedMonth && chartRange === "monthly" && (
+              {chartRange === "monthly" && (
                 <div style={{ display: "flex", alignItems: "center", gap: 2, background: T.isDark ? "rgba(255,255,255,.04)" : T.surf2, border: `1px solid ${T.bdr}`, borderRadius: 8, padding: "2px 4px" }}>
-                  <button onClick={() => { if (focusedIdx > 0) setFocusedMonth(resolvedChartData[focusedIdx - 1].month); }} disabled={focusedIdx <= 0} style={{ padding: "3px 7px", borderRadius: 5, border: "none", background: "transparent", fontFamily: SANS, fontSize: 13, fontWeight: 600, color: focusedIdx <= 0 ? T.t3 : T.t2, cursor: focusedIdx <= 0 ? "default" : "pointer" }}>‹</button>
-                  <span style={{ fontFamily: SANS, fontSize: 11, fontWeight: 600, color: T.t1, padding: "0 4px", minWidth: 60, textAlign: "center" }}>{focusedMonth}</span>
-                  <button onClick={() => { if (focusedIdx < resolvedChartData.length - 1) setFocusedMonth(resolvedChartData[focusedIdx + 1].month); }} disabled={focusedIdx >= resolvedChartData.length - 1} style={{ padding: "3px 7px", borderRadius: 5, border: "none", background: "transparent", fontFamily: SANS, fontSize: 13, fontWeight: 600, color: focusedIdx >= resolvedChartData.length - 1 ? T.t3 : T.t2, cursor: focusedIdx >= resolvedChartData.length - 1 ? "default" : "pointer" }}>›</button>
-                  <button onClick={() => setFocusedMonth(null)} style={{ padding: "3px 8px", borderRadius: 5, border: "none", background: "transparent", fontFamily: SANS, fontSize: 10, fontWeight: 600, color: T.t3, cursor: "pointer", marginLeft: 2 }}>All</button>
+                  <button onClick={() => { if (focusedMonth && focusedIdx > 0) setFocusedMonth(resolvedChartData[focusedIdx - 1].month); else if (!focusedMonth && resolvedChartData.length > 0) setFocusedMonth(resolvedChartData[0].month); }} disabled={focusedMonth ? focusedIdx <= 0 : false} style={{ padding: "3px 7px", borderRadius: 5, border: "none", background: "transparent", fontFamily: SANS, fontSize: 13, fontWeight: 600, color: (focusedMonth && focusedIdx <= 0) ? T.t3 : T.t2, cursor: "pointer" }}>‹</button>
+                  <span style={{ fontFamily: SANS, fontSize: 11, fontWeight: 600, color: T.t1, padding: "0 4px", minWidth: 60, textAlign: "center" }}>{focusedMonth || "All months"}</span>
+                  <button onClick={() => { if (focusedMonth && focusedIdx < resolvedChartData.length - 1) setFocusedMonth(resolvedChartData[focusedIdx + 1].month); else if (!focusedMonth && resolvedChartData.length > 0) setFocusedMonth(resolvedChartData[resolvedChartData.length - 1].month); }} disabled={focusedMonth ? focusedIdx >= resolvedChartData.length - 1 : false} style={{ padding: "3px 7px", borderRadius: 5, border: "none", background: "transparent", fontFamily: SANS, fontSize: 13, fontWeight: 600, color: (focusedMonth && focusedIdx >= resolvedChartData.length - 1) ? T.t3 : T.t2, cursor: "pointer" }}>›</button>
+                  {focusedMonth && <button onClick={() => setFocusedMonth(null)} style={{ padding: "3px 8px", borderRadius: 5, border: "none", background: "transparent", fontFamily: SANS, fontSize: 10, fontWeight: 600, color: T.t3, cursor: "pointer", marginLeft: 2 }}>All</button>}
                 </div>
               )}
               <div style={{ display: "flex", gap: 4, background: T.isDark ? "rgba(255,255,255,.04)" : T.surf2, border: `1px solid ${T.bdr}`, borderRadius: 8, padding: 3 }}>
@@ -940,7 +940,7 @@ function Dashboard({ invoices, onPayAllJuly, chartData, supplierNames, supplierC
               {chartSuppliers.map((name, i) => (
                 <Bar yAxisId="left" key={name} dataKey={name} stackId="a" fill={getColor(name)} radius={i === chartSuppliers.length - 1 ? [3, 3, 0, 0] : [0, 0, 0, 0]} animationDuration={600} animationEasing="ease-out" />
               ))}
-              {hasMom && <Line yAxisId="right" type="monotone" dataKey="momPct" stroke="#818CF8" strokeWidth={1.5} strokeDasharray="4 3" strokeOpacity={0.8} dot={{ r: 3, fill: "transparent", stroke: "#818CF8", strokeWidth: 1.5 }} activeDot={{ r: 4, fill: "#818CF8" }} connectNulls={false} animationDuration={600} />}
+              {hasMom && displayData.length >= 3 && <Line yAxisId="right" type="monotone" dataKey="momPct" stroke="#818CF8" strokeWidth={1.5} strokeDasharray="4 3" strokeOpacity={0.85} dot={{ r: 2.5, fill: "transparent", stroke: "#818CF8", strokeWidth: 1.5 }} activeDot={{ r: 4, fill: "#818CF8" }} label={false} connectNulls={false} animationDuration={600} />}
             </ComposedChart>
           </ResponsiveContainer>
             );
@@ -1307,11 +1307,9 @@ function InvoicesView({ invoices, selectedMonth, onMonthChange, onMarkPaid, onBu
                 </div>
                 <StatusBadge status={inv.status} />
                 <div style={{ display: "flex", justifyContent: "flex-end", gap: 4 }}>
-                  {inv.attachment_path && (
-                    <button onClick={e => { e.stopPropagation(); onViewAttachment?.(inv); }} title="Preview" style={{ width: 26, height: 26, border: `1px solid ${T.isDark ? "rgba(255,255,255,.09)" : T.bdr}`, borderRadius: 6, background: T.isDark ? "rgba(255,255,255,.03)" : "transparent", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                      <Paperclip size={11} strokeWidth={1.75} color={T.isDark ? "rgba(255,255,255,.35)" : T.t2} />
-                    </button>
-                  )}
+                  <button onClick={e => { e.stopPropagation(); inv.attachment_path && onViewAttachment?.(inv); }} title={inv.attachment_path ? "Preview" : "No attachment"} style={{ width: 26, height: 26, border: `1px solid ${T.isDark ? "rgba(255,255,255,.09)" : T.bdr}`, borderRadius: 6, background: T.isDark ? "rgba(255,255,255,.03)" : "transparent", cursor: inv.attachment_path ? "pointer" : "default", display: "flex", alignItems: "center", justifyContent: "center", opacity: inv.attachment_path ? 1 : 0.35 }}>
+                    <Paperclip size={11} strokeWidth={1.75} color={T.isDark ? "rgba(255,255,255,.35)" : T.t2} />
+                  </button>
                   <button onClick={e => { e.stopPropagation(); onEditInvoice?.(inv); }} style={{ width: 26, height: 26, border: `1px solid ${T.isDark ? "rgba(255,255,255,.09)" : T.bdr}`, borderRadius: 6, background: T.isDark ? "rgba(255,255,255,.03)" : "transparent", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
                     <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke={T.isDark ? "rgba(255,255,255,.35)" : T.t2} strokeWidth="2" strokeLinecap="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
                   </button>

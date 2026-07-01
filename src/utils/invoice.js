@@ -68,9 +68,6 @@ export const getSupplierMonthlyAnomalies = (invoices) => {
   const result = new Map();
   if (!invoices?.length) return result;
 
-  const now = new Date();
-  const currentYM = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-
   // Group non-credit invoices by (supplier, YYYY-MM) → monthly total
   const monthlyTotals = {};
   invoices.forEach(inv => {
@@ -84,10 +81,16 @@ export const getSupplierMonthlyAnomalies = (invoices) => {
     monthlyTotals[key][ym] = (monthlyTotals[key][ym] || 0) + Number(inv.amount);
   });
 
+  // Use the most recent month with actual data instead of today's calendar month.
+  // This handles the common case where invoice_date lags behind due_date by 60–90 days.
+  const allMonths = [...new Set(Object.values(monthlyTotals).flatMap(m => Object.keys(m)))].sort();
+  if (allMonths.length < 2) return result;
+  const currentYM = allMonths[allMonths.length - 1];
+
   // For each supplier, compute baseline from past months and compare to current month
   Object.entries(monthlyTotals).forEach(([key, months]) => {
     const currentTotal = months[currentYM];
-    if (!currentTotal) return; // no current month data
+    if (!currentTotal) return;
 
     const pastAmounts = Object.entries(months)
       .filter(([ym]) => ym !== currentYM)
