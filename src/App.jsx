@@ -880,10 +880,10 @@ function Dashboard({ invoices, onPayAllJuly, chartData, supplierNames, supplierC
               const base = focusedMonth
                 ? resolvedChartData.filter(m => m.month === focusedMonth)
                 : resolvedChartData.slice(-12);
-              // Add MoM % to each point
+              // Add MoM % to each point; first point gets 0 so the line starts connected
               displayData = base.map((m, i, arr) => {
                 const prev = arr[i - 1];
-                const momPct = prev && prev.total > 0 ? Math.round((m.total - prev.total) / prev.total * 100) : null;
+                const momPct = prev && prev.total > 0 ? Math.round((m.total - prev.total) / prev.total * 100) : 0;
                 return { ...m, momPct };
               });
               barSize = focusedMonth ? (isMobile ? 44 : 70) : (isMobile ? 20 : 28);
@@ -928,7 +928,7 @@ function Dashboard({ invoices, onPayAllJuly, chartData, supplierNames, supplierC
               barSize = isMobile ? 44 : 60;
             }
 
-            const hasMom = displayData.length > 1;
+            const hasMom = displayData.length >= 2;
             return (
           <ResponsiveContainer width="100%" height={isMobile ? 180 : 260}>
             <ComposedChart data={displayData} barSize={barSize} barCategoryGap="28%" onClick={(data) => { if (data?.activeLabel && chartRange === "monthly") { setFocusedMonth(data.activeLabel); } }}>
@@ -940,7 +940,7 @@ function Dashboard({ invoices, onPayAllJuly, chartData, supplierNames, supplierC
               {chartSuppliers.map((name, i) => (
                 <Bar yAxisId="left" key={name} dataKey={name} stackId="a" fill={getColor(name)} radius={i === chartSuppliers.length - 1 ? [3, 3, 0, 0] : [0, 0, 0, 0]} animationDuration={600} animationEasing="ease-out" />
               ))}
-              {hasMom && displayData.length >= 3 && <Line yAxisId="right" type="monotone" dataKey="momPct" stroke="#818CF8" strokeWidth={1.5} strokeDasharray="4 3" strokeOpacity={0.85} dot={{ r: 2.5, fill: "transparent", stroke: "#818CF8", strokeWidth: 1.5 }} activeDot={{ r: 4, fill: "#818CF8" }} label={false} connectNulls={false} animationDuration={600} />}
+              {hasMom && <Line yAxisId="right" type="monotone" dataKey="momPct" stroke="#818CF8" strokeWidth={1.5} strokeDasharray="4 3" strokeOpacity={0.85} dot={{ r: 2.5, fill: "transparent", stroke: "#818CF8", strokeWidth: 1.5 }} activeDot={{ r: 4, fill: "#818CF8" }} label={false} connectNulls animationDuration={600} />}
             </ComposedChart>
           </ResponsiveContainer>
             );
