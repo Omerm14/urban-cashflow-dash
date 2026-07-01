@@ -34,15 +34,16 @@ const makeOAuth2WithCreds = credentials => {
 };
 
 // GET /api/integrations
-// Explicitly exclude `credentials` — it contains OAuth access/refresh tokens and API keys
-// that must never be returned to the browser.
+// Use select('*') to avoid PostgREST 500s when new columns haven't been migrated yet.
+// Strip credentials in JS before returning — OAuth tokens must never reach the browser.
 exports.list = async (req, res) => {
   const { data, error } = await supabase
     .from('integrations')
-    .select('id,user_id,type,status,config,last_sync,sync_count,auto_sync_enabled,sync_frequency_min,error_message,error_count,created_at,updated_at')
+    .select('*')
     .eq('user_id', req.user.id);
   if (error) { console.error('[integrations] list error:', error.message); return res.status(500).json({ error: 'Internal server error' }); }
-  res.json({ integrations: data || [] });
+  const safe = (data || []).map(({ credentials, ...rest }) => rest);
+  res.json({ integrations: safe });
 };
 
 // DELETE /api/integrations/:id
@@ -84,11 +85,8 @@ exports.googleCallback = async (req, res) => {
   // Parse state first so we can redirect back to the correct frontend URL (branch/preview/local)
   let stateData = {};
   try { stateData = JSON.parse(state || '{}'); } catch { /* fall through */ }
-  const allowedOrigins = (process.env.FRONTEND_URL || '').split(',').map(s => s.trim()).filter(Boolean);
-  if (!allowedOrigins.length) {
-    console.error('[integrations] FRONTEND_URL not set — cannot validate OAuth returnUrl');
-    return res.status(500).json({ error: 'Server misconfiguration: FRONTEND_URL not set' });
-  }
+  const allowedOrigins = (process.env.FRONTEND_URL || 'https://gocashflow.co')
+    .split(',').map(s => s.trim()).filter(Boolean);
   const returnUrl = stateData.returnUrl || '';
   // Compare by exact hostname to prevent subdomain open-redirect attacks
   const isAllowed = !returnUrl || (() => {
