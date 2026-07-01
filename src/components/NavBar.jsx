@@ -9,7 +9,7 @@ const PLAN_BADGE = {
   enterprise: { label: 'ENTERPRISE', bg: 'rgba(99,102,241,.12)',  color: '#818cf8', border: 'rgba(99,102,241,.35)' },
 };
 
-export default function NavBar({ view, setView, suppliersCount, onSuppliersClick, user, onSignOut, integrationError, unreadCount, onBellClick, plan, onUpgrade, onSettings, onStartTour }) {
+export default function NavBar({ view, setView, suppliersCount, onSuppliersClick, user, onSignOut, integrationError, missingCount, unreadCount, onBellClick, plan, onUpgrade, onSettings }) {
   const isAdmin = user?.email && import.meta.env.VITE_ADMIN_EMAIL && user.email === import.meta.env.VITE_ADMIN_EMAIL;
   const views = isAdmin
     ? ["dashboard","invoices","calendar","integrations","admin"]
@@ -39,7 +39,6 @@ export default function NavBar({ view, setView, suppliersCount, onSuppliersClick
             key={v}
             className={`nav-link${view === v ? " active" : ""}`}
             onClick={() => setView(v)}
-            data-onboarding={v === "integrations" ? "integrations" : undefined}
             style={{ textTransform:"capitalize", position:"relative" }}>
             {v === "integrations" ? "Integrations" : v}
             {v === "integrations" && integrationError && (
@@ -50,6 +49,19 @@ export default function NavBar({ view, setView, suppliersCount, onSuppliersClick
       </div>
 
       <div className="nav-right">
+        {missingCount > 0 && (
+          <button
+            onClick={() => setView('dashboard')}
+            title={`${missingCount} ספק${missingCount !== 1 ? 'ים' : ''} קבוע${missingCount !== 1 ? 'ים' : ''} לא שלח${missingCount !== 1 ? 'ו' : ''} חשבונית החודש`}
+            style={{ position:"relative", padding:"8px 10px", background:"rgba(249,115,22,.1)", border:"1px solid rgba(249,115,22,.35)", borderRadius:8, color:"#fb923c", cursor:"pointer", fontSize:14, transition:"all .2s", fontFamily:"inherit" }}
+            onMouseEnter={e => { e.currentTarget.style.background="rgba(249,115,22,.18)"; }}
+            onMouseLeave={e => { e.currentTarget.style.background="rgba(249,115,22,.1)"; }}>
+            ⚠
+            <span style={{ position:"absolute", top:4, right:4, minWidth:14, height:14, borderRadius:7, background:"#ea580c", border:"2px solid var(--bg)", display:"flex", alignItems:"center", justifyContent:"center", fontSize:9, fontWeight:700, color:"#fff", lineHeight:1, padding:"0 2px" }}>
+              {missingCount > 9 ? "9+" : missingCount}
+            </span>
+          </button>
+        )}
         <button
           onClick={onBellClick}
           style={{ position:"relative", padding:"8px 10px", background:"transparent", border:"1px solid var(--bdr)", borderRadius:8, color:"var(--t3)", cursor:"pointer", fontSize:14, transition:"all .2s", fontFamily:"inherit" }}
@@ -63,7 +75,7 @@ export default function NavBar({ view, setView, suppliersCount, onSuppliersClick
           )}
         </button>
 
-        <button className="sup-pill" data-onboarding="suppliers" onClick={onSuppliersClick}>
+        <button className="sup-pill" onClick={onSuppliersClick}>
           <span style={{ width:7, height:7, borderRadius:"50%", background:"var(--cyan)" }}/>
           Suppliers ({suppliersCount})
         </button>
@@ -118,16 +130,6 @@ export default function NavBar({ view, setView, suppliersCount, onSuppliersClick
                   <div style={{ padding: '10px 14px', borderBottom: '1px solid var(--bdr)', fontSize: 12, color: 'var(--t3)' }}>
                     {user.email}
                   </div>
-                  {onStartTour && (
-                    <button onClick={() => { setMenuOpen(false); onStartTour(); }} style={{
-                      display: 'block', width: '100%', padding: '11px 14px',
-                      background: 'none', border: 'none', textAlign: 'left',
-                      fontSize: 13, color: 'var(--t1)', cursor: 'pointer', fontFamily: 'inherit',
-                    }}
-                      onMouseEnter={e => e.currentTarget.style.background = 'var(--surf2)'}
-                      onMouseLeave={e => e.currentTarget.style.background = 'none'}
-                    >▶ Take the tour</button>
-                  )}
                   <button onClick={() => { setMenuOpen(false); onSettings(); }} style={{
                     display: 'block', width: '100%', padding: '11px 14px',
                     background: 'none', border: 'none', textAlign: 'left',

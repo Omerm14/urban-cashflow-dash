@@ -404,69 +404,7 @@ function GreenInvoiceModal({ onClose, onSave }) {
 
 // ─── WhatsApp modal ───────────────────────────────────────────────────────────
 
-function WhatsAppModal({ onClose, onSave }) {
-  const [apiToken,      setApiToken]      = useState("");
-  const [phoneNumberId, setPhoneNumberId] = useState("");
-  const [webhookSecret, setWebhookSecret] = useState("");
-  const [saving,        setSaving]        = useState(false);
-  const [err,           setErr]           = useState(null);
-  const webhookUrl = `${window.location.origin}/api/webhook/whatsapp`;
-
-  const save = async () => {
-    if (!apiToken || !phoneNumberId || !webhookSecret) return setErr("All fields are required");
-    setSaving(true); setErr(null);
-    try {
-      await apiFetch("/api/integrations/whatsapp", {
-        method: "POST",
-        body: { api_token: apiToken, phone_number_id: phoneNumberId, webhook_secret: webhookSecret },
-      });
-      onSave();
-    } catch (e) { setErr(e.message); }
-    finally { setSaving(false); }
-  };
-
-  return (
-    <div className="modal-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
-      <div className="modal" style={{ maxWidth: 460 }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <WhatsAppIcon size={24} />
-            <span style={{ fontWeight: 700, fontSize: 16, color: "#f1f5f9" }}>Connect WhatsApp Business</span>
-          </div>
-          <button onClick={onClose} style={{ width: 30, height: 30, borderRadius: 8, background: "#131c2e", border: "1px solid #1e2d45", color: "#64748b", cursor: "pointer", fontSize: 14 }}>✕</button>
-        </div>
-        <div style={{ marginBottom: 18, background: "#0a1628", borderRadius: 10, padding: "12px 14px", border: "1px solid #1e2d45" }}>
-          <div style={{ fontSize: 11, fontWeight: 600, color: "#475569", marginBottom: 6, textTransform: "uppercase", letterSpacing: ".5px" }}>Your Webhook URL</div>
-          <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-            <code style={{ fontSize: 11, color: "#38bdf8", flex: 1, wordBreak: "break-all" }}>{webhookUrl}</code>
-            <button onClick={() => navigator.clipboard.writeText(webhookUrl)}
-              style={{ padding: "4px 10px", background: "#1e2d45", border: "1px solid #334155", borderRadius: 6, color: "#94a3b8", cursor: "pointer", fontSize: 11, fontFamily: "inherit", flexShrink: 0 }}>
-              Copy
-            </button>
-          </div>
-        </div>
-        {[
-          ["Permanent Access Token", apiToken,      setApiToken,      "Meta → WhatsApp → API Setup"],
-          ["Phone Number ID",        phoneNumberId, setPhoneNumberId, "Meta → WhatsApp → API Setup"],
-          ["Webhook Verify Token",   webhookSecret, setWebhookSecret, "Create any random string — paste same value in Meta console"],
-        ].map(([label, val, setter, hint]) => (
-          <div key={label} style={{ marginBottom: 14 }}>
-            <div style={{ fontSize: 11, fontWeight: 600, color: "#475569", marginBottom: 2, textTransform: "uppercase", letterSpacing: ".5px" }}>{label}</div>
-            {hint && <div style={{ fontSize: 11, color: "#334155", marginBottom: 5 }}>{hint}</div>}
-            <input type="text" value={val} className="input" onChange={e => setter(e.target.value)} />
-          </div>
-        ))}
-        {err && <div style={{ color: "#f87171", fontSize: 12, marginBottom: 12 }}>{err}</div>}
-        <div style={{ display: "flex", gap: 10, justifyContent: "flex-end" }}>
-          <Btn variant="secondary" onClick={onClose}>Cancel</Btn>
-          <Btn onClick={save} disabled={saving} style={{ background: "linear-gradient(135deg,#25d366,#128c7e)" }}>
-            {saving ? "Connecting…" : "Connect"}
-          </Btn>
-        </div>
-      </div>
-    </div>
-  );
-}
+// WhatsApp no longer needs a modal — connect is one click, no credentials required from the user.
 
 // ─── Integration card ─────────────────────────────────────────────────────────
 
@@ -611,6 +549,15 @@ function IntegrationCard({ type, integration, onRefresh, onInvoicesRefresh, onNo
   };
 
   const handleConnect = async () => {
+    // WhatsApp: one-click connect, no credentials needed from the user
+    if (type === "whatsapp") {
+      try {
+        await apiFetch("/api/integrations/whatsapp", { method: "POST" });
+        showToast("WhatsApp connected — open Settings to get your vendor link", true);
+        onRefresh();
+      } catch (e) { showToast(e.message, false); }
+      return;
+    }
     if (cfg.authType !== "oauth") { onConnectModal(type); return; }
     try {
       const { url } = await apiFetch(
@@ -728,6 +675,7 @@ function IntegrationCard({ type, integration, onRefresh, onInvoicesRefresh, onNo
             </Btn>
           ) : (
             <>
+              {cfg.authType !== "webhook" && (
               <Btn
                 onClick={isAtLimit ? onUpgrade : () => handleSync(false)}
                 disabled={isActive}
@@ -740,6 +688,7 @@ function IntegrationCard({ type, integration, onRefresh, onInvoicesRefresh, onNo
                   : isAtLimit ? "🔒 Sync Now"
                   : "Sync Now"}
               </Btn>
+              )}
               {isJobSyncing && (
                 <Btn variant="danger" onClick={() => onCancelSync?.(integration.id)} style={{ padding: "0 14px" }}>
                   Stop
@@ -845,22 +794,54 @@ function IntegrationCard({ type, integration, onRefresh, onInvoicesRefresh, onNo
             </div>
           )}
 
-          {/* WhatsApp webhook info */}
-          {type === "whatsapp" && (
+          {/* WhatsApp vendor sharing panel */}
+          {type === "whatsapp" && integration?.config?.wa_link && (
             <div style={{ marginBottom: 18 }}>
-              <div style={{ fontSize: 11, fontWeight: 600, color: "#475569", marginBottom: 6, textTransform: "uppercase", letterSpacing: ".5px" }}>Webhook URL</div>
+              {/* Inbox code badge */}
+              <div style={{ fontSize: 11, fontWeight: 600, color: "#475569", marginBottom: 8, textTransform: "uppercase", letterSpacing: ".5px" }}>Your Vendor Inbox Code</div>
+              <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 16 }}>
+                <span style={{
+                  fontFamily: "monospace", fontSize: 22, fontWeight: 800, letterSpacing: 4,
+                  color: "#25d366", background: "rgba(37,211,102,0.08)",
+                  border: "1px solid rgba(37,211,102,0.25)", borderRadius: 10,
+                  padding: "8px 18px",
+                }}>
+                  {integration.config.inbox_code}
+                </span>
+              </div>
+
+              {/* QR code + instructions side by side */}
+              <div style={{ display: "flex", gap: 16, alignItems: "flex-start", marginBottom: 14 }}>
+                <img
+                  src={`https://api.qrserver.com/v1/create-qr-code/?size=120x120&color=25d366&bgcolor=0d1626&data=${encodeURIComponent(integration.config.wa_link)}`}
+                  alt="WhatsApp QR code"
+                  width={120} height={120}
+                  style={{ borderRadius: 10, border: "1px solid #1e2d45", flexShrink: 0 }}
+                />
+                <div style={{ fontSize: 12, color: "#64748b", lineHeight: 1.6 }}>
+                  <div style={{ color: "#94a3b8", fontWeight: 600, marginBottom: 4 }}>How to use</div>
+                  <ol style={{ margin: 0, paddingLeft: 16 }}>
+                    <li>Share the QR code or the link below with your vendors.</li>
+                    <li>Vendor scans or taps the link — WhatsApp opens with your code pre-filled.</li>
+                    <li>Vendor attaches the invoice (PDF or photo) and sends.</li>
+                    <li>Invoice appears in your dashboard automatically.</li>
+                  </ol>
+                </div>
+              </div>
+
+              {/* Shareable link */}
+              <div style={{ fontSize: 11, fontWeight: 600, color: "#475569", marginBottom: 6, textTransform: "uppercase", letterSpacing: ".5px" }}>Shareable Link</div>
               <div style={{ display: "flex", gap: 8, alignItems: "center", background: "#0a1628", borderRadius: 8, padding: "8px 12px", border: "1px solid #1e2d45" }}>
-                <code style={{ fontSize: 11, color: "#38bdf8", flex: 1, wordBreak: "break-all" }}>
-                  {window.location.origin}/api/webhook/whatsapp
-                </code>
-                <button onClick={() => navigator.clipboard.writeText(`${window.location.origin}/api/webhook/whatsapp`)}
-                  style={{ padding: "3px 10px", background: "#1e2d45", border: "none", borderRadius: 6, color: "#94a3b8", cursor: "pointer", fontSize: 11, fontFamily: "inherit" }}>
+                <code style={{ fontSize: 11, color: "#38bdf8", flex: 1, wordBreak: "break-all" }}>{integration.config.wa_link}</code>
+                <button
+                  onClick={() => { navigator.clipboard.writeText(integration.config.wa_link); }}
+                  style={{ padding: "3px 10px", background: "#1e2d45", border: "none", borderRadius: 6, color: "#94a3b8", cursor: "pointer", fontSize: 11, fontFamily: "inherit", flexShrink: 0 }}>
                   Copy
                 </button>
               </div>
-              {integration?.config?.phone_number_id && (
-                <div style={{ fontSize: 11, color: "#334155", marginTop: 6 }}>Phone ID: {integration.config.phone_number_id}</div>
-              )}
+              <div style={{ fontSize: 11, color: "#334155", marginTop: 6 }}>
+                If a vendor sends a file without using the link, ask them to type <strong style={{ color: "#475569" }}>{integration.config.inbox_code}</strong> as the message caption.
+              </div>
             </div>
           )}
 
@@ -897,7 +878,8 @@ function IntegrationCard({ type, integration, onRefresh, onInvoicesRefresh, onNo
             </div>
           )}
 
-          {/* Auto-sync */}
+          {/* Auto-sync (not applicable for webhook-driven integrations) */}
+          {cfg.authType !== "webhook" && (
           <div style={{ marginBottom: 18 }}>
             <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", fontSize: 13, color: "#94a3b8", marginBottom: 8 }}>
               <input type="checkbox" checked={autoSync} onChange={e => setAutoSync(e.target.checked)}
@@ -914,6 +896,7 @@ function IntegrationCard({ type, integration, onRefresh, onInvoicesRefresh, onNo
               </div>
             )}
           </div>
+          )}
 
           {/* Save + Resync */}
           <div style={{ display: "flex", gap: 8, paddingBottom: 18 }}>
@@ -955,12 +938,11 @@ function IntegrationCard({ type, integration, onRefresh, onInvoicesRefresh, onNo
 
 // ─── Main page ────────────────────────────────────────────────────────────────
 
-export default function IntegrationsPage({ oauthResult, onClearOAuthResult, onInvoicesRefresh, onNotificationsRefresh, onStartSync, onCancelSync, syncJobs, isAtLimit, onUpgrade, onIntegrationConnected }) {
+export default function IntegrationsPage({ oauthResult, onClearOAuthResult, onInvoicesRefresh, onNotificationsRefresh, onStartSync, onCancelSync, syncJobs, isAtLimit, onUpgrade }) {
   const [integrations,      setIntegrations]      = useState([]);
   const [loading,           setLoading]           = useState(true);
   const [toast,             setToast]             = useState(null);
-  const [showGreenModal,    setShowGreenModal]    = useState(false);
-  const [showWhatsAppModal, setShowWhatsAppModal] = useState(false);
+  const [showGreenModal, setShowGreenModal] = useState(false);
 
   const showToast = useCallback((text, ok) => {
     setToast({ text, ok });
@@ -970,9 +952,7 @@ export default function IntegrationsPage({ oauthResult, onClearOAuthResult, onIn
   const load = useCallback(async () => {
     try {
       const { integrations: data } = await apiFetch("/api/integrations");
-      const list = data || [];
-      setIntegrations(list);
-      if (list.length > 0 && onIntegrationConnected) onIntegrationConnected();
+      setIntegrations(data || []);
     } catch (e) { showToast(e.message, false); }
     finally { setLoading(false); }
   }, [showToast]);
@@ -1000,7 +980,6 @@ export default function IntegrationsPage({ oauthResult, onClearOAuthResult, onIn
 
   const handleConnectModal = type => {
     if (type === "green_invoice") setShowGreenModal(true);
-    if (type === "whatsapp")      setShowWhatsAppModal(true);
   };
 
   if (loading) return (
@@ -1062,12 +1041,6 @@ export default function IntegrationsPage({ oauthResult, onClearOAuthResult, onIn
         <GreenInvoiceModal
           onClose={() => setShowGreenModal(false)}
           onSave={() => { setShowGreenModal(false); load(); showToast("Green Invoice connected", true); }}
-        />
-      )}
-      {showWhatsAppModal && (
-        <WhatsAppModal
-          onClose={() => setShowWhatsAppModal(false)}
-          onSave={() => { setShowWhatsAppModal(false); load(); showToast("WhatsApp Business connected", true); }}
         />
       )}
     </div>
