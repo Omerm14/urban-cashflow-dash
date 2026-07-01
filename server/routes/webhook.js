@@ -84,6 +84,16 @@ async function registerPhone(phone, integration) {
 
 // POST /api/webhook/whatsapp  — incoming message handler
 exports.handleWhatsApp = async (req, res) => {
+  if (!process.env.WHATSAPP_APP_SECRET) {
+    console.error('[webhook:wa] WHATSAPP_APP_SECRET not set — rejecting all webhook payloads');
+    return res.status(200).json({ ok: true }); // 200 so Meta doesn't disable the webhook
+  }
+  const signature = req.headers['x-hub-signature-256'] || '';
+  if (!verifySignature(req.rawBody || '', signature, process.env.WHATSAPP_APP_SECRET)) {
+    console.warn('[webhook:wa] invalid HMAC signature — ignoring payload');
+    return res.status(200).json({ ok: true });
+  }
+
   const body = req.body;
   console.log('[webhook:wa] received, entry len:', body?.entry?.length);
 

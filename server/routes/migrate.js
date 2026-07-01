@@ -18,8 +18,7 @@ const storage  = require('../lib/storage');
 const secretOk = (req) => {
   const secret = process.env.CRON_SECRET;
   if (!secret) return false;
-  const provided = (req.headers.authorization || '').replace(/^Bearer\s+/, '')
-    || req.query.key || req.query.secret || '';
+  const provided = (req.headers.authorization || '').replace(/^Bearer\s+/, '');
   const a = Buffer.from(`${provided}`);
   const b = Buffer.from(`${secret}`);
   return a.length === b.length && crypto.timingSafeEqual(a, b);

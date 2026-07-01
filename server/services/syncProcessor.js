@@ -3,6 +3,7 @@ const crypto     = require('crypto');
 const supabase   = require('../lib/supabase');
 const storage    = require('../lib/storage');
 const { extractFromBuffer } = require('../lib/extraction');
+const { isDriveId } = require('../lib/validate');
 
 // ─── Date / due-date helpers (mirror of src/utils/dates.js) ─────────────────
 
@@ -267,6 +268,7 @@ exports.syncGoogleDrive = async (integration, userId) => {
   const drive = google.drive({ version: 'v3', auth });
 
   const folderId   = integration.config?.folder_id;
+  if (folderId && !isDriveId(folderId)) throw new Error('Invalid folder_id in integration config');
   const lookback   = integration.config?.lookback_days ?? 0;
   const cutoffISO  = computeCutoff(integration.last_sync, lookback);
 
@@ -488,6 +490,7 @@ exports.discoverGoogleDriveFiles = async (integration, userId) => {
   const drive = google.drive({ version: 'v3', auth });
 
   const folderId  = integration.config?.folder_id;
+  if (folderId && !isDriveId(folderId)) throw new Error('Invalid folder_id in integration config');
   const lookback  = integration.config?.lookback_days ?? 0;
   const cutoffISO = computeCutoff(integration.last_sync, lookback);
 

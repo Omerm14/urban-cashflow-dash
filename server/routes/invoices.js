@@ -25,14 +25,14 @@ exports.remove = async (req, res) => {
     .eq('id', req.params.id)
     .eq('user_id', req.user.id)
     .maybeSingle();
-  if (error) return res.status(500).json({ error: error.message });
+  if (error) { console.error('[invoices] remove lookup error:', error.message); return res.status(500).json({ error: 'Internal server error' }); }
   if (!row)  return res.status(404).json({ error: 'Invoice not found' });
 
   await removeAttachment(row);
 
   const { error: delErr } = await supabase
     .from('invoices').delete().eq('id', row.id).eq('user_id', req.user.id);
-  if (delErr) return res.status(500).json({ error: delErr.message });
+  if (delErr) { console.error('[invoices] remove delete error:', delErr.message); return res.status(500).json({ error: 'Internal server error' }); }
   res.json({ ok: true });
 };
 
@@ -40,13 +40,14 @@ exports.remove = async (req, res) => {
 exports.bulkRemove = async (req, res) => {
   const ids = Array.isArray(req.body?.ids) ? req.body.ids : [];
   if (!ids.length) return res.status(400).json({ error: 'ids array is required' });
+  if (ids.length > 500) return res.status(400).json({ error: 'Cannot delete more than 500 invoices at once' });
 
   const { data: rows, error } = await supabase
     .from('invoices')
     .select('id, attachment_path, attachment_backend')
     .in('id', ids)
     .eq('user_id', req.user.id);
-  if (error) return res.status(500).json({ error: error.message });
+  if (error) { console.error('[invoices] bulkRemove lookup error:', error.message); return res.status(500).json({ error: 'Internal server error' }); }
 
   await Promise.allSettled((rows || []).map(removeAttachment));
 
@@ -54,7 +55,7 @@ exports.bulkRemove = async (req, res) => {
   if (ownedIds.length) {
     const { error: delErr } = await supabase
       .from('invoices').delete().in('id', ownedIds).eq('user_id', req.user.id);
-    if (delErr) return res.status(500).json({ error: delErr.message });
+    if (delErr) { console.error('[invoices] bulkRemove delete error:', delErr.message); return res.status(500).json({ error: 'Internal server error' }); }
   }
   res.json({ ok: true, deleted: ownedIds.length });
 };
@@ -80,7 +81,9 @@ exports.presignUpload = async (req, res) => {
   if (backend !== 'r2') return res.json({ backend });
 
   try {
+    const ALLOWED_EXTS = new Set(['pdf', 'jpg', 'jpeg', 'png', 'webp', 'heic']);
     const ext = (filename.split('.').pop() || 'bin').toLowerCase();
+    if (!ALLOWED_EXTS.has(ext)) return res.status(400).json({ error: `File type .${ext} is not supported` });
     // Hash-named key dedups repeat uploads (incl. each page of one PDF) to one object.
     const base = fileHash || `${Date.now()}-${Math.random().toString(36).slice(2)}`;
     const key  = `${req.user.id}/${base}.${ext}`;
@@ -88,6 +91,6 @@ exports.presignUpload = async (req, res) => {
     res.json({ backend, key, uploadUrl });
   } catch (err) {
     console.error('[invoices] presign error:', err.message);
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: 'Internal server error' });
   }
 };

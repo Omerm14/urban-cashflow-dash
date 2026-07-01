@@ -72,19 +72,23 @@ async function ipn(req, res) {
   try {
     const data = req.body;
 
-    // Basic validation — confirm this is from our Meshulam account
-    if (data.userId && data.userId !== MESHULAM_USER_ID) {
-      console.warn('IPN userId mismatch', data.userId);
+    // Require Meshulam merchant userId field — reject if missing or mismatched.
+    // Without this check an attacker could omit the field and bypass merchant validation.
+    if (!data.userId || data.userId !== MESHULAM_USER_ID) {
+      console.warn('IPN userId missing or mismatch', data.userId);
       return res.status(400).send('invalid');
     }
 
     const success = data.transactionStatus === '1' || data.status === 'success' || data.transactionStatus === 'success';
-    const plan    = data['custom[plan]'] || data.customFields?.plan || null;
+    const planRaw = data['custom[plan]'] || data.customFields?.plan || null;
     const userId  = data['custom[userId]'] || data.customFields?.userId || null;
     const cardToken = data.cardToken || data.token || null;
 
+    // Validate plan against allowlist — never trust an arbitrary string from the payload
+    const plan = Object.keys(PLAN_AMOUNTS).includes(planRaw) ? planRaw : null;
+
     if (!userId || !plan) {
-      console.warn('IPN missing userId or plan', data);
+      console.warn('IPN missing or invalid userId/plan', { userId: !!userId, plan: planRaw });
       return res.status(200).send('ok'); // Always 200 to prevent Meshulam retries
     }
 
@@ -93,7 +97,7 @@ async function ipn(req, res) {
       const periodEnd = new Date(now);
       periodEnd.setDate(periodEnd.getDate() + 30);
 
-      await supabase.from('subscriptions').upsert({
+      const { error: upsertErr } = await supabase.from('subscriptions').upsert({
         user_id: userId,
         plan,
         status: 'active',
@@ -103,10 +107,15 @@ async function ipn(req, res) {
         current_period_end: periodEnd.toISOString(),
         updated_at: now.toISOString(),
       }, { onConflict: 'user_id' });
+      if (upsertErr) {
+        console.error('IPN upsert failed:', upsertErr.message);
+        return res.status(500).send('error'); // Non-200 so Meshulam retries
+      }
     } else {
-      await supabase.from('subscriptions')
+      const { error: updateErr } = await supabase.from('subscriptions')
         .update({ status: 'past_due', updated_at: new Date().toISOString() })
         .eq('user_id', userId);
+      if (updateErr) console.error('IPN past_due update failed:', updateErr.message);
     }
 
     res.status(200).send('ok');
