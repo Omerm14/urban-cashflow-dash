@@ -24,7 +24,7 @@ import { calcDueDate, toYM, correctSwappedDate }                           from 
 import { STATUS }                                    from "./constants";
 import { supabase }                                  from "./lib/supabase";
 import { useOnboarding }                             from "./hooks/useOnboarding";
-import OnboardingTour                                from "./components/onboarding/OnboardingTour";
+import OnboardingTour, { OnboardingWelcome, OnboardingCelebration } from "./components/onboarding/OnboardingTour";
 import OnboardingChecklist                           from "./components/onboarding/OnboardingChecklist";
 
 // SHA-256 hex of a file — used to name attachment objects so repeat uploads
@@ -122,8 +122,9 @@ export default function App() {
   const { plan, limit, used, remaining, pct, isAtLimit, isNearLimit, refresh: refreshPlan } = usePlan();
 
   const {
-    tourActive, tourStep, checklistVisible, tasks,
-    startTour, endTour, nextStep, prevStep, markTaskDone, dismissChecklist,
+    phase, tourStep, checklistVisible, checklistAllDone, tasks,
+    beginTour, skipWelcome, finishTour, skipTour, nextStep, prevStep,
+    markTaskDone, dismissChecklist, startFromWelcome,
   } = useOnboarding({ userId: user?.id, invoices, suppliers });
   const [upgradeModalDismissed, setUpgradeModalDismissed] = useState(false);
   const [upgradeModalForced,    setUpgradeModalForced]    = useState(false);
@@ -335,7 +336,7 @@ export default function App() {
         plan={plan}
         onUpgrade={openUpgrade}
         onSettings={() => setView('settings')}
-        onStartTour={startTour}
+        onStartTour={startFromWelcome}
       />
 
       {view !== 'settings' && <UsageBanner plan={plan} used={used} limit={limit} remaining={remaining} onUpgrade={openUpgrade} />}
@@ -488,21 +489,27 @@ export default function App() {
         </div>
       )}
 
-      {tourActive && (
+      {phase === 'welcome' && (
+        <OnboardingWelcome onBegin={beginTour} onSkip={skipWelcome} />
+      )}
+
+      {phase === 'tour' && (
         <OnboardingTour
           step={tourStep}
           onNext={nextStep}
           onPrev={prevStep}
-          onSkip={endTour}
-          onFinish={endTour}
+          onSkip={skipTour}
+          onFinish={finishTour}
         />
       )}
 
-      {checklistVisible && !tourActive && view === "dashboard" && (
+      {phase === 'celebrate' && <OnboardingCelebration />}
+
+      {(checklistVisible || checklistAllDone) && phase === 'idle' && view === "dashboard" && (
         <OnboardingChecklist
           tasks={tasks}
           onDismiss={dismissChecklist}
-          onRestartTour={startTour}
+          onRestartTour={startFromWelcome}
         />
       )}
 
