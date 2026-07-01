@@ -28,7 +28,7 @@ import {
   Building2, CreditCard, User, Eye, EyeOff, Menu,
 } from "lucide-react";
 import {
-  BarChart, Bar, XAxis, YAxis, CartesianGrid,
+  ComposedChart, BarChart, Bar, Line, XAxis, YAxis, CartesianGrid,
   Tooltip, ResponsiveContainer,
 } from "recharts";
 
@@ -99,18 +99,27 @@ function StatusBadge({ status }) {
 function ChartTooltip({ active, payload, label }) {
   const T = useT();
   if (!active || !payload?.length) return null;
-  const filtered = payload.filter(p => p.value > 0);
-  if (!filtered.length) return null;
+  const momEntry = payload.find(p => p.dataKey === "momPct");
+  const barEntries = payload.filter(p => p.dataKey !== "momPct" && p.value > 0);
+  if (!barEntries.length && momEntry?.value == null) return null;
   return (
     <div style={{ background: T.isDark ? "#131D2E" : T.surf2, border: `1px solid ${T.bdr2}`, borderRadius: 10, padding: "12px 16px", boxShadow: T.isDark ? "0 16px 48px rgba(0,0,0,.6)" : "0 4px 12px rgba(0,0,0,0.1)", minWidth: 152 }}>
       <div style={{ fontFamily: SANS, fontSize: 11, fontWeight: 500, color: T.t2, marginBottom: 8 }}>{label}</div>
-      {filtered.map(p => (
+      {barEntries.map(p => (
         <div key={p.name} style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
           <div style={{ width: 6, height: 6, borderRadius: 1, background: p.fill, flexShrink: 0 }} />
           <span style={{ fontFamily: SANS, fontSize: 12, color: T.t2, flex: 1 }}>{p.name}</span>
           <span style={{ fontFamily: MONO, fontSize: 12, color: T.t1, fontWeight: 500 }}>{fmt(p.value)}</span>
         </div>
       ))}
+      {momEntry?.value != null && (
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", borderTop: `1px solid ${T.bdr}`, marginTop: 6, paddingTop: 6 }}>
+          <span style={{ fontFamily: SANS, fontSize: 11, color: T.t3 }}>vs prev month</span>
+          <span style={{ fontFamily: MONO, fontSize: 12, fontWeight: 700, color: momEntry.value >= 0 ? "#4ade80" : "#f87171" }}>
+            {momEntry.value >= 0 ? "+" : ""}{momEntry.value}%
+          </span>
+        </div>
+      )}
     </div>
   );
 }
@@ -765,11 +774,12 @@ function Dashboard({ invoices, onPayAllJuly, chartData, supplierNames, supplierC
 
   const isCompact = isMobile || isTablet;
   const kpiCols = isMobile ? "1fr 1fr" : isTablet ? "1fr 1fr" : "repeat(4,1fr)";
-  const [chartRange, setChartRange] = React.useState("4m");
+  const [chartRange, setChartRange] = React.useState("monthly");
   const [focusedMonth, setFocusedMonth] = React.useState(null);
   const chartSuppliers = supplierNames || [];
   const resolvedChartData = chartData && chartData.length > 0 ? chartData : [];
   const getColor = supplierColor || (() => "#6366F1");
+  const focusedIdx = focusedMonth ? resolvedChartData.findIndex(m => m.month === focusedMonth) : -1;
 
   return (
     <div style={{ animation: "slideUp 0.35s cubic-bezier(.16,1,.3,1)" }}>
@@ -843,32 +853,95 @@ function Dashboard({ invoices, onPayAllJuly, chartData, supplierNames, supplierC
               <div style={{ fontFamily: SANS, fontWeight: 600, fontSize: 14, color: T.isDark ? "#CBD6E6" : T.t1, letterSpacing: "-0.02em" }}>{t("dash_payment_schedule")}</div>
               <div style={{ fontFamily: SANS, fontSize: 12, color: T.t2, marginTop: 3 }}>{t("dash_upcoming")}</div>
             </div>
-            <div style={{ display: "flex", gap: 4, background: T.isDark ? "rgba(255,255,255,.04)" : T.surf2, border: `1px solid ${T.bdr}`, borderRadius: 8, padding: 3 }}>
-              {focusedMonth && chartRange === "1m" && (
-                <button onClick={() => { setFocusedMonth(null); setChartRange("4m"); }} style={{ padding: "4px 10px", borderRadius: 6, border: "none", background: "transparent", fontFamily: SANS, fontSize: 11, fontWeight: 600, color: T.t2, cursor: "pointer" }}>← All</button>
+            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+              {chartRange === "monthly" && (
+                <div style={{ display: "flex", alignItems: "center", gap: 2, background: T.isDark ? "rgba(255,255,255,.04)" : T.surf2, border: `1px solid ${T.bdr}`, borderRadius: 8, padding: "2px 4px" }}>
+                  <button onClick={() => { if (focusedMonth && focusedIdx > 0) setFocusedMonth(resolvedChartData[focusedIdx - 1].month); else if (!focusedMonth && resolvedChartData.length > 0) setFocusedMonth(resolvedChartData[0].month); }} disabled={focusedMonth ? focusedIdx <= 0 : false} style={{ padding: "3px 7px", borderRadius: 5, border: "none", background: "transparent", fontFamily: SANS, fontSize: 13, fontWeight: 600, color: (focusedMonth && focusedIdx <= 0) ? T.t3 : T.t2, cursor: "pointer" }}>‹</button>
+                  <span style={{ fontFamily: SANS, fontSize: 11, fontWeight: 600, color: T.t1, padding: "0 4px", minWidth: 60, textAlign: "center" }}>{focusedMonth || "All months"}</span>
+                  <button onClick={() => { if (focusedMonth && focusedIdx < resolvedChartData.length - 1) setFocusedMonth(resolvedChartData[focusedIdx + 1].month); else if (!focusedMonth && resolvedChartData.length > 0) setFocusedMonth(resolvedChartData[resolvedChartData.length - 1].month); }} disabled={focusedMonth ? focusedIdx >= resolvedChartData.length - 1 : false} style={{ padding: "3px 7px", borderRadius: 5, border: "none", background: "transparent", fontFamily: SANS, fontSize: 13, fontWeight: 600, color: (focusedMonth && focusedIdx >= resolvedChartData.length - 1) ? T.t3 : T.t2, cursor: "pointer" }}>›</button>
+                  {focusedMonth && <button onClick={() => setFocusedMonth(null)} style={{ padding: "3px 8px", borderRadius: 5, border: "none", background: "transparent", fontFamily: SANS, fontSize: 10, fontWeight: 600, color: T.t3, cursor: "pointer", marginLeft: 2 }}>All</button>}
+                </div>
               )}
-              {[{ key: "1m", label: "1 month" }, { key: "4m", label: "4 months" }].map(opt => (
-                <button key={opt.key} onClick={() => { setChartRange(opt.key); if (opt.key === "4m") setFocusedMonth(null); }} style={{ padding: "4px 12px", borderRadius: 6, border: "none", background: chartRange === opt.key ? (T.isDark ? "rgba(99,102,241,.25)" : T.indigoTint) : "transparent", fontFamily: SANS, fontSize: 11, fontWeight: 600, color: chartRange === opt.key ? (T.isDark ? "#A5B4FC" : T.indigo) : T.t2, cursor: "pointer" }}>{opt.label}</button>
-              ))}
+              <div style={{ display: "flex", gap: 4, background: T.isDark ? "rgba(255,255,255,.04)" : T.surf2, border: `1px solid ${T.bdr}`, borderRadius: 8, padding: 3 }}>
+                {[{ key: "monthly", label: "Monthly" }, { key: "quarterly", label: "Quarterly" }, { key: "yearly", label: "Yearly" }].map(opt => (
+                  <button key={opt.key} onClick={() => { setChartRange(opt.key); setFocusedMonth(null); }} style={{ padding: "4px 12px", borderRadius: 6, border: "none", background: chartRange === opt.key ? (T.isDark ? "rgba(99,102,241,.25)" : T.indigoTint) : "transparent", fontFamily: SANS, fontSize: 11, fontWeight: 600, color: chartRange === opt.key ? (T.isDark ? "#A5B4FC" : T.indigo) : T.t2, cursor: "pointer" }}>{opt.label}</button>
+                ))}
+              </div>
             </div>
           </div>
           {(() => {
             const now2 = new Date();
             const currentMonthKey = `${["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"][now2.getMonth()]} '${String(now2.getFullYear()).slice(2)}`;
-            const displayData = chartRange === "1m"
-              ? resolvedChartData.filter(m => m.month === (focusedMonth || currentMonthKey))
-              : resolvedChartData.slice(-4);
+
+            // Build display data per chart range
+            let displayData;
+            let barSize;
+            if (chartRange === "monthly") {
+              const base = focusedMonth
+                ? resolvedChartData.filter(m => m.month === focusedMonth)
+                : resolvedChartData.slice(-12);
+              // Add MoM % to each point; first point gets 0 so the line starts connected
+              displayData = base.map((m, i, arr) => {
+                const prev = arr[i - 1];
+                const momPct = prev && prev.total > 0 ? Math.round((m.total - prev.total) / prev.total * 100) : 0;
+                return { ...m, momPct };
+              });
+              barSize = focusedMonth ? (isMobile ? 44 : 70) : (isMobile ? 20 : 28);
+            } else if (chartRange === "quarterly") {
+              const qMap = {};
+              resolvedChartData.forEach(m => {
+                const [mon, yr] = m.month.split(" '");
+                const monIdx = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"].indexOf(mon);
+                const q = Math.floor(monIdx / 3) + 1;
+                const key = `Q${q} '${yr}`;
+                if (!qMap[key]) qMap[key] = { month: key, total: 0 };
+                chartSuppliers.forEach(s => {
+                  qMap[key][s] = (qMap[key][s] || 0) + (m[s] || 0);
+                  qMap[key].total += (m[s] || 0);
+                });
+              });
+              const qArr = Object.values(qMap);
+              displayData = qArr.slice(-4).map((m, i, arr) => {
+                const prev = arr[i - 1];
+                const momPct = prev && prev.total > 0 ? Math.round((m.total - prev.total) / prev.total * 100) : 0;
+                return { ...m, momPct };
+              });
+              barSize = isMobile ? 34 : 50;
+            } else {
+              // yearly
+              const yMap = {};
+              resolvedChartData.forEach(m => {
+                const yr = m.month.split(" '")[1];
+                const key = `20${yr}`;
+                if (!yMap[key]) yMap[key] = { month: key, total: 0 };
+                chartSuppliers.forEach(s => {
+                  yMap[key][s] = (yMap[key][s] || 0) + (m[s] || 0);
+                  yMap[key].total += (m[s] || 0);
+                });
+              });
+              const yArr = Object.values(yMap);
+              displayData = yArr.map((m, i, arr) => {
+                const prev = arr[i - 1];
+                const momPct = prev && prev.total > 0 ? Math.round((m.total - prev.total) / prev.total * 100) : 0;
+                return { ...m, momPct };
+              });
+              barSize = isMobile ? 44 : 60;
+            }
+
+            const hasMom = displayData.length >= 2;
             return (
           <ResponsiveContainer width="100%" height={isMobile ? 180 : 260}>
-            <BarChart data={displayData} barSize={chartRange === "1m" ? (isMobile ? 44 : 70) : (isMobile ? 28 : 42)} barCategoryGap="28%" onClick={(data) => { if (data?.activeLabel) { setFocusedMonth(data.activeLabel); setChartRange("1m"); } }}>
+            <ComposedChart data={displayData} barSize={barSize} barCategoryGap="28%" onClick={(data) => { if (data?.activeLabel && chartRange === "monthly") { setFocusedMonth(data.activeLabel); } }}>
               <CartesianGrid strokeDasharray="3 3" stroke={T.bdr} vertical={false} />
               <XAxis dataKey="month" tick={{ fontFamily: SANS, fontSize: isMobile ? 10 : 11, fill: T.t3 }} axisLine={false} tickLine={false} />
-              <YAxis tick={{ fontFamily: SANS, fontSize: 10, fill: T.t3 }} axisLine={false} tickLine={false} tickFormatter={v => `₪${(v / 1000).toFixed(0)}k`} width={isMobile ? 32 : 38} />
-              <Tooltip content={<ChartTooltip />} cursor={{ fill: T.indigoTint }} />
+              <YAxis yAxisId="left" tick={{ fontFamily: SANS, fontSize: 10, fill: T.t3 }} axisLine={false} tickLine={false} tickFormatter={v => `₪${(v / 1000).toFixed(0)}k`} width={isMobile ? 32 : 38} />
+              {hasMom && <YAxis yAxisId="right" orientation="right" tick={{ fontFamily: SANS, fontSize: 10, fill: T.t3 }} axisLine={false} tickLine={false} tickFormatter={v => `${v}%`} width={isMobile ? 28 : 34} />}
+              <Tooltip content={<ChartTooltip />} cursor={{ fill: T.indigoTint }} animationDuration={200} />
               {chartSuppliers.map((name, i) => (
-                <Bar key={name} dataKey={name} stackId="a" fill={getColor(name)} radius={i === chartSuppliers.length - 1 ? [3, 3, 0, 0] : [0, 0, 0, 0]} animationDuration={600} animationEasing="ease-out" />
+                <Bar yAxisId="left" key={name} dataKey={name} stackId="a" fill={getColor(name)} radius={i === chartSuppliers.length - 1 ? [3, 3, 0, 0] : [0, 0, 0, 0]} animationDuration={600} animationEasing="ease-out" />
               ))}
-            </BarChart>
+              {hasMom && <Line yAxisId="right" type="monotone" dataKey="momPct" stroke="#818CF8" strokeWidth={1.5} strokeDasharray="4 3" strokeOpacity={0.85} dot={{ r: 2.5, fill: "transparent", stroke: "#818CF8", strokeWidth: 1.5 }} activeDot={{ r: 4, fill: "#818CF8" }} label={false} connectNulls animationDuration={600} />}
+            </ComposedChart>
           </ResponsiveContainer>
             );
           })()}
@@ -909,7 +982,9 @@ function Dashboard({ invoices, onPayAllJuly, chartData, supplierNames, supplierC
 }
 
 // ── Invoices ──────────────────────────────────────────────────────────────────
-function SupplierGroup({ supplier, invoices, selectedIds, onToggleSelect, onToggleAll, onMarkPaid, onPayGroup, onEditInvoice, anomalyMap, color }) {
+const SOURCE_LABELS = { google_drive: { icon: "📁", label: "Drive" }, gmail: { icon: "✉️", label: "Gmail" }, whatsapp: { icon: "💬", label: "WA" }, green_invoice: { icon: "🧾", label: "GI" } };
+
+function SupplierGroup({ supplier, invoices, selectedIds, onToggleSelect, onToggleAll, onMarkPaid, onPayGroup, onEditInvoice, onViewAttachment, anomalyMap, color }) {
   const T = useT();
   const { isMobile } = useLayout();
   const [hov, setHov] = useState(false);
@@ -920,15 +995,21 @@ function SupplierGroup({ supplier, invoices, selectedIds, onToggleSelect, onTogg
   const someSel = !allSel && allIds.some(id => selectedIds.has(id));
   const total = invoices.reduce((s, i) => s + i.amount, 0);
   const checkRef = useRef(null);
+  const supplierAnomaly = anomalyMap?.get(supplier);
   useEffect(() => { if (checkRef.current) checkRef.current.indeterminate = someSel; }, [someSel]);
 
   return (
-    <div style={{ background: T.surf, border: `1px solid ${T.bdr}`, borderRadius: 10, marginBottom: 10, overflow: "hidden" }}
+    <div style={{ background: T.surf, border: `1px solid ${supplierAnomaly ? T.amberBdr : T.bdr}`, borderRadius: 10, marginBottom: 10, overflow: "hidden" }}
       onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)}>
-      <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "11px 14px", borderBottom: `1px solid ${T.bdr}` }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "11px 14px", borderBottom: `1px solid ${T.bdr}`, background: supplierAnomaly ? T.amberTint : "transparent" }}>
         <input type="checkbox" ref={checkRef} checked={allSel} onChange={() => onToggleAll(allIds)} style={{ accentColor: T.indigo, cursor: "pointer", width: 14, height: 14, flexShrink: 0 }} />
         <div style={{ width: 28, height: 28, borderRadius: "50%", background: c, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: SANS, fontWeight: 700, fontSize: 12, color: "#fff", flexShrink: 0 }}>{supplier.charAt(0)}</div>
         <span style={{ fontFamily: SANS, fontWeight: 600, fontSize: 13, color: T.t1, flex: 1 }}>{supplier}</span>
+        {supplierAnomaly && (
+          <span title={`Monthly total is ${supplierAnomaly.deviationPct}% ${supplierAnomaly.direction} than baseline`} style={{ display: "flex", alignItems: "center", gap: 3, padding: "2px 7px", background: T.amberTint, border: `1px solid ${T.amberBdr}`, borderRadius: 4, color: T.amber, fontFamily: SANS, fontSize: 10, fontWeight: 700, cursor: "help" }}>
+            <AlertTriangle size={9} />{supplierAnomaly.direction === "higher" ? "↑" : "↓"}{supplierAnomaly.deviationPct}%
+          </span>
+        )}
         {hov && unpaidIds.length > 0 && !isMobile && (
           <button onClick={e => { e.stopPropagation(); onPayGroup(unpaidIds); }} style={{ padding: "4px 10px", borderRadius: 4, background: T.indigo, border: "none", cursor: "pointer", fontFamily: SANS, fontWeight: 600, fontSize: 12, color: "#fff", display: "flex", alignItems: "center", gap: 4, animation: "fadeIn 0.15s" }}>
             <Zap size={11} />Pay
@@ -941,28 +1022,29 @@ function SupplierGroup({ supplier, invoices, selectedIds, onToggleSelect, onTogg
         {invoices.map(inv => {
           const isSel = selectedIds.has(inv.id);
           const isPaid = inv.status === "Paid" || inv.status === "paid";
-          const anomaly = anomalyMap?.get(inv.id);
-          const cols = isMobile ? "36px 1fr 100px 110px 130px" : "40px 1fr 110px 120px 110px 1fr 190px";
+          const src = SOURCE_LABELS[inv.sync_source];
+          const cols = isMobile ? "36px 1fr 100px 110px 130px" : "40px 1fr 80px 110px 120px 110px 1fr 190px";
           return (
             <div key={inv.id} onClick={() => onToggleSelect(inv.id)}
-              style={{ display: "grid", gridTemplateColumns: cols, alignItems: "center", gap: 8, padding: "8px 14px", borderTop: `1px solid ${anomaly ? T.amberBdr : T.bdr}`, background: isSel ? T.indigoTint : anomaly ? T.amberTint : "transparent", cursor: "pointer", transition: "background 0.1s", minWidth: isMobile ? 460 : "auto" }}
+              style={{ display: "grid", gridTemplateColumns: cols, alignItems: "center", gap: 8, padding: "8px 14px", borderTop: `1px solid ${T.bdr}`, background: isSel ? T.indigoTint : "transparent", cursor: "pointer", transition: "background 0.1s", minWidth: isMobile ? 460 : "auto" }}
               onMouseEnter={e => { if (!isSel) e.currentTarget.style.background = T.isDark ? "rgba(99,102,241,.07)" : T.surf2; }}
-              onMouseLeave={e => { e.currentTarget.style.background = isSel ? T.indigoTint : anomaly ? T.amberTint : "transparent"; }}>
+              onMouseLeave={e => { e.currentTarget.style.background = isSel ? T.indigoTint : "transparent"; }}>
               <input type="checkbox" checked={isSel} onChange={() => onToggleSelect(inv.id)} onClick={e => e.stopPropagation()} style={{ accentColor: T.indigo, cursor: "pointer", width: 13, height: 13 }} />
               <div style={{ display: "flex", alignItems: "center", gap: 5, minWidth: 0 }}>
                 <span style={{ fontFamily: MONO, fontSize: 12, color: T.isDark ? "#627488" : T.t3, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontVariantNumeric: "tabular-nums" }}>{inv.invoiceNo}</span>
-                {anomaly && (
-                  <span title={`Amount is ${anomaly.deviationPct}% ${anomaly.direction} than usual`} style={{ display: "flex", alignItems: "center", gap: 2, padding: "1px 5px", background: T.amberTint, border: `1px solid ${T.amberBdr}`, borderRadius: 4, color: T.amber, fontFamily: SANS, fontSize: 10, fontWeight: 700, flexShrink: 0, cursor: "help" }}>
-                    <AlertTriangle size={9} />⚠ {anomaly.deviationPct}%
-                  </span>
-                )}
               </div>
-              <span style={{ fontFamily: MONO, fontWeight: 600, fontSize: 13, color: anomaly ? T.amber : T.isDark ? "#C8D6E8" : T.t1, fontVariantNumeric: "tabular-nums" }}>{fmt(inv.amount)}</span>
+              {!isMobile && (
+                <span title={src ? src.label : "Manual"} style={{ fontFamily: SANS, fontSize: 11, color: T.t3, display: "flex", alignItems: "center", gap: 3 }}>
+                  <span>{src ? src.icon : "📤"}</span>
+                  <span style={{ fontSize: 10 }}>{src ? src.label : "Manual"}</span>
+                </span>
+              )}
+              <span style={{ fontFamily: MONO, fontWeight: 600, fontSize: 13, color: T.isDark ? "#C8D6E8" : T.t1, fontVariantNumeric: "tabular-nums" }}>{fmt(inv.amount)}</span>
               <StatusBadge status={inv.status} />
               {!isMobile && <span style={{ fontFamily: MONO, fontSize: 12, color: T.isDark ? "#627488" : T.t2, fontVariantNumeric: "tabular-nums" }}>{fmtDate(inv.invoiceDate)}</span>}
               {!isMobile && <span style={{ fontFamily: MONO, fontSize: 12, color: (inv.status === "Overdue" || inv.status === "overdue") ? "#F87171" : T.isDark ? "#627488" : T.t2, fontWeight: (inv.status === "Overdue" || inv.status === "overdue") ? 600 : 400, fontVariantNumeric: "tabular-nums" }}>{fmtDate(inv.dueDate)}</span>}
               <div style={{ display: "flex", gap: 4, justifyContent: "flex-end" }}>
-                {inv.attachment && <button onClick={e => e.stopPropagation()} style={{ padding: "2px 6px", background: "transparent", border: `1px solid ${T.bdr}`, borderRadius: 4, color: T.t2, cursor: "pointer", display: "flex", alignItems: "center" }}><Paperclip size={10} /></button>}
+                <button onClick={e => { e.stopPropagation(); onViewAttachment?.(inv); }} title="Preview" style={{ padding: "2px 6px", background: "transparent", border: `1px solid ${T.bdr}`, borderRadius: 4, color: T.t2, cursor: "pointer", display: "flex", alignItems: "center" }}><Paperclip size={10} /></button>
                 <button onClick={e => { e.stopPropagation(); onMarkPaid(inv.id); }} style={{ padding: "2px 7px", background: isPaid ? "transparent" : T.greenTint, border: `1px solid ${isPaid ? T.bdr : T.greenBdr}`, borderRadius: 4, color: isPaid ? T.t3 : T.green, cursor: "pointer", fontFamily: SANS, fontSize: 11, fontWeight: 600, display: "flex", alignItems: "center", gap: 2 }}>
                   {isPaid ? <><X size={10} />Unpaid</> : <><Check size={10} />Paid</>}
                 </button>
@@ -982,7 +1064,7 @@ function SupplierGroup({ supplier, invoices, selectedIds, onToggleSelect, onTogg
   );
 }
 
-function GroupedView({ invoices, selectedMonth, onMonthChange, selectedIds, onToggleSelect, onToggleAll, onMarkPaid, onSelectAll, onPayGroup, onAllPaid, onEditInvoice, anomalyMap, missingSuppliers }) {
+function GroupedView({ invoices, selectedMonth, onMonthChange, selectedIds, onToggleSelect, onToggleAll, onMarkPaid, onSelectAll, onPayGroup, onAllPaid, onEditInvoice, onViewAttachment, anomalyMap, missingSuppliers }) {
   const T = useT();
   const { isMobile } = useLayout();
   const monthInvoices = invoices.filter(inv => inv.dueDate?.startsWith(selectedMonth));
@@ -1057,7 +1139,7 @@ function GroupedView({ invoices, selectedMonth, onMonthChange, selectedIds, onTo
         <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 14px", background: T.amberTint, border: `1px solid ${T.amberBdr}`, borderRadius: 10, marginBottom: 10 }}>
           <AlertTriangle size={14} color={T.amber} style={{ flexShrink: 0 }} />
           <div style={{ flex: 1 }}>
-            <span style={{ fontFamily: SANS, fontSize: 13, fontWeight: 600, color: T.amber }}>Missing invoices this month: </span>
+            <span style={{ fontFamily: SANS, fontSize: 13, fontWeight: 600, color: T.amber }}>Missing suppliers this month: </span>
             <span style={{ fontFamily: SANS, fontSize: 13, color: T.isDark ? T.amber : T.t2 }}>{missingSuppliers.join(", ")}</span>
           </div>
         </div>
@@ -1065,14 +1147,14 @@ function GroupedView({ invoices, selectedMonth, onMonthChange, selectedIds, onTo
       {groups.map(([supplier, supInvoices]) => (
         <SupplierGroup key={supplier} supplier={supplier} invoices={supInvoices} selectedIds={selectedIds}
           onToggleSelect={onToggleSelect} onToggleAll={onToggleAll} onMarkPaid={onMarkPaid}
-          onPayGroup={ids => onSelectAll(ids)} onEditInvoice={onEditInvoice} anomalyMap={anomalyMap}
+          onPayGroup={ids => onSelectAll(ids)} onEditInvoice={onEditInvoice} onViewAttachment={onViewAttachment} anomalyMap={anomalyMap}
           color={supplierColor(supplier)} />
       ))}
     </div>
   );
 }
 
-function InvoicesView({ invoices, selectedMonth, onMonthChange, onMarkPaid, onBulkPaid, onBulkUnpaid, preSelectAll, onEditInvoice, anomalyMap, missingSuppliers, initialFilterStatus, initialSelectedId }) {
+function InvoicesView({ invoices, selectedMonth, onMonthChange, onMarkPaid, onBulkPaid, onBulkUnpaid, preSelectAll, onEditInvoice, onViewAttachment, anomalyMap, missingSuppliers, initialFilterStatus, initialSelectedId }) {
   const T = useT();
   const { isMobile, isTablet } = useLayout();
   const { t } = useLang();
@@ -1187,20 +1269,21 @@ function InvoicesView({ invoices, selectedMonth, onMonthChange, onMarkPaid, onBu
           selectedIds={selectedIds} onToggleSelect={toggleSelect} onToggleAll={toggleAll}
           onMarkPaid={onMarkPaid} onSelectAll={ids => setSelectedIds(new Set(ids))}
           onPayGroup={ids => { setSelectedIds(new Set(ids)); setShowPayConfirm(true); }}
-          onAllPaid={() => setShowCelebration(true)} onEditInvoice={onEditInvoice}
+          onAllPaid={() => setShowCelebration(true)} onEditInvoice={onEditInvoice} onViewAttachment={onViewAttachment}
           anomalyMap={anomalyMap} missingSuppliers={missingSuppliers} />
       ) : (
         <div style={{ background: T.surf, border: `1px solid ${T.bdr}`, borderRadius: 10, overflow: "hidden" }}>
-          <div style={{ display: "grid", gridTemplateColumns: "40px minmax(140px,1fr) 130px 90px 90px 110px 90px 52px", alignItems: "center", padding: "0 18px", height: 40, background: T.isDark ? "#0E1520" : T.surf2, borderBottom: `1px solid ${T.bdr}` }}>
-            {["", t("inv_col_supplier"), t("inv_col_invoice"), t("inv_col_issued"), t("inv_col_due"), t("inv_col_amount"), t("inv_col_status"), ""].map((h, i) => (
+          <div style={{ display: "grid", gridTemplateColumns: "40px minmax(140px,1fr) 130px 90px 90px 110px 70px 90px 80px", alignItems: "center", padding: "0 18px", height: 40, background: T.isDark ? "#0E1520" : T.surf2, borderBottom: `1px solid ${T.bdr}` }}>
+            {["", t("inv_col_supplier"), t("inv_col_invoice"), t("inv_col_issued"), t("inv_col_due"), t("inv_col_amount"), "Source", t("inv_col_status"), ""].map((h, i) => (
               <div key={i} style={{ fontFamily: SANS, fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", color: T.isDark ? "rgba(255,255,255,.3)" : T.t3, textAlign: i === 5 ? "right" : "left", paddingRight: i === 5 ? 14 : 0 }}>{h}</div>
             ))}
           </div>
           {filteredInvoices.map(inv => {
             const isSel = selectedIds.has(inv.id);
+            const srcInfo = SOURCE_LABELS[inv.sync_source];
             return (
               <div key={inv.id} onClick={() => toggleSelect(inv.id)}
-                style={{ display: "grid", gridTemplateColumns: "40px minmax(140px,1fr) 130px 90px 90px 110px 90px 52px", alignItems: "center", padding: "0 18px", height: 52, borderBottom: `1px solid ${T.isDark ? "rgba(255,255,255,.04)" : T.bdr}`, background: isSel ? T.indigoTint : "transparent", cursor: "pointer", transition: "background 0.1s" }}
+                style={{ display: "grid", gridTemplateColumns: "40px minmax(140px,1fr) 130px 90px 90px 110px 70px 90px 80px", alignItems: "center", padding: "0 18px", height: 52, borderBottom: `1px solid ${T.isDark ? "rgba(255,255,255,.04)" : T.bdr}`, background: isSel ? T.indigoTint : "transparent", cursor: "pointer", transition: "background 0.1s" }}
                 onMouseEnter={e => { if (!isSel) e.currentTarget.style.background = T.isDark ? "rgba(99,102,241,.07)" : T.surf2; }}
                 onMouseLeave={e => { e.currentTarget.style.background = isSel ? T.indigoTint : "transparent"; }}>
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "center" }}>
@@ -1216,8 +1299,15 @@ function InvoicesView({ invoices, selectedMonth, onMonthChange, onMarkPaid, onBu
                 <div style={{ fontFamily: MONO, fontSize: 12, color: T.t2, fontVariantNumeric: "tabular-nums" }}>{fmtDate(inv.invoiceDate)}</div>
                 <div style={{ fontFamily: MONO, fontSize: 12, color: (inv.status === "Overdue" || inv.status === "overdue") ? "#F87171" : T.t2, fontWeight: (inv.status === "Overdue" || inv.status === "overdue") ? 600 : 400, fontVariantNumeric: "tabular-nums" }}>{fmtDate(inv.dueDate)}</div>
                 <div style={{ fontFamily: MONO, fontSize: 14, fontWeight: 600, color: T.isDark ? "#C8D6E8" : T.t1, textAlign: "right", paddingRight: 14, fontVariantNumeric: "tabular-nums" }}>{fmt(inv.amount)}</div>
+                <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                  <span style={{ fontSize: 11 }}>{srcInfo ? srcInfo.icon : "📤"}</span>
+                  <span style={{ fontFamily: SANS, fontSize: 10, color: T.t3, fontWeight: 500 }}>{srcInfo ? srcInfo.label : "Manual"}</span>
+                </div>
                 <StatusBadge status={inv.status} />
-                <div style={{ display: "flex", justifyContent: "flex-end" }}>
+                <div style={{ display: "flex", justifyContent: "flex-end", gap: 4 }}>
+                  <button onClick={e => { e.stopPropagation(); onViewAttachment?.(inv); }} title="Preview" style={{ width: 26, height: 26, border: `1px solid ${T.isDark ? "rgba(255,255,255,.09)" : T.bdr}`, borderRadius: 6, background: T.isDark ? "rgba(255,255,255,.03)" : "transparent", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                    <Paperclip size={11} strokeWidth={1.75} color={T.isDark ? "rgba(255,255,255,.35)" : T.t2} />
+                  </button>
                   <button onClick={e => { e.stopPropagation(); onEditInvoice?.(inv); }} style={{ width: 26, height: 26, border: `1px solid ${T.isDark ? "rgba(255,255,255,.09)" : T.bdr}`, borderRadius: 6, background: T.isDark ? "rgba(255,255,255,.03)" : "transparent", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
                     <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke={T.isDark ? "rgba(255,255,255,.35)" : T.t2} strokeWidth="2" strokeLinecap="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
                   </button>
@@ -1497,7 +1587,10 @@ function SettingsScreen({ onUpgrade, onSignOut, user, invoices, suppliers, onNav
   const [activeSection, setActiveSection] = useState("general");
   const [saved, setSaved] = useState(null);
   const [saveError, setSaveError] = useState(null);
-  const [bizName, setBizName] = useState("");
+  const [bizName, setBizName] = useState(user?.user_metadata?.business_name || "");
+  const [logoUrl, setLogoUrl] = useState(user?.user_metadata?.logo_url || null);
+  const [logoUploading, setLogoUploading] = useState(false);
+  const logoInputRef = useRef(null);
   const [currency, setCurrency] = useState("ILS");
   const [timezone, setTimezone] = useState("Asia/Jerusalem");
   const [fullName, setFullName] = useState(user?.user_metadata?.full_name || user?.email?.split("@")[0] || "");
@@ -1513,11 +1606,29 @@ function SettingsScreen({ onUpgrade, onSignOut, user, invoices, suppliers, onNav
   useEffect(() => {
     try {
       const s = JSON.parse(localStorage.getItem(SETTINGS_KEY) || "{}");
-      if (s.bizName !== undefined) setBizName(s.bizName);
+      if (!user?.user_metadata?.business_name && s.bizName !== undefined) setBizName(s.bizName);
       if (s.currency) setCurrency(s.currency);
       if (s.timezone) setTimezone(s.timezone);
     } catch {}
   }, []);
+
+  const handleLogoUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setLogoUploading(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const fd = new FormData();
+      fd.append('logo', file);
+      const res = await fetch('/api/profile/logo', { method: 'POST', headers: { Authorization: `Bearer ${session?.access_token}` }, body: fd });
+      if (!res.ok) { const j = await res.json().catch(() => ({})); throw new Error(j.error || 'Upload failed'); }
+      const { logo_url } = await res.json();
+      setLogoUrl(logo_url);
+      await supabase.auth.updateUser({ data: { logo_url } });
+    } catch (err) { setSaveError(err.message); }
+    setLogoUploading(false);
+    e.target.value = '';
+  };
 
   const scrollTo = (id) => { sectionRefs[id]?.current?.scrollIntoView({ behavior: "smooth", block: "start" }); setActiveSection(id); };
 
@@ -1526,6 +1637,7 @@ function SettingsScreen({ onUpgrade, onSignOut, user, invoices, suppliers, onNav
     try {
       if (id === "general") {
         localStorage.setItem(SETTINGS_KEY, JSON.stringify({ bizName, currency, timezone }));
+        await supabase.auth.updateUser({ data: { business_name: bizName } });
       }
       if (id === "profile") {
         const { error } = await supabase.auth.updateUser({ data: { full_name: fullName } });
@@ -1653,6 +1765,19 @@ function SettingsScreen({ onUpgrade, onSignOut, user, invoices, suppliers, onNav
 
       <div style={{ flex: 1, minWidth: 0, maxWidth: isCompact ? "100%" : 560 }}>
         <Section id="general" title={t("set_general")} desc="">
+          <Row label="Business Logo">
+            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+              {logoUrl
+                ? <img src={logoUrl} alt="logo" style={{ width: 48, height: 48, borderRadius: 8, objectFit: "contain", border: `1px solid ${T.bdr}`, background: T.surf2 }} />
+                : <div style={{ width: 48, height: 48, borderRadius: 8, background: T.surf2, border: `1px solid ${T.bdr}`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20 }}>🏢</div>
+              }
+              <input ref={logoInputRef} type="file" accept="image/jpeg,image/png,image/webp,image/gif" style={{ display: "none" }} onChange={handleLogoUpload} />
+              <button onClick={() => logoInputRef.current?.click()} disabled={logoUploading} style={{ padding: "7px 14px", border: `1px solid ${T.bdr2}`, borderRadius: 7, background: "transparent", fontFamily: SANS, fontSize: 12, fontWeight: 500, color: T.t2, cursor: "pointer" }}>
+                {logoUploading ? "Uploading…" : "Upload logo"}
+              </button>
+              {logoUrl && <button onClick={() => { setLogoUrl(null); supabase.auth.updateUser({ data: { logo_url: null } }); }} style={{ background: "none", border: "none", color: T.t3, cursor: "pointer", fontSize: 12 }}>Remove</button>}
+            </div>
+          </Row>
           <Row label={t("set_biz_name")}><input value={bizName} onChange={e => setBizName(e.target.value)} style={inp} /></Row>
           <Row label={t("set_currency")}>
             <select value={currency} onChange={e => setCurrency(e.target.value)} style={sel}>
@@ -2214,7 +2339,7 @@ export default function App() {
             <main style={{ flex: 1, overflowY: "auto", padding: isMobile ? "20px 16px 100px" : "28px clamp(20px,3vw,36px) 80px" }}>
               <div style={{ width: "100%" }}>
                 {view === "dashboard"    && <Dashboard invoices={invoices} onPayAllJuly={handlePayAll} chartData={chartData} supplierNames={allNames} supplierColor={getSupplierColor} user={user} onMissingAlert={() => setShowMissingModal(true)} onAnomalyAlert={() => setShowAnomalyModal(true)} missingSuppliers={missingSuppliers} anomalyMap={anomalyMap} onViewMonth={handleViewMonth} onNavigateFiltered={(status) => { setView("invoices"); setInitialFilterStatus(status); }} />}
-                {view === "invoices"     && <InvoicesView invoices={invoices} selectedMonth={selectedMonth} onMonthChange={setSelectedMonth} onMarkPaid={handleMarkPaid} onBulkPaid={handleBulkPaid} onBulkUnpaid={handleBulkUnpaid} preSelectAll={preSelectAll} onEditInvoice={setEditInvoice} anomalyMap={anomalyMap} missingSuppliers={missingSuppliers} initialFilterStatus={initialFilterStatus} initialSelectedId={deepLinkInvoiceId} />}
+                {view === "invoices"     && <InvoicesView invoices={invoices} selectedMonth={selectedMonth} onMonthChange={setSelectedMonth} onMarkPaid={handleMarkPaid} onBulkPaid={handleBulkPaid} onBulkUnpaid={handleBulkUnpaid} preSelectAll={preSelectAll} onEditInvoice={setEditInvoice} anomalyMap={anomalyMap} missingSuppliers={missingSuppliers} initialFilterStatus={initialFilterStatus} initialSelectedId={deepLinkInvoiceId} onViewAttachment={async (inv) => { try { const { data: { session } } = await supabase.auth.getSession(); const res = await fetch(`/api/invoices/${inv.id}/attachment-url`, { headers: { Authorization: `Bearer ${session?.access_token}` } }); if (res.ok) { const { url } = await res.json(); setPreviewAttachment({ url, filename: inv.source_file || inv.attachment_path?.split('/').pop() || 'invoice' }); } } catch(e) { console.error('attachment-url:', e); } }} />}
                 {view === "calendar"     && <CalendarView computed={invoices} calMonth={calMonth} setCalMonth={setCalMonth} color={getSupplierColor} />}
                 {view === "integrations" && <IntegrationsPage
                   syncJobs={syncJobs} onStartSync={startSync} onCancelSync={cancelSync}
@@ -2240,7 +2365,7 @@ export default function App() {
               updateInvoice={updateInvoice}
               getSupplier={getSupplier}
               onViewAttachment={att => setPreviewAttachment(att)}
-              anomaly={anomalyMap?.get(editInvoice?.id)}
+              anomaly={anomalyMap?.get(editInvoice?.supplier)}
             />
           )}
 

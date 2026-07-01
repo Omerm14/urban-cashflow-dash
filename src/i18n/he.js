@@ -26,10 +26,10 @@ const he = {
   dash_payment_schedule: "לוח תשלומים",
   dash_upcoming: "תשלומים קרובים לפי חודש",
   dash_4months: "4 חודשים",
-  dash_missing_title: "{n} חשבוניות חסרות",
+  dash_missing_title: "{n} ספקים חסרים",
   dash_missing_sub: "ספקים קבועים שלא שלחו חשבונית החודש",
-  dash_anomaly_title: "{n} חריגות סכום",
-  dash_anomaly_sub: "חשבוניות החורגות מממוצע הספק",
+  dash_anomaly_title: "{n} חריגות ספקים",
+  dash_anomaly_sub: "ספקים עם סה\"כ חודשי חריג ביחס לבסיס הרגיל",
   dash_details: "לפרטים ←",
 
   // KPI labels
@@ -142,12 +142,12 @@ const he = {
   notif_clear: "נקה הכל",
   notif_empty: "אין התראות כרגע",
   notif_all_clear: "הכל תקין",
-  notif_missing: "חשבוניות חסרות",
+  notif_missing: "ספקים חסרים",
   notif_missing_sub: "ספק {n} לא שלח חשבונית החודש",
   notif_missing_sub_plural: "{n} ספקים לא שלחו חשבונית החודש",
-  notif_anomaly: "זוהו חריגות",
-  notif_anomaly_sub: "{n} חשבונית מחוץ לטווח הרגיל",
-  notif_anomaly_sub_plural: "{n} חשבוניות מחוץ לטווח הרגיל",
+  notif_anomaly: "חריגות ספקים",
+  notif_anomaly_sub: "ספק {n} מחוץ לטווח הרגיל",
+  notif_anomaly_sub_plural: "{n} ספקים מחוץ לטווח הרגיל",
 
   // Search
   search_placeholder: "חיפוש חשבוניות, ספקים…",

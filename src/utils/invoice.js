@@ -61,6 +61,63 @@ export const getMissingSuppliers = (invoices, suppliers, ym) => {
   }).sort();
 };
 
+// Returns a Map<supplierName, { deviationPct, direction, baseline, currentTotal }>
+// for suppliers whose current-month total deviates >30% from their 6-month baseline avg.
+// Requires ≥3 months of history to flag.
+export const getSupplierMonthlyAnomalies = (invoices) => {
+  const result = new Map();
+  if (!invoices?.length) return result;
+
+  // Group non-credit invoices by (supplier, YYYY-MM) → monthly total
+  const monthlyTotals = {};
+  invoices.forEach(inv => {
+    if (inv.status === 'Credit' || Number(inv.amount) < 0) return;
+    const date = inv.invoice_date || inv.invoiceDate || '';
+    const ym = date.slice(0, 7);
+    if (!ym || !/^\d{4}-\d{2}$/.test(ym)) return;
+    const key = normName(inv.supplier);
+    if (!key) return;
+    if (!monthlyTotals[key]) monthlyTotals[key] = {};
+    monthlyTotals[key][ym] = (monthlyTotals[key][ym] || 0) + Number(inv.amount);
+  });
+
+  // Use the most recent month with actual data instead of today's calendar month.
+  // This handles the common case where invoice_date lags behind due_date by 60–90 days.
+  const allMonths = [...new Set(Object.values(monthlyTotals).flatMap(m => Object.keys(m)))].sort();
+  if (allMonths.length < 2) return result;
+  const currentYM = allMonths[allMonths.length - 1];
+
+  // For each supplier, compute baseline from past months and compare to current month
+  Object.entries(monthlyTotals).forEach(([key, months]) => {
+    const currentTotal = months[currentYM];
+    if (!currentTotal) return;
+
+    const pastAmounts = Object.entries(months)
+      .filter(([ym]) => ym !== currentYM)
+      .sort(([a], [b]) => b.localeCompare(a))
+      .slice(0, 6)
+      .map(([, v]) => v);
+
+    if (pastAmounts.length < 2) return; // not enough history
+
+    const baseline = pastAmounts.reduce((s, v) => s + v, 0) / pastAmounts.length;
+    const deviation = (currentTotal - baseline) / baseline;
+    if (Math.abs(deviation) < 0.3) return;
+
+    // Recover display name from original invoices
+    const displayName = invoices.find(inv => normName(inv.supplier) === key)?.supplier || key;
+
+    result.set(displayName, {
+      deviationPct: Math.round(Math.abs(deviation) * 100),
+      direction: deviation > 0 ? 'higher' : 'lower',
+      baseline,
+      currentTotal,
+    });
+  });
+
+  return result;
+};
+
 // Returns anomaly data if the invoice amount deviates >30% from the supplier's
 // 3-month average. Returns null if not enough history or no anomaly.
 export const getAmountAnomaly = (invoice, allInvoices) => {

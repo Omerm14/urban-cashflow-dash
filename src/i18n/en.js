@@ -26,10 +26,10 @@ const en = {
   dash_payment_schedule: "Payment Schedule",
   dash_upcoming: "Upcoming payments by month",
   dash_4months: "4 months",
-  dash_missing_title: "{n} Missing Invoices",
+  dash_missing_title: "{n} Missing Suppliers",
   dash_missing_sub: "Recurring suppliers with no invoice this month",
-  dash_anomaly_title: "{n} Amount Anomalies",
-  dash_anomaly_sub: "Invoices that deviate from supplier averages",
+  dash_anomaly_title: "{n} Supplier Anomalies",
+  dash_anomaly_sub: "Suppliers with unusual monthly totals vs. their baseline",
   dash_details: "Details →",
 
   // KPI labels
@@ -142,12 +142,12 @@ const en = {
   notif_clear: "Clear all",
   notif_empty: "No notifications right now",
   notif_all_clear: "All clear",
-  notif_missing: "Missing Invoices",
-  notif_missing_sub: "{n} supplier haven't billed this month",
+  notif_missing: "Missing Suppliers",
+  notif_missing_sub: "{n} supplier hasn't billed this month",
   notif_missing_sub_plural: "{n} suppliers haven't billed this month",
-  notif_anomaly: "Anomalies Detected",
-  notif_anomaly_sub: "{n} invoice outside normal range",
-  notif_anomaly_sub_plural: "{n} invoices outside normal range",
+  notif_anomaly: "Supplier Anomalies",
+  notif_anomaly_sub: "{n} supplier outside normal range",
+  notif_anomaly_sub_plural: "{n} suppliers outside normal range",
 
   // Search
   search_placeholder: "Search invoices, suppliers…",
