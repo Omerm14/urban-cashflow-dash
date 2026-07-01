@@ -903,7 +903,7 @@ function Dashboard({ invoices, onPayAllJuly, chartData, supplierNames, supplierC
               const qArr = Object.values(qMap);
               displayData = qArr.slice(-4).map((m, i, arr) => {
                 const prev = arr[i - 1];
-                const momPct = prev && prev.total > 0 ? Math.round((m.total - prev.total) / prev.total * 100) : null;
+                const momPct = prev && prev.total > 0 ? Math.round((m.total - prev.total) / prev.total * 100) : 0;
                 return { ...m, momPct };
               });
               barSize = isMobile ? 34 : 50;
@@ -922,7 +922,7 @@ function Dashboard({ invoices, onPayAllJuly, chartData, supplierNames, supplierC
               const yArr = Object.values(yMap);
               displayData = yArr.map((m, i, arr) => {
                 const prev = arr[i - 1];
-                const momPct = prev && prev.total > 0 ? Math.round((m.total - prev.total) / prev.total * 100) : null;
+                const momPct = prev && prev.total > 0 ? Math.round((m.total - prev.total) / prev.total * 100) : 0;
                 return { ...m, momPct };
               });
               barSize = isMobile ? 44 : 60;
