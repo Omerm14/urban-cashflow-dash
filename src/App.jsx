@@ -697,6 +697,51 @@ function KPICard({ label, value, valueColor, iconBg, iconColor, iconPath, pill, 
   );
 }
 
+// ── Mock CFO data (demo preview, shown when no real income exists) ─────────────
+const NOW = new Date();
+const MOCK_MONTHS = Array.from({ length: 6 }, (_, i) => {
+  const d = new Date(NOW.getFullYear(), NOW.getMonth() - 5 + i, 1);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+});
+// Realistic cafe numbers (ILS)
+const MOCK_INC  = [68400, 72800, 65200, 79600, 83100, 91400]; // POS + Wolt per month
+const MOCK_WOLT = [9200,  10100, 8800,  11200, 12400, 13800];
+const MOCK_EXP  = {
+  food_bev:      [22800, 24100, 21500, 26200, 27400, 29800],
+  staff:         [18000, 18000, 18000, 18000, 18000, 19500],
+  rent:          [8500,  8500,  8500,  8500,  8500,  8500 ],
+  utilities:     [2100,  2300,  1900,  2100,  2200,  2400 ],
+  packaging:     [1800,  1900,  1700,  2100,  2200,  2500 ],
+};
+
+const MOCK_PL = {
+  months: MOCK_MONTHS,
+  income: Object.fromEntries(MOCK_MONTHS.map((m, i) => [m, {
+    pos_sales: MOCK_INC[i] - MOCK_WOLT[i],
+    wolt:      MOCK_WOLT[i],
+  }])),
+  expense: Object.fromEntries(MOCK_MONTHS.map((m, i) => [m, {
+    food_bev:  MOCK_EXP.food_bev[i],
+    staff:     MOCK_EXP.staff[i],
+    rent:      MOCK_EXP.rent[i],
+    utilities: MOCK_EXP.utilities[i],
+    packaging: MOCK_EXP.packaging[i],
+  }])),
+  net: Object.fromEntries(MOCK_MONTHS.map((m, i) => {
+    const totalIn  = MOCK_INC[i];
+    const totalOut = MOCK_EXP.food_bev[i] + MOCK_EXP.staff[i] + MOCK_EXP.rent[i] + MOCK_EXP.utilities[i] + MOCK_EXP.packaging[i];
+    return [m, totalIn - totalOut];
+  })),
+};
+
+const lastIdx = MOCK_MONTHS.length - 1;
+const MOCK_CFOKPIS = {
+  totalIncome:   MOCK_INC[lastIdx],
+  totalExpenses: MOCK_EXP.food_bev[lastIdx] + MOCK_EXP.staff[lastIdx] + MOCK_EXP.rent[lastIdx] + MOCK_EXP.utilities[lastIdx] + MOCK_EXP.packaging[lastIdx],
+  get netProfit() { return this.totalIncome - this.totalExpenses; },
+  get foodCostPct() { return Math.round(MOCK_EXP.food_bev[lastIdx] / this.totalIncome * 100); },
+};
+
 // ── P&L Summary Table ─────────────────────────────────────────────────────────
 function PLSummaryTable({ plData, T, isMobile }) {
   const { months, income, expense, net } = plData;
@@ -876,36 +921,49 @@ function Dashboard({ invoices, onPayAllJuly, chartData, supplierNames, supplierC
         </div>
       )}
 
-      <div style={{ display: "grid", gridTemplateColumns: kpiCols, gap: 12, marginBottom: cfokpis && cfokpis.totalIncome > 0 ? 12 : 16 }}>
+      <div style={{ display: "grid", gridTemplateColumns: kpiCols, gap: 12, marginBottom: 12 }}>
         {CARDS.map(c => <KPICard key={c.label} {...c} />)}
       </div>
 
-      {/* CFO KPI row — shown when income data exists */}
-      {cfokpis && cfokpis.totalIncome > 0 && (
-        <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr 1fr" : "repeat(4,1fr)", gap: 12, marginBottom: 16 }}>
-          {[
-            { label: "Total Income",   value: cfokpis.totalIncome,   color: "#22C55E", bg: "rgba(34,197,94,.08)",  border: "rgba(34,197,94,.2)",  ico: "📈" },
-            { label: "Total Expenses", value: cfokpis.totalExpenses,  color: "#F87171", bg: "rgba(248,113,113,.08)", border: "rgba(248,113,113,.2)", ico: "📉" },
-            { label: "Net Profit",     value: cfokpis.netProfit,      color: cfokpis.netProfit >= 0 ? "#22C55E" : "#F87171", bg: cfokpis.netProfit >= 0 ? "rgba(34,197,94,.08)" : "rgba(248,113,113,.08)", border: cfokpis.netProfit >= 0 ? "rgba(34,197,94,.2)" : "rgba(248,113,113,.2)", ico: "💰" },
-            { label: "Food Cost %",    value: null, pct: cfokpis.foodCostPct, color: "#F59E0B", bg: "rgba(245,158,11,.08)", border: "rgba(245,158,11,.2)", ico: "🍽️" },
-          ].map(c => (
-            <div key={c.label} style={{ background: c.bg, border: `1px solid ${c.border}`, borderRadius: 12, padding: "16px 18px" }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 8 }}>
-                <span style={{ fontFamily: SANS, fontSize: 11, fontWeight: 700, color: T.t3, textTransform: "uppercase", letterSpacing: ".6px" }}>{c.label}</span>
-                <span style={{ fontSize: 16, opacity: .6 }}>{c.ico}</span>
+      {/* CFO section — real data if income exists, mock preview otherwise */}
+      {(() => {
+        const hasRealIncome = cfokpis && cfokpis.totalIncome > 0;
+        const activeCfo = hasRealIncome ? cfokpis : MOCK_CFOKPIS;
+        const activePl  = hasRealIncome ? plData  : MOCK_PL;
+        return (
+          <>
+            {!hasRealIncome && (
+              <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:10, padding:"8px 14px", background:"rgba(99,102,241,.08)", border:"1px solid rgba(99,102,241,.25)", borderRadius:8 }}>
+                <span style={{ fontSize:14 }}>✨</span>
+                <span style={{ fontFamily:SANS, fontSize:12, color:T.isDark ? "#a5b4fc" : T.indigo, fontWeight:600 }}>
+                  Preview — connect your POS or add income entries to see your real CFO dashboard
+                </span>
               </div>
-              <div style={{ fontFamily: MONO, fontSize: isMobile ? 18 : 22, fontWeight: 800, color: c.color, letterSpacing: "-0.04em" }}>
-                {c.pct !== undefined ? `${c.pct}%` : fmt(c.value)}
-              </div>
+            )}
+            <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr 1fr" : "repeat(4,1fr)", gap: 12, marginBottom: 16, opacity: hasRealIncome ? 1 : 0.75 }}>
+              {[
+                { label: "Total Income",   value: activeCfo.totalIncome,   color: "#22C55E", bg: "rgba(34,197,94,.08)",  border: "rgba(34,197,94,.2)",  ico: "📈" },
+                { label: "Total Expenses", value: activeCfo.totalExpenses,  color: "#F87171", bg: "rgba(248,113,113,.08)", border: "rgba(248,113,113,.2)", ico: "📉" },
+                { label: "Net Profit",     value: activeCfo.netProfit,      color: activeCfo.netProfit >= 0 ? "#22C55E" : "#F87171", bg: activeCfo.netProfit >= 0 ? "rgba(34,197,94,.08)" : "rgba(248,113,113,.08)", border: activeCfo.netProfit >= 0 ? "rgba(34,197,94,.2)" : "rgba(248,113,113,.2)", ico: "💰" },
+                { label: "Food Cost %",    value: null, pct: activeCfo.foodCostPct, color: "#F59E0B", bg: "rgba(245,158,11,.08)", border: "rgba(245,158,11,.2)", ico: "🍽️" },
+              ].map(c => (
+                <div key={c.label} style={{ background: c.bg, border: `1px solid ${c.border}`, borderRadius: 12, padding: "16px 18px" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 8 }}>
+                    <span style={{ fontFamily: SANS, fontSize: 11, fontWeight: 700, color: T.t3, textTransform: "uppercase", letterSpacing: ".6px" }}>{c.label}</span>
+                    <span style={{ fontSize: 16, opacity: .6 }}>{c.ico}</span>
+                  </div>
+                  <div style={{ fontFamily: MONO, fontSize: isMobile ? 18 : 22, fontWeight: 800, color: c.color, letterSpacing: "-0.04em" }}>
+                    {c.pct !== undefined ? `${c.pct}%` : fmt(c.value)}
+                  </div>
+                </div>
+              ))}
             </div>
-          ))}
-        </div>
-      )}
-
-      {/* P&L Summary Table — shown when income data exists */}
-      {plData && cfokpis && cfokpis.totalIncome > 0 && (
-        <PLSummaryTable plData={plData} T={T} isMobile={isMobile} />
-      )}
+            <div style={{ opacity: hasRealIncome ? 1 : 0.75 }}>
+              <PLSummaryTable plData={activePl} T={T} isMobile={isMobile} />
+            </div>
+          </>
+        );
+      })()}
 
       <div style={{ background: T.surf, border: `1px solid ${T.isDark ? "rgba(99,102,241,.30)" : T.indigoBdr}`, borderRadius: 12, padding: isMobile ? "14px 16px" : "20px 24px", display: "flex", alignItems: isMobile ? "flex-start" : "center", flexDirection: isMobile ? "column" : "row", justifyContent: "space-between", gap: 12, marginBottom: 16 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
