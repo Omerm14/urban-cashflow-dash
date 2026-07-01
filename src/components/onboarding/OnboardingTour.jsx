@@ -1,28 +1,27 @@
 import { useEffect, useRef, useState } from 'react';
+import { BarChart3, Zap, Link2, Building2 } from 'lucide-react';
 import './onboarding.css';
+
+const STEP_ICONS = [BarChart3, Zap, Link2, Building2];
 
 const STEPS = [
   {
     target: '[data-onboarding="kpi"]',
-    icon: '📊',
     title: 'Your Cash Flow Dashboard',
     body: 'Four live KPI cards track Outstanding, Overdue, Next Month, and Total Paid — your complete financial picture at a glance.',
   },
   {
     target: '[data-onboarding="upload"]',
-    icon: '⚡',
     title: 'AI Invoice Extraction',
     body: 'Drop any PDF or photo of an invoice. Our AI reads the supplier, amount, and date in seconds — no manual typing ever.',
   },
   {
     target: '[data-onboarding="integrations"]',
-    icon: '🔗',
     title: 'Connect & Auto-Sync',
     body: 'Link Gmail, Google Drive, WhatsApp, or Green Invoice. We pull new invoices automatically on your schedule.',
   },
   {
     target: '[data-onboarding="suppliers"]',
-    icon: '🏢',
     title: 'Suppliers & Payment Terms',
     body: 'Add your suppliers and set terms like Shotef+30. We calculate every due date automatically from there.',
   },
@@ -34,7 +33,15 @@ export function OnboardingWelcome({ onBegin, onSkip }) {
     <div className="ob-overlay ob-welcome-overlay">
       <div className="ob-welcome-card">
         <div className="ob-welcome-body">
-          <div className="ob-welcome-icon">💸</div>
+          <div className="ob-welcome-icon">
+            <svg width="38" height="38" viewBox="0 0 36 36" fill="none">
+              <path d="M9 18C9 13 13 9.5 18 9.5C21 9.5 23.5 10.7 25 12.7" stroke="#fff" strokeWidth="2.2" strokeLinecap="round" fill="none"/>
+              <path d="M27 18C27 23 23 26.5 18 26.5C15 26.5 12.5 25.3 11 23.3" stroke="rgba(255,255,255,.75)" strokeWidth="2.2" strokeLinecap="round" fill="none"/>
+              <circle cx="18" cy="18" r="2.6" fill="#fff"/>
+              <circle cx="25" cy="12.7" r="1.7" fill="rgba(255,255,255,.85)"/>
+              <circle cx="11" cy="23.3" r="1.7" fill="rgba(255,255,255,.7)"/>
+            </svg>
+          </div>
           <h1 className="ob-welcome-title">Welcome to Cashflow</h1>
           <p className="ob-welcome-sub">
             Let's show you around in 60 seconds — you'll know exactly what to do.
@@ -59,7 +66,7 @@ function Confetti() {
   const particles = Array.from({ length: 22 }, (_, i) => ({
     id: i,
     left: `${5 + Math.floor((i / 22) * 90)}%`,
-    top: `${40 + Math.floor(Math.random() * 30)}%`,
+    top: `${40 + (i % 5) * 6}%`,
     color: CONFETTI_COLORS[i % CONFETTI_COLORS.length],
     delay: `${(i % 8) * 0.08}s`,
     size: 6 + (i % 4) * 2,
@@ -93,7 +100,18 @@ export function OnboardingCelebration() {
     <>
       <Confetti />
       <div className="ob-overlay ob-celebration-overlay">
-        <div className="ob-check-ring">✓</div>
+        <div className="ob-check-ring">
+          <svg width="40" height="40" viewBox="0 0 40 40" fill="none">
+            <path
+              d="M10 20 L17 27 L30 13"
+              stroke="#10b981"
+              strokeWidth="3"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className="ob-check-path"
+            />
+          </svg>
+        </div>
         <div className="ob-celebration-title">You're all set!</div>
         <div className="ob-celebration-sub">Your checklist is waiting on the dashboard.</div>
       </div>
@@ -106,6 +124,7 @@ export default function OnboardingTour({ step, onNext, onPrev, onSkip, onFinish 
   const [rect, setRect] = useState(null);
   const tooltipRef = useRef(null);
   const current = STEPS[step];
+  const StepIcon = STEP_ICONS[step];
 
   useEffect(() => {
     if (!current) return;
@@ -162,10 +181,11 @@ export default function OnboardingTour({ step, onNext, onPrev, onSkip, onFinish 
       {rect && <div className="ob-spotlight" style={spotlightStyle} />}
 
       <div ref={tooltipRef} className="ob-tooltip" style={tooltipStyle}>
-        {/* key forces re-animation on step change */}
         <div key={step} className="ob-tooltip-inner">
           <div className="ob-tooltip-top">
-            <div className="ob-step-icon">{current.icon}</div>
+            <div className="ob-step-icon">
+              {StepIcon && <StepIcon size={20} strokeWidth={1.75} color="#06b6d4" />}
+            </div>
             <div className="ob-tooltip-meta">
               <div className="ob-step-pill">Step {step + 1} of {STEPS.length}</div>
               <div className="ob-tooltip-title">{current.title}</div>
@@ -185,7 +205,7 @@ export default function OnboardingTour({ step, onNext, onPrev, onSkip, onFinish 
                 <button className="ob-btn ob-btn-ghost" onClick={onPrev}>Back</button>
               )}
               <button className="ob-btn ob-btn-primary" onClick={isLast ? onFinish : onNext}>
-                {isLast ? 'Finish ✓' : 'Next →'}
+                {isLast ? 'Finish' : 'Next →'}
               </button>
             </div>
           </div>
