@@ -25,14 +25,14 @@ exports.remove = async (req, res) => {
     .eq('id', req.params.id)
     .eq('user_id', req.user.id)
     .maybeSingle();
-  if (error) return res.status(500).json({ error: error.message });
+  if (error) { console.error('[invoices] remove lookup error:', error.message); return res.status(500).json({ error: 'Internal server error' }); }
   if (!row)  return res.status(404).json({ error: 'Invoice not found' });
 
   await removeAttachment(row);
 
   const { error: delErr } = await supabase
     .from('invoices').delete().eq('id', row.id).eq('user_id', req.user.id);
-  if (delErr) return res.status(500).json({ error: delErr.message });
+  if (delErr) { console.error('[invoices] remove delete error:', delErr.message); return res.status(500).json({ error: 'Internal server error' }); }
   res.json({ ok: true });
 };
 
@@ -47,7 +47,7 @@ exports.bulkRemove = async (req, res) => {
     .select('id, attachment_path, attachment_backend')
     .in('id', ids)
     .eq('user_id', req.user.id);
-  if (error) return res.status(500).json({ error: error.message });
+  if (error) { console.error('[invoices] bulkRemove lookup error:', error.message); return res.status(500).json({ error: 'Internal server error' }); }
 
   await Promise.allSettled((rows || []).map(removeAttachment));
 
@@ -55,7 +55,7 @@ exports.bulkRemove = async (req, res) => {
   if (ownedIds.length) {
     const { error: delErr } = await supabase
       .from('invoices').delete().in('id', ownedIds).eq('user_id', req.user.id);
-    if (delErr) return res.status(500).json({ error: delErr.message });
+    if (delErr) { console.error('[invoices] bulkRemove delete error:', delErr.message); return res.status(500).json({ error: 'Internal server error' }); }
   }
   res.json({ ok: true, deleted: ownedIds.length });
 };
@@ -91,6 +91,6 @@ exports.presignUpload = async (req, res) => {
     res.json({ backend, key, uploadUrl });
   } catch (err) {
     console.error('[invoices] presign error:', err.message);
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: 'Internal server error' });
   }
 };

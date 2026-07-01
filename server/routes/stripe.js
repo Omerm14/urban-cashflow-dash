@@ -60,7 +60,7 @@ router.post('/checkout', async (req, res) => {
     res.json({ url: session.url });
   } catch (err) {
     console.error('[stripe] checkout error:', err.message);
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: 'Internal server error' });
   }
 });
 
@@ -89,7 +89,7 @@ router.post('/portal', async (req, res) => {
     res.json({ url: session.url });
   } catch (err) {
     console.error('[stripe] portal error:', err.message);
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: 'Internal server error' });
   }
 });
 
@@ -101,7 +101,7 @@ router.get('/usage', async (req, res) => {
     res.json(usage);
   } catch (err) {
     console.error('[stripe] usage error:', err.message);
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: 'Internal server error' });
   }
 });
 
@@ -121,7 +121,7 @@ exports.webhook = async (req, res) => {
     );
   } catch (err) {
     console.error('[stripe] webhook signature error:', err.message);
-    return res.status(400).json({ error: `Webhook signature error: ${err.message}` });
+    return res.status(400).json({ error: 'Webhook error' });
   }
 
   try {

@@ -1,10 +1,9 @@
 require('dotenv').config({ path: '.env.local' });
 const express = require('express');
 
-if (!process.env.ANTHROPIC_API_KEY) {
-  console.error('ERROR: ANTHROPIC_API_KEY not set in .env.local');
-  process.exit(1);
-}
+['ANTHROPIC_API_KEY', 'SUPABASE_URL', 'SUPABASE_SERVICE_ROLE_KEY', 'FRONTEND_URL'].forEach(k => {
+  if (!process.env[k]) { console.error(`ERROR: ${k} not set in .env.local`); process.exit(1); }
+});
 
 const app       = express();
 const auth      = require('./middleware/auth');
@@ -12,8 +11,10 @@ const rateLimit = require('express-rate-limit');
 
 // Protect expensive endpoints from abuse while allowing generous legitimate use.
 // Limits are per-IP; well above any real single-user burst.
-const extractLimiter = rateLimit({ windowMs: 60_000, max: 120, standardHeaders: true, legacyHeaders: false, message: { error: 'Too many requests, please slow down' } });
-const syncLimiter    = rateLimit({ windowMs: 60_000, max: 10,  standardHeaders: true, legacyHeaders: false, message: { error: 'Too many sync requests, please wait' } });
+const extractLimiter   = rateLimit({ windowMs: 60_000,      max: 120, standardHeaders: true, legacyHeaders: false, message: { error: 'Too many requests, please slow down' } });
+const syncLimiter      = rateLimit({ windowMs: 60_000,      max: 10,  standardHeaders: true, legacyHeaders: false, message: { error: 'Too many sync requests, please wait' } });
+const googleApiLimiter = rateLimit({ windowMs: 60_000,      max: 20,  standardHeaders: true, legacyHeaders: false, message: { error: 'Too many requests' } });
+const accountLimiter   = rateLimit({ windowMs: 3_600_000,   max: 3,   standardHeaders: true, legacyHeaders: false, message: { error: 'Too many account operations, please wait' } });
 
 // Capture raw body for webhook signature verification before JSON parsing
 // (needed for WhatsApp HMAC and Stripe signature verification).
@@ -41,8 +42,8 @@ app.get('/api/integrations',                        auth, integrations.list);
 app.delete('/api/integrations/:id',                 auth, integrations.remove);
 app.get('/api/integrations/google/auth-url',        auth, integrations.googleAuthUrl);
 app.get('/api/integrations/google/callback',             integrations.googleCallback);
-app.get('/api/integrations/google/folders',         auth, integrations.googleFolders);
-app.get('/api/integrations/google/labels',          auth, integrations.googleLabels);
+app.get('/api/integrations/google/folders',         googleApiLimiter, auth, integrations.googleFolders);
+app.get('/api/integrations/google/labels',          googleApiLimiter, auth, integrations.googleLabels);
 app.get('/api/integrations/:id/events',             auth, integrations.listEvents);
 app.post('/api/integrations/:id/resync',            auth, integrations.resync);
 app.post('/api/integrations/green-invoice',         auth, integrations.connectGreenInvoice);

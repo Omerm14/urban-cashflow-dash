@@ -56,8 +56,10 @@ const billing = require('../server/routes/billing');
 app.post('/api/billing/ipn', billing.ipn);
 app.use('/api/billing', auth, billing.router);
 
-// Account management
-app.delete('/api/account', auth, require('../server/routes/account').deleteAccount);
+// Account management (strict rate limit — permanent destructive operation)
+const rateLimit = require('express-rate-limit');
+const accountLimiter = rateLimit({ windowMs: 3_600_000, max: 3, standardHeaders: true, legacyHeaders: false, message: { error: 'Too many account operations, please wait' } });
+app.delete('/api/account', accountLimiter, auth, require('../server/routes/account').deleteAccount);
 
 // Cron (secured by CRON_SECRET header)
 app.get('/api/cron/sync', require('../server/routes/cron').runSync);

@@ -34,12 +34,14 @@ const makeOAuth2WithCreds = credentials => {
 };
 
 // GET /api/integrations
+// Explicitly exclude `credentials` — it contains OAuth access/refresh tokens and API keys
+// that must never be returned to the browser.
 exports.list = async (req, res) => {
   const { data, error } = await supabase
     .from('integrations')
-    .select('*')
+    .select('id,user_id,type,status,config,last_sync,sync_count,auto_sync_enabled,sync_frequency_min,error_message,error_count,created_at,updated_at')
     .eq('user_id', req.user.id);
-  if (error) return res.status(500).json({ error: error.message });
+  if (error) { console.error('[integrations] list error:', error.message); return res.status(500).json({ error: 'Internal server error' }); }
   res.json({ integrations: data || [] });
 };
 
@@ -50,7 +52,7 @@ exports.remove = async (req, res) => {
     .delete()
     .eq('id', req.params.id)
     .eq('user_id', req.user.id);
-  if (error) return res.status(500).json({ error: error.message });
+  if (error) { console.error('[integrations] remove error:', error.message); return res.status(500).json({ error: 'Internal server error' }); }
   res.json({ ok: true });
 };
 
@@ -156,7 +158,7 @@ exports.googleFolders = async (req, res) => {
     res.json({ folders, currentName });
   } catch (err) {
     console.error('[folders]', err.message);
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: 'Internal server error' });
   }
 };
 
@@ -179,7 +181,7 @@ exports.googleLabels = async (req, res) => {
     res.json({ labels: filtered });
   } catch (err) {
     console.error('[labels]', err.message);
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: 'Internal server error' });
   }
 };
 
@@ -206,7 +208,7 @@ exports.listEvents = async (req, res) => {
       .eq('integration_id', req.params.id)
       .eq('event_type', 'saved'),
   ]);
-  if (eventsResult.error) return res.status(500).json({ error: eventsResult.error.message });
+  if (eventsResult.error) { console.error('[integrations] listEvents error:', eventsResult.error.message); return res.status(500).json({ error: 'Internal server error' }); }
   res.json({ events: eventsResult.data || [], totalSaved: countResult.count || 0 });
 };
 
@@ -235,7 +237,7 @@ exports.resync = async (req, res) => {
         error_count: (integration.error_count || 0) + 1,
         last_error_at: new Date().toISOString(),
       }).eq('id', integration.id);
-      return res.status(500).json({ error: err.message });
+      return res.status(500).json({ error: 'Internal server error' });
     }
   }
 
@@ -261,7 +263,7 @@ exports.resync = async (req, res) => {
       error_count:   (integration.error_count || 0) + 1,
       last_error_at: new Date().toISOString(),
     }).eq('id', integration.id);
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: 'Internal server error' });
   }
 };
 
@@ -280,7 +282,7 @@ exports.connectGreenInvoice = async (req, res) => {
     error_count:   0,
   }, { onConflict: 'user_id,type' });
 
-  if (error) return res.status(500).json({ error: error.message });
+  if (error) { console.error('[integrations] connectGreenInvoice error:', error.message); return res.status(500).json({ error: 'Internal server error' }); }
   res.json({ ok: true });
 };
 
@@ -306,7 +308,7 @@ exports.connectWhatsApp = async (req, res) => {
     error_count:   0,
   }, { onConflict: 'user_id,type' });
 
-  if (error) return res.status(500).json({ error: error.message });
+  if (error) { console.error('[integrations] connectWhatsApp error:', error.message); return res.status(500).json({ error: 'Internal server error' }); }
   res.json({ ok: true, inbox_code, wa_link });
 };
 
@@ -318,7 +320,7 @@ exports.updateConfig = async (req, res) => {
     .update({ config })
     .eq('id', req.params.id)
     .eq('user_id', req.user.id);
-  if (error) return res.status(500).json({ error: error.message });
+  if (error) { console.error('[integrations] updateConfig error:', error.message); return res.status(500).json({ error: 'Internal server error' }); }
   res.json({ ok: true });
 };
 
@@ -336,7 +338,7 @@ exports.updateAutoSync = async (req, res) => {
     .update({ auto_sync_enabled, sync_frequency_min })
     .eq('id', req.params.id)
     .eq('user_id', req.user.id);
-  if (error) return res.status(500).json({ error: error.message });
+  if (error) { console.error('[integrations] updateAutoSync error:', error.message); return res.status(500).json({ error: 'Internal server error' }); }
   res.json({ ok: true });
 };
 
@@ -350,7 +352,7 @@ exports.listNotifications = async (req, res) => {
       .neq('event_type', 'dedup_skipped')
       .order('created_at', { ascending: false })
       .limit(50);
-    if (error) return res.status(500).json({ error: error.message });
+    if (error) { console.error('[integrations] listNotifications error:', error.message); return res.status(500).json({ error: 'Internal server error' }); }
     const notifications = (data || []).map(ev => ({
       id:               ev.id,
       event_type:       ev.event_type,
@@ -362,7 +364,8 @@ exports.listNotifications = async (req, res) => {
     }));
     res.json({ notifications });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.error('[integrations] listNotifications catch:', err.message);
+    res.status(500).json({ error: 'Internal server error' });
   }
 };
 
@@ -375,13 +378,14 @@ exports.getAttachmentUrl = async (req, res) => {
       .eq('id', req.params.id)
       .eq('user_id', req.user.id)
       .maybeSingle();
-    if (error) return res.status(500).json({ error: error.message });
+    if (error) { console.error('[integrations] getAttachmentUrl error:', error.message); return res.status(500).json({ error: 'Internal server error' }); }
     if (!invoice?.attachment_path) return res.status(404).json({ error: 'No attachment for this invoice' });
 
     const url = await storage.getSignedReadUrl(invoice.attachment_path, invoice.attachment_backend || 'supabase', 3600);
     res.json({ url });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.error('[integrations] getAttachmentUrl catch:', err.message);
+    res.status(500).json({ error: 'Internal server error' });
   }
 };
 
@@ -441,7 +445,7 @@ exports.triggerSync = async (req, res) => {
         error_count: (integration.error_count || 0) + 1,
         last_error_at: new Date().toISOString(),
       }).eq('id', integration.id);
-      return res.status(500).json({ error: err.message });
+      return res.status(500).json({ error: 'Internal server error' });
     }
   }
 
@@ -467,7 +471,7 @@ exports.triggerSync = async (req, res) => {
       error_count:   (integration.error_count || 0) + 1,
       last_error_at: new Date().toISOString(),
     }).eq('id', integration.id);
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: 'Internal server error' });
   }
 };
 
@@ -479,7 +483,7 @@ exports.cancelSyncJob = async (req, res) => {
     .eq('id', req.params.jobId)
     .eq('user_id', req.user.id)
     .in('status', ['pending', 'running']);
-  if (error) return res.status(500).json({ error: error.message });
+  if (error) { console.error('[integrations] cancelSyncJob error:', error.message); return res.status(500).json({ error: 'Internal server error' }); }
   res.json({ ok: true });
 };
 
