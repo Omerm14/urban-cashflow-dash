@@ -1044,9 +1044,7 @@ function SupplierGroup({ supplier, invoices, selectedIds, onToggleSelect, onTogg
               {!isMobile && <span style={{ fontFamily: MONO, fontSize: 12, color: T.isDark ? "#627488" : T.t2, fontVariantNumeric: "tabular-nums" }}>{fmtDate(inv.invoiceDate)}</span>}
               {!isMobile && <span style={{ fontFamily: MONO, fontSize: 12, color: (inv.status === "Overdue" || inv.status === "overdue") ? "#F87171" : T.isDark ? "#627488" : T.t2, fontWeight: (inv.status === "Overdue" || inv.status === "overdue") ? 600 : 400, fontVariantNumeric: "tabular-nums" }}>{fmtDate(inv.dueDate)}</span>}
               <div style={{ display: "flex", gap: 4, justifyContent: "flex-end" }}>
-                {inv.attachment_path && (
-                  <button onClick={e => { e.stopPropagation(); onViewAttachment?.(inv); }} title="Preview" style={{ padding: "2px 6px", background: "transparent", border: `1px solid ${T.bdr}`, borderRadius: 4, color: T.t2, cursor: "pointer", display: "flex", alignItems: "center" }}><Paperclip size={10} /></button>
-                )}
+                <button onClick={e => { e.stopPropagation(); onViewAttachment?.(inv); }} title="Preview" style={{ padding: "2px 6px", background: "transparent", border: `1px solid ${T.bdr}`, borderRadius: 4, color: T.t2, cursor: "pointer", display: "flex", alignItems: "center" }}><Paperclip size={10} /></button>
                 <button onClick={e => { e.stopPropagation(); onMarkPaid(inv.id); }} style={{ padding: "2px 7px", background: isPaid ? "transparent" : T.greenTint, border: `1px solid ${isPaid ? T.bdr : T.greenBdr}`, borderRadius: 4, color: isPaid ? T.t3 : T.green, cursor: "pointer", fontFamily: SANS, fontSize: 11, fontWeight: 600, display: "flex", alignItems: "center", gap: 2 }}>
                   {isPaid ? <><X size={10} />Unpaid</> : <><Check size={10} />Paid</>}
                 </button>
@@ -1307,7 +1305,7 @@ function InvoicesView({ invoices, selectedMonth, onMonthChange, onMarkPaid, onBu
                 </div>
                 <StatusBadge status={inv.status} />
                 <div style={{ display: "flex", justifyContent: "flex-end", gap: 4 }}>
-                  <button onClick={e => { e.stopPropagation(); inv.attachment_path && onViewAttachment?.(inv); }} title={inv.attachment_path ? "Preview" : "No attachment"} style={{ width: 26, height: 26, border: `1px solid ${T.isDark ? "rgba(255,255,255,.09)" : T.bdr}`, borderRadius: 6, background: T.isDark ? "rgba(255,255,255,.03)" : "transparent", cursor: inv.attachment_path ? "pointer" : "default", display: "flex", alignItems: "center", justifyContent: "center", opacity: inv.attachment_path ? 1 : 0.35 }}>
+                  <button onClick={e => { e.stopPropagation(); onViewAttachment?.(inv); }} title="Preview" style={{ width: 26, height: 26, border: `1px solid ${T.isDark ? "rgba(255,255,255,.09)" : T.bdr}`, borderRadius: 6, background: T.isDark ? "rgba(255,255,255,.03)" : "transparent", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
                     <Paperclip size={11} strokeWidth={1.75} color={T.isDark ? "rgba(255,255,255,.35)" : T.t2} />
                   </button>
                   <button onClick={e => { e.stopPropagation(); onEditInvoice?.(inv); }} style={{ width: 26, height: 26, border: `1px solid ${T.isDark ? "rgba(255,255,255,.09)" : T.bdr}`, borderRadius: 6, background: T.isDark ? "rgba(255,255,255,.03)" : "transparent", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>

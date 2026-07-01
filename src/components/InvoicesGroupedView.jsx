@@ -121,9 +121,7 @@ function SupplierCard({ supplier, invoices, dupeIds, anomalyMap, updateInvoice, 
               }
             </span>
             <div style={{ display:"flex", gap:5, justifyContent:"flex-end" }}>
-              {inv.attachment_path && (
-                <button className="btn btn-ghost btn-sm" title="View file" onClick={() => onViewAttachment?.(inv)}>📎</button>
-              )}
+              <button className="btn btn-ghost btn-sm" title="View file" onClick={() => onViewAttachment?.(inv)}>📎</button>
               {!isPaid && (
                 <button className="btn btn-success btn-sm" onClick={() => updateInvoice(inv.id, { status: STATUS.PAID })}>✓ Paid</button>
               )}
