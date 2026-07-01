@@ -217,13 +217,11 @@ const makeOAuth2 = credentials => {
   c.setCredentials(credentials);
   // Persist refreshed tokens back to DB automatically
   c.on('tokens', async tokens => {
-    if (tokens.refresh_token) {
-      await supabase
-        .from('integrations')
-        .update({ credentials: { ...credentials, ...tokens } })
-        .eq('user_id', credentials._userId)
-        .eq('type', credentials._type);
-    }
+    await supabase
+      .from('integrations')
+      .update({ credentials: { ...credentials, ...tokens } })
+      .eq('user_id', credentials._userId)
+      .eq('type', credentials._type);
   });
   return c;
 };
@@ -595,8 +593,17 @@ exports.processWhatsAppMedia = async (integration, userId, mediaId, filename, mi
   const suppliers        = await getSuppliers(userId);
   const existingInvoices = await getExistingInvoices(userId);
 
-  return processFile(
+  const results = await processFile(
     buffer, filename || `whatsapp_${mediaId}`, mimeType, userId, suppliers, existingInvoices,
     integration.id, 'whatsapp', { wa_message_id: waMessageId, media_id: mediaId },
   );
+
+  if (results.length > 0) {
+    await supabase.from('integrations').update({
+      last_sync:  new Date().toISOString(),
+      sync_count: (integration.sync_count || 0) + results.length,
+    }).eq('id', integration.id);
+  }
+
+  return results;
 };

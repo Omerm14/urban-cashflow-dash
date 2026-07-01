@@ -16,20 +16,42 @@ const syncLimiter      = rateLimit({ windowMs: 60_000,      max: 10,  standardHe
 const googleApiLimiter = rateLimit({ windowMs: 60_000,      max: 20,  standardHeaders: true, legacyHeaders: false, message: { error: 'Too many requests' } });
 const accountLimiter   = rateLimit({ windowMs: 3_600_000,   max: 3,   standardHeaders: true, legacyHeaders: false, message: { error: 'Too many account operations, please wait' } });
 
-// Capture raw body for webhook signature verification before JSON parsing
-// (needed for WhatsApp HMAC and Stripe signature verification).
-app.use((req, res, next) => {
-  const needsRaw =
-    (req.path === '/api/webhook/whatsapp' && req.method === 'POST') ||
-    (req.path === '/api/stripe/webhook'   && req.method === 'POST');
-  if (needsRaw) {
-    let data = '';
-    req.on('data', chunk => { data += chunk; });
-    req.on('end', () => { req.rawBody = data; next(); });
-  } else {
-    next();
-  }
-});
+// WhatsApp + Stripe webhooks registered BEFORE global json parser — both need
+// rawBody preserved for signature verification (HMAC / Stripe-Signature).
+const webhook = require('./routes/webhook');
+app.get('/api/webhook/whatsapp', webhook.verifyWhatsApp);
+app.post('/api/webhook/whatsapp',
+  (req, res, next) => {
+    // Vercel may pre-consume the stream; if body is already an object, skip raw capture.
+    if (req.body && typeof req.body === 'object' && !Buffer.isBuffer(req.body)) return next();
+    const chunks = [];
+    req.on('data', c => chunks.push(c));
+    req.on('end', () => {
+      const buf = Buffer.concat(chunks);
+      req.rawBody = buf;
+      try { req.body = buf.length ? JSON.parse(buf.toString()) : {}; } catch { req.body = {}; }
+      next();
+    });
+    req.on('error', () => next());
+  },
+  webhook.handleWhatsApp,
+);
+
+const stripeRoutes = require('./routes/stripe');
+app.post('/api/stripe/webhook',
+  (req, res, next) => {
+    const chunks = [];
+    req.on('data', c => chunks.push(c));
+    req.on('end', () => {
+      const buf = Buffer.concat(chunks);
+      req.rawBody = buf.toString();
+      try { req.body = buf.length ? JSON.parse(buf.toString()) : {}; } catch { req.body = {}; }
+      next();
+    });
+    req.on('error', () => next());
+  },
+  stripeRoutes.webhook,
+);
 
 app.use(express.json({ limit: '20mb' }));
 
@@ -62,19 +84,13 @@ app.delete('/api/invoices/:id',           auth, invoices.remove);
 app.post('/api/invoices/bulk-delete',     auth, invoices.bulkRemove);
 app.post('/api/attachments/presign',      auth, invoices.presignUpload);
 
-// WhatsApp webhook (no auth — verified by HMAC signature)
-const webhook = require('./routes/webhook');
-app.get('/api/webhook/whatsapp',  webhook.verifyWhatsApp);
-app.post('/api/webhook/whatsapp', webhook.handleWhatsApp);
-
 // Billing — Meshulam IPN has no auth; rest uses auth middleware
 const billingRoutes = require('./routes/billing');
 app.post('/api/billing/ipn', billingRoutes.ipn);
 app.use('/api/billing', auth, billingRoutes.router);
 
-// Stripe — webhook has no auth (verified by Stripe signature); rest uses auth middleware
-const stripeRoutes = require('./routes/stripe');
-app.post('/api/stripe/webhook', stripeRoutes.webhook);
+// Stripe — authenticated API routes (checkout, portal, usage)
+// Webhook is registered above the JSON parser to preserve rawBody for signature verification.
 app.use('/api/stripe', auth, stripeRoutes.router);
 
 // Cron (secured by CRON_SECRET header)
