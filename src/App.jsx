@@ -984,7 +984,7 @@ function Dashboard({ invoices, onPayAllJuly, chartData, supplierNames, supplierC
 // ── Invoices ──────────────────────────────────────────────────────────────────
 const SOURCE_LABELS = { google_drive: { icon: "📁", label: "Drive" }, gmail: { icon: "✉️", label: "Gmail" }, whatsapp: { icon: "💬", label: "WA" }, green_invoice: { icon: "🧾", label: "GI" } };
 
-function SupplierGroup({ supplier, invoices, selectedIds, onToggleSelect, onToggleAll, onMarkPaid, onPayGroup, onEditInvoice, onViewAttachment, anomalyMap, color }) {
+function SupplierGroup({ supplier, invoices, selectedIds, onToggleSelect, onToggleAll, onMarkPaid, onPayGroup, onEditInvoice, onDeleteInvoice, onViewAttachment, anomalyMap, color }) {
   const T = useT();
   const { isMobile } = useLayout();
   const [hov, setHov] = useState(false);
@@ -1049,6 +1049,7 @@ function SupplierGroup({ supplier, invoices, selectedIds, onToggleSelect, onTogg
                   {isPaid ? <><X size={10} />Unpaid</> : <><Check size={10} />Paid</>}
                 </button>
                 {!isMobile && <button onClick={e => { e.stopPropagation(); onEditInvoice?.(inv); }} style={{ padding: "2px 6px", background: "transparent", border: `1px solid ${T.bdr}`, borderRadius: 4, color: T.t2, cursor: "pointer", display: "flex", alignItems: "center" }}><Pencil size={10} /></button>}
+                <button onClick={e => { e.stopPropagation(); onDeleteInvoice?.(inv.id); }} title="Delete" style={{ padding: "2px 6px", background: "transparent", border: `1px solid ${T.redBdr}`, borderRadius: 4, color: T.red, cursor: "pointer", display: "flex", alignItems: "center" }}><Trash2 size={10} /></button>
               </div>
             </div>
           );
@@ -1064,7 +1065,7 @@ function SupplierGroup({ supplier, invoices, selectedIds, onToggleSelect, onTogg
   );
 }
 
-function GroupedView({ invoices, selectedMonth, onMonthChange, selectedIds, onToggleSelect, onToggleAll, onMarkPaid, onSelectAll, onPayGroup, onAllPaid, onEditInvoice, onViewAttachment, anomalyMap, missingSuppliers }) {
+function GroupedView({ invoices, selectedMonth, onMonthChange, selectedIds, onToggleSelect, onToggleAll, onMarkPaid, onSelectAll, onPayGroup, onAllPaid, onEditInvoice, onDeleteInvoice, onViewAttachment, anomalyMap, missingSuppliers }) {
   const T = useT();
   const { isMobile } = useLayout();
   const monthInvoices = invoices.filter(inv => inv.dueDate?.startsWith(selectedMonth));
@@ -1147,14 +1148,14 @@ function GroupedView({ invoices, selectedMonth, onMonthChange, selectedIds, onTo
       {groups.map(([supplier, supInvoices]) => (
         <SupplierGroup key={supplier} supplier={supplier} invoices={supInvoices} selectedIds={selectedIds}
           onToggleSelect={onToggleSelect} onToggleAll={onToggleAll} onMarkPaid={onMarkPaid}
-          onPayGroup={ids => onSelectAll(ids)} onEditInvoice={onEditInvoice} onViewAttachment={onViewAttachment} anomalyMap={anomalyMap}
+          onPayGroup={ids => onSelectAll(ids)} onEditInvoice={onEditInvoice} onDeleteInvoice={onDeleteInvoice} onViewAttachment={onViewAttachment} anomalyMap={anomalyMap}
           color={supplierColor(supplier)} />
       ))}
     </div>
   );
 }
 
-function InvoicesView({ invoices, selectedMonth, onMonthChange, onMarkPaid, onBulkPaid, onBulkUnpaid, preSelectAll, onEditInvoice, onViewAttachment, anomalyMap, missingSuppliers, initialFilterStatus, initialSelectedId }) {
+function InvoicesView({ invoices, selectedMonth, onMonthChange, onMarkPaid, onBulkPaid, onBulkUnpaid, preSelectAll, onEditInvoice, onDeleteInvoice, onViewAttachment, anomalyMap, missingSuppliers, initialFilterStatus, initialSelectedId }) {
   const T = useT();
   const { isMobile, isTablet } = useLayout();
   const { t } = useLang();
@@ -1269,7 +1270,7 @@ function InvoicesView({ invoices, selectedMonth, onMonthChange, onMarkPaid, onBu
           selectedIds={selectedIds} onToggleSelect={toggleSelect} onToggleAll={toggleAll}
           onMarkPaid={onMarkPaid} onSelectAll={ids => setSelectedIds(new Set(ids))}
           onPayGroup={ids => { setSelectedIds(new Set(ids)); setShowPayConfirm(true); }}
-          onAllPaid={() => setShowCelebration(true)} onEditInvoice={onEditInvoice} onViewAttachment={onViewAttachment}
+          onAllPaid={() => setShowCelebration(true)} onEditInvoice={onEditInvoice} onDeleteInvoice={onDeleteInvoice} onViewAttachment={onViewAttachment}
           anomalyMap={anomalyMap} missingSuppliers={missingSuppliers} />
       ) : (
         <div style={{ background: T.surf, border: `1px solid ${T.bdr}`, borderRadius: 10, overflow: "hidden" }}>
@@ -1310,6 +1311,9 @@ function InvoicesView({ invoices, selectedMonth, onMonthChange, onMarkPaid, onBu
                   </button>
                   <button onClick={e => { e.stopPropagation(); onEditInvoice?.(inv); }} style={{ width: 26, height: 26, border: `1px solid ${T.isDark ? "rgba(255,255,255,.09)" : T.bdr}`, borderRadius: 6, background: T.isDark ? "rgba(255,255,255,.03)" : "transparent", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
                     <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke={T.isDark ? "rgba(255,255,255,.35)" : T.t2} strokeWidth="2" strokeLinecap="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                  </button>
+                  <button onClick={e => { e.stopPropagation(); onDeleteInvoice?.(inv.id); }} title="Delete" style={{ width: 26, height: 26, border: `1px solid ${T.redBdr}`, borderRadius: 6, background: "transparent", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                    <Trash2 size={11} color={T.red} />
                   </button>
                 </div>
               </div>
@@ -2339,7 +2343,7 @@ export default function App() {
             <main style={{ flex: 1, overflowY: "auto", padding: isMobile ? "20px 16px 100px" : "28px clamp(20px,3vw,36px) 80px" }}>
               <div style={{ width: "100%" }}>
                 {view === "dashboard"    && <Dashboard invoices={invoices} onPayAllJuly={handlePayAll} chartData={chartData} supplierNames={allNames} supplierColor={getSupplierColor} user={user} onMissingAlert={() => setShowMissingModal(true)} onAnomalyAlert={() => setShowAnomalyModal(true)} missingSuppliers={missingSuppliers} anomalyMap={anomalyMap} onViewMonth={handleViewMonth} onNavigateFiltered={(status) => { setView("invoices"); setInitialFilterStatus(status); }} />}
-                {view === "invoices"     && <InvoicesView invoices={invoices} selectedMonth={selectedMonth} onMonthChange={setSelectedMonth} onMarkPaid={handleMarkPaid} onBulkPaid={handleBulkPaid} onBulkUnpaid={handleBulkUnpaid} preSelectAll={preSelectAll} onEditInvoice={setEditInvoice} anomalyMap={anomalyMap} missingSuppliers={missingSuppliers} initialFilterStatus={initialFilterStatus} initialSelectedId={deepLinkInvoiceId} onViewAttachment={async (inv) => { try { const { data: { session } } = await supabase.auth.getSession(); const res = await fetch(`/api/invoices/${inv.id}/attachment-url`, { headers: { Authorization: `Bearer ${session?.access_token}` } }); if (res.ok) { const { url } = await res.json(); setPreviewAttachment({ url, filename: inv.source_file || inv.attachment_path?.split('/').pop() || 'invoice' }); } } catch(e) { console.error('attachment-url:', e); } }} />}
+                {view === "invoices"     && <InvoicesView invoices={invoices} selectedMonth={selectedMonth} onMonthChange={setSelectedMonth} onMarkPaid={handleMarkPaid} onBulkPaid={handleBulkPaid} onBulkUnpaid={handleBulkUnpaid} preSelectAll={preSelectAll} onEditInvoice={setEditInvoice} onDeleteInvoice={deleteInvoice} anomalyMap={anomalyMap} missingSuppliers={missingSuppliers} initialFilterStatus={initialFilterStatus} initialSelectedId={deepLinkInvoiceId} onViewAttachment={async (inv) => { try { const { data: { session } } = await supabase.auth.getSession(); const res = await fetch(`/api/invoices/${inv.id}/attachment-url`, { headers: { Authorization: `Bearer ${session?.access_token}` } }); if (res.ok) { const { url } = await res.json(); setPreviewAttachment({ url, filename: inv.source_file || inv.attachment_path?.split('/').pop() || 'invoice' }); } } catch(e) { console.error('attachment-url:', e); } }} />}
                 {view === "calendar"     && <CalendarView computed={invoices} calMonth={calMonth} setCalMonth={setCalMonth} color={getSupplierColor} />}
                 {view === "integrations" && <IntegrationsPage
                   syncJobs={syncJobs} onStartSync={startSync} onCancelSync={cancelSync}
