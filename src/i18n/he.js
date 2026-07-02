@@ -49,6 +49,7 @@ const he = {
   dash_range_yearly: "שנתי",
   dash_due_week: "לתשלום השבוע",
   dash_week_clear: "אין תשלומים השבוע — הכל נקי.",
+  dash_other: "אחר",
   kpi_due_30: "לתשלום ב-30 הימים הקרובים",
   kpi_due_30_meta: "{n} חשבוניות מ-{s} ספקים",
   kpi_paid_month: "שולם החודש",

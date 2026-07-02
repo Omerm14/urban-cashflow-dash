@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useAuth } from "./contexts/AuthContext";
 import { supabase } from "./lib/supabase";
 import { useInvoiceData } from "./hooks/useInvoiceData";
@@ -169,13 +169,15 @@ export default function App() {
     return palette[idx >= 0 ? idx % palette.length : 0];
   }, [allNames, palette]);
 
-  const chartData = (() => {
+  const chartData = useMemo(() => {
     const map = {};
     invoices.forEach(inv => {
       if (!inv.dueDate) return;
-      const d = new Date(inv.dueDate + "T12:00:00");
-      const key = `${MONTHS_SHORT[d.getMonth()]} '${String(d.getFullYear()).slice(2)}`;
-      if (!map[key]) map[key] = { month: key, _year: d.getFullYear(), _mon: d.getMonth() };
+      // dueDate is "YYYY-MM-DD" — slice instead of constructing a Date per invoice
+      const year = Number(inv.dueDate.slice(0, 4));
+      const mon = Number(inv.dueDate.slice(5, 7)) - 1;
+      const key = `${MONTHS_SHORT[mon]} '${String(year).slice(2)}`;
+      if (!map[key]) map[key] = { month: key, _year: year, _mon: mon };
       map[key][inv.supplier] = (map[key][inv.supplier] || 0) + Number(inv.amount || 0);
     });
     return Object.values(map)
@@ -185,7 +187,7 @@ export default function App() {
         const total = Object.entries(rest).filter(([k]) => k !== "month").reduce((s, [, v]) => s + v, 0);
         return { ...rest, total };
       });
-  })();
+  }, [invoices]);
 
   const handlePayAll = () => { setPreSelectAll(true); setView("invoices"); };
   const handleViewMonth = (monthLabel) => {

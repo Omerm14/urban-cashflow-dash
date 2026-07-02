@@ -79,7 +79,7 @@ export default function AdminPage() {
               <tr><td colSpan={5} style={{ padding:'40px 0', textAlign:'center', color:'#334155' }}>No API calls recorded yet</td></tr>
             )}
             {byUser.map(u => (
-              <tr key={u.email} className="row-hover" style={{ borderTop:'1px solid #0d1626' }}>
+              <tr key={u.email} className="row-hover" style={{ borderTop:'1px solid var(--bdr)' }}>
                 <td style={{ padding:'13px 18px', fontWeight:500 }}>{u.email}</td>
                 <td style={{ padding:'13px 18px', color:'#94a3b8' }}>{u.calls}</td>
                 <td style={{ padding:'13px 18px', color:'#94a3b8' }}>{u.inputTokens.toLocaleString()}</td>

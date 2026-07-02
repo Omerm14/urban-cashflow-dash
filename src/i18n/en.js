@@ -179,6 +179,7 @@ const en = {
   dash_range_yearly: "Yearly",
   dash_due_week: "Due this week",
   dash_week_clear: "Nothing due this week — you're clear.",
+  dash_other: "Other",
   kpi_due_30: "Due Next 30 Days",
   kpi_due_30_meta: "{n} invoices from {s} suppliers",
   kpi_paid_month: "Paid This Month",

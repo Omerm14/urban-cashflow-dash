@@ -129,10 +129,13 @@ export const useInvoiceData = () => {
 
   const computed = useMemo(() => {
     const today = new Date(); today.setHours(0, 0, 0, 0);
+    // Canonicalise status casing once so every consumer (filters, KPIs, pills)
+    // compares a single form — DB rows from older sync paths may be lowercase.
+    const CANON = { paid: STATUS.PAID, unpaid: STATUS.UNPAID, overdue: STATUS.OVERDUE, credit: STATUS.CREDIT };
     return invoices.map(inv => {
       const sup = matchSupplier(inv.supplier, suppliers);
       const due = inv.due_date || inv.dueDate || (calcDueDate(inv.invoice_date || inv.invoiceDate, sup)?.toISOString().split("T")[0] ?? null);
-      let status = inv.status;
+      let status = CANON[String(inv.status || "").toLowerCase()] || inv.status || STATUS.UNPAID;
       if (status !== STATUS.PAID && status !== STATUS.CREDIT && due && new Date(due) < today) status = STATUS.OVERDUE;
       return {
         ...inv,

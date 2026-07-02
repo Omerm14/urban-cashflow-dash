@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { useT, useLayout, useLang } from "../contexts/AppContexts";
 import { FONT_UI as SANS, FONT_DISPLAY as DISPLAY, FONT_MONO as MONO } from "../theme";
 import { fmt, MONTHS_SHORT } from "../utils/format";
@@ -11,25 +11,31 @@ const isUnpaid = (i) => i.status !== "Paid" && i.status !== "paid";
 const isPaid = (i) => i.status === "Paid" || i.status === "paid";
 const isOverdue = (i) => i.status === "Overdue" || i.status === "overdue";
 
-// Eased count-up for KPI values; snaps immediately under prefers-reduced-motion.
+// Eased count-up for KPI values. Animates from the previously displayed value
+// (not zero) so small data edits nudge rather than replay; snaps immediately
+// under prefers-reduced-motion.
 function useCountUp(target, duration = 900) {
   const [value, setValue] = useState(target);
+  const displayedRef = useRef(target);
+  useEffect(() => { displayedRef.current = value; });
   useEffect(() => {
     if (typeof window === "undefined" || window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
       setValue(target);
       return;
     }
+    const from = displayedRef.current;
+    if (from === target) return;
     const start = performance.now();
     let raf;
     const tick = (now) => {
       const p = Math.min((now - start) / duration, 1);
       const e = 1 - Math.pow(1 - p, 3);
-      setValue(target * e);
+      setValue(from + (target - from) * e);
       if (p < 1) raf = requestAnimationFrame(tick);
     };
     raf = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(raf);
-  }, [target, duration]);
+  }, [target, duration]); // eslint-disable-line react-hooks/exhaustive-deps
   return value;
 }
 
@@ -175,6 +181,8 @@ export default function DashboardView({ invoices, loading, onPayAll, chartData, 
 
     const attention = overdueInvs.length;
 
+    const currentMonthInvoices = invoices.filter(i => (i.invoice_date || i.invoiceDate || i.dueDate || "").startsWith(currentYM) && isUnpaid(i));
+
     return {
       outstanding, outstandingDelta,
       overdue: overdueInvs.reduce((s, i) => s + Number(i.amount), 0),
@@ -184,18 +192,39 @@ export default function DashboardView({ invoices, loading, onPayAll, chartData, 
       due30Suppliers: new Set(due30Invs.map(i => i.supplier)).size,
       paidThisMonth, paidDelta,
       dueSeries, paidSeries, dueThisWeek, dueThisWeekTotal, attention,
+      currentMonthTotal: currentMonthInvoices.reduce((s, i) => s + Number(i.amount || 0), 0),
+      currentMonthSuppliers: new Set(currentMonthInvoices.map(i => i.supplier)).size,
     };
   }, [invoices, currentYM]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const currentMonthInvoices = invoices.filter(i => (i.invoice_date || i.invoiceDate || i.dueDate || "").startsWith(currentYM) && isUnpaid(i));
-  const currentMonthTotal = currentMonthInvoices.reduce((s, i) => s + Number(i.amount || 0), 0);
-  const currentMonthSuppliers = [...new Set(currentMonthInvoices.map(i => i.supplier))].length;
+  const { currentMonthTotal, currentMonthSuppliers } = stats;
 
   const [chartRange, setChartRange] = useState("monthly");
   const [focusedMonth, setFocusedMonth] = useState(null);
-  const chartSuppliers = supplierNames || [];
-  const resolvedChartData = chartData && chartData.length > 0 ? chartData : [];
-  const getColor = supplierColor || (() => T.accentDeep);
+  const baseColor = supplierColor || (() => T.accentDeep);
+
+  // The chart palette has 8 fixed slots; beyond that, hues would repeat and the
+  // legend becomes noise. Keep the 7 biggest suppliers as series and fold the
+  // rest into a neutral "Other" stack segment.
+  const OTHER = t("dash_other");
+  const { chartSuppliers, resolvedChartData } = useMemo(() => {
+    const data = chartData && chartData.length > 0 ? chartData : [];
+    const names = supplierNames || [];
+    if (names.length <= 8) return { chartSuppliers: names, resolvedChartData: data };
+    const totals = {};
+    data.forEach(m => names.forEach(n => { if (m[n]) totals[n] = (totals[n] || 0) + m[n]; }));
+    const top = [...names].sort((a, b) => (totals[b] || 0) - (totals[a] || 0)).slice(0, 7);
+    const topSet = new Set(top);
+    const rolled = data.map(m => {
+      const row = { month: m.month, total: m.total };
+      let other = 0;
+      names.forEach(n => { if (!m[n]) return; if (topSet.has(n)) row[n] = m[n]; else other += m[n]; });
+      if (other > 0) row[OTHER] = other;
+      return row;
+    });
+    return { chartSuppliers: [...top, OTHER], resolvedChartData: rolled };
+  }, [chartData, supplierNames, OTHER]);
+  const getColor = (name) => (name === OTHER ? T.t3 : baseColor(name));
   const focusedIdx = focusedMonth ? resolvedChartData.findIndex(m => m.month === focusedMonth) : -1;
 
   if (loading) return <DashboardSkeleton isMobile={isMobile} />;
