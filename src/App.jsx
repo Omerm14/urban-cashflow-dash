@@ -998,11 +998,11 @@ function TermsPicker({ value, onChange }) {
   const T = useT();
   const isCustom = value && !isPreset(value);
   const [customDays, setCustomDays] = useState(() => {
-    // Support both net{N} and legacy shotef_plus(N) for existing custom values
-    const mNet   = value?.match(/^net(\d+)$/);
+    // Extract days from shotef_plus(N) or net{N} for non-preset values
     const mShotef = value?.match(/^shotef_plus\((\d+)\)$/);
-    if (mNet) return mNet[1];
+    const mNet    = value?.match(/^net(\d+)$/);
     if (mShotef && !isPreset(value)) return mShotef[1];
+    if (mNet) return mNet[1];
     return "";
   });
   return (
@@ -1024,7 +1024,7 @@ function TermsPicker({ value, onChange }) {
           <span style={{ fontFamily: SANS, fontSize: 12, color: T.t3 }}>+</span>
           <input
             type="number" min="1" max="365" value={customDays}
-            onChange={e => { setCustomDays(e.target.value); if (e.target.value) onChange(`net${e.target.value}`); }}
+            onChange={e => { setCustomDays(e.target.value); if (e.target.value) onChange(`shotef_plus(${e.target.value})`); }}
             placeholder="days"
             style={{ width: 60, height: 30, padding: "0 8px", border: `1px solid ${T.indigoBdr}`, borderRadius: 6, background: T.surf, color: T.t1, fontFamily: MONO, fontSize: 13, outline: "none", textAlign: "center" }}
             autoFocus
@@ -2245,7 +2245,12 @@ export default function App() {
       if (!key || notifiedJobsRef.current.has(key)) return;
       if (job.done) {
         notifiedJobsRef.current.add(key);
-        addAppNotif({ type: "sync", icon: "✓", text: `${job.integrationId || "Drive"} sync complete — ${job.added ?? 0} invoice${job.added !== 1 ? "s" : ""} added`, ts: Date.now() });
+        const added = job.added ?? 0, dupes = job.dupes ?? 0;
+        const parts = [];
+        if (added > 0) parts.push(`${added} invoice${added !== 1 ? "s" : ""} synced`);
+        else parts.push("No new invoices");
+        if (dupes > 0) parts.push(`${dupes} duplicate${dupes !== 1 ? "s" : ""} skipped`);
+        addAppNotif({ type: "sync", text: `${job.integrationId || "Drive"}: ${parts.join(" · ")}`, ts: Date.now() });
       } else if (job.error) {
         notifiedJobsRef.current.add(key);
         addAppNotif({ type: "error", icon: "⚠", text: `Sync error: ${String(job.error).slice(0, 80)}`, ts: Date.now() });
@@ -2503,7 +2508,14 @@ export default function App() {
                   syncJobs={syncJobs} onStartSync={startSync} onCancelSync={cancelSync}
                   onInvoicesRefresh={refreshInvoices} isAtLimit={isAtLimit} onUpgrade={() => setShowUpgrade(true)}
                   oauthResult={oauthResult} onClearOAuthResult={() => setOauthResult(null)}
-                  onNotificationsRefresh={() => addAppNotif({ type: "sync", icon: "✓", text: "Integration connected successfully", ts: Date.now() })}
+                  onNotificationsRefresh={() => addAppNotif({ type: "sync", text: "Integration connected successfully", ts: Date.now() })}
+                  onSyncResult={({ source, added, dupes, filesFound }) => {
+                    const parts = [];
+                    if (added > 0) parts.push(`${added} invoice${added !== 1 ? "s" : ""} synced`);
+                    else parts.push("No new invoices");
+                    if (dupes > 0) parts.push(`${dupes} duplicate${dupes !== 1 ? "s" : ""} skipped`);
+                    addAppNotif({ type: "sync", text: `${source}: ${parts.join(" · ")}`, ts: Date.now() });
+                  }}
                 />}
                 {view === "suppliers"    && <SuppliersView suppliers={suppliers} onAdd={addSupplier} onUpdate={updateSupplier} onDelete={deleteSupplier} />}
                 {view === "settings"     && <SettingsScreen onUpgrade={() => setShowUpgrade(true)} onSignOut={signOut} user={user} invoices={invoices} suppliers={suppliers} onNavigateToIntegrations={() => setView("integrations")} />}
