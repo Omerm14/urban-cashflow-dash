@@ -984,23 +984,47 @@ function Dashboard({ invoices, onPayAllJuly, chartData, supplierNames, supplierC
 // ── Invoices ──────────────────────────────────────────────────────────────────
 const SOURCE_LABELS = { google_drive: { icon: "📁", label: "Drive" }, gmail: { icon: "✉️", label: "Gmail" }, whatsapp: { icon: "💬", label: "WA" }, green_invoice: { icon: "🧾", label: "GI" } };
 
-const TERMS_OPTIONS = [
+const TERMS_PRESETS = [
   { value: "immediate", label: "Immediate" },
   { value: "net30",     label: "+30" },
   { value: "net45",     label: "+45" },
   { value: "net75",     label: "+75" },
 ];
+const isPreset = v => TERMS_PRESETS.some(o => o.value === v);
 function TermsPicker({ value, onChange }) {
   const T = useT();
-  const active = TERMS_OPTIONS.find(o => o.value === value)?.value || null;
+  const isCustom = value && !isPreset(value);
+  const [customDays, setCustomDays] = useState(() => {
+    const m = value?.match(/^net(\d+)$/);
+    return m ? m[1] : "";
+  });
   return (
-    <div style={{ display: "flex", background: T.isDark ? "#0D1117" : T.surf2, border: `1px solid ${T.bdr}`, borderRadius: 8, padding: 2, gap: 2, flexShrink: 0 }}>
-      {TERMS_OPTIONS.map(opt => (
-        <button key={opt.value} onClick={() => onChange(opt.value)}
-          style={{ padding: "5px 11px", borderRadius: 6, border: "none", cursor: "pointer", fontFamily: SANS, fontSize: 12, fontWeight: active === opt.value ? 700 : 400, background: active === opt.value ? T.indigo : "transparent", color: active === opt.value ? "#fff" : T.t2, transition: "background 0.15s, color 0.15s", whiteSpace: "nowrap" }}>
-          {opt.label}
+    <div style={{ display: "flex", alignItems: "center", gap: 4, flexShrink: 0, flexWrap: "wrap" }}>
+      <div style={{ display: "flex", background: T.isDark ? "#0D1117" : T.surf2, border: `1px solid ${T.bdr}`, borderRadius: 8, padding: 2, gap: 2 }}>
+        {TERMS_PRESETS.map(opt => (
+          <button key={opt.value} onClick={() => { onChange(opt.value); }}
+            style={{ padding: "5px 11px", borderRadius: 6, border: "none", cursor: "pointer", fontFamily: SANS, fontSize: 12, fontWeight: !isCustom && value === opt.value ? 700 : 400, background: !isCustom && value === opt.value ? T.indigo : "transparent", color: !isCustom && value === opt.value ? "#fff" : T.t2, transition: "background 0.15s, color 0.15s", whiteSpace: "nowrap" }}>
+            {opt.label}
+          </button>
+        ))}
+        <button onClick={() => { if (!isCustom) { setCustomDays(""); onChange("net_custom"); } }}
+          style={{ padding: "5px 11px", borderRadius: 6, border: "none", cursor: "pointer", fontFamily: SANS, fontSize: 12, fontWeight: isCustom ? 700 : 400, background: isCustom ? T.indigo : "transparent", color: isCustom ? "#fff" : T.t2, transition: "background 0.15s, color 0.15s", whiteSpace: "nowrap" }}>
+          Custom
         </button>
-      ))}
+      </div>
+      {isCustom && (
+        <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+          <span style={{ fontFamily: SANS, fontSize: 12, color: T.t3 }}>+</span>
+          <input
+            type="number" min="1" max="365" value={customDays}
+            onChange={e => { setCustomDays(e.target.value); if (e.target.value) onChange(`net${e.target.value}`); }}
+            placeholder="days"
+            style={{ width: 60, height: 30, padding: "0 8px", border: `1px solid ${T.indigoBdr}`, borderRadius: 6, background: T.surf, color: T.t1, fontFamily: MONO, fontSize: 13, outline: "none", textAlign: "center" }}
+            autoFocus
+          />
+          <span style={{ fontFamily: SANS, fontSize: 11, color: T.t3 }}>days</span>
+        </div>
+      )}
     </div>
   );
 }
