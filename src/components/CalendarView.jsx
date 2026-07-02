@@ -1,7 +1,10 @@
 import { useMemo } from "react";
 import { currency, toYM, fmtMonth } from "../utils/dates";
+import { useLang } from "../contexts/AppContexts";
 
 export default function CalendarView({ computed, calMonth, setCalMonth, color }) {
+  const { lang } = useLang();
+  const locale = lang === "he" ? "he-IL" : "en-GB";
   const { calY, calM, daysInMonth, firstDay, calByDay } = useMemo(() => {
     const [y, m] = calMonth.split("-").map(Number);
     const calY = y, calM = m - 1;
@@ -31,7 +34,7 @@ export default function CalendarView({ computed, calMonth, setCalMonth, color })
         <button onClick={prevMonth} style={navBtn}>‹</button>
         <div>
           <div style={{ fontWeight:700, fontSize:20, color:"var(--t1)", fontFamily:"var(--font-display)", letterSpacing:"-0.5px" }}>
-            {new Date(calY, calM).toLocaleString("en-GB", { month:"long", year:"numeric" })}
+            {new Date(calY, calM).toLocaleString(locale, { month:"long", year:"numeric" })}
           </div>
           <div style={{ fontSize:12, color:"var(--t3)", marginTop:2 }}>
             {allInMonth.length} invoices · {currency(monthTotal)}
@@ -40,7 +43,7 @@ export default function CalendarView({ computed, calMonth, setCalMonth, color })
         <button onClick={nextMonth} style={navBtn}>›</button>
       </div>
       <div style={{ display:"grid", gridTemplateColumns:"repeat(7,1fr)", gap:4, overflowX:"auto", minWidth:0 }}>
-        {["Sun","Mon","Tue","Wed","Thu","Fri","Sat"].map(d => (
+        {Array.from({ length: 7 }, (_, i) => new Date(2023, 0, i + 1).toLocaleDateString(locale, { weekday: "short" })).map(d => (
           <div key={d} style={{ padding:"8px 4px", textAlign:"center", fontSize:11, color:"var(--t3)", fontWeight:700, letterSpacing:".5px", textTransform:"uppercase" }}>{d}</div>
         ))}
         {Array.from({ length:firstDay }).map((_, i) => <div key={`e${i}`} style={{ minHeight:88 }} />)}

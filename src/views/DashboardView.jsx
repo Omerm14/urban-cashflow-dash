@@ -128,8 +128,9 @@ function DashboardSkeleton({ isMobile }) {
 
 export default function DashboardView({ invoices, loading, onPayAll, chartData, supplierNames, supplierColor, user, onMissingAlert, onAnomalyAlert, missingSuppliers, anomalyMap, onViewMonth, onNavigateFiltered }) {
   const T = useT();
-  const { t } = useLang();
+  const { t, lang } = useLang();
   const { isMobile, isTablet } = useLayout();
+  const locale = lang === "he" ? "he-IL" : "en-US";
   const now = new Date();
 
   const currentYM = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
@@ -211,7 +212,7 @@ export default function DashboardView({ invoices, loading, onPayAll, chartData, 
           </h1>
           {!isMobile && (
             <p style={{ fontFamily: SANS, fontSize: 13, color: T.t2, margin: 0 }}>
-              {now.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" })}
+              {now.toLocaleDateString(locale, { weekday: "long", month: "long", day: "numeric", year: "numeric" })}
               {stats.attention > 0 && <> · <span style={{ color: T.amber, fontWeight: 500 }}>{t("dash_attention", { n: stats.attention })}</span></>}
             </p>
           )}
@@ -395,7 +396,7 @@ export default function DashboardView({ invoices, loading, onPayAll, chartData, 
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontFamily: SANS, fontSize: 13, fontWeight: 600, color: T.t1, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{inv.supplier}</div>
                 <div style={{ fontFamily: SANS, fontSize: 11, color: T.t3, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                  {inv.dueDate ? new Date(inv.dueDate + "T12:00:00").toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" }) : "—"}
+                  {inv.dueDate ? new Date(inv.dueDate + "T12:00:00").toLocaleDateString(locale, { weekday: "short", month: "short", day: "numeric" }) : "—"}
                 </div>
               </div>
               <span className="num" style={{ fontSize: 13, color: T.t1 }}>{fmt(inv.amount)}</span>
