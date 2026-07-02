@@ -53,7 +53,7 @@ export default function AdminPage() {
           <div style={{ display:'flex', alignItems:'flex-end', gap:4, height:80 }}>
             {timeline.map(d => (
               <div key={d.date} style={{ flex:1, display:'flex', flexDirection:'column', alignItems:'center', gap:4 }}>
-                <div style={{ width:'100%', background:'#6366f1', borderRadius:3, height:`${(d.calls / maxBar) * 72}px`, minHeight:2 }} title={`${d.date}: ${d.calls} calls`} />
+                <div style={{ width:'100%', background:'var(--accent)', borderRadius:3, height:`${(d.calls / maxBar) * 72}px`, minHeight:2 }} title={`${d.date}: ${d.calls} calls`} />
               </div>
             ))}
           </div>

@@ -186,7 +186,7 @@ function DriveNavigator({ selectedFolder, selectedFolderName, onSelect }) {
               onClick={() => navigateTo(i)}
               style={{
                 background: "none", border: "none", cursor: i < stack.length - 1 ? "pointer" : "default",
-                color: i < stack.length - 1 ? "#6366f1" : "#f1f5f9",
+                color: i < stack.length - 1 ? "var(--accent)" : "var(--t1)",
                 fontSize: 12, fontWeight: i === stack.length - 1 ? 700 : 400,
                 fontFamily: "inherit", padding: "2px 4px", borderRadius: 4,
                 textDecoration: i < stack.length - 1 ? "underline" : "none",
@@ -229,7 +229,7 @@ function DriveNavigator({ selectedFolder, selectedFolderName, onSelect }) {
             style={{
               padding: "3px 12px", borderRadius: 6, fontSize: 11, fontFamily: "inherit", fontWeight: 600,
               cursor: "pointer",
-              background: isSelected(current.id === "root" ? "" : current.id) ? "#6366f1" : "#1e2d45",
+              background: isSelected(current.id === "root" ? "" : current.id) ? "var(--accent)" : "var(--surf3)",
               color:      isSelected(current.id === "root" ? "" : current.id) ? "#fff"    : "#94a3b8",
               border: "none",
             }}
@@ -263,7 +263,7 @@ function DriveNavigator({ selectedFolder, selectedFolderName, onSelect }) {
                   style={{
                     padding: "3px 10px", borderRadius: 6, fontSize: 11, fontFamily: "inherit", fontWeight: 600,
                     cursor: "pointer",
-                    background: isSelected(f.id) ? "#6366f1" : "#1e2d45",
+                    background: isSelected(f.id) ? "var(--accent)" : "var(--surf3)",
                     color:      isSelected(f.id) ? "#fff"    : "#94a3b8",
                     border: "none",
                   }}
@@ -743,13 +743,13 @@ function IntegrationCard({ type, integration, onRefresh, onInvoicesRefresh, onNo
                       <label key={l.id} style={{
                         display: "flex", alignItems: "center", gap: 5, cursor: "pointer",
                         padding: "5px 12px", borderRadius: 20, fontSize: 12,
-                        background: selectedLabels.includes(l.id) ? "#6366f122" : "#0d1626",
-                        border: `1px solid ${selectedLabels.includes(l.id) ? "#6366f1" : "#1e2d45"}`,
+                        background: selectedLabels.includes(l.id) ? "var(--accent-tint)" : "var(--surf2)",
+                        border: `1px solid ${selectedLabels.includes(l.id) ? "var(--accent)" : "var(--surf3)"}`,
                         color: selectedLabels.includes(l.id) ? "#38bdf8" : "#64748b",
                         transition: "all .15s",
                       }}>
                         <input type="checkbox" checked={selectedLabels.includes(l.id)} onChange={() => toggleLabel(l.id)}
-                          style={{ accentColor: "#6366f1", width: 12, height: 12 }} />
+                          style={{ accentColor: "var(--accent)", width: 12, height: 12 }} />
                         {l.name}
                       </label>
                     ))}
@@ -887,7 +887,7 @@ function IntegrationCard({ type, integration, onRefresh, onInvoicesRefresh, onNo
           <div style={{ marginBottom: 18 }}>
             <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", fontSize: 13, color: "#94a3b8", marginBottom: 8 }}>
               <input type="checkbox" checked={autoSync} onChange={e => setAutoSync(e.target.checked)}
-                style={{ accentColor: "#6366f1", width: 14, height: 14 }} />
+                style={{ accentColor: "var(--accent)", width: 14, height: 14 }} />
               Auto-sync enabled
             </label>
             {autoSync && (

@@ -128,7 +128,7 @@ export function MissingSuppliersModal({ missingSuppliers, invoices, suppliers, o
                     <div style={{ fontSize: 11, color: 'var(--t3)', marginTop: 1 }}>
                       {s.payment_terms}: <span style={{ fontFamily: 'monospace' }}>{sup.terms}</span>
                       {sup.recurring
-                        ? <span style={{ marginLeft: 8, color: 'var(--cyan)', fontWeight: 600 }}> · {s.recurring_manual}</span>
+                        ? <span style={{ marginLeft: 8, color: 'var(--accent)', fontWeight: 600 }}> · {s.recurring_manual}</span>
                         : <span style={{ marginLeft: 8, color: 'var(--t3)' }}> · {s.recurring_auto}</span>
                       }
                     </div>

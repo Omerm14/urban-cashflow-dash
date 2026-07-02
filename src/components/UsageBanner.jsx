@@ -14,7 +14,7 @@ export default function UsageBanner({ plan, used, limit, remaining, onUpgrade })
 
   return (
     <div style={{
-      position: 'sticky', top: 72, zIndex: 110,
+      position: 'sticky', top: 54, zIndex: 110,
       background: bg, borderBottom: border,
       padding: '8px 24px',
       display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 14,
@@ -35,7 +35,7 @@ export default function UsageBanner({ plan, used, limit, remaining, onUpgrade })
             background: isWarning ? '#f59e0b' : 'var(--primary)',
             border: 'none', borderRadius: 8,
             padding: '5px 12px', fontSize: 12, fontWeight: 700,
-            color: isWarning ? '#1c1917' : '#fff', cursor: 'pointer',
+            color: isWarning ? '#1c1917' : 'var(--accent-ink)', cursor: 'pointer',
           }}
         >
           Upgrade Now

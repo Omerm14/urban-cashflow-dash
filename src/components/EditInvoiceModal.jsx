@@ -95,7 +95,7 @@ export default function EditInvoiceModal({ editInvoice, setEditInvoice, supplier
               {editInvoice.attachment_path && onViewAttachment && (
                 <span style={{ marginTop:2 }}>
                   <button
-                    style={{ background:"none", border:"none", cursor:"pointer", padding:0, fontFamily:"inherit", fontSize:12, color:"#6366f1", textDecoration:"underline" }}
+                    style={{ background:"none", border:"none", cursor:"pointer", padding:0, fontFamily:"inherit", fontSize:12, color:"var(--accent)", textDecoration:"underline" }}
                     onClick={() => { close(); onViewAttachment(editInvoice); }}>
                     📎 View original file
                   </button>

@@ -32,6 +32,44 @@ const he = {
   dash_anomaly_sub: "ספקים עם סה\"כ חודשי חריג ביחס לבסיס הרגיל",
   dash_details: "לפרטים ←",
 
+  // Nav (overhaul additions)
+  nav_menu: "תפריט",
+  nav_manage: "ניהול",
+  nav_sign_out: "התנתקות",
+  plan_label: "מסלול",
+  plan_manage: "ניהול",
+  plan_usage: "{used} מתוך {limit} חשבוניות",
+
+  // Dashboard (overhaul additions)
+  dash_attention: "{n} חשבוניות דורשות טיפול",
+  dash_vs_prev: "לעומת החודש הקודם",
+  dash_all_months: "הכל",
+  dash_range_monthly: "חודשי",
+  dash_range_quarterly: "רבעוני",
+  dash_range_yearly: "שנתי",
+  dash_due_week: "לתשלום השבוע",
+  dash_week_clear: "אין תשלומים השבוע — הכל נקי.",
+  kpi_due_30: "לתשלום ב-30 הימים הקרובים",
+  kpi_due_30_meta: "{n} חשבוניות מ-{s} ספקים",
+  kpi_paid_month: "שולם החודש",
+
+  // Onboarding
+  ob_title: "בואו נתחיל להזרים את החשבוניות",
+  ob_sub: "חברו מקור ו-Cashflow יאסוף, יקרא ויארגן כל חשבונית אוטומטית — או העלו אחת עכשיו וראו את זה עובד.",
+  ob_gmail_desc: "סורק מיילים מתויגים לצרופות חשבוניות",
+  ob_drive_desc: "עוקב אחרי תיקיות ומייבא קבצים חדשים",
+  ob_wa_desc: "העבירו חשבוניות למספר העסקי שלכם",
+  ob_gi_desc: "מסתנכרן ישירות עם חשבונית ירוקה",
+  ob_or: "או",
+  ob_upload_title: "העלו את החשבונית הראשונה",
+  ob_upload_sub: "PDF או תמונה — עברית ואנגלית עובדות",
+  ob_reading_title: "קוראים את החשבונית הראשונה שלכם…",
+  ob_reading_sub: "מחלצים ספק, סכום ותאריך תשלום",
+  ob_done_title: "החשבונית הראשונה שלכם בפנים",
+  ob_done_sub: "זה מה ש-Cashflow קרא — בלי להקליד כלום.",
+  ob_upload_more: "העלאת עוד",
+  ob_continue: "ללוח הבקרה",
+
   // KPI labels
   kpi_outstanding: "יתרה לתשלום",
   kpi_overdue: "באיחור",
@@ -69,6 +107,25 @@ const he = {
   inv_anomaly_banner: "{n} חשבוניות עם סכומים חריגים",
   inv_missing_banner: "{n} ספקים חסרים החודש",
 
+  // Invoices (overhaul additions)
+  inv_col_source: "מקור",
+  inv_total: "סה\"כ",
+  inv_total_due: "סה\"כ לתשלום",
+  inv_paid_of: "{paid} מתוך {total} שולמו",
+  inv_none_month: "אין חשבוניות לתשלום ב{month}",
+  inv_missing_label: "ספקים חסרים החודש:",
+  inv_selected: "{n} נבחרו",
+  inv_delete_confirm: "למחוק את החשבונית?",
+  inv_bulk_delete_confirm: "למחוק {n} חשבוניות?",
+  inv_confirm_title: "אישור תשלום",
+  inv_confirm_sub: "מסמן {n} חשבוניות כשולמו",
+  inv_cleared_title: "{month} נסגר 🎉",
+  inv_cleared_sub: "כל החשבוניות שולמו.",
+  inv_success_title: "הכל נקי",
+  inv_success_sub: "{n} חשבוניות סומנו כשולמו",
+  inv_next_month: "לחודש הבא",
+  inv_next_label: "הבא: {month}",
+
   // Suppliers
   sup_title: "ספקים",
   sup_add: "הוסף ספק",
@@ -90,6 +147,9 @@ const he = {
   sup_add_terms_placeholder: "תנאי תשלום (לדוגמה: שוטף + 30)",
   sup_added_ok: "הספק נוסף",
   sup_new_found: "ספקים חדשים זוהו",
+  sup_add_named: 'הוספת "{name}" כספק',
+  sup_all: "הכל",
+  sup_csv_empty: "לא נמצאו ספקים ב-CSV. ודאו שקיימת עמודת 'name'.",
 
   // Calendar
   cal_title: "לוח שנה",
@@ -142,6 +202,20 @@ const he = {
   set_upgrade: "שדרוג",
   set_delete_account: "מחיקת חשבון",
   set_delete_warning: "לא ניתן לבטל פעולה זו.",
+  set_logo: "לוגו העסק",
+  set_uploading: "מעלה…",
+  set_upload_logo: "העלאת לוגו",
+  set_remove: "הסרה",
+  set_plan_limit: "עד {limit} חשבוניות בחודש",
+  set_usage_month: "שימוש החודש",
+  set_team_soon: "עבודת צוות נמצאת במפת הדרכים.",
+  set_danger_zone: "אזור מסוכן",
+  set_danger_desc: "פעולות אלה סופיות ולא ניתנות לביטול.",
+  set_delete_sure: "בטוחים לגמרי?",
+  set_delete_perm: "פעולה זו תמחק לצמיתות את החשבון ואת כל הנתונים.",
+  set_delete_undone: "לא ניתן לשחזר.",
+  set_delete_type: "הקלידו",
+  set_delete_perm_btn: "מחיקה לצמיתות",
 
   // Notifications bell
   notif_title: "התראות",
@@ -154,6 +228,8 @@ const he = {
   notif_anomaly: "חריגות ספקים",
   notif_anomaly_sub: "ספק {n} מחוץ לטווח הרגיל",
   notif_anomaly_sub_plural: "{n} ספקים מחוץ לטווח הרגיל",
+  notif_recent: "פעילות אחרונה",
+  notif_no_activity: "אין פעילות עדיין — העלו חשבוניות או סנכרנו אינטגרציות.",
 
   // Search
   search_placeholder: "חיפוש חשבוניות, ספקים…",
@@ -171,6 +247,13 @@ const he = {
   confirm: "אישור",
   loading: "טוען…",
   error: "משהו השתבש",
+
+  // System
+  attachment_error: "לא ניתן לטעון את תצוגת הקובץ.",
+  data_load_error: "לא הצלחנו לטעון את הנתונים. בדקו את החיבור ונסו שוב.",
+  retry: "נסו שוב",
+  syncing: "מסנכרן…",
+  back: "→ חזרה",
 };
 
 export default he;

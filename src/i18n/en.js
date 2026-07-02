@@ -162,6 +162,95 @@ const en = {
   search_no_results: "No results",
   search_hint: "↑↓ navigate · ↵ select · Esc close",
 
+  // Nav (overhaul additions)
+  nav_menu: "Menu",
+  nav_manage: "Manage",
+  nav_sign_out: "Sign out",
+  plan_label: "Plan",
+  plan_manage: "Manage",
+  plan_usage: "{used} of {limit} invoices",
+
+  // Dashboard (overhaul additions)
+  dash_attention: "{n} invoices need attention",
+  dash_vs_prev: "vs prev month",
+  dash_all_months: "All",
+  dash_range_monthly: "Monthly",
+  dash_range_quarterly: "Quarterly",
+  dash_range_yearly: "Yearly",
+  dash_due_week: "Due this week",
+  dash_week_clear: "Nothing due this week — you're clear.",
+  kpi_due_30: "Due Next 30 Days",
+  kpi_due_30_meta: "{n} invoices from {s} suppliers",
+  kpi_paid_month: "Paid This Month",
+
+  // Onboarding
+  ob_title: "Let's get your invoices flowing",
+  ob_sub: "Connect a source and Cashflow will collect, read, and organize every invoice automatically — or upload one now and watch it work.",
+  ob_gmail_desc: "Scans labeled emails for invoice attachments",
+  ob_drive_desc: "Watches folders and imports new files",
+  ob_wa_desc: "Forward invoices to your business number",
+  ob_gi_desc: "Syncs with חשבונית ירוקה directly",
+  ob_or: "or",
+  ob_upload_title: "Upload your first invoice",
+  ob_upload_sub: "PDF or photo — Hebrew and English both work",
+  ob_reading_title: "Reading your first invoice…",
+  ob_reading_sub: "Extracting supplier, amount, and due date",
+  ob_done_title: "Your first invoice is in",
+  ob_done_sub: "Here's what Cashflow read — no typing required.",
+  ob_upload_more: "Upload more",
+  ob_continue: "See your dashboard",
+
+  // Invoices (overhaul additions)
+  inv_col_source: "Source",
+  inv_total: "Total",
+  inv_total_due: "Total due",
+  inv_paid_of: "{paid} of {total} paid",
+  inv_none_month: "No invoices due in {month}",
+  inv_missing_label: "Missing suppliers this month:",
+  inv_selected: "{n} selected",
+  inv_delete_confirm: "Delete this invoice?",
+  inv_bulk_delete_confirm: "Delete {n} invoices?",
+  inv_confirm_title: "Confirm Payment",
+  inv_confirm_sub: "Marking {n} invoices as paid",
+  inv_cleared_title: "{month} is cleared 🎉",
+  inv_cleared_sub: "Every invoice has been paid.",
+  inv_success_title: "All Clear",
+  inv_success_sub: "{n} invoices marked paid",
+  inv_next_month: "Next Month",
+  inv_next_label: "Next: {month}",
+
+  // Suppliers (overhaul additions)
+  sup_add_named: 'Add "{name}" as supplier',
+  sup_all: "All",
+  sup_csv_empty: "No suppliers found in CSV. Make sure it has a 'name' column.",
+
+  // Settings (overhaul additions)
+  set_logo: "Business logo",
+  set_uploading: "Uploading…",
+  set_upload_logo: "Upload logo",
+  set_remove: "Remove",
+  set_plan_limit: "Up to {limit} invoices/month",
+  set_usage_month: "Usage this month",
+  set_team_soon: "Team collaboration is on the roadmap.",
+  set_danger_zone: "Danger Zone",
+  set_danger_desc: "These actions are permanent and cannot be undone.",
+  set_delete_sure: "Are you absolutely sure?",
+  set_delete_perm: "This will permanently delete your account and all data.",
+  set_delete_undone: "Cannot be undone.",
+  set_delete_type: "Type",
+  set_delete_perm_btn: "Permanently delete",
+
+  // Notifications (overhaul additions)
+  notif_recent: "Recent activity",
+  notif_no_activity: "No activity yet — upload invoices or sync integrations.",
+
+  // System
+  attachment_error: "Could not load the attachment preview.",
+  data_load_error: "Couldn't load your data. Check your connection and try again.",
+  retry: "Retry",
+  syncing: "Syncing…",
+  back: "← Back",
+
   // Common
   cancel: "Cancel",
   save: "Save",
