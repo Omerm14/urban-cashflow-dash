@@ -984,19 +984,26 @@ function Dashboard({ invoices, onPayAllJuly, chartData, supplierNames, supplierC
 // ── Invoices ──────────────────────────────────────────────────────────────────
 const SOURCE_LABELS = { google_drive: { icon: "📁", label: "Drive" }, gmail: { icon: "✉️", label: "Gmail" }, whatsapp: { icon: "💬", label: "WA" }, green_invoice: { icon: "🧾", label: "GI" } };
 
+// Presets use shotef_plus(N) format (end-of-month + N days) — matches existing DB values.
+// Custom falls back to net{N} (calendar days from invoice date) for arbitrary values.
 const TERMS_PRESETS = [
-  { value: "immediate", label: "Immediate" },
-  { value: "net30",     label: "+30" },
-  { value: "net45",     label: "+45" },
-  { value: "net75",     label: "+75" },
+  { value: "immediate",        label: "Immediate" },
+  { value: "shotef",           label: "Shotef" },
+  { value: "shotef_plus(30)",  label: "+30" },
+  { value: "shotef_plus(45)",  label: "+45" },
+  { value: "shotef_plus(75)",  label: "+75" },
 ];
 const isPreset = v => TERMS_PRESETS.some(o => o.value === v);
 function TermsPicker({ value, onChange }) {
   const T = useT();
   const isCustom = value && !isPreset(value);
   const [customDays, setCustomDays] = useState(() => {
-    const m = value?.match(/^net(\d+)$/);
-    return m ? m[1] : "";
+    // Support both net{N} and legacy shotef_plus(N) for existing custom values
+    const mNet   = value?.match(/^net(\d+)$/);
+    const mShotef = value?.match(/^shotef_plus\((\d+)\)$/);
+    if (mNet) return mNet[1];
+    if (mShotef && !isPreset(value)) return mShotef[1];
+    return "";
   });
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 4, flexShrink: 0, flexWrap: "wrap" }}>
@@ -1578,7 +1585,7 @@ function SuppliersView({ suppliers, onAdd, onUpdate, onDelete }) {
   const [editData, setEditData] = useState({});
   const [csvToast, setCsvToast] = useState(null);
   const csvRef = useRef(null);
-  const TERMS = ["all", "shotef_plus(45)", "shotef_plus(30)", "shotef", "immediate"];
+  const TERMS = ["all", "shotef_plus(75)", "shotef_plus(45)", "shotef_plus(30)", "shotef", "immediate", "net75", "net45", "net30"];
   const filtered = filterTerm === "all" ? suppliers : suppliers.filter(s => s.terms === filterTerm);
   const inp = { flex: 1, padding: "6px 10px", background: T.surf2, border: `1px solid ${T.bdr}`, borderRadius: 5, fontFamily: SANS, fontSize: 12, color: T.t1, minWidth: 0, outline: "none" };
 
