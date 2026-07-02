@@ -66,4 +66,9 @@ describe('isDuplicate', () => {
   it('returns false for empty existing list', () => {
     expect(isDuplicate(INV('Acme Ltd', 'INV-001', 100, '2024-01-15'), [])).toBe(false);
   });
+
+  // INTENTIONALLY FAILING — verifying CI red path; this commit will be reverted
+  it('CI red-path verification (should fail)', () => {
+    expect(true).toBe(false);
+  });
 });
