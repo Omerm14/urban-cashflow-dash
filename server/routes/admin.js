@@ -6,7 +6,7 @@ const INPUT_COST  = 0.80 / 1_000_000
 const OUTPUT_COST = 4.00 / 1_000_000
 
 module.exports = [auth, async (req, res) => {
-  if (req.user.email !== process.env.ADMIN_EMAIL) {
+  if (req.user.email?.toLowerCase() !== process.env.ADMIN_EMAIL?.toLowerCase()) {
     return res.status(403).json({ error: 'Forbidden' })
   }
 

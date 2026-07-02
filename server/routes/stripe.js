@@ -25,9 +25,9 @@ router.post('/checkout', async (req, res) => {
     // Re-use existing Stripe customer if one exists for this user
     const { data: sub } = await supabase
       .from('subscriptions')
-      .select('stripe_customer_id')
+      .select('stripe_customer_id,stripe_subscription_id')
       .eq('user_id', req.user.id)
-      .single();
+      .maybeSingle();
 
     const origin = process.env.FRONTEND_URL || 'http://localhost:5173';
 
@@ -60,7 +60,7 @@ router.post('/checkout', async (req, res) => {
     res.json({ url: session.url });
   } catch (err) {
     console.error('[stripe] checkout error:', err.message);
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: 'Internal server error' });
   }
 });
 
@@ -75,7 +75,7 @@ router.post('/portal', async (req, res) => {
       .from('subscriptions')
       .select('stripe_customer_id')
       .eq('user_id', req.user.id)
-      .single();
+      .maybeSingle();
 
     if (!sub?.stripe_customer_id) {
       return res.status(404).json({ error: 'No billing account found' });
@@ -89,7 +89,7 @@ router.post('/portal', async (req, res) => {
     res.json({ url: session.url });
   } catch (err) {
     console.error('[stripe] portal error:', err.message);
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: 'Internal server error' });
   }
 });
 
@@ -101,15 +101,15 @@ router.get('/usage', async (req, res) => {
     res.json(usage);
   } catch (err) {
     console.error('[stripe] usage error:', err.message);
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: 'Internal server error' });
   }
 });
 
 // ─── Webhook (no auth — verified by Stripe signature) ─────────────────────────
 exports.webhook = async (req, res) => {
   if (!process.env.STRIPE_WEBHOOK_SECRET || !process.env.STRIPE_SECRET_KEY) {
-    // Stripe not configured — accept webhook silently to avoid 500 noise
-    return res.json({ received: true });
+    console.error('[stripe] STRIPE_WEBHOOK_SECRET or STRIPE_SECRET_KEY not set — rejecting webhook');
+    return res.status(400).json({ error: 'Webhook not configured' });
   }
 
   let event;
@@ -121,7 +121,7 @@ exports.webhook = async (req, res) => {
     );
   } catch (err) {
     console.error('[stripe] webhook signature error:', err.message);
-    return res.status(400).json({ error: `Webhook signature error: ${err.message}` });
+    return res.status(400).json({ error: 'Webhook error' });
   }
 
   try {
@@ -214,7 +214,7 @@ async function userIdForCustomer(customerId) {
     .from('subscriptions')
     .select('user_id')
     .eq('stripe_customer_id', customerId)
-    .single();
+    .maybeSingle();
   return data?.user_id || null;
 }
 

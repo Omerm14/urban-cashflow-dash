@@ -4,6 +4,11 @@ const express = require('express');
 const app  = express();
 const auth = require('../server/middleware/auth');
 
+// Trust exactly one hop (Vercel's edge proxy) so req.ip resolves to the real
+// client IP instead of the proxy address. `true`/trust-all would let clients
+// spoof X-Forwarded-For and bypass per-client rate limiting.
+app.set('trust proxy', 1);
+
 // WhatsApp webhook must be registered BEFORE global json parser —
 // it uses its own body reader to capture rawBody for HMAC verification.
 const webhook = require('../server/routes/webhook');
@@ -45,13 +50,18 @@ app.post('/api/invoices/bulk-delete',     auth, invoices.bulkRemove);
 app.post('/api/attachments/presign',      auth, invoices.presignUpload);
 
 
+// Profile (logo upload)
+app.post('/api/profile/logo', auth, require('../server/routes/profile').uploadLogo);
+
 // Billing (Meshulam)
 const billing = require('../server/routes/billing');
 app.post('/api/billing/ipn', billing.ipn);
 app.use('/api/billing', auth, billing.router);
 
-// Account management
-app.delete('/api/account', auth, require('../server/routes/account').deleteAccount);
+// Account management (strict rate limit — permanent destructive operation)
+const rateLimit = require('express-rate-limit');
+const accountLimiter = rateLimit({ windowMs: 3_600_000, max: 3, standardHeaders: true, legacyHeaders: false, message: { error: 'Too many account operations, please wait' } });
+app.delete('/api/account', accountLimiter, auth, require('../server/routes/account').deleteAccount);
 
 // Cron (secured by CRON_SECRET header)
 app.get('/api/cron/sync', require('../server/routes/cron').runSync);

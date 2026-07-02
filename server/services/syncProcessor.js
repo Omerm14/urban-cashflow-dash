@@ -4,6 +4,7 @@ const supabase   = require('../lib/supabase');
 const storage    = require('../lib/storage');
 const { extractFromBuffer } = require('../lib/extraction');
 const { mergeTokenUpdate } = require('../lib/mergeTokenUpdate');
+const { isDriveId } = require('../lib/validate');
 
 // ─── Date / due-date helpers (mirror of src/utils/dates.js) ─────────────────
 
@@ -268,6 +269,7 @@ exports.syncGoogleDrive = async (integration, userId) => {
   const drive = google.drive({ version: 'v3', auth });
 
   const folderId   = integration.config?.folder_id;
+  if (folderId && !isDriveId(folderId)) throw new Error('Invalid folder_id in integration config');
   const lookback   = integration.config?.lookback_days ?? 0;
   const cutoffISO  = computeCutoff(integration.last_sync, lookback);
 
@@ -489,6 +491,7 @@ exports.discoverGoogleDriveFiles = async (integration, userId) => {
   const drive = google.drive({ version: 'v3', auth });
 
   const folderId  = integration.config?.folder_id;
+  if (folderId && !isDriveId(folderId)) throw new Error('Invalid folder_id in integration config');
   const lookback  = integration.config?.lookback_days ?? 0;
   const cutoffISO = computeCutoff(integration.last_sync, lookback);
 
@@ -591,8 +594,17 @@ exports.processWhatsAppMedia = async (integration, userId, mediaId, filename, mi
   const suppliers        = await getSuppliers(userId);
   const existingInvoices = await getExistingInvoices(userId);
 
-  return processFile(
+  const results = await processFile(
     buffer, filename || `whatsapp_${mediaId}`, mimeType, userId, suppliers, existingInvoices,
     integration.id, 'whatsapp', { wa_message_id: waMessageId, media_id: mediaId },
   );
+
+  if (results.length > 0) {
+    await supabase.from('integrations').update({
+      last_sync:  new Date().toISOString(),
+      sync_count: (integration.sync_count || 0) + results.length,
+    }).eq('id', integration.id);
+  }
+
+  return results;
 };

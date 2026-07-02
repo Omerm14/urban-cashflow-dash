@@ -13,9 +13,12 @@ const SCOPES = {
 // Register two URIs: one for production (https://your-domain.vercel.app/api/integrations/google/callback)
 // and one for local dev (http://localhost:3001/api/integrations/google/callback).
 // Branch/preview URLs don't need separate registration — returnUrl in OAuth state handles the final redirect.
-const getRedirectUri = () =>
-  process.env.GOOGLE_REDIRECT_URI ||
-  'http://localhost:3001/api/integrations/google/callback';
+const getRedirectUri = () => {
+  if (!process.env.GOOGLE_REDIRECT_URI) {
+    console.warn('[integrations] GOOGLE_REDIRECT_URI is not set — defaulting to localhost. Set this in production or OAuth will fail.');
+  }
+  return process.env.GOOGLE_REDIRECT_URI || 'http://localhost:3001/api/integrations/google/callback';
+};
 
 const makeOAuth2 = () => new google.auth.OAuth2(
   process.env.GOOGLE_CLIENT_ID,
@@ -34,13 +37,16 @@ const makeOAuth2WithCreds = credentials => {
 };
 
 // GET /api/integrations
+// Use select('*') to avoid PostgREST 500s when new columns haven't been migrated yet.
+// Strip credentials in JS before returning — OAuth tokens must never reach the browser.
 exports.list = async (req, res) => {
   const { data, error } = await supabase
     .from('integrations')
     .select('*')
     .eq('user_id', req.user.id);
-  if (error) return res.status(500).json({ error: error.message });
-  res.json({ integrations: data || [] });
+  if (error) { console.error('[integrations] list error:', error.message); return res.status(500).json({ error: 'Internal server error' }); }
+  const safe = (data || []).map(({ credentials, ...rest }) => rest);
+  res.json({ integrations: safe });
 };
 
 // DELETE /api/integrations/:id
@@ -50,7 +56,7 @@ exports.remove = async (req, res) => {
     .delete()
     .eq('id', req.params.id)
     .eq('user_id', req.user.id);
-  if (error) return res.status(500).json({ error: error.message });
+  if (error) { console.error('[integrations] remove error:', error.message); return res.status(500).json({ error: 'Internal server error' }); }
   res.json({ ok: true });
 };
 
@@ -82,8 +88,19 @@ exports.googleCallback = async (req, res) => {
   // Parse state first so we can redirect back to the correct frontend URL (branch/preview/local)
   let stateData = {};
   try { stateData = JSON.parse(state || '{}'); } catch { /* fall through */ }
-  const frontend = stateData.returnUrl || process.env.FRONTEND_URL || 'http://localhost:5173';
+  const allowedOrigins = (process.env.FRONTEND_URL || 'https://gocashflow.co')
+    .split(',').map(s => s.trim()).filter(Boolean);
+  const returnUrl = stateData.returnUrl || '';
+  // Compare by exact hostname to prevent subdomain open-redirect attacks
+  const isAllowed = !returnUrl || (() => {
+    try {
+      const retHost = new URL(returnUrl).hostname;
+      return allowedOrigins.some(origin => new URL(origin).hostname === retHost);
+    } catch { return false; }
+  })();
+  const frontend = isAllowed && returnUrl ? returnUrl : allowedOrigins[0];
 
+  if (!isAllowed && returnUrl) return res.status(400).json({ error: 'Invalid returnUrl' });
   if (error) return res.redirect(`${frontend}?view=integrations&oauth_error=${encodeURIComponent(error)}`);
   if (!stateData.userId) return res.redirect(`${frontend}?view=integrations&oauth_error=invalid_state`);
 
@@ -123,6 +140,8 @@ exports.googleFolders = async (req, res) => {
     const drive = google.drive({ version: 'v3', auth });
 
     const parent = req.query.parent || 'root';
+    const { isDriveId } = require('../lib/validate');
+    if (parent !== 'root' && !isDriveId(parent)) return res.status(400).json({ error: 'Invalid folder ID' });
 
     const { data: { files: folders = [] } } = await drive.files.list({
       q:        `'${parent}' in parents and mimeType='application/vnd.google-apps.folder' and trashed=false`,
@@ -140,7 +159,7 @@ exports.googleFolders = async (req, res) => {
     res.json({ folders, currentName });
   } catch (err) {
     console.error('[folders]', err.message);
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: 'Internal server error' });
   }
 };
 
@@ -163,7 +182,7 @@ exports.googleLabels = async (req, res) => {
     res.json({ labels: filtered });
   } catch (err) {
     console.error('[labels]', err.message);
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: 'Internal server error' });
   }
 };
 
@@ -190,7 +209,7 @@ exports.listEvents = async (req, res) => {
       .eq('integration_id', req.params.id)
       .eq('event_type', 'saved'),
   ]);
-  if (eventsResult.error) return res.status(500).json({ error: eventsResult.error.message });
+  if (eventsResult.error) { console.error('[integrations] listEvents error:', eventsResult.error.message); return res.status(500).json({ error: 'Internal server error' }); }
   res.json({ events: eventsResult.data || [], totalSaved: countResult.count || 0 });
 };
 
@@ -219,7 +238,7 @@ exports.resync = async (req, res) => {
         error_count: (integration.error_count || 0) + 1,
         last_error_at: new Date().toISOString(),
       }).eq('id', integration.id);
-      return res.status(500).json({ error: err.message });
+      return res.status(500).json({ error: 'Internal server error' });
     }
   }
 
@@ -245,7 +264,7 @@ exports.resync = async (req, res) => {
       error_count:   (integration.error_count || 0) + 1,
       last_error_at: new Date().toISOString(),
     }).eq('id', integration.id);
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: 'Internal server error' });
   }
 };
 
@@ -264,7 +283,7 @@ exports.connectGreenInvoice = async (req, res) => {
     error_count:   0,
   }, { onConflict: 'user_id,type' });
 
-  if (error) return res.status(500).json({ error: error.message });
+  if (error) { console.error('[integrations] connectGreenInvoice error:', error.message); return res.status(500).json({ error: 'Internal server error' }); }
   res.json({ ok: true });
 };
 
@@ -275,9 +294,19 @@ exports.connectWhatsApp = async (req, res) => {
     return res.status(500).json({ error: 'WhatsApp is not configured on this server. Set WHATSAPP_PHONE_NUMBER and WHATSAPP_API_TOKEN.' });
   }
 
-  // Generate a short unique inbox code (avoids ambiguous chars like 0/O, 1/I)
+  // Fetch existing config to preserve whitelisted_phones and reuse existing inbox_code
+  const { data: existing } = await supabase.from('integrations')
+    .select('config')
+    .eq('user_id', req.user.id)
+    .eq('type', 'whatsapp')
+    .maybeSingle();
+
+  const preservedPhones = existing?.config?.whitelisted_phones || [];
+  const existingCode    = existing?.config?.inbox_code;
+
+  // Keep existing inbox_code so vendors who saved the old code continue to work
   const CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-  const inbox_code = Array.from({ length: 6 }, () => CHARS[Math.floor(Math.random() * CHARS.length)]).join('');
+  const inbox_code = existingCode || Array.from({ length: 6 }, () => CHARS[Math.floor(Math.random() * CHARS.length)]).join('');
   const wa_link = `https://wa.me/${phone}?text=${inbox_code}`;
 
   const { error } = await supabase.from('integrations').upsert({
@@ -285,36 +314,48 @@ exports.connectWhatsApp = async (req, res) => {
     type:          'whatsapp',
     status:        'connected',
     credentials:   {},
-    config:        { inbox_code, wa_link },
+    config:        { inbox_code, wa_link, whitelisted_phones: preservedPhones },
     error_message: null,
     error_count:   0,
   }, { onConflict: 'user_id,type' });
 
-  if (error) return res.status(500).json({ error: error.message });
+  if (error) { console.error('[integrations] connectWhatsApp error:', error.message); return res.status(500).json({ error: 'Internal server error' }); }
   res.json({ ok: true, inbox_code, wa_link });
 };
 
 // PATCH /api/integrations/:id/config  { config: {...} }
 exports.updateConfig = async (req, res) => {
   const { config } = req.body;
+  if (config === undefined || config === null || typeof config !== 'object' || Array.isArray(config)) {
+    return res.status(400).json({ error: 'config must be a JSON object' });
+  }
+  if (JSON.stringify(config).length > 8192) {
+    return res.status(400).json({ error: 'config exceeds maximum allowed size' });
+  }
   const { error } = await supabase
     .from('integrations')
     .update({ config })
     .eq('id', req.params.id)
     .eq('user_id', req.user.id);
-  if (error) return res.status(500).json({ error: error.message });
+  if (error) { console.error('[integrations] updateConfig error:', error.message); return res.status(500).json({ error: 'Internal server error' }); }
   res.json({ ok: true });
 };
 
 // PATCH /api/integrations/:id/auto-sync  { auto_sync_enabled, sync_frequency_min }
 exports.updateAutoSync = async (req, res) => {
   const { auto_sync_enabled, sync_frequency_min } = req.body;
+  if (sync_frequency_min !== undefined) {
+    const freq = Number(sync_frequency_min);
+    if (!Number.isInteger(freq) || freq < 5 || freq > 10080) {
+      return res.status(400).json({ error: 'sync_frequency_min must be an integer between 5 and 10080' });
+    }
+  }
   const { error } = await supabase
     .from('integrations')
     .update({ auto_sync_enabled, sync_frequency_min })
     .eq('id', req.params.id)
     .eq('user_id', req.user.id);
-  if (error) return res.status(500).json({ error: error.message });
+  if (error) { console.error('[integrations] updateAutoSync error:', error.message); return res.status(500).json({ error: 'Internal server error' }); }
   res.json({ ok: true });
 };
 
@@ -328,7 +369,7 @@ exports.listNotifications = async (req, res) => {
       .neq('event_type', 'dedup_skipped')
       .order('created_at', { ascending: false })
       .limit(50);
-    if (error) return res.status(500).json({ error: error.message });
+    if (error) { console.error('[integrations] listNotifications error:', error.message); return res.status(500).json({ error: 'Internal server error' }); }
     const notifications = (data || []).map(ev => ({
       id:               ev.id,
       event_type:       ev.event_type,
@@ -340,7 +381,8 @@ exports.listNotifications = async (req, res) => {
     }));
     res.json({ notifications });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.error('[integrations] listNotifications catch:', err.message);
+    res.status(500).json({ error: 'Internal server error' });
   }
 };
 
@@ -353,13 +395,14 @@ exports.getAttachmentUrl = async (req, res) => {
       .eq('id', req.params.id)
       .eq('user_id', req.user.id)
       .maybeSingle();
-    if (error) return res.status(500).json({ error: error.message });
+    if (error) { console.error('[integrations] getAttachmentUrl error:', error.message); return res.status(500).json({ error: 'Internal server error' }); }
     if (!invoice?.attachment_path) return res.status(404).json({ error: 'No attachment for this invoice' });
 
     const url = await storage.getSignedReadUrl(invoice.attachment_path, invoice.attachment_backend || 'supabase', 3600);
     res.json({ url });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.error('[integrations] getAttachmentUrl catch:', err.message);
+    res.status(500).json({ error: 'Internal server error' });
   }
 };
 
@@ -414,12 +457,14 @@ exports.triggerSync = async (req, res) => {
       return res.json({ ok: true, ...result });
     } catch (err) {
       console.error('[integrations] sync discover error:', err.message);
+      const isInvalidGrant = err.message?.includes('invalid_grant');
       await supabase.from('integrations').update({
-        status: 'error', error_message: err.message,
-        error_count: (integration.error_count || 0) + 1,
+        status:        isInvalidGrant ? 'disconnected' : 'error',
+        error_message: isInvalidGrant ? 'Google authorization expired. Please reconnect.' : err.message,
+        error_count:   isInvalidGrant ? 0 : (integration.error_count || 0) + 1,
         last_error_at: new Date().toISOString(),
       }).eq('id', integration.id);
-      return res.status(500).json({ error: err.message });
+      return res.status(isInvalidGrant ? 401 : 500).json({ error: isInvalidGrant ? 'invalid_grant' : 'Internal server error' });
     }
   }
 
@@ -439,13 +484,14 @@ exports.triggerSync = async (req, res) => {
     res.json({ ok: true, jobId: null, ...result });
   } catch (err) {
     console.error('[integrations] sync error:', err.message);
+    const isInvalidGrant = err.message?.includes('invalid_grant');
     await supabase.from('integrations').update({
-      status:        'error',
-      error_message: err.message,
-      error_count:   (integration.error_count || 0) + 1,
+      status:        isInvalidGrant ? 'disconnected' : 'error',
+      error_message: isInvalidGrant ? 'Google authorization expired. Please reconnect.' : err.message,
+      error_count:   isInvalidGrant ? 0 : (integration.error_count || 0) + 1,
       last_error_at: new Date().toISOString(),
     }).eq('id', integration.id);
-    res.status(500).json({ error: err.message });
+    res.status(isInvalidGrant ? 401 : 500).json({ error: isInvalidGrant ? 'invalid_grant' : 'Internal server error' });
   }
 };
 
@@ -457,7 +503,7 @@ exports.cancelSyncJob = async (req, res) => {
     .eq('id', req.params.jobId)
     .eq('user_id', req.user.id)
     .in('status', ['pending', 'running']);
-  if (error) return res.status(500).json({ error: error.message });
+  if (error) { console.error('[integrations] cancelSyncJob error:', error.message); return res.status(500).json({ error: 'Internal server error' }); }
   res.json({ ok: true });
 };
 

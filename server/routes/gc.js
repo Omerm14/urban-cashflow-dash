@@ -13,8 +13,7 @@ const secretOk = (req) => {
   // Accept the secret from the Authorization header (cron services) OR a `key`
   // query param (so the endpoint can be triggered by simply opening a URL in a
   // browser — no terminal / header-setting tool required).
-  const provided = (req.headers.authorization || '').replace(/^Bearer\s+/, '')
-    || req.query.key || req.query.secret || '';
+  const provided = (req.headers.authorization || '').replace(/^Bearer\s+/, '');
   const a = Buffer.from(`${provided}`);
   const b = Buffer.from(`${secret}`);
   return a.length === b.length && crypto.timingSafeEqual(a, b);
