@@ -9,12 +9,17 @@ const auth = require('../server/middleware/auth');
 // spoof X-Forwarded-For and bypass per-client rate limiting.
 app.set('trust proxy', 1);
 
-// WhatsApp webhook must be registered BEFORE global json parser —
-// it uses its own body reader to capture rawBody for HMAC verification.
+// WhatsApp webhook must be registered BEFORE global json parser.
+// We capture rawBody here for HMAC signature verification.
 const webhook = require('../server/routes/webhook');
 app.get('/api/webhook/whatsapp', webhook.verifyWhatsApp);
 app.post('/api/webhook/whatsapp',
-  express.json({ limit: '20mb', strict: false }),
+  express.raw({ type: '*/*', limit: '20mb' }),
+  (req, res, next) => {
+    req.rawBody = req.body;          // Buffer from express.raw
+    try { req.body = JSON.parse(req.rawBody.toString()); } catch { req.body = {}; }
+    next();
+  },
   webhook.handleWhatsApp,
 );
 
