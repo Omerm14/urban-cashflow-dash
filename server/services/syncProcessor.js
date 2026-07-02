@@ -255,9 +255,9 @@ const collectFolderTree = async (drive, rootId) => {
 const computeCutoff = (lastSync, lookbackDays) => {
   if (lookbackDays === -1) return null;                                    // all time
   if (lookbackDays > 0) {
-    const cutoff = new Date(Date.now() - lookbackDays * 86_400_000);
-    if (!lastSync || new Date(lastSync) < cutoff) return cutoff.toISOString();
-    return new Date(lastSync).toISOString();
+    // Fixed rolling window: always search the last N days, independent of lastSync.
+    // This ensures "Last 30 days" always scans 30 days back even if we just synced.
+    return new Date(Date.now() - lookbackDays * 86_400_000).toISOString();
   }
   return lastSync ? new Date(lastSync).toISOString() : null;              // since last_sync
 };
