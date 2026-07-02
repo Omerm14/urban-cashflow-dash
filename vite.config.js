@@ -4,6 +4,10 @@ import { resolve } from 'path'
 
 export default defineConfig({
   plugins: [react()],
+  test: {
+    environment: 'node',
+    include: ['tests/**/*.test.js'],
+  },
   server: {
     proxy: {
       '/api': 'http://localhost:3001',
