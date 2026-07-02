@@ -561,7 +561,7 @@ function IntegrationCard({ type, integration, onRefresh, onInvoicesRefresh, onNo
     if (cfg.authType !== "oauth") { onConnectModal(type); return; }
     try {
       const { url } = await apiFetch(
-        `/api/integrations/google/auth-url?type=${type}&returnUrl=${encodeURIComponent(window.location.origin)}`
+        `/api/integrations/google/auth-url?type=${type}&returnUrl=${encodeURIComponent(window.location.origin + '/app')}`
       );
       window.location.href = url;
     } catch (e) { showToast(e.message, false); }
