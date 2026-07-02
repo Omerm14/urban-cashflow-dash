@@ -13,9 +13,12 @@ const SCOPES = {
 // Register two URIs: one for production (https://your-domain.vercel.app/api/integrations/google/callback)
 // and one for local dev (http://localhost:3001/api/integrations/google/callback).
 // Branch/preview URLs don't need separate registration — returnUrl in OAuth state handles the final redirect.
-const getRedirectUri = () =>
-  process.env.GOOGLE_REDIRECT_URI ||
-  'http://localhost:3001/api/integrations/google/callback';
+const getRedirectUri = () => {
+  if (!process.env.GOOGLE_REDIRECT_URI) {
+    console.warn('[integrations] GOOGLE_REDIRECT_URI is not set — defaulting to localhost. Set this in production or OAuth will fail.');
+  }
+  return process.env.GOOGLE_REDIRECT_URI || 'http://localhost:3001/api/integrations/google/callback';
+};
 
 const makeOAuth2 = () => new google.auth.OAuth2(
   process.env.GOOGLE_CLIENT_ID,
@@ -291,9 +294,19 @@ exports.connectWhatsApp = async (req, res) => {
     return res.status(500).json({ error: 'WhatsApp is not configured on this server. Set WHATSAPP_PHONE_NUMBER and WHATSAPP_API_TOKEN.' });
   }
 
-  // Generate a short unique inbox code (avoids ambiguous chars like 0/O, 1/I)
+  // Fetch existing config to preserve whitelisted_phones and reuse existing inbox_code
+  const { data: existing } = await supabase.from('integrations')
+    .select('config')
+    .eq('user_id', req.user.id)
+    .eq('type', 'whatsapp')
+    .maybeSingle();
+
+  const preservedPhones = existing?.config?.whitelisted_phones || [];
+  const existingCode    = existing?.config?.inbox_code;
+
+  // Keep existing inbox_code so vendors who saved the old code continue to work
   const CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-  const inbox_code = Array.from({ length: 6 }, () => CHARS[Math.floor(Math.random() * CHARS.length)]).join('');
+  const inbox_code = existingCode || Array.from({ length: 6 }, () => CHARS[Math.floor(Math.random() * CHARS.length)]).join('');
   const wa_link = `https://wa.me/${phone}?text=${inbox_code}`;
 
   const { error } = await supabase.from('integrations').upsert({
@@ -301,7 +314,7 @@ exports.connectWhatsApp = async (req, res) => {
     type:          'whatsapp',
     status:        'connected',
     credentials:   {},
-    config:        { inbox_code, wa_link },
+    config:        { inbox_code, wa_link, whitelisted_phones: preservedPhones },
     error_message: null,
     error_count:   0,
   }, { onConflict: 'user_id,type' });
