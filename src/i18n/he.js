@@ -84,6 +84,12 @@ const he = {
   sup_no_results: "אין ספקים עדיין",
   sup_invoices: "חשבוניות",
   sup_imported: "{n} ספקים יובאו",
+  sup_add_unrecognized: "ספק חדש",
+  sup_add_save: "הוסף",
+  sup_add_cancel: "ביטול",
+  sup_add_terms_placeholder: "תנאי תשלום (לדוגמה: שוטף + 30)",
+  sup_added_ok: "הספק נוסף",
+  sup_new_found: "ספקים חדשים זוהו",
 
   // Calendar
   cal_title: "לוח שנה",

@@ -130,10 +130,11 @@ export const useInvoiceData = () => {
       return {
         ...inv,
         // normalise snake_case DB fields → camelCase for UI
-        invoiceNo:   inv.invoice_no   ?? inv.invoiceNo   ?? '',
-        invoiceDate: inv.invoice_date ?? inv.invoiceDate ?? '',
-        dueDate:     due,
+        invoiceNo:       inv.invoice_no   ?? inv.invoiceNo   ?? '',
+        invoiceDate:     inv.invoice_date ?? inv.invoiceDate ?? '',
+        dueDate:         due,
         status,
+        supplierMatched: sup !== null || !inv.supplier,
       };
     });
   }, [invoices, suppliers]);

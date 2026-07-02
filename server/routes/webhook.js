@@ -113,6 +113,24 @@ exports.handleWhatsApp = async (req, res) => {
       for (const msg of (value.messages || [])) {
         if (!msg.id) continue;
 
+        // Handle plain text messages: if body matches an inbox_code, register the sender's phone
+        if (msg.type === 'text' && msg.text?.body) {
+          const textCode = msg.text.body.trim().toUpperCase();
+          const { data: textInt } = await supabase
+            .from('integrations')
+            .select('*')
+            .eq('type', 'whatsapp')
+            .eq('status', 'connected')
+            .filter('config->>inbox_code', 'eq', textCode)
+            .maybeSingle();
+          if (textInt) {
+            await registerPhone(msg.from, textInt);
+            await sendWhatsAppReply(msg.from, '✅ הטלפון שלך נרשם בהצלחה! כעת שלח את החשבונית כקובץ מצורף.');
+            console.log(`[webhook:wa] registered phone ${msg.from} via text code ${textCode}`);
+          }
+          continue;
+        }
+
         const mediaType = ['image', 'document'].find(t => msg[t]);
         if (!mediaType) continue;
 
@@ -189,7 +207,7 @@ exports.handleWhatsApp = async (req, res) => {
       if (err.code === 'PLAN_LIMIT_REACHED') {
         await sendWhatsAppReply(msgFrom, '❌ הגעת למגבלת החשבוניות החודשית. אנא שדרג את החבילה שלך.');
       } else {
-        await sendWhatsAppReply(msgFrom, '❌ אירעה שגיאה בעיבוד החשבונית. אנא נסה שוב או פנה לתמיכה.');
+        await sendWhatsAppReply(msgFrom, '❌ שגיאה בעיבוד החשבונית. אנא נסה שוב או פנה לתמיכה.');
       }
     }
   }
