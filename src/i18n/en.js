@@ -84,6 +84,12 @@ const en = {
   sup_no_results: "No suppliers yet",
   sup_invoices: "invoices",
   sup_imported: "{n} suppliers imported",
+  sup_add_unrecognized: "New supplier",
+  sup_add_save: "Add",
+  sup_add_cancel: "Cancel",
+  sup_add_terms_placeholder: "Payment terms (e.g. Net 30)",
+  sup_added_ok: "Supplier added",
+  sup_new_found: "New suppliers found",
 
   // Calendar
   cal_title: "Calendar",

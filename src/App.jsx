@@ -1305,9 +1305,22 @@ function InvoicesView({ invoices, selectedMonth, onMonthChange, onMarkPaid, onBu
                 </div>
                 <StatusBadge status={inv.status} />
                 <div style={{ display: "flex", justifyContent: "flex-end", gap: 4 }}>
-                  <button onClick={e => { e.stopPropagation(); onViewAttachment?.(inv); }} title="Preview" style={{ width: 26, height: 26, border: `1px solid ${T.isDark ? "rgba(255,255,255,.09)" : T.bdr}`, borderRadius: 6, background: T.isDark ? "rgba(255,255,255,.03)" : "transparent", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                    <Paperclip size={11} strokeWidth={1.75} color={T.isDark ? "rgba(255,255,255,.35)" : T.t2} />
-                  </button>
+                  {(() => {
+                    const isPaid = inv.status === "Paid" || inv.status === "paid";
+                    return (
+                      <button
+                        onClick={e => { e.stopPropagation(); onMarkPaid?.(inv.id); }}
+                        title={isPaid ? "Mark as Unpaid" : "Mark as Paid"}
+                        style={{ height: 26, padding: "0 7px", border: `1px solid ${isPaid ? T.bdr : T.greenBdr}`, borderRadius: 6, background: isPaid ? (T.isDark ? "rgba(255,255,255,.03)" : "transparent") : T.greenTint, cursor: "pointer", display: "flex", alignItems: "center", gap: 3, fontFamily: SANS, fontSize: 10, fontWeight: 600, color: isPaid ? T.t3 : T.green }}>
+                        {isPaid ? "↻" : "✓"} {isPaid ? "Unpaid" : "Paid"}
+                      </button>
+                    );
+                  })()}
+                  {inv.attachment_path && (
+                    <button onClick={e => { e.stopPropagation(); onViewAttachment?.(inv); }} title="Preview" style={{ width: 26, height: 26, border: `1px solid ${T.isDark ? "rgba(255,255,255,.09)" : T.bdr}`, borderRadius: 6, background: T.isDark ? "rgba(255,255,255,.03)" : "transparent", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                      <Paperclip size={11} strokeWidth={1.75} color={T.isDark ? "rgba(255,255,255,.35)" : T.t2} />
+                    </button>
+                  )}
                   <button onClick={e => { e.stopPropagation(); onEditInvoice?.(inv); }} style={{ width: 26, height: 26, border: `1px solid ${T.isDark ? "rgba(255,255,255,.09)" : T.bdr}`, borderRadius: 6, background: T.isDark ? "rgba(255,255,255,.03)" : "transparent", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
                     <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke={T.isDark ? "rgba(255,255,255,.35)" : T.t2} strokeWidth="2" strokeLinecap="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
                   </button>
@@ -2257,7 +2270,7 @@ export default function App() {
                 attachment = { attachment_path: presign.key, attachment_backend: 'r2', attachment_status: 'present' };
               } else {
                 const key = `${user.id}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
-                await supabase.storage.from('attachments').upload(key, file, { contentType: file.type, upsert: true });
+                await supabase.storage.from('invoice-attachments').upload(key, file, { contentType: file.type, upsert: true });
                 attachment = { attachment_path: key, attachment_backend: 'supabase', attachment_status: 'present' };
               }
             }
@@ -2339,7 +2352,7 @@ export default function App() {
             <main style={{ flex: 1, overflowY: "auto", padding: isMobile ? "20px 16px 100px" : "28px clamp(20px,3vw,36px) 80px" }}>
               <div style={{ width: "100%" }}>
                 {view === "dashboard"    && <Dashboard invoices={invoices} onPayAllJuly={handlePayAll} chartData={chartData} supplierNames={allNames} supplierColor={getSupplierColor} user={user} onMissingAlert={() => setShowMissingModal(true)} onAnomalyAlert={() => setShowAnomalyModal(true)} missingSuppliers={missingSuppliers} anomalyMap={anomalyMap} onViewMonth={handleViewMonth} onNavigateFiltered={(status) => { setView("invoices"); setInitialFilterStatus(status); }} />}
-                {view === "invoices"     && <InvoicesView invoices={invoices} selectedMonth={selectedMonth} onMonthChange={setSelectedMonth} onMarkPaid={handleMarkPaid} onBulkPaid={handleBulkPaid} onBulkUnpaid={handleBulkUnpaid} preSelectAll={preSelectAll} onEditInvoice={setEditInvoice} anomalyMap={anomalyMap} missingSuppliers={missingSuppliers} initialFilterStatus={initialFilterStatus} initialSelectedId={deepLinkInvoiceId} onViewAttachment={async (inv) => { try { const { data: { session } } = await supabase.auth.getSession(); const res = await fetch(`/api/invoices/${inv.id}/attachment-url`, { headers: { Authorization: `Bearer ${session?.access_token}` } }); if (res.ok) { const { url } = await res.json(); setPreviewAttachment({ url, filename: inv.source_file || inv.attachment_path?.split('/').pop() || 'invoice' }); } } catch(e) { console.error('attachment-url:', e); } }} />}
+                {view === "invoices"     && <InvoicesView invoices={invoices} selectedMonth={selectedMonth} onMonthChange={setSelectedMonth} onMarkPaid={handleMarkPaid} onAddSupplier={addSupplier} onBulkPaid={handleBulkPaid} onBulkUnpaid={handleBulkUnpaid} preSelectAll={preSelectAll} onEditInvoice={setEditInvoice} anomalyMap={anomalyMap} missingSuppliers={missingSuppliers} initialFilterStatus={initialFilterStatus} initialSelectedId={deepLinkInvoiceId} onViewAttachment={async (inv) => { try { const { data: { session } } = await supabase.auth.getSession(); const res = await fetch(`/api/invoices/${inv.id}/attachment-url`, { headers: { Authorization: `Bearer ${session?.access_token}` } }); if (res.ok) { const { url } = await res.json(); setPreviewAttachment({ url, filename: inv.source_file || inv.attachment_path?.split('/').pop() || 'invoice' }); } else { setExtractMsg({ text: 'Could not load attachment preview', ok: false }); setTimeout(() => setExtractMsg(null), 4000); } } catch(e) { console.error('attachment-url:', e); setExtractMsg({ text: 'Could not load attachment preview', ok: false }); setTimeout(() => setExtractMsg(null), 4000); } }} />}
                 {view === "calendar"     && <CalendarView computed={invoices} calMonth={calMonth} setCalMonth={setCalMonth} color={getSupplierColor} />}
                 {view === "integrations" && <IntegrationsPage
                   syncJobs={syncJobs} onStartSync={startSync} onCancelSync={cancelSync}

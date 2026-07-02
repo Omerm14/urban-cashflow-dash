@@ -2,6 +2,7 @@ const crypto   = require('crypto');
 const https    = require('https');
 const supabase  = require('../lib/supabase');
 const sync      = require('../services/syncProcessor');
+const { assertInvoiceLimit } = require('../lib/plans');
 
 // Send a text reply to a WhatsApp phone number via the Cloud API
 async function sendWhatsAppReply(to, text) {
@@ -112,6 +113,24 @@ exports.handleWhatsApp = async (req, res) => {
       for (const msg of (value.messages || [])) {
         if (!msg.id) continue;
 
+        // Handle plain text messages: if body matches an inbox_code, register the sender's phone
+        if (msg.type === 'text' && msg.text?.body) {
+          const textCode = msg.text.body.trim().toUpperCase();
+          const { data: textInt } = await supabase
+            .from('integrations')
+            .select('*')
+            .eq('type', 'whatsapp')
+            .eq('status', 'connected')
+            .filter('config->>inbox_code', 'eq', textCode)
+            .maybeSingle();
+          if (textInt) {
+            await registerPhone(msg.from, textInt);
+            await sendWhatsAppReply(msg.from, '✅ הטלפון שלך נרשם בהצלחה! כעת שלח את החשבונית כקובץ מצורף.');
+            console.log(`[webhook:wa] registered phone ${msg.from} via text code ${textCode}`);
+          }
+          continue;
+        }
+
         const mediaType = ['image', 'document'].find(t => msg[t]);
         if (!mediaType) continue;
 
@@ -179,11 +198,17 @@ exports.handleWhatsApp = async (req, res) => {
   for (const { integration, media, mediaType, mimeType, msgId, msgFrom } of jobs) {
     const filename = media.filename || `${mediaType}_${media.id}`;
     try {
+      await assertInvoiceLimit(integration.user_id);
       await sync.processWhatsAppMedia(integration, integration.user_id, media.id, filename, mimeType, msgId);
       console.log(`[webhook:wa] processed ${msgId}`);
       await sendWhatsAppReply(msgFrom, '✅ החשבונית התקבלה בהצלחה!');
     } catch (err) {
       console.error(`[webhook:wa] failed ${msgId}:`, err.message);
+      if (err.code === 'PLAN_LIMIT_REACHED') {
+        await sendWhatsAppReply(msgFrom, '❌ הגעת למגבלת החשבוניות החודשית. אנא שדרג את החבילה שלך.');
+      } else {
+        await sendWhatsAppReply(msgFrom, '❌ שגיאה בעיבוד החשבונית. אנא נסה שוב או פנה לתמיכה.');
+      }
     }
   }
 

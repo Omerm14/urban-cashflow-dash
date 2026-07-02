@@ -1,4 +1,4 @@
-import { useRef, useEffect } from "react";
+import { useRef, useEffect, useState } from "react";
 import { currency, fmt } from "../utils/dates";
 import { STATUS } from "../constants";
 
@@ -12,10 +12,12 @@ function statusBadge(status) {
   return map[status] || map[STATUS.UNPAID];
 }
 
-export default function InvoicesTable({ computed, dupeIds, anomalyMap, updateInvoice, deleteInvoice, setEditInvoice, color, selectedIds, onToggleSelect, onToggleAll, onViewAttachment }) {
+export default function InvoicesTable({ computed, dupeIds, anomalyMap, updateInvoice, deleteInvoice, setEditInvoice, color, selectedIds, onToggleSelect, onToggleAll, onViewAttachment, onMarkPaid, onAddSupplier }) {
   const allIds = computed.map(i => i.id);
   const allSelected = allIds.length > 0 && allIds.every(id => selectedIds.has(id));
   const someSelected = !allSelected && allIds.some(id => selectedIds.has(id));
+  const [addingSupplier, setAddingSupplier] = useState(null); // { name, terms }
+  const [addSupplierOk, setAddSupplierOk]   = useState(null); // invoice id just saved
 
   const selectAllRef = useRef();
   useEffect(() => {
@@ -69,7 +71,36 @@ export default function InvoicesTable({ computed, dupeIds, anomalyMap, updateInv
                       {inv.supplier.charAt(0)}
                     </div>
                     <div>
-                      <span style={{ fontWeight:500, fontSize:13 }}>{inv.supplier}</span>
+                      <div style={{ display:"flex", alignItems:"center", gap:6 }}>
+                        <span style={{ fontWeight:500, fontSize:13 }}>{inv.supplier}</span>
+                        {!inv.supplierMatched && inv.supplier && onAddSupplier && addSupplierOk !== inv.id && (
+                          addingSupplier?.id === inv.id
+                            ? <span style={{ display:"inline-flex", alignItems:"center", gap:4 }}>
+                                <input
+                                  autoFocus
+                                  value={addingSupplier.terms}
+                                  onChange={e => setAddingSupplier(s => ({ ...s, terms: e.target.value }))}
+                                  placeholder="Payment terms"
+                                  style={{ fontSize:11, padding:"2px 6px", borderRadius:4, border:"1px solid #1e2d45", background:"#0a1628", color:"#94a3b8", width:120 }}
+                                />
+                                <button
+                                  onClick={async () => {
+                                    await onAddSupplier({ name: addingSupplier.name, terms: addingSupplier.terms, notes: '' });
+                                    setAddSupplierOk(inv.id);
+                                    setAddingSupplier(null);
+                                  }}
+                                  style={{ fontSize:11, padding:"2px 8px", borderRadius:4, border:"none", background:"#0ea5e9", color:"#fff", cursor:"pointer" }}>Add</button>
+                                <button
+                                  onClick={() => setAddingSupplier(null)}
+                                  style={{ fontSize:11, padding:"2px 6px", borderRadius:4, border:"none", background:"#1e2d45", color:"#94a3b8", cursor:"pointer" }}>✕</button>
+                              </span>
+                            : <button
+                                title="Add as new supplier"
+                                onClick={() => setAddingSupplier({ id: inv.id, name: inv.supplier, terms: '' })}
+                                style={{ fontSize:11, padding:"1px 6px", borderRadius:4, border:"1px solid #0ea5e9", background:"transparent", color:"#0ea5e9", cursor:"pointer", lineHeight:1.4 }}>＋ New supplier</button>
+                        )}
+                        {addSupplierOk === inv.id && <span style={{ fontSize:11, color:"#22c55e" }}>✓ Added</span>}
+                      </div>
                       {dupeIds.has(inv.id) && <div style={{ fontSize:10, fontWeight:700, color:"var(--amber)", marginTop:1 }}>⚠ POSSIBLE DUPLICATE</div>}
                     </div>
                   </div>
@@ -113,9 +144,16 @@ export default function InvoicesTable({ computed, dupeIds, anomalyMap, updateInv
                     {inv.attachment_path && (
                       <button className="btn btn-ghost btn-sm" title="View original file" onClick={() => onViewAttachment?.(inv)}>📎</button>
                     )}
-                    {inv.status !== STATUS.PAID && (
-                      <button className="btn btn-success btn-sm" onClick={() => updateInvoice(inv.id, { status: STATUS.PAID })}>✓ Paid</button>
-                    )}
+                    {onMarkPaid
+                      ? <button
+                          className={`btn btn-sm ${inv.status === STATUS.PAID ? "btn-ghost" : "btn-success"}`}
+                          title={inv.status === STATUS.PAID ? "Mark as Unpaid" : "Mark as Paid"}
+                          onClick={() => onMarkPaid(inv.id)}
+                        >{inv.status === STATUS.PAID ? "↻ Unpaid" : "✓ Paid"}</button>
+                      : inv.status !== STATUS.PAID && (
+                          <button className="btn btn-success btn-sm" onClick={() => updateInvoice(inv.id, { status: STATUS.PAID })}>✓ Paid</button>
+                        )
+                    }
                     <button className="btn btn-ghost btn-sm" onClick={() => setEditInvoice({...inv})}>Edit</button>
                     <button className="btn btn-danger btn-sm" onClick={() => deleteInvoice(inv.id)}>✕</button>
                   </div>

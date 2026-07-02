@@ -822,8 +822,9 @@ function IntegrationCard({ type, integration, onRefresh, onInvoicesRefresh, onNo
                   <div style={{ color: "#94a3b8", fontWeight: 600, marginBottom: 4 }}>How to use</div>
                   <ol style={{ margin: 0, paddingLeft: 16 }}>
                     <li>Share the QR code or the link below with your vendors.</li>
-                    <li>Vendor scans or taps the link — WhatsApp opens with your code pre-filled.</li>
-                    <li>Vendor attaches the invoice (PDF or photo) and sends.</li>
+                    <li>Vendor taps the link — WhatsApp opens with your code pre-filled.</li>
+                    <li><strong>Vendor sends the pre-filled code as a text message first</strong> — this registers their number.</li>
+                    <li>Vendor then attaches the invoice (PDF or photo) and sends it.</li>
                     <li>Invoice appears in your dashboard automatically.</li>
                   </ol>
                 </div>
@@ -840,7 +841,7 @@ function IntegrationCard({ type, integration, onRefresh, onInvoicesRefresh, onNo
                 </button>
               </div>
               <div style={{ fontSize: 11, color: "#334155", marginTop: 6 }}>
-                If a vendor sends a file without using the link, ask them to type <strong style={{ color: "#475569" }}>{integration.config.inbox_code}</strong> as the message caption.
+                Once registered, vendors can send invoices directly without the code. To register manually, ask them to send the text <strong style={{ color: "#475569" }}>{integration.config.inbox_code}</strong> first.
               </div>
             </div>
           )}
@@ -968,7 +969,7 @@ export default function IntegrationsPage({ oauthResult, onClearOAuthResult, onIn
       );
     } else if (oauthResult.error) {
       const msg = oauthResult.error === 'access_denied'
-        ? "Access denied — your Google account hasn't been approved for this app yet. Contact your administrator to request access."
+        ? "Access denied — you may not be on the authorized test-user list. Contact support to get access, or ask the account owner to add your email in Google Cloud Console."
         : `Connection failed: ${oauthResult.error}`;
       showToast(msg, false);
     }

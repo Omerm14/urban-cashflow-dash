@@ -9,7 +9,7 @@ function nxtMonth(ym) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
 }
 
-export default function InvoicesView({ computed, dupeIds, anomalyMap, updateInvoice, deleteInvoice, bulkMarkPaid, bulkMarkUnpaid, bulkDelete, setEditInvoice, color, onViewAttachment, preSelMonth, onClearPreSel, missingSuppliers, onOpenMissing, onOpenAnomalies }) {
+export default function InvoicesView({ computed, dupeIds, anomalyMap, updateInvoice, deleteInvoice, bulkMarkPaid, bulkMarkUnpaid, bulkDelete, setEditInvoice, color, onViewAttachment, onMarkPaid, onAddSupplier, preSelMonth, onClearPreSel, missingSuppliers, onOpenMissing, onOpenAnomalies }) {
   const [selectedIds,   setSelectedIds]   = useState(new Set());
   const [viewMode,      setViewMode]      = useState("grouped");
   const [selectedMonth, setSelectedMonth] = useState(() => toYM(new Date()));
@@ -198,7 +198,7 @@ export default function InvoicesView({ computed, dupeIds, anomalyMap, updateInvo
             updateInvoice={updateInvoice} deleteInvoice={handleDeleteInvoice}
             setEditInvoice={setEditInvoice} color={color}
             selectedIds={selectedIds} onToggleSelect={toggleSelect} onToggleAll={toggleAll}
-            onViewAttachment={onViewAttachment}
+            onViewAttachment={onViewAttachment} onMarkPaid={onMarkPaid} onAddSupplier={onAddSupplier}
           />
         : <InvoicesGroupedView
             computed={computed} dupeIds={dupeIds} anomalyMap={anomalyMap}

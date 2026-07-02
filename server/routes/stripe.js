@@ -25,9 +25,9 @@ router.post('/checkout', async (req, res) => {
     // Re-use existing Stripe customer if one exists for this user
     const { data: sub } = await supabase
       .from('subscriptions')
-      .select('stripe_customer_id')
+      .select('stripe_customer_id,stripe_subscription_id')
       .eq('user_id', req.user.id)
-      .single();
+      .maybeSingle();
 
     const origin = process.env.FRONTEND_URL || 'http://localhost:5173';
 
@@ -75,7 +75,7 @@ router.post('/portal', async (req, res) => {
       .from('subscriptions')
       .select('stripe_customer_id')
       .eq('user_id', req.user.id)
-      .single();
+      .maybeSingle();
 
     if (!sub?.stripe_customer_id) {
       return res.status(404).json({ error: 'No billing account found' });
@@ -214,7 +214,7 @@ async function userIdForCustomer(customerId) {
     .from('subscriptions')
     .select('user_id')
     .eq('stripe_customer_id', customerId)
-    .single();
+    .maybeSingle();
   return data?.user_id || null;
 }
 
