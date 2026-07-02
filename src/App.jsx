@@ -2072,6 +2072,7 @@ export default function App() {
   const [previewAttachment, setPreviewAttachment] = useState(null);
   const [extracting, setExtracting] = useState(false);
   const [extractMsg, setExtractMsg] = useState(null);
+  const [uploadProgress, setUploadProgress] = useState({ done: 0, total: 0 });
   const [showSearch, setShowSearch] = useState(false);
   const [appNotifs, setAppNotifs] = useState([]);
   const [oauthResult, setOauthResult] = useState(null);
@@ -2091,7 +2092,7 @@ export default function App() {
   const { plan, used: planUsed, limit: planLimit, pct: planPct, isAtLimit, refresh: refreshPlan } = usePlan();
 
   // Sync jobs for IntegrationsPage
-  const { jobs: syncJobs, startSync, cancelSync } = useSyncJob({
+  const { jobs: syncJobs, startSync, cancelSync, activeJob } = useSyncJob({
     onBatchDone: refreshInvoices,
   });
 
@@ -2116,6 +2117,17 @@ export default function App() {
     const error = params.get("error") || hashParams.get("error");
     if (code || error) {
       setOauthResult({ code, error });
+      window.history.replaceState({}, "", window.location.pathname);
+      return;
+    }
+    // Google OAuth callback params
+    const oauthConnected = params.get("oauth_connected");
+    const oauthError     = params.get("oauth_error");
+    const viewParam      = params.get("view");
+    if (oauthConnected || oauthError || viewParam) {
+      if (oauthConnected) setOauthResult({ connected: oauthConnected });
+      if (oauthError)     setOauthResult({ error: oauthError });
+      if (viewParam)      setView(viewParam);
       window.history.replaceState({}, "", window.location.pathname);
     }
   }, []);
@@ -2197,6 +2209,7 @@ export default function App() {
     const files = Array.from(e?.target?.files || []);
     if (!files.length) return;
     setExtracting(true);
+    setUploadProgress({ done: 0, total: files.length });
     setExtractMsg({ text: `Processing ${files.length} file${files.length > 1 ? "s" : ""}…`, ok: null });
     try {
       const { processPdf, fileToBase64, extractInvoice, translateSupplierName } = await import("./utils/image");
@@ -2278,6 +2291,7 @@ export default function App() {
           await addInvoice({ ...candidate, ...attachment });
           added++;
         } catch (err) { errors.push(`${file.name}: ${err.message}`); }
+        setUploadProgress(p => ({ ...p, done: p.done + 1 }));
       }));
 
       if (added > 0) { refreshPlan(); addAppNotif({ type: "upload", icon: "📄", text: `${added} invoice${added !== 1 ? "s" : ""} uploaded from ${files.length === 1 ? files[0].name : `${files.length} files`}`, ts: Date.now() }); }
@@ -2322,6 +2336,7 @@ export default function App() {
             @keyframes fadeIn     { from{opacity:0}to{opacity:1} }
             @keyframes scaleIn    { from{opacity:0;transform:scale(.97)}to{opacity:1;transform:none} }
             @keyframes confettiFall { 0%{transform:translateY(0) rotate(0);opacity:1} 100%{transform:translateY(-130px) rotate(480deg);opacity:0} }
+            @keyframes spin { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }
             @keyframes kpiIn { from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)} }
             *, *::before, *::after { box-sizing:border-box; margin:0; padding:0 }
             ::-webkit-scrollbar{width:5px;height:5px}
@@ -2334,8 +2349,35 @@ export default function App() {
           <input ref={fileRef} type="file" accept=".pdf,.jpg,.jpeg,.png" multiple style={{ display: "none" }} onChange={handleUpload} />
 
           {extractMsg && (
-            <div style={{ position: "fixed", top: 16, left: "50%", transform: "translateX(-50%)", zIndex: 9999, background: extractMsg.ok === null ? T.surf : extractMsg.ok ? T.greenTint : T.redTint, border: `1px solid ${extractMsg.ok === null ? T.bdr : extractMsg.ok ? T.greenBdr : T.redBdr}`, color: extractMsg.ok === null ? T.t1 : extractMsg.ok ? T.green : T.red, padding: "10px 20px", borderRadius: 8, fontFamily: SANS, fontSize: 13, boxShadow: "0 4px 20px rgba(0,0,0,0.3)", whiteSpace: "nowrap" }}>
-              {extracting && "⟳ "}{extractMsg.text}
+            <div style={{ position: "fixed", top: 16, left: "50%", transform: "translateX(-50%)", zIndex: 9999, background: extractMsg.ok === null ? T.surf : extractMsg.ok ? T.greenTint : T.redTint, border: `1px solid ${extractMsg.ok === null ? T.bdr : extractMsg.ok ? T.greenBdr : T.redBdr}`, color: extractMsg.ok === null ? T.t1 : extractMsg.ok ? T.green : T.red, padding: "10px 20px 12px", borderRadius: 8, fontFamily: SANS, fontSize: 13, boxShadow: "0 4px 20px rgba(0,0,0,0.3)", minWidth: 220, maxWidth: 400 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                {extracting && <span style={{ display: "inline-block", animation: "spin 1s linear infinite" }}>⟳</span>}
+                <span>{extractMsg.text}</span>
+                {extracting && uploadProgress.total > 0 && (
+                  <span style={{ marginLeft: "auto", fontSize: 11, opacity: 0.7 }}>{uploadProgress.done}/{uploadProgress.total}</span>
+                )}
+              </div>
+              {extracting && uploadProgress.total > 0 && (
+                <div style={{ marginTop: 8, height: 3, borderRadius: 2, background: extractMsg.ok === null ? T.bdr : T.greenBdr, overflow: "hidden" }}>
+                  <div style={{ height: "100%", borderRadius: 2, background: extractMsg.ok === null ? T.t3 : T.green, width: `${Math.round((uploadProgress.done / uploadProgress.total) * 100)}%`, transition: "width 0.3s ease" }} />
+                </div>
+              )}
+            </div>
+          )}
+          {!extractMsg && activeJob && !activeJob.done && (
+            <div style={{ position: "fixed", top: 16, left: "50%", transform: "translateX(-50%)", zIndex: 9999, background: T.surf, border: `1px solid ${T.bdr}`, color: T.t1, padding: "10px 20px 12px", borderRadius: 8, fontFamily: SANS, fontSize: 13, boxShadow: "0 4px 20px rgba(0,0,0,0.3)", minWidth: 220, maxWidth: 400 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                <span style={{ display: "inline-block", animation: "spin 1s linear infinite" }}>⟳</span>
+                <span>Syncing…</span>
+                {activeJob.totalFiles > 0 && (
+                  <span style={{ marginLeft: "auto", fontSize: 11, opacity: 0.7 }}>{activeJob.cursor || 0}/{activeJob.totalFiles}</span>
+                )}
+              </div>
+              {activeJob.totalFiles > 0 && (
+                <div style={{ marginTop: 8, height: 3, borderRadius: 2, background: T.bdr, overflow: "hidden" }}>
+                  <div style={{ height: "100%", borderRadius: 2, background: T.t3, width: `${Math.round(((activeJob.cursor || 0) / activeJob.totalFiles) * 100)}%`, transition: "width 0.3s ease" }} />
+                </div>
+              )}
             </div>
           )}
 
