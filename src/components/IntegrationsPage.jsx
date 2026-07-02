@@ -538,7 +538,8 @@ function IntegrationCard({ type, integration, onRefresh, onInvoicesRefresh, onNo
         else if (added === 0) msg = `Found ${filesFound} file${filesFound !== 1 ? "s" : ""} but none were new${errors > 0 ? ` (${errors} failed)` : " (all already imported)"}`;
         else msg = `${added} new invoice${added !== 1 ? "s" : ""} added from ${cfg.label}`;
         showToast(msg, added > 0);
-        if (added > 0) { setSyncDone(true); setTimeout(() => setSyncDone(false), 3000); onInvoicesRefresh?.(); }
+        if (added > 0) { setSyncDone(true); setTimeout(() => setSyncDone(false), 3000); }
+        onInvoicesRefresh?.();
         onRefresh();
         setEventsRefreshKey(k => k + 1);
         setHistoryOpen(true);

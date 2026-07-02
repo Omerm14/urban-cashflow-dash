@@ -107,12 +107,19 @@ exports.googleCallback = async (req, res) => {
   const { userId, type } = stateData;
   try {
     const { tokens } = await makeOAuth2().getToken(code);
+    // Fetch existing row to preserve config (labels, folder, etc.) and sync_count
+    const { data: existing } = await supabase.from('integrations')
+      .select('config, sync_count')
+      .eq('user_id', userId)
+      .eq('type', type)
+      .maybeSingle();
     await supabase.from('integrations').upsert({
       user_id:       userId,
       type,
       status:        'connected',
       credentials:   tokens,
-      config:        {},
+      config:        existing?.config || {},
+      sync_count:    existing?.sync_count || 0,
       error_message: null,
       error_count:   0,
     }, { onConflict: 'user_id,type' });
@@ -293,6 +300,9 @@ exports.connectWhatsApp = async (req, res) => {
   if (!phone || !process.env.WHATSAPP_API_TOKEN) {
     return res.status(500).json({ error: 'WhatsApp is not configured on this server. Set WHATSAPP_PHONE_NUMBER and WHATSAPP_API_TOKEN.' });
   }
+  if (!process.env.WHATSAPP_PHONE_NUMBER_ID) {
+    console.warn('[integrations] WHATSAPP_PHONE_NUMBER_ID not set — WhatsApp reply messages will not be sent. Add this env var (the numeric Phone Number ID from Meta Business dashboard).');
+  }
 
   // Fetch existing config to preserve whitelisted_phones and reuse existing inbox_code
   const { data: existing } = await supabase.from('integrations')
@@ -307,7 +317,7 @@ exports.connectWhatsApp = async (req, res) => {
   // Keep existing inbox_code so vendors who saved the old code continue to work
   const CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
   const inbox_code = existingCode || Array.from({ length: 6 }, () => CHARS[Math.floor(Math.random() * CHARS.length)]).join('');
-  const wa_link = `https://wa.me/${phone}?text=${inbox_code}`;
+  const wa_link = `https://wa.me/${phone}?text=${encodeURIComponent(inbox_code)}`;
 
   const { error } = await supabase.from('integrations').upsert({
     user_id:       req.user.id,

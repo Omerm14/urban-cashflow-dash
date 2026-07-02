@@ -8,7 +8,9 @@ const { assertInvoiceLimit } = require('../lib/plans');
 async function sendWhatsAppReply(to, text) {
   const token   = process.env.WHATSAPP_API_TOKEN;
   const phoneId = process.env.WHATSAPP_PHONE_NUMBER_ID;
-  if (!token || !phoneId || !to) return;
+  if (!to) return;
+  if (!token)   { console.error('[webhook:wa] sendWhatsAppReply: WHATSAPP_API_TOKEN not set'); return; }
+  if (!phoneId) { console.error('[webhook:wa] sendWhatsAppReply: WHATSAPP_PHONE_NUMBER_ID not set — cannot send reply. Add this env var (numeric Phone Number ID from Meta Business dashboard).'); return; }
 
   const payload = JSON.stringify({
     messaging_product: 'whatsapp',
