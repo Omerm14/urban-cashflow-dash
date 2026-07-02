@@ -4,6 +4,11 @@ const express = require('express');
 const app  = express();
 const auth = require('../server/middleware/auth');
 
+// Trust exactly one hop (Vercel's edge proxy) so req.ip resolves to the real
+// client IP instead of the proxy address. `true`/trust-all would let clients
+// spoof X-Forwarded-For and bypass per-client rate limiting.
+app.set('trust proxy', 1);
+
 // WhatsApp webhook must be registered BEFORE global json parser —
 // it uses its own body reader to capture rawBody for HMAC verification.
 const webhook = require('../server/routes/webhook');

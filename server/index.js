@@ -9,6 +9,11 @@ const app       = express();
 const auth      = require('./middleware/auth');
 const rateLimit = require('express-rate-limit');
 
+// Trust exactly one hop (Vercel's edge proxy) so req.ip resolves to the real
+// client IP instead of the proxy address. `true`/trust-all would let clients
+// spoof X-Forwarded-For and bypass per-client rate limiting.
+app.set('trust proxy', 1);
+
 // Protect expensive endpoints from abuse while allowing generous legitimate use.
 // Limits are per-IP; well above any real single-user burst.
 const extractLimiter   = rateLimit({ windowMs: 60_000,      max: 120, standardHeaders: true, legacyHeaders: false, message: { error: 'Too many requests, please slow down' } });
