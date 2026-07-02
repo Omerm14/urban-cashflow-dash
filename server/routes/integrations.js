@@ -528,12 +528,12 @@ exports.processSyncJob = async (req, res) => {
   if (error || !job) return res.status(404).json({ error: 'Sync job not found' });
 
   if (job.status === 'done' || job.status === 'error' || job.status === 'cancelled') {
-    return res.json({ done: true, cancelled: job.status === 'cancelled', cursor: job.cursor, totalFiles: job.total_files, added: job.added, errors: job.errors, filesAdded: [] });
+    return res.json({ done: true, cancelled: job.status === 'cancelled', cursor: job.cursor, totalFiles: job.total_files, added: job.added, dupes: job.dupes || 0, errors: job.errors, filesAdded: [] });
   }
 
   // Prevent double-processing: skip if another call is actively running this job
   if (job.status === 'running' && (Date.now() - new Date(job.updated_at).getTime()) < 30000) {
-    return res.json({ done: false, cursor: job.cursor, totalFiles: job.total_files, added: job.added, errors: job.errors, filesAdded: [] });
+    return res.json({ done: false, cursor: job.cursor, totalFiles: job.total_files, added: job.added, dupes: job.dupes || 0, errors: job.errors, filesAdded: [] });
   }
 
   await supabase.from('sync_jobs').update({ status: 'running', updated_at: new Date().toISOString() }).eq('id', job.id);
@@ -547,7 +547,7 @@ exports.processSyncJob = async (req, res) => {
     return res.status(404).json({ error: 'Integration not found' });
   }
 
-  let batchRes = { results: [], errors: 0 };
+  let batchRes = { results: [], skipped: 0, errors: 0 };
   try {
     batchRes = await sync.processGoogleDriveFileBatch(integration, job.user_id, batch);
   } catch (err) {
@@ -557,11 +557,12 @@ exports.processSyncJob = async (req, res) => {
 
   const newCursor = job.cursor + batch.length;
   const newAdded  = job.added  + batchRes.results.length;
+  const newDupes  = (job.dupes || 0) + (batchRes.skipped || 0);
   const newErrors = job.errors + batchRes.errors;
   const done      = newCursor >= job.total_files;
 
   await supabase.from('sync_jobs').update({
-    cursor: newCursor, added: newAdded, errors: newErrors,
+    cursor: newCursor, added: newAdded, dupes: newDupes, errors: newErrors,
     status: done ? 'done' : 'running',
     updated_at: new Date().toISOString(),
   }).eq('id', job.id);
@@ -576,5 +577,5 @@ exports.processSyncJob = async (req, res) => {
     }).eq('id', integration.id);
   }
 
-  res.json({ done, cursor: newCursor, totalFiles: job.total_files, added: newAdded, errors: newErrors, filesAdded: batchRes.results });
+  res.json({ done, cursor: newCursor, totalFiles: job.total_files, added: newAdded, dupes: newDupes, errors: newErrors, filesAdded: batchRes.results });
 };

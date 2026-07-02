@@ -1,6 +1,6 @@
 import { useState } from "react";
 
-const TERM_FILTERS = ["all", "shotef_plus(75)", "shotef_plus(45)", "shotef_plus(30)", "shotef_plus(10)", "shotef", "immediate", "custom"];
+const TERM_FILTERS = ["all", "shotef_plus(75)", "shotef_plus(45)", "shotef_plus(30)", "shotef", "immediate", "net75", "net45", "net30"];
 
 export default function SuppliersModal({ suppliers, addSupplier, updateSupplier, deleteSupplier, editSupplier, setEditSupplier, onClose }) {
   const [filterTerm, setFilterTerm] = useState("all");

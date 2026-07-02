@@ -984,19 +984,26 @@ function Dashboard({ invoices, onPayAllJuly, chartData, supplierNames, supplierC
 // ── Invoices ──────────────────────────────────────────────────────────────────
 const SOURCE_LABELS = { google_drive: { icon: "📁", label: "Drive" }, gmail: { icon: "✉️", label: "Gmail" }, whatsapp: { icon: "💬", label: "WA" }, green_invoice: { icon: "🧾", label: "GI" } };
 
+// Presets use shotef_plus(N) format (end-of-month + N days) — matches existing DB values.
+// Custom falls back to net{N} (calendar days from invoice date) for arbitrary values.
 const TERMS_PRESETS = [
-  { value: "immediate", label: "Immediate" },
-  { value: "net30",     label: "+30" },
-  { value: "net45",     label: "+45" },
-  { value: "net75",     label: "+75" },
+  { value: "immediate",        label: "Immediate" },
+  { value: "shotef",           label: "Shotef" },
+  { value: "shotef_plus(30)",  label: "+30" },
+  { value: "shotef_plus(45)",  label: "+45" },
+  { value: "shotef_plus(75)",  label: "+75" },
 ];
 const isPreset = v => TERMS_PRESETS.some(o => o.value === v);
 function TermsPicker({ value, onChange }) {
   const T = useT();
   const isCustom = value && !isPreset(value);
   const [customDays, setCustomDays] = useState(() => {
-    const m = value?.match(/^net(\d+)$/);
-    return m ? m[1] : "";
+    // Extract days from shotef_plus(N) or net{N} for non-preset values
+    const mShotef = value?.match(/^shotef_plus\((\d+)\)$/);
+    const mNet    = value?.match(/^net(\d+)$/);
+    if (mShotef && !isPreset(value)) return mShotef[1];
+    if (mNet) return mNet[1];
+    return "";
   });
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 4, flexShrink: 0, flexWrap: "wrap" }}>
@@ -1017,7 +1024,7 @@ function TermsPicker({ value, onChange }) {
           <span style={{ fontFamily: SANS, fontSize: 12, color: T.t3 }}>+</span>
           <input
             type="number" min="1" max="365" value={customDays}
-            onChange={e => { setCustomDays(e.target.value); if (e.target.value) onChange(`net${e.target.value}`); }}
+            onChange={e => { setCustomDays(e.target.value); if (e.target.value) onChange(`shotef_plus(${e.target.value})`); }}
             placeholder="days"
             style={{ width: 60, height: 30, padding: "0 8px", border: `1px solid ${T.indigoBdr}`, borderRadius: 6, background: T.surf, color: T.t1, fontFamily: MONO, fontSize: 13, outline: "none", textAlign: "center" }}
             autoFocus
@@ -1084,38 +1091,62 @@ function SupplierGroup({ supplier, invoices, selectedIds, onToggleSelect, onTogg
         </div>
       )}
       <div style={{ overflowX: isMobile ? "auto" : "visible" }}>
+        {/* Column headers inside card */}
+        <div style={{ display: "grid", gridTemplateColumns: isMobile ? "32px 1fr 90px 100px 160px" : "36px 1fr 80px 100px 100px 90px 90px 190px", alignItems: "center", padding: isMobile ? "0 10px" : "0 14px", height: 28, background: T.isDark ? "rgba(255,255,255,.02)" : "rgba(0,0,0,.02)", borderTop: `1px solid ${T.bdr}`, gap: 8, minWidth: isMobile ? 460 : "auto" }}>
+          {(isMobile
+            ? ["", "Invoice #", "Amount", "Status", ""]
+            : ["", "Invoice #", "Source", "Amount", "Status", "Issued", "Due", ""]
+          ).map((h, i, arr) => (
+            <div key={i} style={{ fontFamily: SANS, fontSize: 9, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em", color: T.isDark ? "rgba(255,255,255,.2)" : T.t3, textAlign: i === arr.length - 1 ? "right" : i >= 3 ? "center" : "left" }}>{h}</div>
+          ))}
+        </div>
         {invoices.map(inv => {
           const isSel = selectedIds.has(inv.id);
           const isPaid = inv.status === "Paid" || inv.status === "paid";
+          const isOverdue = inv.status === "Overdue" || inv.status === "overdue";
           const src = SOURCE_LABELS[inv.sync_source];
-          const cols = isMobile ? "36px 1fr 100px 110px 130px" : "40px 1fr 80px 110px 120px 110px 1fr 190px";
+          const cols = isMobile ? "32px 1fr 90px 100px 160px" : "36px 1fr 80px 100px 100px 90px 90px 190px";
           return (
             <div key={inv.id} onClick={() => onToggleSelect(inv.id)}
-              style={{ display: "grid", gridTemplateColumns: cols, alignItems: "center", gap: 8, padding: "8px 14px", borderTop: `1px solid ${T.bdr}`, background: isSel ? T.indigoTint : "transparent", cursor: "pointer", transition: "background 0.1s", minWidth: isMobile ? 460 : "auto" }}
-              onMouseEnter={e => { if (!isSel) e.currentTarget.style.background = T.isDark ? "rgba(99,102,241,.07)" : T.surf2; }}
+              style={{ display: "grid", gridTemplateColumns: cols, alignItems: "center", gap: 8, padding: isMobile ? "9px 10px" : "9px 14px", borderTop: `1px solid ${T.isDark ? "rgba(255,255,255,.04)" : T.bdr}`, background: isSel ? T.indigoTint : "transparent", cursor: "pointer", transition: "background 0.1s", minWidth: isMobile ? 460 : "auto" }}
+              onMouseEnter={e => { if (!isSel) e.currentTarget.style.background = T.isDark ? "rgba(99,102,241,.06)" : T.surf2; }}
               onMouseLeave={e => { e.currentTarget.style.background = isSel ? T.indigoTint : "transparent"; }}>
               <input type="checkbox" checked={isSel} onChange={() => onToggleSelect(inv.id)} onClick={e => e.stopPropagation()} style={{ accentColor: T.indigo, cursor: "pointer", width: 13, height: 13 }} />
               <div style={{ display: "flex", alignItems: "center", gap: 5, minWidth: 0 }}>
-                <span style={{ fontFamily: MONO, fontSize: 12, color: T.isDark ? "#627488" : T.t3, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontVariantNumeric: "tabular-nums" }}>{inv.invoiceNo}</span>
+                <span style={{ fontFamily: MONO, fontSize: 12, color: T.isDark ? "#627488" : T.t3, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontVariantNumeric: "tabular-nums" }}>{inv.invoiceNo || "—"}</span>
               </div>
               {!isMobile && (
-                <span title={src ? src.label : "Manual"} style={{ fontFamily: SANS, fontSize: 11, color: T.t3, display: "flex", alignItems: "center", gap: 3 }}>
-                  <span>{src ? src.icon : "📤"}</span>
-                  <span style={{ fontSize: 10 }}>{src ? src.label : "Manual"}</span>
-                </span>
+                <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 1 }}>
+                  <span style={{ fontSize: 12 }}>{src ? src.icon : "📤"}</span>
+                  <span style={{ fontFamily: SANS, fontSize: 9, color: T.t3 }}>{src ? src.label : "Manual"}</span>
+                </div>
               )}
-              <span style={{ fontFamily: MONO, fontWeight: 600, fontSize: 13, color: T.isDark ? "#C8D6E8" : T.t1, fontVariantNumeric: "tabular-nums" }}>{fmt(inv.amount)}</span>
-              <StatusBadge status={inv.status} />
-              {!isMobile && <span style={{ fontFamily: MONO, fontSize: 12, color: T.isDark ? "#627488" : T.t2, fontVariantNumeric: "tabular-nums" }}>{fmtDate(inv.invoiceDate)}</span>}
-              {!isMobile && <span style={{ fontFamily: MONO, fontSize: 12, color: (inv.status === "Overdue" || inv.status === "overdue") ? "#F87171" : T.isDark ? "#627488" : T.t2, fontWeight: (inv.status === "Overdue" || inv.status === "overdue") ? 600 : 400, fontVariantNumeric: "tabular-nums" }}>{fmtDate(inv.dueDate)}</span>}
-              <div style={{ display: "flex", gap: 4, justifyContent: "flex-end" }}>
-                {inv.attachment_path && <button onClick={e => { e.stopPropagation(); onViewAttachment?.(inv); }} title="Preview" style={{ padding: "2px 6px", background: "transparent", border: `1px solid ${T.bdr}`, borderRadius: 4, color: T.t2, cursor: "pointer", display: "flex", alignItems: "center" }}><Paperclip size={10} /></button>}
-                <button onClick={e => { e.stopPropagation(); onMarkPaid(inv.id); }} style={{ padding: "2px 7px", background: isPaid ? "transparent" : T.greenTint, border: `1px solid ${isPaid ? T.bdr : T.greenBdr}`, borderRadius: 4, color: isPaid ? T.t3 : T.green, cursor: "pointer", fontFamily: SANS, fontSize: 11, fontWeight: 600, display: "flex", alignItems: "center", gap: 2 }}>
-                  {isPaid ? <><X size={10} />Unpaid</> : <><Check size={10} />Paid</>}
+              <span style={{ fontFamily: MONO, fontWeight: 600, fontSize: 13, color: T.isDark ? "#C8D6E8" : T.t1, textAlign: "center", fontVariantNumeric: "tabular-nums" }}>{fmt(inv.amount)}</span>
+              <div style={{ display: "flex", justifyContent: "center" }}><StatusBadge status={inv.status} /></div>
+              {!isMobile && <span style={{ fontFamily: MONO, fontSize: 11, color: T.isDark ? "#627488" : T.t2, textAlign: "center", fontVariantNumeric: "tabular-nums" }}>{fmtDate(inv.invoiceDate)}</span>}
+              {!isMobile && <span style={{ fontFamily: MONO, fontSize: 11, color: isOverdue ? "#F87171" : T.isDark ? "#627488" : T.t2, fontWeight: isOverdue ? 600 : 400, textAlign: "center", fontVariantNumeric: "tabular-nums" }}>{inv.dueDate ? fmtDate(inv.dueDate) : "—"}</span>}
+              <div style={{ display: "flex", gap: 4, justifyContent: "flex-end", alignItems: "center" }}>
+                {inv.attachment_path && (
+                  <button onClick={e => { e.stopPropagation(); onViewAttachment?.(inv); }} title="Preview"
+                    style={{ width: 28, height: 28, background: T.isDark ? "rgba(255,255,255,.04)" : T.surf2, border: `1px solid ${T.bdr}`, borderRadius: 6, color: T.t2, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                    <Paperclip size={12} />
+                  </button>
+                )}
+                <button onClick={e => { e.stopPropagation(); onMarkPaid(inv.id); }}
+                  style={{ height: 28, padding: "0 9px", background: isPaid ? (T.isDark ? "rgba(255,255,255,.04)" : T.surf2) : T.greenTint, border: `1px solid ${isPaid ? T.bdr : T.greenBdr}`, borderRadius: 6, color: isPaid ? T.t3 : T.green, cursor: "pointer", fontFamily: SANS, fontSize: 11, fontWeight: 600, display: "flex", alignItems: "center", gap: 3, flexShrink: 0 }}>
+                  {isPaid
+                    ? <><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M3 12a9 9 0 1 0 18 0 9 9 0 0 0-18 0"/><path d="m8 12 3 3 5-5"/></svg>Unpaid</>
+                    : <><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><polyline points="20 6 9 17 4 12"/></svg>Paid</>}
                 </button>
-                {!isMobile && <button onClick={e => { e.stopPropagation(); onEditInvoice?.(inv); }} style={{ padding: "2px 6px", background: "transparent", border: `1px solid ${T.bdr}`, borderRadius: 4, color: T.t2, cursor: "pointer", display: "flex", alignItems: "center" }}><Pencil size={10} /></button>}
-                <button onClick={e => { e.stopPropagation(); if (window.confirm("Delete this invoice?")) onDeleteInvoice?.(inv.id); }} title="Delete" style={{ padding: "2px 6px", background: T.isDark ? "rgba(239,68,68,.06)" : T.redTint, border: `1px solid ${T.isDark ? "rgba(239,68,68,.2)" : T.redBdr}`, borderRadius: 4, color: T.isDark ? "rgba(239,68,68,.7)" : T.red, cursor: "pointer", display: "flex", alignItems: "center" }}>
-                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M9 6V4h6v2"/></svg>
+                {!isMobile && (
+                  <button onClick={e => { e.stopPropagation(); onEditInvoice?.(inv); }} title="Edit"
+                    style={{ width: 28, height: 28, background: T.isDark ? "rgba(255,255,255,.04)" : T.surf2, border: `1px solid ${T.bdr}`, borderRadius: 6, color: T.t2, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                    <Pencil size={12} />
+                  </button>
+                )}
+                <button onClick={e => { e.stopPropagation(); if (window.confirm("Delete this invoice?")) onDeleteInvoice?.(inv.id); }} title="Delete"
+                  style={{ width: 28, height: 28, background: T.isDark ? "rgba(239,68,68,.08)" : T.redTint, border: `1px solid ${T.isDark ? "rgba(239,68,68,.28)" : T.redBdr}`, borderRadius: 6, color: T.isDark ? "rgba(239,68,68,.75)" : T.red, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M9 6V4h6v2"/></svg>
                 </button>
               </div>
             </div>
@@ -1344,68 +1375,92 @@ function InvoicesView({ invoices, selectedMonth, onMonthChange, onMarkPaid, onAd
           onDeleteInvoice={onDeleteInvoice} onAddSupplier={onAddSupplier} />
       ) : (
         <div style={{ background: T.surf, border: `1px solid ${T.bdr}`, borderRadius: 10, overflow: "hidden" }}>
-          <div style={{ display: "grid", gridTemplateColumns: "40px minmax(140px,1fr) 130px 90px 90px 110px 70px 90px 1fr", alignItems: "center", padding: "0 18px", height: 40, background: T.isDark ? "#0E1520" : T.surf2, borderBottom: `1px solid ${T.bdr}` }}>
-            {["", t("inv_col_supplier"), t("inv_col_invoice"), t("inv_col_issued"), t("inv_col_due"), t("inv_col_amount"), "Source", t("inv_col_status"), ""].map((h, i) => (
-              <div key={i} style={{ fontFamily: SANS, fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", color: T.isDark ? "rgba(255,255,255,.3)" : T.t3, textAlign: i === 5 ? "right" : "left", paddingRight: i === 5 ? 14 : 0 }}>{h}</div>
+          {/* Table header */}
+          <div style={{ display: "grid", gridTemplateColumns: "44px minmax(160px,1.6fr) 120px 96px 96px 120px 80px 100px 200px", alignItems: "center", padding: "0 16px", height: 38, background: T.isDark ? "#0A0F1A" : T.surf2, borderBottom: `1px solid ${T.bdr}` }}>
+            {[
+              { label: "", align: "center" },
+              { label: t("inv_col_supplier"), align: "left" },
+              { label: t("inv_col_invoice"), align: "center" },
+              { label: t("inv_col_issued"), align: "center" },
+              { label: t("inv_col_due"), align: "center" },
+              { label: t("inv_col_amount"), align: "right" },
+              { label: "Source", align: "center" },
+              { label: t("inv_col_status"), align: "center" },
+              { label: "", align: "right" },
+            ].map((h, i) => (
+              <div key={i} style={{ fontFamily: SANS, fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", color: T.isDark ? "rgba(255,255,255,.28)" : T.t3, textAlign: h.align }}>{h.label}</div>
             ))}
           </div>
           {filteredInvoices.map(inv => {
             const isSel = selectedIds.has(inv.id);
             const srcInfo = SOURCE_LABELS[inv.sync_source];
             const isAddingSupplier = addingSupplierFor === inv.id;
+            const isPaid = inv.status === "Paid" || inv.status === "paid";
+            const isOverdue = inv.status === "Overdue" || inv.status === "overdue";
             return (
               <div key={inv.id}>
                 <div onClick={() => toggleSelect(inv.id)}
-                  style={{ display: "grid", gridTemplateColumns: "40px minmax(140px,1fr) 130px 90px 90px 110px 70px 90px 1fr", alignItems: "center", padding: "0 18px", height: 52, borderBottom: isAddingSupplier ? "none" : `1px solid ${T.isDark ? "rgba(255,255,255,.04)" : T.bdr}`, background: isSel ? T.indigoTint : "transparent", cursor: "pointer", transition: "background 0.1s" }}
-                  onMouseEnter={e => { if (!isSel) e.currentTarget.style.background = T.isDark ? "rgba(99,102,241,.07)" : T.surf2; }}
+                  style={{ display: "grid", gridTemplateColumns: "44px minmax(160px,1.6fr) 120px 96px 96px 120px 80px 100px 200px", alignItems: "center", padding: "0 16px", height: 54, borderBottom: isAddingSupplier ? "none" : `1px solid ${T.isDark ? "rgba(255,255,255,.04)" : T.bdr}`, background: isSel ? T.indigoTint : "transparent", cursor: "pointer", transition: "background 0.1s" }}
+                  onMouseEnter={e => { if (!isSel) e.currentTarget.style.background = T.isDark ? "rgba(99,102,241,.06)" : T.surf2; }}
                   onMouseLeave={e => { e.currentTarget.style.background = isSel ? T.indigoTint : "transparent"; }}>
+                  {/* Checkbox */}
                   <div style={{ display: "flex", alignItems: "center", justifyContent: "center" }}>
-                    <div style={{ width: 14, height: 14, border: `1.5px solid ${isSel ? T.indigo : T.isDark ? "rgba(255,255,255,.18)" : T.bdr2}`, borderRadius: 3, background: isSel ? T.indigo : "transparent", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                    <div style={{ width: 15, height: 15, border: `1.5px solid ${isSel ? T.indigo : T.isDark ? "rgba(255,255,255,.18)" : T.bdr2}`, borderRadius: 4, background: isSel ? T.indigo : "transparent", display: "flex", alignItems: "center", justifyContent: "center", transition: "all 0.12s" }}>
                       {isSel && <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3.5" strokeLinecap="round"><polyline points="20 6 9 17 4 12"/></svg>}
                     </div>
                   </div>
-                  <div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0 }}>
-                    <div style={{ width: 28, height: 28, borderRadius: "50%", background: invColor(inv.supplier), display: "flex", alignItems: "center", justifyContent: "center", fontFamily: SANS, fontWeight: 700, fontSize: 10, color: "#fff", flexShrink: 0 }}>{(inv.supplier || "?").charAt(0)}</div>
+                  {/* Supplier */}
+                  <div style={{ display: "flex", alignItems: "center", gap: 9, minWidth: 0 }}>
+                    <div style={{ width: 30, height: 30, borderRadius: "50%", background: invColor(inv.supplier), display: "flex", alignItems: "center", justifyContent: "center", fontFamily: SANS, fontWeight: 700, fontSize: 11, color: "#fff", flexShrink: 0 }}>{(inv.supplier || "?").charAt(0)}</div>
                     <div style={{ minWidth: 0 }}>
                       <span style={{ fontFamily: SANS, fontWeight: 500, fontSize: 13, color: T.isDark ? "#B8CAE0" : T.t1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", display: "block" }}>{inv.supplier}</span>
                       {inv.supplier && !inv.supplierMatched && (
-                        <button onClick={e => { e.stopPropagation(); setAddingSupplierFor(isAddingSupplier ? null : inv.id); setNewSupplierTerms("net30"); }} title="Unrecognized supplier — click to add" style={{ display: "inline-flex", alignItems: "center", gap: 3, marginTop: 2, padding: "2px 6px", border: `1px solid ${T.amberBdr}`, borderRadius: 4, background: T.amberTint, cursor: "pointer", fontFamily: SANS, fontSize: 9, fontWeight: 700, color: T.amber, lineHeight: 1.4 }}>
+                        <button onClick={e => { e.stopPropagation(); setAddingSupplierFor(isAddingSupplier ? null : inv.id); setNewSupplierTerms("shotef"); }} title="Unrecognized supplier — click to add" style={{ display: "inline-flex", alignItems: "center", gap: 3, marginTop: 2, padding: "2px 6px", border: `1px solid ${T.amberBdr}`, borderRadius: 4, background: T.amberTint, cursor: "pointer", fontFamily: SANS, fontSize: 9, fontWeight: 700, color: T.amber, lineHeight: 1.4 }}>
                           <AlertTriangle size={8} />New supplier
                         </button>
                       )}
                     </div>
                   </div>
-                  <div style={{ fontFamily: MONO, fontSize: 12, color: T.t2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", paddingRight: 8, fontVariantNumeric: "tabular-nums" }}>{inv.invoiceNo}</div>
-                  <div style={{ fontFamily: MONO, fontSize: 12, color: T.t2, fontVariantNumeric: "tabular-nums" }}>{fmtDate(inv.invoiceDate)}</div>
-                  <div style={{ fontFamily: MONO, fontSize: 12, color: (inv.status === "Overdue" || inv.status === "overdue") ? "#F87171" : T.t2, fontWeight: (inv.status === "Overdue" || inv.status === "overdue") ? 600 : 400, fontVariantNumeric: "tabular-nums" }}>{fmtDate(inv.dueDate)}</div>
-                  <div style={{ fontFamily: MONO, fontSize: 14, fontWeight: 600, color: T.isDark ? "#C8D6E8" : T.t1, textAlign: "right", paddingRight: 14, fontVariantNumeric: "tabular-nums" }}>{fmt(inv.amount)}</div>
-                  <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
-                    <span style={{ fontSize: 11 }}>{srcInfo ? srcInfo.icon : "📤"}</span>
-                    <span style={{ fontFamily: SANS, fontSize: 10, color: T.t3, fontWeight: 500 }}>{srcInfo ? srcInfo.label : "Manual"}</span>
+                  {/* Invoice # */}
+                  <div style={{ fontFamily: MONO, fontSize: 12, color: T.t2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", textAlign: "center", fontVariantNumeric: "tabular-nums" }}>{inv.invoiceNo || "—"}</div>
+                  {/* Issued */}
+                  <div style={{ fontFamily: MONO, fontSize: 12, color: T.t2, textAlign: "center", fontVariantNumeric: "tabular-nums" }}>{fmtDate(inv.invoiceDate)}</div>
+                  {/* Due */}
+                  <div style={{ fontFamily: MONO, fontSize: 12, color: isOverdue ? "#F87171" : T.t2, fontWeight: isOverdue ? 600 : 400, textAlign: "center", fontVariantNumeric: "tabular-nums" }}>{fmtDate(inv.dueDate)}</div>
+                  {/* Amount */}
+                  <div style={{ fontFamily: MONO, fontSize: 14, fontWeight: 600, color: T.isDark ? "#C8D6E8" : T.t1, textAlign: "right", fontVariantNumeric: "tabular-nums" }}>{fmt(inv.amount)}</div>
+                  {/* Source */}
+                  <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 1 }}>
+                    <span style={{ fontSize: 13 }}>{srcInfo ? srcInfo.icon : "📤"}</span>
+                    <span style={{ fontFamily: SANS, fontSize: 9, color: T.t3, fontWeight: 500 }}>{srcInfo ? srcInfo.label : "Manual"}</span>
                   </div>
-                  <StatusBadge status={inv.status} />
-                  <div style={{ display: "flex", justifyContent: "flex-end", gap: 4 }}>
-                    {(() => {
-                      const isPaid = inv.status === "Paid" || inv.status === "paid";
-                      return (
-                        <button
-                          onClick={e => { e.stopPropagation(); onMarkPaid?.(inv.id); }}
-                          title={isPaid ? "Mark as Unpaid" : "Mark as Paid"}
-                          style={{ height: 26, padding: "0 7px", border: `1px solid ${isPaid ? T.bdr : T.greenBdr}`, borderRadius: 6, background: isPaid ? (T.isDark ? "rgba(255,255,255,.03)" : "transparent") : T.greenTint, cursor: "pointer", display: "flex", alignItems: "center", gap: 3, fontFamily: SANS, fontSize: 10, fontWeight: 600, color: isPaid ? T.t3 : T.green }}>
-                          {isPaid ? "↻" : "✓"} {isPaid ? "Unpaid" : "Paid"}
-                        </button>
-                      );
-                    })()}
+                  {/* Status */}
+                  <div style={{ display: "flex", justifyContent: "center" }}>
+                    <StatusBadge status={inv.status} />
+                  </div>
+                  {/* Actions */}
+                  <div style={{ display: "flex", justifyContent: "flex-end", alignItems: "center", gap: 5 }}>
+                    <button
+                      onClick={e => { e.stopPropagation(); onMarkPaid?.(inv.id); }}
+                      title={isPaid ? "Mark as Unpaid" : "Mark as Paid"}
+                      style={{ height: 30, padding: "0 10px", border: `1px solid ${isPaid ? T.bdr : T.greenBdr}`, borderRadius: 7, background: isPaid ? (T.isDark ? "rgba(255,255,255,.04)" : T.surf2) : T.greenTint, cursor: "pointer", display: "flex", alignItems: "center", gap: 4, fontFamily: SANS, fontSize: 11, fontWeight: 600, color: isPaid ? T.t3 : T.green, transition: "all 0.12s", flexShrink: 0 }}>
+                      {isPaid
+                        ? <><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M3 12a9 9 0 1 0 18 0 9 9 0 0 0-18 0"/><path d="m8 12 3 3 5-5"/></svg>Unpaid</>
+                        : <><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><polyline points="20 6 9 17 4 12"/></svg>Paid</>}
+                    </button>
                     {inv.attachment_path && (
-                      <button onClick={e => { e.stopPropagation(); onViewAttachment?.(inv); }} title="Preview" style={{ width: 26, height: 26, border: `1px solid ${T.isDark ? "rgba(255,255,255,.09)" : T.bdr}`, borderRadius: 6, background: T.isDark ? "rgba(255,255,255,.03)" : "transparent", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                        <Paperclip size={11} strokeWidth={1.75} color={T.isDark ? "rgba(255,255,255,.35)" : T.t2} />
+                      <button onClick={e => { e.stopPropagation(); onViewAttachment?.(inv); }} title="Preview attachment"
+                        style={{ width: 30, height: 30, border: `1px solid ${T.bdr}`, borderRadius: 7, background: T.isDark ? "rgba(255,255,255,.04)" : T.surf2, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", transition: "all 0.12s", flexShrink: 0 }}>
+                        <Paperclip size={13} strokeWidth={1.75} color={T.t2} />
                       </button>
                     )}
-                    <button onClick={e => { e.stopPropagation(); onEditInvoice?.(inv); }} title="Edit" style={{ width: 26, height: 26, border: `1px solid ${T.isDark ? "rgba(255,255,255,.09)" : T.bdr}`, borderRadius: 6, background: T.isDark ? "rgba(255,255,255,.03)" : "transparent", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke={T.isDark ? "rgba(255,255,255,.35)" : T.t2} strokeWidth="2" strokeLinecap="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                    <button onClick={e => { e.stopPropagation(); onEditInvoice?.(inv); }} title="Edit invoice"
+                      style={{ width: 30, height: 30, border: `1px solid ${T.bdr}`, borderRadius: 7, background: T.isDark ? "rgba(255,255,255,.04)" : T.surf2, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", transition: "all 0.12s", flexShrink: 0 }}>
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={T.t2} strokeWidth="2" strokeLinecap="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
                     </button>
-                    <button onClick={e => { e.stopPropagation(); if (window.confirm("Delete this invoice?")) onDeleteInvoice?.(inv.id); }} title="Delete" style={{ width: 26, height: 26, border: `1px solid ${T.isDark ? "rgba(239,68,68,.25)" : T.redBdr}`, borderRadius: 6, background: T.isDark ? "rgba(239,68,68,.06)" : T.redTint, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke={T.isDark ? "rgba(239,68,68,.6)" : T.red} strokeWidth="2" strokeLinecap="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+                    <button onClick={e => { e.stopPropagation(); if (window.confirm("Delete this invoice?")) onDeleteInvoice?.(inv.id); }} title="Delete invoice"
+                      style={{ width: 30, height: 30, border: `1px solid ${T.isDark ? "rgba(239,68,68,.3)" : T.redBdr}`, borderRadius: 7, background: T.isDark ? "rgba(239,68,68,.08)" : T.redTint, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", transition: "all 0.12s", flexShrink: 0 }}>
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={T.isDark ? "rgba(239,68,68,.75)" : T.red} strokeWidth="2" strokeLinecap="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>
                     </button>
                   </div>
                 </div>
@@ -1578,7 +1633,7 @@ function SuppliersView({ suppliers, onAdd, onUpdate, onDelete }) {
   const [editData, setEditData] = useState({});
   const [csvToast, setCsvToast] = useState(null);
   const csvRef = useRef(null);
-  const TERMS = ["all", "shotef_plus(45)", "shotef_plus(30)", "shotef", "immediate"];
+  const TERMS = ["all", "shotef_plus(75)", "shotef_plus(45)", "shotef_plus(30)", "shotef", "immediate", "net75", "net45", "net30"];
   const filtered = filterTerm === "all" ? suppliers : suppliers.filter(s => s.terms === filterTerm);
   const inp = { flex: 1, padding: "6px 10px", background: T.surf2, border: `1px solid ${T.bdr}`, borderRadius: 5, fontFamily: SANS, fontSize: 12, color: T.t1, minWidth: 0, outline: "none" };
 
@@ -2238,7 +2293,12 @@ export default function App() {
       if (!key || notifiedJobsRef.current.has(key)) return;
       if (job.done) {
         notifiedJobsRef.current.add(key);
-        addAppNotif({ type: "sync", icon: "✓", text: `${job.integrationId || "Drive"} sync complete — ${job.added ?? 0} invoice${job.added !== 1 ? "s" : ""} added`, ts: Date.now() });
+        const added = job.added ?? 0, dupes = job.dupes ?? 0;
+        const parts = [];
+        if (added > 0) parts.push(`${added} invoice${added !== 1 ? "s" : ""} synced`);
+        else parts.push("No new invoices");
+        if (dupes > 0) parts.push(`${dupes} duplicate${dupes !== 1 ? "s" : ""} skipped`);
+        addAppNotif({ type: "sync", text: `${job.integrationId || "Drive"}: ${parts.join(" · ")}`, ts: Date.now() });
       } else if (job.error) {
         notifiedJobsRef.current.add(key);
         addAppNotif({ type: "error", icon: "⚠", text: `Sync error: ${String(job.error).slice(0, 80)}`, ts: Date.now() });
@@ -2496,7 +2556,14 @@ export default function App() {
                   syncJobs={syncJobs} onStartSync={startSync} onCancelSync={cancelSync}
                   onInvoicesRefresh={refreshInvoices} isAtLimit={isAtLimit} onUpgrade={() => setShowUpgrade(true)}
                   oauthResult={oauthResult} onClearOAuthResult={() => setOauthResult(null)}
-                  onNotificationsRefresh={() => addAppNotif({ type: "sync", icon: "✓", text: "Integration connected successfully", ts: Date.now() })}
+                  onNotificationsRefresh={() => addAppNotif({ type: "sync", text: "Integration connected successfully", ts: Date.now() })}
+                  onSyncResult={({ source, added, dupes, filesFound }) => {
+                    const parts = [];
+                    if (added > 0) parts.push(`${added} invoice${added !== 1 ? "s" : ""} synced`);
+                    else parts.push("No new invoices");
+                    if (dupes > 0) parts.push(`${dupes} duplicate${dupes !== 1 ? "s" : ""} skipped`);
+                    addAppNotif({ type: "sync", text: `${source}: ${parts.join(" · ")}`, ts: Date.now() });
+                  }}
                 />}
                 {view === "suppliers"    && <SuppliersView suppliers={suppliers} onAdd={addSupplier} onUpdate={updateSupplier} onDelete={deleteSupplier} />}
                 {view === "settings"     && <SettingsScreen onUpgrade={() => setShowUpgrade(true)} onSignOut={signOut} user={user} invoices={invoices} suppliers={suppliers} onNavigateToIntegrations={() => setView("integrations")} />}

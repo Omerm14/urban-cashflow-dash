@@ -408,7 +408,7 @@ function GreenInvoiceModal({ onClose, onSave }) {
 
 // ─── Integration card ─────────────────────────────────────────────────────────
 
-function IntegrationCard({ type, integration, onRefresh, onInvoicesRefresh, onNotificationsRefresh, showToast, onConnectModal, onStartSync, onCancelSync, activeSyncJob, isAtLimit, onUpgrade }) {
+function IntegrationCard({ type, integration, onRefresh, onInvoicesRefresh, onNotificationsRefresh, onSyncResult, showToast, onConnectModal, onStartSync, onCancelSync, activeSyncJob, isAtLimit, onUpgrade }) {
   const cfg       = PROVIDERS[type];
   const Icon      = ICONS[type];
   const status    = integration?.status || "disconnected";
@@ -438,6 +438,7 @@ function IntegrationCard({ type, integration, onRefresh, onInvoicesRefresh, onNo
       setHistoryOpen(true);
       if (activeSyncJob.added > 0) onInvoicesRefresh?.();
       onNotificationsRefresh?.();
+      onSyncResult?.({ source: integration?.config?.label || type, added: activeSyncJob.added || 0, dupes: activeSyncJob.dupes || 0, filesFound: activeSyncJob.totalFiles || 0 });
     }
   }, [activeSyncJob?.done]);
 
@@ -532,13 +533,14 @@ function IntegrationCard({ type, integration, onRefresh, onInvoicesRefresh, onNo
         // Progress shown via activeSyncJob / global bottom bar
       } else {
         // Gmail / Green Invoice: result already complete
-        const { added = 0, filesFound = 0, errors = 0 } = res;
+        const { added = 0, skipped = 0, filesFound = 0, errors = 0 } = res;
         let msg;
         if (filesFound === 0 || filesFound == null) msg = "No files found — try a longer lookback window in Settings";
         else if (added === 0) msg = `Found ${filesFound} file${filesFound !== 1 ? "s" : ""} but none were new${errors > 0 ? ` (${errors} failed)` : " (all already imported)"}`;
         else msg = `${added} new invoice${added !== 1 ? "s" : ""} added from ${cfg.label}`;
         showToast(msg, added > 0);
         if (added > 0) { setSyncDone(true); setTimeout(() => setSyncDone(false), 3000); }
+        onSyncResult?.({ source: cfg.label || type, added, dupes: skipped, filesFound });
         onInvoicesRefresh?.();
         onRefresh();
         setEventsRefreshKey(k => k + 1);
@@ -940,7 +942,7 @@ function IntegrationCard({ type, integration, onRefresh, onInvoicesRefresh, onNo
 
 // ─── Main page ────────────────────────────────────────────────────────────────
 
-export default function IntegrationsPage({ oauthResult, onClearOAuthResult, onInvoicesRefresh, onNotificationsRefresh, onStartSync, onCancelSync, syncJobs, isAtLimit, onUpgrade }) {
+export default function IntegrationsPage({ oauthResult, onClearOAuthResult, onInvoicesRefresh, onNotificationsRefresh, onSyncResult, onStartSync, onCancelSync, syncJobs, isAtLimit, onUpgrade }) {
   const [integrations,      setIntegrations]      = useState([]);
   const [loading,           setLoading]           = useState(true);
   const [toast,             setToast]             = useState(null);
@@ -1027,6 +1029,7 @@ export default function IntegrationsPage({ oauthResult, onClearOAuthResult, onIn
               onRefresh={load}
               onInvoicesRefresh={onInvoicesRefresh}
               onNotificationsRefresh={onNotificationsRefresh}
+              onSyncResult={onSyncResult}
               showToast={showToast}
               onConnectModal={handleConnectModal}
               onStartSync={onStartSync}
