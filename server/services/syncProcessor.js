@@ -3,6 +3,7 @@ const crypto     = require('crypto');
 const supabase   = require('../lib/supabase');
 const storage    = require('../lib/storage');
 const { extractFromBuffer } = require('../lib/extraction');
+const { mergeTokenUpdate } = require('../lib/mergeTokenUpdate');
 const { isDriveId } = require('../lib/validate');
 
 // ─── Date / due-date helpers (mirror of src/utils/dates.js) ─────────────────
@@ -219,7 +220,7 @@ const makeOAuth2 = credentials => {
   c.on('tokens', async tokens => {
     await supabase
       .from('integrations')
-      .update({ credentials: { ...credentials, ...tokens } })
+      .update({ credentials: mergeTokenUpdate(credentials, tokens) })
       .eq('user_id', credentials._userId)
       .eq('type', credentials._type);
   });

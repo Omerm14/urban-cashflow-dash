@@ -8,6 +8,10 @@ export default defineConfig({
     include: ['tests/**/*.test.js'],
   },
   plugins: [react()],
+  test: {
+    environment: 'node',
+    include: ['tests/**/*.test.js'],
+  },
   server: {
     proxy: {
       '/api': 'http://localhost:3001',
