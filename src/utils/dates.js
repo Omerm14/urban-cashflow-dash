@@ -12,6 +12,9 @@ export const calcDueDate = (invoiceDate, supplier) => {
   const m = t.match(/shotef_plus\((\d+)\)/);
   if (m) return addDays(endOfMonth(invoiceDate), parseInt(m[1]));
   if (t === "immediate") return new Date(invoiceDate);
+  // net30/45/75: N calendar days after invoice date
+  const netM = t.match(/^net(\d+)$/);
+  if (netM) return addDays(invoiceDate, parseInt(netM[1]));
   return null;
 };
 
