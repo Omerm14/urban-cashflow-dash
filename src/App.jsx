@@ -984,10 +984,33 @@ function Dashboard({ invoices, onPayAllJuly, chartData, supplierNames, supplierC
 // ── Invoices ──────────────────────────────────────────────────────────────────
 const SOURCE_LABELS = { google_drive: { icon: "📁", label: "Drive" }, gmail: { icon: "✉️", label: "Gmail" }, whatsapp: { icon: "💬", label: "WA" }, green_invoice: { icon: "🧾", label: "GI" } };
 
-function SupplierGroup({ supplier, invoices, selectedIds, onToggleSelect, onToggleAll, onMarkPaid, onPayGroup, onEditInvoice, onViewAttachment, anomalyMap, color }) {
+const TERMS_OPTIONS = [
+  { value: "immediate", label: "Immediate" },
+  { value: "net30",     label: "+30" },
+  { value: "net45",     label: "+45" },
+  { value: "net75",     label: "+75" },
+];
+function TermsPicker({ value, onChange }) {
+  const T = useT();
+  const active = TERMS_OPTIONS.find(o => o.value === value)?.value || null;
+  return (
+    <div style={{ display: "flex", background: T.isDark ? "#0D1117" : T.surf2, border: `1px solid ${T.bdr}`, borderRadius: 8, padding: 2, gap: 2, flexShrink: 0 }}>
+      {TERMS_OPTIONS.map(opt => (
+        <button key={opt.value} onClick={() => onChange(opt.value)}
+          style={{ padding: "5px 11px", borderRadius: 6, border: "none", cursor: "pointer", fontFamily: SANS, fontSize: 12, fontWeight: active === opt.value ? 700 : 400, background: active === opt.value ? T.indigo : "transparent", color: active === opt.value ? "#fff" : T.t2, transition: "background 0.15s, color 0.15s", whiteSpace: "nowrap" }}>
+          {opt.label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+function SupplierGroup({ supplier, invoices, selectedIds, onToggleSelect, onToggleAll, onMarkPaid, onPayGroup, onEditInvoice, onViewAttachment, anomalyMap, color, onDeleteInvoice, onAddSupplier }) {
   const T = useT();
   const { isMobile } = useLayout();
   const [hov, setHov] = useState(false);
+  const [addingSupplier, setAddingSupplier] = useState(false);
+  const [newTerms, setNewTerms] = useState("net30");
   const c = color || T.indigo;
   const unpaidIds = invoices.filter(i => i.status !== "Paid" && i.status !== "paid").map(i => i.id);
   const allIds = invoices.map(i => i.id);
@@ -996,15 +1019,23 @@ function SupplierGroup({ supplier, invoices, selectedIds, onToggleSelect, onTogg
   const total = invoices.reduce((s, i) => s + i.amount, 0);
   const checkRef = useRef(null);
   const supplierAnomaly = anomalyMap?.get(supplier);
+  const supplierUnmatched = invoices[0] && invoices[0].supplier && invoices[0].supplierMatched === false;
   useEffect(() => { if (checkRef.current) checkRef.current.indeterminate = someSel; }, [someSel]);
 
   return (
-    <div style={{ background: T.surf, border: `1px solid ${supplierAnomaly ? T.amberBdr : T.bdr}`, borderRadius: 10, marginBottom: 10, overflow: "hidden" }}
+    <div style={{ background: T.surf, border: `1px solid ${supplierUnmatched ? T.amberBdr : supplierAnomaly ? T.amberBdr : T.bdr}`, borderRadius: 10, marginBottom: 10, overflow: "hidden" }}
       onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)}>
-      <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "11px 14px", borderBottom: `1px solid ${T.bdr}`, background: supplierAnomaly ? T.amberTint : "transparent" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "11px 14px", borderBottom: `1px solid ${T.bdr}`, background: supplierUnmatched ? T.amberTint : supplierAnomaly ? T.amberTint : "transparent" }}>
         <input type="checkbox" ref={checkRef} checked={allSel} onChange={() => onToggleAll(allIds)} style={{ accentColor: T.indigo, cursor: "pointer", width: 14, height: 14, flexShrink: 0 }} />
         <div style={{ width: 28, height: 28, borderRadius: "50%", background: c, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: SANS, fontWeight: 700, fontSize: 12, color: "#fff", flexShrink: 0 }}>{supplier.charAt(0)}</div>
         <span style={{ fontFamily: SANS, fontWeight: 600, fontSize: 13, color: T.t1, flex: 1 }}>{supplier}</span>
+        {supplierUnmatched && (
+          <button onClick={e => { e.stopPropagation(); setAddingSupplier(v => !v); setNewTerms("net30"); }}
+            title="Supplier not recognized — click to add"
+            style={{ display: "flex", alignItems: "center", gap: 4, padding: "3px 8px", background: T.amberTint, border: `1px solid ${T.amberBdr}`, borderRadius: 5, color: T.amber, cursor: "pointer", fontFamily: SANS, fontSize: 11, fontWeight: 700, flexShrink: 0 }}>
+            <AlertTriangle size={10} />New supplier
+          </button>
+        )}
         {supplierAnomaly && (
           <span title={`Monthly total is ${supplierAnomaly.deviationPct}% ${supplierAnomaly.direction} than baseline`} style={{ display: "flex", alignItems: "center", gap: 3, padding: "2px 7px", background: T.amberTint, border: `1px solid ${T.amberBdr}`, borderRadius: 4, color: T.amber, fontFamily: SANS, fontSize: 10, fontWeight: 700, cursor: "help" }}>
             <AlertTriangle size={9} />{supplierAnomaly.direction === "higher" ? "↑" : "↓"}{supplierAnomaly.deviationPct}%
@@ -1018,6 +1049,16 @@ function SupplierGroup({ supplier, invoices, selectedIds, onToggleSelect, onTogg
         <span style={{ fontFamily: SANS, fontSize: 11, color: T.t3, background: T.surf2, padding: "2px 7px", borderRadius: 10, fontWeight: 600 }}>{invoices.length}</span>
         <span style={{ fontFamily: MONO, fontWeight: 500, fontSize: 13, color: T.t1 }}>{fmt(total)}</span>
       </div>
+      {addingSupplier && (
+        <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", padding: "10px 14px", background: T.amberTint, borderBottom: `1px solid ${T.amberBdr}` }}>
+          <span style={{ fontFamily: SANS, fontSize: 12, fontWeight: 600, color: T.amber, whiteSpace: "nowrap" }}>Add "{supplier}" as supplier</span>
+          <TermsPicker value={newTerms} onChange={setNewTerms} />
+          <button onClick={async () => { try { await onAddSupplier?.({ name: supplier, terms: newTerms, notes: "" }); setAddingSupplier(false); } catch(e) { console.error(e); } }}
+            style={{ height: 30, padding: "0 12px", background: T.indigo, border: "none", borderRadius: 6, color: "#fff", cursor: "pointer", fontFamily: SANS, fontSize: 12, fontWeight: 600 }}>Save</button>
+          <button onClick={() => setAddingSupplier(false)}
+            style={{ height: 30, padding: "0 10px", background: "transparent", border: `1px solid ${T.bdr2}`, borderRadius: 6, color: T.t2, cursor: "pointer", fontFamily: SANS, fontSize: 12 }}>Cancel</button>
+        </div>
+      )}
       <div style={{ overflowX: isMobile ? "auto" : "visible" }}>
         {invoices.map(inv => {
           const isSel = selectedIds.has(inv.id);
@@ -1044,11 +1085,14 @@ function SupplierGroup({ supplier, invoices, selectedIds, onToggleSelect, onTogg
               {!isMobile && <span style={{ fontFamily: MONO, fontSize: 12, color: T.isDark ? "#627488" : T.t2, fontVariantNumeric: "tabular-nums" }}>{fmtDate(inv.invoiceDate)}</span>}
               {!isMobile && <span style={{ fontFamily: MONO, fontSize: 12, color: (inv.status === "Overdue" || inv.status === "overdue") ? "#F87171" : T.isDark ? "#627488" : T.t2, fontWeight: (inv.status === "Overdue" || inv.status === "overdue") ? 600 : 400, fontVariantNumeric: "tabular-nums" }}>{fmtDate(inv.dueDate)}</span>}
               <div style={{ display: "flex", gap: 4, justifyContent: "flex-end" }}>
-                <button onClick={e => { e.stopPropagation(); onViewAttachment?.(inv); }} title="Preview" style={{ padding: "2px 6px", background: "transparent", border: `1px solid ${T.bdr}`, borderRadius: 4, color: T.t2, cursor: "pointer", display: "flex", alignItems: "center" }}><Paperclip size={10} /></button>
+                {inv.attachment_path && <button onClick={e => { e.stopPropagation(); onViewAttachment?.(inv); }} title="Preview" style={{ padding: "2px 6px", background: "transparent", border: `1px solid ${T.bdr}`, borderRadius: 4, color: T.t2, cursor: "pointer", display: "flex", alignItems: "center" }}><Paperclip size={10} /></button>}
                 <button onClick={e => { e.stopPropagation(); onMarkPaid(inv.id); }} style={{ padding: "2px 7px", background: isPaid ? "transparent" : T.greenTint, border: `1px solid ${isPaid ? T.bdr : T.greenBdr}`, borderRadius: 4, color: isPaid ? T.t3 : T.green, cursor: "pointer", fontFamily: SANS, fontSize: 11, fontWeight: 600, display: "flex", alignItems: "center", gap: 2 }}>
                   {isPaid ? <><X size={10} />Unpaid</> : <><Check size={10} />Paid</>}
                 </button>
                 {!isMobile && <button onClick={e => { e.stopPropagation(); onEditInvoice?.(inv); }} style={{ padding: "2px 6px", background: "transparent", border: `1px solid ${T.bdr}`, borderRadius: 4, color: T.t2, cursor: "pointer", display: "flex", alignItems: "center" }}><Pencil size={10} /></button>}
+                <button onClick={e => { e.stopPropagation(); if (window.confirm("Delete this invoice?")) onDeleteInvoice?.(inv.id); }} title="Delete" style={{ padding: "2px 6px", background: T.isDark ? "rgba(239,68,68,.06)" : T.redTint, border: `1px solid ${T.isDark ? "rgba(239,68,68,.2)" : T.redBdr}`, borderRadius: 4, color: T.isDark ? "rgba(239,68,68,.7)" : T.red, cursor: "pointer", display: "flex", alignItems: "center" }}>
+                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M9 6V4h6v2"/></svg>
+                </button>
               </div>
             </div>
           );
@@ -1064,7 +1108,7 @@ function SupplierGroup({ supplier, invoices, selectedIds, onToggleSelect, onTogg
   );
 }
 
-function GroupedView({ invoices, selectedMonth, onMonthChange, selectedIds, onToggleSelect, onToggleAll, onMarkPaid, onSelectAll, onPayGroup, onAllPaid, onEditInvoice, onViewAttachment, anomalyMap, missingSuppliers }) {
+function GroupedView({ invoices, selectedMonth, onMonthChange, selectedIds, onToggleSelect, onToggleAll, onMarkPaid, onSelectAll, onPayGroup, onAllPaid, onEditInvoice, onViewAttachment, anomalyMap, missingSuppliers, onDeleteInvoice, onAddSupplier }) {
   const T = useT();
   const { isMobile } = useLayout();
   const monthInvoices = invoices.filter(inv => inv.dueDate?.startsWith(selectedMonth));
@@ -1148,7 +1192,7 @@ function GroupedView({ invoices, selectedMonth, onMonthChange, selectedIds, onTo
         <SupplierGroup key={supplier} supplier={supplier} invoices={supInvoices} selectedIds={selectedIds}
           onToggleSelect={onToggleSelect} onToggleAll={onToggleAll} onMarkPaid={onMarkPaid}
           onPayGroup={ids => onSelectAll(ids)} onEditInvoice={onEditInvoice} onViewAttachment={onViewAttachment} anomalyMap={anomalyMap}
-          color={supplierColor(supplier)} />
+          color={supplierColor(supplier)} onDeleteInvoice={onDeleteInvoice} onAddSupplier={onAddSupplier} />
       ))}
     </div>
   );
@@ -1197,7 +1241,7 @@ function InvoicesView({ invoices, selectedMonth, onMonthChange, onMarkPaid, onAd
   useEffect(() => { if (initialSelectedId) setSelectedIds(new Set([initialSelectedId])); }, [initialSelectedId]);
 
   const [addingSupplierFor, setAddingSupplierFor] = useState(null); // inv.id
-  const [newSupplierTerms, setNewSupplierTerms] = useState("");
+  const [newSupplierTerms, setNewSupplierTerms] = useState("net30");
   const toggleSelect = useCallback((id) => { setSelectedIds(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; }); }, []);
   const toggleAll = useCallback((ids) => { setSelectedIds(prev => { const allSel = ids.every(id => prev.has(id)); const n = new Set(prev); if (allSel) ids.forEach(id => n.delete(id)); else ids.forEach(id => n.add(id)); return n; }); }, []);
   const selInvs = invoices.filter(i => selectedIds.has(i.id));
@@ -1272,7 +1316,8 @@ function InvoicesView({ invoices, selectedMonth, onMonthChange, onMarkPaid, onAd
           onMarkPaid={onMarkPaid} onSelectAll={ids => setSelectedIds(new Set(ids))}
           onPayGroup={ids => { setSelectedIds(new Set(ids)); setShowPayConfirm(true); }}
           onAllPaid={() => setShowCelebration(true)} onEditInvoice={onEditInvoice} onViewAttachment={onViewAttachment}
-          anomalyMap={anomalyMap} missingSuppliers={missingSuppliers} />
+          anomalyMap={anomalyMap} missingSuppliers={missingSuppliers}
+          onDeleteInvoice={onDeleteInvoice} onAddSupplier={onAddSupplier} />
       ) : (
         <div style={{ background: T.surf, border: `1px solid ${T.bdr}`, borderRadius: 10, overflow: "hidden" }}>
           <div style={{ display: "grid", gridTemplateColumns: "40px minmax(140px,1fr) 130px 90px 90px 110px 70px 90px 1fr", alignItems: "center", padding: "0 18px", height: 40, background: T.isDark ? "#0E1520" : T.surf2, borderBottom: `1px solid ${T.bdr}` }}>
@@ -1300,7 +1345,9 @@ function InvoicesView({ invoices, selectedMonth, onMonthChange, onMarkPaid, onAd
                     <div style={{ minWidth: 0 }}>
                       <span style={{ fontFamily: SANS, fontWeight: 500, fontSize: 13, color: T.isDark ? "#B8CAE0" : T.t1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", display: "block" }}>{inv.supplier}</span>
                       {inv.supplier && !inv.supplierMatched && (
-                        <button onClick={e => { e.stopPropagation(); setAddingSupplierFor(isAddingSupplier ? null : inv.id); setNewSupplierTerms(""); }} title="Add as supplier" style={{ display: "inline-flex", alignItems: "center", gap: 2, marginTop: 1, padding: "1px 5px", border: `1px solid ${T.indigoBdr}`, borderRadius: 4, background: T.indigoTint, cursor: "pointer", fontFamily: SANS, fontSize: 9, fontWeight: 700, color: T.indigo, lineHeight: 1.4 }}>＋ Add supplier</button>
+                        <button onClick={e => { e.stopPropagation(); setAddingSupplierFor(isAddingSupplier ? null : inv.id); setNewSupplierTerms("net30"); }} title="Unrecognized supplier — click to add" style={{ display: "inline-flex", alignItems: "center", gap: 3, marginTop: 2, padding: "2px 6px", border: `1px solid ${T.amberBdr}`, borderRadius: 4, background: T.amberTint, cursor: "pointer", fontFamily: SANS, fontSize: 9, fontWeight: 700, color: T.amber, lineHeight: 1.4 }}>
+                          <AlertTriangle size={8} />New supplier
+                        </button>
                       )}
                     </div>
                   </div>
@@ -1339,11 +1386,11 @@ function InvoicesView({ invoices, selectedMonth, onMonthChange, onMarkPaid, onAd
                   </div>
                 </div>
                 {isAddingSupplier && (
-                  <div onClick={e => e.stopPropagation()} style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 18px 10px 76px", borderBottom: `1px solid ${T.isDark ? "rgba(255,255,255,.04)" : T.bdr}`, background: T.indigoTint }}>
-                    <span style={{ fontFamily: SANS, fontSize: 12, color: T.indigo, fontWeight: 600, whiteSpace: "nowrap" }}>Add "{inv.supplier}"</span>
-                    <input value={newSupplierTerms} onChange={e => setNewSupplierTerms(e.target.value)} placeholder="Payment terms (e.g. Net 30)" style={{ flex: 1, maxWidth: 220, height: 28, padding: "0 8px", border: `1px solid ${T.indigoBdr}`, borderRadius: 5, background: T.surf, color: T.t1, fontFamily: SANS, fontSize: 12, outline: "none" }} />
-                    <button onClick={async () => { try { await onAddSupplier?.({ name: inv.supplier, terms: newSupplierTerms, notes: "" }); setAddingSupplierFor(null); } catch(e) { console.error(e); } }} style={{ height: 28, padding: "0 12px", background: T.indigo, border: "none", borderRadius: 5, color: "#fff", cursor: "pointer", fontFamily: SANS, fontSize: 12, fontWeight: 600 }}>Save</button>
-                    <button onClick={() => setAddingSupplierFor(null)} style={{ height: 28, padding: "0 10px", background: "transparent", border: `1px solid ${T.bdr2}`, borderRadius: 5, color: T.t2, cursor: "pointer", fontFamily: SANS, fontSize: 12 }}>Cancel</button>
+                  <div onClick={e => e.stopPropagation()} style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", padding: "8px 18px 10px 76px", borderBottom: `1px solid ${T.isDark ? "rgba(255,255,255,.04)" : T.bdr}`, background: T.amberTint }}>
+                    <span style={{ fontFamily: SANS, fontSize: 12, color: T.amber, fontWeight: 600, whiteSpace: "nowrap" }}>Add "{inv.supplier}" as supplier</span>
+                    <TermsPicker value={newSupplierTerms} onChange={setNewSupplierTerms} />
+                    <button onClick={async () => { try { await onAddSupplier?.({ name: inv.supplier, terms: newSupplierTerms, notes: "" }); setAddingSupplierFor(null); } catch(e) { console.error(e); } }} style={{ height: 30, padding: "0 12px", background: T.indigo, border: "none", borderRadius: 6, color: "#fff", cursor: "pointer", fontFamily: SANS, fontSize: 12, fontWeight: 600 }}>Save</button>
+                    <button onClick={() => setAddingSupplierFor(null)} style={{ height: 30, padding: "0 10px", background: "transparent", border: `1px solid ${T.bdr2}`, borderRadius: 6, color: T.t2, cursor: "pointer", fontFamily: SANS, fontSize: 12 }}>Cancel</button>
                   </div>
                 )}
               </div>
@@ -1553,7 +1600,7 @@ function SuppliersView({ suppliers, onAdd, onUpdate, onDelete }) {
               <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                 <div style={{ display: "flex", gap: 7 }}>
                   <input value={editData.name ?? ""} placeholder={t("sup_name")} onChange={e => setEditData(d => ({ ...d, name: e.target.value }))} style={inp} />
-                  <input value={editData.terms ?? ""} placeholder={t("sup_terms")} onChange={e => setEditData(d => ({ ...d, terms: e.target.value }))} style={{ ...inp, maxWidth: 130 }} />
+                  <TermsPicker value={editData.terms || "net30"} onChange={v => setEditData(d => ({ ...d, terms: v }))} />
                 </div>
                 <div style={{ display: "flex", gap: 7 }}>
                   <input value={editData.notes ?? ""} placeholder={t("sup_notes")} onChange={e => setEditData(d => ({ ...d, notes: e.target.value }))} style={inp} />
