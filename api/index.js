@@ -23,9 +23,30 @@ app.post('/api/webhook/whatsapp',
   webhook.handleWhatsApp,
 );
 
+// Stripe webhook also needs the raw body (Stripe-Signature verification) and
+// must be registered before the global json parser — mirrors server/index.js.
+const stripeRoutes = require('../server/routes/stripe');
+app.post('/api/stripe/webhook',
+  express.raw({ type: '*/*', limit: '2mb' }),
+  (req, res, next) => {
+    req.rawBody = Buffer.isBuffer(req.body) ? req.body.toString() : '';
+    try { req.body = req.rawBody ? JSON.parse(req.rawBody) : {}; } catch { req.body = {}; }
+    next();
+  },
+  stripeRoutes.webhook,
+);
+
 app.use(express.json({ limit: '20mb' }));
 
-app.post('/api/extract',    auth, require('../server/routes/extract'));
+// Per-IP rate limits on expensive endpoints — same values as server/index.js
+// (tests/routeParity.test.js keeps the two route tables from drifting again).
+const rateLimit = require('express-rate-limit');
+const extractLimiter   = rateLimit({ windowMs: 60_000,    max: 120, standardHeaders: true, legacyHeaders: false, message: { error: 'Too many requests, please slow down' } });
+const syncLimiter      = rateLimit({ windowMs: 60_000,    max: 10,  standardHeaders: true, legacyHeaders: false, message: { error: 'Too many sync requests, please wait' } });
+const googleApiLimiter = rateLimit({ windowMs: 60_000,    max: 20,  standardHeaders: true, legacyHeaders: false, message: { error: 'Too many requests' } });
+const accountLimiter   = rateLimit({ windowMs: 3_600_000, max: 3,   standardHeaders: true, legacyHeaders: false, message: { error: 'Too many account operations, please wait' } });
+
+app.post('/api/extract',    extractLimiter, auth, require('../server/routes/extract'));
 app.get('/api/admin/usage',      require('../server/routes/admin'));
 
 // Integrations
@@ -34,15 +55,15 @@ app.get('/api/integrations',                        auth, integrations.list);
 app.delete('/api/integrations/:id',                 auth, integrations.remove);
 app.get('/api/integrations/google/auth-url',        auth, integrations.googleAuthUrl);
 app.get('/api/integrations/google/callback',             integrations.googleCallback);
-app.get('/api/integrations/google/folders',         auth, integrations.googleFolders);
-app.get('/api/integrations/google/labels',          auth, integrations.googleLabels);
+app.get('/api/integrations/google/folders',         googleApiLimiter, auth, integrations.googleFolders);
+app.get('/api/integrations/google/labels',          googleApiLimiter, auth, integrations.googleLabels);
 app.get('/api/integrations/:id/events',             auth, integrations.listEvents);
 app.post('/api/integrations/:id/resync',            auth, integrations.resync);
 app.post('/api/integrations/green-invoice',         auth, integrations.connectGreenInvoice);
 app.post('/api/integrations/whatsapp',              auth, integrations.connectWhatsApp);
 app.patch('/api/integrations/:id/config',           auth, integrations.updateConfig);
 app.patch('/api/integrations/:id/auto-sync',        auth, integrations.updateAutoSync);
-app.post('/api/integrations/:id/sync',              auth, integrations.triggerSync);
+app.post('/api/integrations/:id/sync',              syncLimiter, auth, integrations.triggerSync);
 app.post('/api/sync-jobs/:jobId/process',           auth, integrations.processSyncJob);
 app.post('/api/sync-jobs/:jobId/cancel',            auth, integrations.cancelSyncJob);
 app.get('/api/notifications',                       auth, integrations.listNotifications);
@@ -63,9 +84,10 @@ const billing = require('../server/routes/billing');
 app.post('/api/billing/ipn', billing.ipn);
 app.use('/api/billing', auth, billing.router);
 
+// Billing (Stripe — global market; both systems write the subscriptions table)
+app.use('/api/stripe', auth, stripeRoutes.router);
+
 // Account management (strict rate limit — permanent destructive operation)
-const rateLimit = require('express-rate-limit');
-const accountLimiter = rateLimit({ windowMs: 3_600_000, max: 3, standardHeaders: true, legacyHeaders: false, message: { error: 'Too many account operations, please wait' } });
 app.delete('/api/account', accountLimiter, auth, require('../server/routes/account').deleteAccount);
 
 // Cron (secured by CRON_SECRET header)

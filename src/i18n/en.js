@@ -240,6 +240,7 @@ const en = {
   set_delete_undone: "Cannot be undone.",
   set_delete_type: "Type",
   set_delete_perm_btn: "Permanently delete",
+  set_deleting: "Deleting…",
 
   // Notifications (overhaul additions)
   notif_recent: "Recent activity",

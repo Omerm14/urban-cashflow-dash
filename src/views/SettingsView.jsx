@@ -39,6 +39,28 @@ export default function SettingsView({ onUpgrade, onSignOut, user, invoices, sup
   const [pwError, setPwError] = useState("");
   const [deleteInput, setDeleteInput] = useState("");
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState(null);
+
+  // Actually deletes the account server-side (all rows + auth user), then signs out.
+  const handleDeleteAccount = async () => {
+    setDeleting(true); setDeleteError(null);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const res = await fetch("/api/account", {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${session?.access_token}` },
+      });
+      if (!res.ok) {
+        const j = await res.json().catch(() => ({}));
+        throw new Error(j.error || "Failed to delete account");
+      }
+      await onSignOut();
+    } catch (err) {
+      setDeleteError(err.message);
+      setDeleting(false);
+    }
+  };
 
   const SETTINGS_KEY = "urban_cashflow_settings";
   useEffect(() => {
@@ -349,10 +371,11 @@ export default function SettingsView({ onUpgrade, onSignOut, user, invoices, sup
                 <p style={{ fontFamily: SANS, fontSize: 13, color: T.t2, marginBottom: 12, lineHeight: 1.5 }}>{t("set_delete_perm")} <strong style={{ color: T.red }}>{t("set_delete_undone")}</strong></p>
                 <label style={{ fontFamily: SANS, fontSize: 12, color: T.t3, display: "block", marginBottom: 6 }}>{t("set_delete_type")} <strong style={{ fontFamily: MONO, color: T.red }}>DELETE</strong></label>
                 <input value={deleteInput} onChange={e => setDeleteInput(e.target.value)} placeholder="DELETE" style={{ ...inp, marginBottom: 10, border: `1px solid ${T.redBdr}` }} />
+                {deleteError && <div role="alert" style={{ fontFamily: SANS, fontSize: 12, color: T.red, marginBottom: 10 }}>{deleteError}</div>}
                 <div style={{ display: "flex", gap: 8 }}>
-                  <button className="btn btn-ghost" style={{ flex: 1 }} onClick={() => { setShowDeleteConfirm(false); setDeleteInput(""); }}>{t("cancel")}</button>
-                  <button disabled={deleteInput !== "DELETE"} onClick={onSignOut} style={{ flex: 2, padding: "9px 0", background: deleteInput === "DELETE" ? T.red : T.redTint, border: `1px solid ${T.redBdr}`, borderRadius: 6, fontFamily: SANS, fontWeight: 700, fontSize: 13, color: deleteInput === "DELETE" ? "#fff" : T.redBdr, cursor: deleteInput === "DELETE" ? "pointer" : "not-allowed" }}>
-                    {t("set_delete_perm_btn")}
+                  <button className="btn btn-ghost" style={{ flex: 1 }} disabled={deleting} onClick={() => { setShowDeleteConfirm(false); setDeleteInput(""); setDeleteError(null); }}>{t("cancel")}</button>
+                  <button disabled={deleteInput !== "DELETE" || deleting} onClick={handleDeleteAccount} style={{ flex: 2, padding: "9px 0", background: deleteInput === "DELETE" && !deleting ? T.red : T.redTint, border: `1px solid ${T.redBdr}`, borderRadius: 6, fontFamily: SANS, fontWeight: 700, fontSize: 13, color: deleteInput === "DELETE" && !deleting ? "#fff" : T.redBdr, cursor: deleteInput === "DELETE" && !deleting ? "pointer" : "not-allowed" }}>
+                    {deleting ? t("set_deleting") : t("set_delete_perm_btn")}
                   </button>
                 </div>
               </div>

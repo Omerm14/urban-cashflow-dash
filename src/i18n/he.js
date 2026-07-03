@@ -217,6 +217,7 @@ const he = {
   set_delete_undone: "לא ניתן לשחזר.",
   set_delete_type: "הקלידו",
   set_delete_perm_btn: "מחיקה לצמיתות",
+  set_deleting: "מוחק…",
 
   // Notifications bell
   notif_title: "התראות",
