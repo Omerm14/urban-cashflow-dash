@@ -29,6 +29,7 @@ import InvoicesView from "./views/InvoicesView";
 import SuppliersView from "./views/SuppliersView";
 import SettingsView from "./views/SettingsView";
 import OnboardingView from "./views/OnboardingView";
+import ActivityView from "./views/ActivityView";
 
 const currentYM = () => {
   const now = new Date();
@@ -307,7 +308,7 @@ export default function App() {
                     ? <OnboardingView onUploadClick={() => fileRef.current?.click()} onNavigate={setView}
                         extracting={extracting} uploadProgress={uploadProgress}
                         invoices={invoices} onContinue={() => setOnboardingDismissed(true)} />
-                    : <DashboardView invoices={invoices} loading={invoicesLoading} onPayAll={handlePayAll} chartData={chartData} supplierNames={allNames} supplierColor={getSupplierColor} user={user} onMissingAlert={() => setShowMissingModal(true)} onAnomalyAlert={() => setShowAnomalyModal(true)} missingSuppliers={missingSuppliers} anomalyMap={anomalyMap} onViewMonth={handleViewMonth} onNavigateFiltered={(status) => { setView("invoices"); setInitialFilterStatus(status); }} />)}
+                    : <DashboardView invoices={invoices} suppliers={suppliers} loading={invoicesLoading} onPayAll={handlePayAll} chartData={chartData} supplierNames={allNames} supplierColor={getSupplierColor} user={user} onMissingAlert={() => setShowMissingModal(true)} onAnomalyAlert={() => setShowAnomalyModal(true)} missingSuppliers={missingSuppliers} anomalyMap={anomalyMap} onViewMonth={handleViewMonth} onNavigateFiltered={(status) => { setView("invoices"); setInitialFilterStatus(status); }} />)}
                   {view === "invoices" && <InvoicesView invoices={invoices} selectedMonth={selectedMonth} onMonthChange={setSelectedMonth} onMarkPaid={handleMarkPaid} onAddSupplier={addSupplier} onDeleteInvoice={deleteInvoice} onBulkPaid={handleBulkPaid} onBulkUnpaid={handleBulkUnpaid} onBulkDelete={bulkDelete} preSelectAll={preSelectAll} onEditInvoice={setEditInvoice} anomalyMap={anomalyMap} missingSuppliers={missingSuppliers} initialFilterStatus={initialFilterStatus} initialSelectedId={deepLinkInvoiceId} onViewAttachment={handleViewAttachment} supplierColor={getSupplierColor} />}
                   {view === "calendar" && <CalendarView computed={invoices} calMonth={calMonth} setCalMonth={setCalMonth} color={getSupplierColor} />}
                   {view === "integrations" && <IntegrationsPage
@@ -323,6 +324,7 @@ export default function App() {
                       addAppNotif({ type: "sync", text: `${source}: ${parts.join(" · ")}`, ts: Date.now() });
                     }}
                   />}
+                  {view === "activity" && <ActivityView />}
                   {view === "suppliers" && <SuppliersView suppliers={suppliers} onAdd={addSupplier} onUpdate={updateSupplier} onDelete={deleteSupplier} />}
                   {view === "settings" && <SettingsView onUpgrade={() => setShowUpgrade(true)} onSignOut={signOut} user={user} invoices={invoices} suppliers={suppliers} onNavigateToIntegrations={() => setView("integrations")} />}
                   {view === "admin" && <AdminPage />}

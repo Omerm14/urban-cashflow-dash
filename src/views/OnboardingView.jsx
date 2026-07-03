@@ -1,13 +1,16 @@
+import { useState, useEffect } from "react";
 import { useT, useLayout, useLang } from "../contexts/AppContexts";
 import { FONT_UI as SANS, FONT_DISPLAY as DISPLAY, FONT_MONO as MONO } from "../theme";
 import { fmt, fmtDate } from "../utils/format";
+import { apiFetch } from "../lib/api";
 import { Upload, ArrowRight, Check } from "lucide-react";
 
+// `type` matches the integrations table; used to show real connection state.
 const SOURCES = [
-  { id: "gmail", name: "Gmail", glyph: "M", color: "#EA4335", descKey: "ob_gmail_desc" },
-  { id: "drive", name: "Google Drive", glyph: "D", color: "#3987E5", descKey: "ob_drive_desc" },
-  { id: "whatsapp", name: "WhatsApp", glyph: "W", color: "#25D366", descKey: "ob_wa_desc" },
-  { id: "greeninvoice", name: "Green Invoice", glyph: "ח", color: "#3DD6A3", descKey: "ob_gi_desc" },
+  { id: "gmail", type: "gmail", name: "Gmail", glyph: "M", color: "#EA4335", descKey: "ob_gmail_desc" },
+  { id: "drive", type: "google_drive", name: "Google Drive", glyph: "D", color: "#3987E5", descKey: "ob_drive_desc" },
+  { id: "whatsapp", type: "whatsapp", name: "WhatsApp", glyph: "W", color: "#25D366", descKey: "ob_wa_desc" },
+  { id: "greeninvoice", type: "green_invoice", name: "Green Invoice", glyph: "ח", color: "#3DD6A3", descKey: "ob_gi_desc" },
 ];
 
 // First-run experience: shown while the account has no invoices, and through the
@@ -18,6 +21,19 @@ export default function OnboardingView({ onUploadClick, onNavigate, extracting, 
   const { isMobile } = useLayout();
   const firstInvoice = invoices.length > 0 ? invoices[invoices.length - 1] : null;
   const phase = firstInvoice ? "done" : extracting ? "reading" : "connect";
+
+  // Show real connection state on the source cards.
+  const [connectedTypes, setConnectedTypes] = useState(new Set());
+  useEffect(() => {
+    let mounted = true;
+    apiFetch("/api/integrations")
+      .then(({ integrations }) => {
+        if (!mounted || !Array.isArray(integrations)) return;
+        setConnectedTypes(new Set(integrations.filter(i => i.status !== "disconnected").map(i => i.type)));
+      })
+      .catch(() => { /* card links still work without status */ });
+    return () => { mounted = false; };
+  }, []);
 
   return (
     <div style={{ maxWidth: 760, margin: "0 auto", padding: isMobile ? "24px 0 60px" : "48px 0 80px", animation: "slideUp 0.4s cubic-bezier(.16,1,.3,1)" }}>
@@ -49,9 +65,15 @@ export default function OnboardingView({ onUploadClick, onNavigate, extracting, 
                 <span aria-hidden="true" style={{ width: 34, height: 34, borderRadius: 9, background: `${src.color}22`, color: src.color, display: "grid", placeItems: "center", fontFamily: DISPLAY, fontWeight: 700, fontSize: 14 }}>{src.glyph}</span>
                 <span style={{ fontFamily: SANS, fontWeight: 600, fontSize: 13.5, color: T.t1 }}>{src.name}</span>
                 <span style={{ fontFamily: SANS, fontSize: 11.5, color: T.t3, lineHeight: 1.45 }}>{t(src.descKey)}</span>
-                <span style={{ fontFamily: SANS, fontSize: 12, fontWeight: 600, color: T.accent, display: "inline-flex", alignItems: "center", gap: 4, marginTop: 2 }}>
-                  {t("int_connect")} <ArrowRight size={11} aria-hidden="true" />
-                </span>
+                {connectedTypes.has(src.type) ? (
+                  <span style={{ fontFamily: SANS, fontSize: 12, fontWeight: 600, color: T.green, display: "inline-flex", alignItems: "center", gap: 4, marginTop: 2 }}>
+                    <Check size={11} aria-hidden="true" /> {t("int_connected")}
+                  </span>
+                ) : (
+                  <span style={{ fontFamily: SANS, fontSize: 12, fontWeight: 600, color: T.accent, display: "inline-flex", alignItems: "center", gap: 4, marginTop: 2 }}>
+                    {t("int_connect")} <ArrowRight size={11} aria-hidden="true" />
+                  </span>
+                )}
               </button>
             ))}
           </div>

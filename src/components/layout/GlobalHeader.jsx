@@ -11,7 +11,7 @@ export default function GlobalHeader({ view, isDark, onToggleTheme, onToggleLang
   const { t } = useLang();
   const [notifOpen, setNotifOpen] = useState(false);
   const bellRef = useRef(null);
-  const TITLES = { dashboard: t("nav_dashboard"), invoices: t("nav_invoices"), calendar: t("nav_calendar"), integrations: t("nav_integrations"), suppliers: t("nav_suppliers"), settings: t("nav_settings"), admin: t("nav_admin") };
+  const TITLES = { dashboard: t("nav_dashboard"), invoices: t("nav_invoices"), calendar: t("nav_calendar"), integrations: t("nav_integrations"), activity: t("nav_activity"), suppliers: t("nav_suppliers"), settings: t("nav_settings"), admin: t("nav_admin") };
   const totalAlerts = (missingCount || 0) + (anomalyCount || 0);
   const recentAppNotifs = (appNotifs || []).slice(0, 5);
   const totalCount = totalAlerts + recentAppNotifs.length;

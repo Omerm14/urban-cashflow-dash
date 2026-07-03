@@ -1,20 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
-import { supabase } from "../lib/supabase";
+import { apiFetch as sharedApiFetch } from "../lib/api";
 
-const apiFetch = async (path, method = "POST") => {
-  const { data: { session } } = await supabase.auth.getSession();
-  const res = await fetch(path, {
-    method,
-    headers: {
-      "Content-Type": "application/json",
-      ...(session ? { Authorization: `Bearer ${session.access_token}` } : {}),
-    },
-  });
-  let json;
-  try { json = await res.json(); } catch { json = {}; }
-  if (!res.ok) throw new Error(json.error || `Error ${res.status}`);
-  return json;
-};
+const apiFetch = (path, method = "POST") => sharedApiFetch(path, { method });
 
 // job shape: { jobId, totalFiles, filesFound, cursor, added, errors, done, error, integrationId, integrationType }
 

@@ -36,6 +36,20 @@ const he = {
   nav_menu: "תפריט",
   nav_manage: "ניהול",
   nav_sign_out: "התנתקות",
+  nav_activity: "יומן פעילות",
+
+  // Activity (audit trail)
+  act_sub: "כל קובץ שסונכרן אוטומטית, המקור שלו ומה קרה איתו — נתיב ביקורת מלא לרואה החשבון.",
+  act_all: "הכל",
+  act_saved: "נשמר",
+  act_dupe: "כפילות דולגה",
+  act_failed: "נכשל",
+  act_dl_failed: "הורדה נכשלה",
+  act_events: "אירועים",
+  act_empty: "אין פעילות סנכרון עדיין. חברו Gmail, Drive, WhatsApp או חשבונית ירוקה והאירועים יופיעו כאן.",
+  act_empty_filter: "אין אירועים שמתאימים לסינון.",
+  act_unnamed: "קובץ ללא שם",
+  act_sync: "סנכרון",
   plan_label: "מסלול",
   plan_manage: "ניהול",
   plan_usage: "{used} מתוך {limit} חשבוניות",
@@ -53,6 +67,9 @@ const he = {
   kpi_due_30: "לתשלום ב-30 הימים הקרובים",
   kpi_due_30_meta: "{n} חשבוניות מ-{s} ספקים",
   kpi_paid_month: "שולם החודש",
+  kpi_overdue_oldest: "{n} חשבוניות · הוותיקה בת {d} ימים",
+  dash_forecast: "צפי",
+  dash_projected_note: "{month} כולל צפי לספקים קבועים",
 
   // Onboarding
   ob_title: "בואו נתחיל להזרים את החשבוניות",

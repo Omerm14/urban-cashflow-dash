@@ -166,6 +166,20 @@ const en = {
   nav_menu: "Menu",
   nav_manage: "Manage",
   nav_sign_out: "Sign out",
+  nav_activity: "Activity",
+
+  // Activity (audit trail)
+  act_sub: "Every auto-synced file, its origin, and what happened to it — your accountant's paper trail.",
+  act_all: "All",
+  act_saved: "Saved",
+  act_dupe: "Duplicate skipped",
+  act_failed: "Failed",
+  act_dl_failed: "Download failed",
+  act_events: "events",
+  act_empty: "No sync activity yet. Connect Gmail, Drive, WhatsApp, or Green Invoice and events will appear here.",
+  act_empty_filter: "No events match this filter.",
+  act_unnamed: "Unnamed file",
+  act_sync: "Sync",
   plan_label: "Plan",
   plan_manage: "Manage",
   plan_usage: "{used} of {limit} invoices",
@@ -183,6 +197,9 @@ const en = {
   kpi_due_30: "Due Next 30 Days",
   kpi_due_30_meta: "{n} invoices from {s} suppliers",
   kpi_paid_month: "Paid This Month",
+  kpi_overdue_oldest: "{n} invoices · oldest {d} days",
+  dash_forecast: "Forecast",
+  dash_projected_note: "{month} includes a recurring-supplier forecast",
 
   // Onboarding
   ob_title: "Let's get your invoices flowing",

@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo, useRef } from "react";
 import { useT, useLayout, useLang } from "../contexts/AppContexts";
 import { FONT_UI as SANS, FONT_DISPLAY as DISPLAY, FONT_MONO as MONO } from "../theme";
 import { fmt, MONTHS_SHORT } from "../utils/format";
+import { projectMonth } from "../utils/projection";
 import { ChevronRight } from "lucide-react";
 import {
   ComposedChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
@@ -132,7 +133,7 @@ function DashboardSkeleton({ isMobile }) {
   );
 }
 
-export default function DashboardView({ invoices, loading, onPayAll, chartData, supplierNames, supplierColor, user, onMissingAlert, onAnomalyAlert, missingSuppliers, anomalyMap, onViewMonth, onNavigateFiltered }) {
+export default function DashboardView({ invoices, suppliers, loading, onPayAll, chartData, supplierNames, supplierColor, user, onMissingAlert, onAnomalyAlert, missingSuppliers, anomalyMap, onViewMonth, onNavigateFiltered }) {
   const T = useT();
   const { t, lang } = useLang();
   const { isMobile, isTablet } = useLayout();
@@ -180,6 +181,11 @@ export default function DashboardView({ invoices, loading, onPayAll, chartData, 
     const dueThisWeekTotal = dueThisWeek.filter(isUnpaid).reduce((s, i) => s + Number(i.amount), 0);
 
     const attention = overdueInvs.length;
+    const oldestOverdueDays = overdueInvs.reduce((max, i) => {
+      if (!i.dueDate) return max;
+      const days = Math.floor((now - new Date(i.dueDate + "T12:00:00")) / 86_400_000);
+      return Math.max(max, days);
+    }, 0);
 
     const currentMonthInvoices = invoices.filter(i => (i.invoice_date || i.invoiceDate || i.dueDate || "").startsWith(currentYM) && isUnpaid(i));
 
@@ -191,7 +197,7 @@ export default function DashboardView({ invoices, loading, onPayAll, chartData, 
       due30Count: due30Invs.length,
       due30Suppliers: new Set(due30Invs.map(i => i.supplier)).size,
       paidThisMonth, paidDelta,
-      dueSeries, paidSeries, dueThisWeek, dueThisWeekTotal, attention,
+      dueSeries, paidSeries, dueThisWeek, dueThisWeekTotal, attention, oldestOverdueDays,
       currentMonthTotal: currentMonthInvoices.reduce((s, i) => s + Number(i.amount || 0), 0),
       currentMonthSuppliers: new Set(currentMonthInvoices.map(i => i.supplier)).size,
     };
@@ -207,24 +213,47 @@ export default function DashboardView({ invoices, loading, onPayAll, chartData, 
   // legend becomes noise. Keep the 7 biggest suppliers as series and fold the
   // rest into a neutral "Other" stack segment.
   const OTHER = t("dash_other");
+  const FORECAST = t("dash_forecast");
+  // Next month = committed invoices + recurring-supplier forecast, drawn as a
+  // visually distinct (tinted, outlined) segment so it never reads as actuals.
+  const projection = useMemo(() => {
+    const d = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+    const nextYM = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+    const nextLabel = `${MONTHS_SHORT[d.getMonth()]} '${String(d.getFullYear()).slice(2)}`;
+    return { ...projectMonth(invoices, nextYM), nextLabel };
+  }, [invoices]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const { chartSuppliers, resolvedChartData } = useMemo(() => {
-    const data = chartData && chartData.length > 0 ? chartData : [];
+    let data = chartData && chartData.length > 0 ? [...chartData] : [];
     const names = supplierNames || [];
-    if (names.length <= 8) return { chartSuppliers: names, resolvedChartData: data };
-    const totals = {};
-    data.forEach(m => names.forEach(n => { if (m[n]) totals[n] = (totals[n] || 0) + m[n]; }));
-    const top = [...names].sort((a, b) => (totals[b] || 0) - (totals[a] || 0)).slice(0, 7);
-    const topSet = new Set(top);
-    const rolled = data.map(m => {
-      const row = { month: m.month, total: m.total };
-      let other = 0;
-      names.forEach(n => { if (!m[n]) return; if (topSet.has(n)) row[n] = m[n]; else other += m[n]; });
-      if (other > 0) row[OTHER] = other;
-      return row;
-    });
-    return { chartSuppliers: [...top, OTHER], resolvedChartData: rolled };
-  }, [chartData, supplierNames, OTHER]);
-  const getColor = (name) => (name === OTHER ? T.t3 : baseColor(name));
+    let suppliers = names, rows = data;
+    if (names.length > 8) {
+      const totals = {};
+      data.forEach(m => names.forEach(n => { if (m[n]) totals[n] = (totals[n] || 0) + m[n]; }));
+      const top = [...names].sort((a, b) => (totals[b] || 0) - (totals[a] || 0)).slice(0, 7);
+      const topSet = new Set(top);
+      rows = data.map(m => {
+        const row = { month: m.month, total: m.total };
+        let other = 0;
+        names.forEach(n => { if (!m[n]) return; if (topSet.has(n)) row[n] = m[n]; else other += m[n]; });
+        if (other > 0) row[OTHER] = other;
+        return row;
+      });
+      suppliers = [...top, OTHER];
+    } else {
+      rows = data.map(m => ({ ...m }));
+    }
+    // Attach the forecast to next month's row (creating it if no invoice is
+    // committed there yet).
+    if (projection.forecast > 0) {
+      let row = rows.find(r => r.month === projection.nextLabel);
+      if (!row) { row = { month: projection.nextLabel, total: 0 }; rows.push(row); }
+      row[FORECAST] = projection.forecast;
+      row.total = (row.total || 0) + projection.forecast;
+    }
+    return { chartSuppliers: suppliers, resolvedChartData: rows };
+  }, [chartData, supplierNames, OTHER, FORECAST, projection]);
+  const getColor = (name) => (name === OTHER ? T.t3 : name === FORECAST ? T.accentDeep : baseColor(name));
   const focusedIdx = focusedMonth ? resolvedChartData.findIndex(m => m.month === focusedMonth) : -1;
 
   if (loading) return <DashboardSkeleton isMobile={isMobile} />;
@@ -282,7 +311,11 @@ export default function DashboardView({ invoices, loading, onPayAll, chartData, 
           spark={stats.dueSeries} sparkColor={T.accentDeep}
           onClick={() => onNavigateFiltered?.("Unpaid")} />
         <KPITile label={t("kpi_overdue")} value={stats.overdue} valueColor={T.red} delay={0.06}
-          meta={stats.overdueCount > 0 ? `${stats.overdueCount} ${t("kpi_invoices")} · ${t("kpi_need_action")}` : t("notif_all_clear")}
+          meta={stats.overdueCount > 0
+            ? (stats.oldestOverdueDays > 0
+              ? t("kpi_overdue_oldest", { n: stats.overdueCount, d: stats.oldestOverdueDays })
+              : `${stats.overdueCount} ${t("kpi_invoices")} · ${t("kpi_need_action")}`)
+            : t("notif_all_clear")}
           onClick={() => onNavigateFiltered?.("Overdue")} />
         <KPITile label={t("kpi_due_30")} value={stats.due30} delay={0.12}
           meta={t("kpi_due_30_meta", { n: stats.due30Count, s: stats.due30Suppliers })} />
@@ -323,7 +356,10 @@ export default function DashboardView({ invoices, loading, onPayAll, chartData, 
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 18, flexWrap: "wrap", gap: 8 }}>
             <div>
               <div style={{ fontFamily: DISPLAY, fontWeight: 700, fontSize: 14.5, color: T.t1, letterSpacing: "-0.015em" }}>{t("dash_payment_schedule")}</div>
-              <div style={{ fontFamily: SANS, fontSize: 12, color: T.t3, marginTop: 3 }}>{t("dash_upcoming")}</div>
+              <div style={{ fontFamily: SANS, fontSize: 12, color: T.t3, marginTop: 3 }}>
+                {t("dash_upcoming")}
+                {projection.forecast > 0 && <> · {t("dash_projected_note", { month: projection.nextLabel })}</>}
+              </div>
             </div>
             <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
               {chartRange === "monthly" && resolvedChartData.length > 0 && (
@@ -392,11 +428,16 @@ export default function DashboardView({ invoices, loading, onPayAll, chartData, 
                       radius={i === chartSuppliers.length - 1 ? [3, 3, 0, 0] : [0, 0, 0, 0]}
                       animationDuration={600} animationEasing="ease-out" />
                   ))}
+                  {projection.forecast > 0 && (
+                    <Bar dataKey={FORECAST} stackId="a" fill={T.accentTint} stroke={T.accentDeep}
+                      strokeDasharray="4 3" radius={[3, 3, 0, 0]}
+                      animationDuration={600} animationEasing="ease-out" />
+                  )}
                 </ComposedChart>
               </ResponsiveContainer>
             );
           })()}
-          {chartSuppliers.length > 1 && (
+          {(chartSuppliers.length > 1 || projection.forecast > 0) && (
             <div style={{ display: "flex", flexWrap: "wrap", gap: 10, marginTop: 14, paddingTop: 12, borderTop: `1px solid ${T.bdr}` }}>
               {chartSuppliers.map(n => (
                 <div key={n} style={{ display: "flex", alignItems: "center", gap: 6 }}>
@@ -404,6 +445,12 @@ export default function DashboardView({ invoices, loading, onPayAll, chartData, 
                   <span style={{ fontFamily: SANS, fontSize: 11, color: T.t2, maxWidth: 90, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{n}</span>
                 </div>
               ))}
+              {projection.forecast > 0 && (
+                <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                  <span style={{ width: 8, height: 8, borderRadius: 2, background: T.accentTint, border: `1.5px dashed ${T.accentDeep}`, flexShrink: 0 }} />
+                  <span style={{ fontFamily: SANS, fontSize: 11, color: T.t2 }}>{FORECAST}</span>
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -419,13 +466,17 @@ export default function DashboardView({ invoices, loading, onPayAll, chartData, 
               {t("dash_week_clear")}
             </div>
           )}
-          {stats.dueThisWeek.map((inv, i) => (
+          {stats.dueThisWeek.map((inv, i) => {
+            const terms = (suppliers || []).find(s => s.name === inv.supplier)?.terms;
+            const prettyTerms = terms ? terms.replace("shotef_plus(", "+").replace(")", "") : null;
+            return (
             <div key={inv.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 0", borderTop: i > 0 ? `1px solid ${T.bdr}` : "none" }}>
-              <span style={{ width: 8, height: 8, borderRadius: "50%", background: getColor(inv.supplier), flexShrink: 0 }} aria-hidden="true" />
+              <span style={{ width: 8, height: 8, borderRadius: "50%", background: baseColor(inv.supplier), flexShrink: 0 }} aria-hidden="true" />
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontFamily: SANS, fontSize: 13, fontWeight: 600, color: T.t1, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{inv.supplier}</div>
                 <div style={{ fontFamily: SANS, fontSize: 11, color: T.t3, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
                   {inv.dueDate ? new Date(inv.dueDate + "T12:00:00").toLocaleDateString(locale, { weekday: "short", month: "short", day: "numeric" }) : "—"}
+                  {prettyTerms && <> · {prettyTerms}</>}
                 </div>
               </div>
               <span className="num" style={{ fontSize: 13, color: T.t1 }}>{fmt(inv.amount)}</span>
@@ -433,7 +484,8 @@ export default function DashboardView({ invoices, loading, onPayAll, chartData, 
                 <i aria-hidden="true" />{isOverdue(inv) ? t("inv_overdue") : isPaid(inv) ? t("inv_paid") : t("inv_unpaid")}
               </span>
             </div>
-          ))}
+            );
+          })}
         </div>
       </div>
 

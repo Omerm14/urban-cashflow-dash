@@ -1,24 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "../lib/supabase";
-
-// ─── API helpers ─────────────────────────────────────────────────────────────
-
-const apiFetch = async (path, opts = {}) => {
-  const { data: { session } } = await supabase.auth.getSession();
-  const res = await fetch(path, {
-    ...opts,
-    headers: {
-      "Content-Type": "application/json",
-      ...(session ? { Authorization: `Bearer ${session.access_token}` } : {}),
-      ...(opts.headers || {}),
-    },
-    body: opts.body ? JSON.stringify(opts.body) : undefined,
-  });
-  let json;
-  try { json = await res.json(); } catch { json = {}; }
-  if (!res.ok) throw new Error(json.error || `Server error (${res.status}) — please try again`);
-  return json;
-};
+import { apiFetch } from "../lib/api";
 
 // ─── Brand SVG icons ─────────────────────────────────────────────────────────
 
