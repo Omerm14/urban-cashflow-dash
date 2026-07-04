@@ -7,6 +7,7 @@ import { useSyncJob } from "./hooks/useSyncJob";
 import { useUpload } from "./hooks/useUpload";
 import { useNotifications } from "./hooks/useNotifications";
 import { useIntegrationErrors } from "./hooks/useIntegrationErrors";
+import { useIsAdmin } from "./hooks/useIsAdmin";
 import { ThemeCtx, LayoutCtx, LangCtx } from "./contexts/AppContexts";
 import { NIGHT, DAY, FONT_UI as SANS, chartPalette } from "./theme";
 import { MONTHS_SHORT } from "./utils/format";
@@ -97,6 +98,7 @@ export default function App() {
   const { jobs: syncJobs, startSync, cancelSync, activeJob } = useSyncJob({ onBatchDone: refreshInvoices });
   const { notifications: persistedNotifs, unreadCount, markAllRead, refresh: refreshNotifications } = useNotifications();
   const { hasError: hasIntegrationError, refresh: refreshIntegrationErrors } = useIntegrationErrors();
+  const isAdmin = useIsAdmin();
 
   const addAppNotif = useCallback((notif) => {
     setAppNotifs(prev => [{ ...notif, id: Date.now() + Math.random() }, ...prev].slice(0, 20));
@@ -295,7 +297,7 @@ export default function App() {
               onUpgrade={() => setShowUpgrade(true)} onUpload={() => fileRef.current?.click()}
               mobileOpen={mobileMenuOpen} setMobileOpen={setMobileMenuOpen}
               plan={plan} planUsed={planUsed} planLimit={planLimit} planPct={planPct} user={user} onSignOut={signOut}
-              integrationError={hasIntegrationError} />
+              integrationError={hasIntegrationError} isAdmin={isAdmin} />
 
             <div style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0 }}>
               <GlobalHeader view={view} isDark={isDark} onToggleTheme={() => setIsDark(v => !v)} onToggleLang={() => setLang(l => l === "he" ? "en" : "he")} lang={lang} onMenuOpen={() => setMobileMenuOpen(true)} onMissingAlert={() => setShowMissingModal(true)} onAnomalyAlert={() => setShowAnomalyModal(true)} missingCount={missingSuppliers?.length || 0} anomalyCount={anomalyMap?.size || 0} appNotifs={appNotifs} onClearAppNotifs={() => setAppNotifs([])} onSearchOpen={() => setShowSearch(true)} notifications={persistedNotifs} unreadCount={unreadCount} onOpenNotifications={refreshNotifications} onMarkAllRead={markAllRead} onViewActivity={() => setView("activity")} />
@@ -327,7 +329,7 @@ export default function App() {
                   {view === "activity" && <ActivityView />}
                   {view === "suppliers" && <SuppliersView suppliers={suppliers} loading={invoicesLoading} onAdd={addSupplier} onUpdate={updateSupplier} onDelete={deleteSupplier} />}
                   {view === "settings" && <SettingsView onUpgrade={() => setShowUpgrade(true)} onSignOut={signOut} user={user} invoices={invoices} suppliers={suppliers} onNavigateToIntegrations={() => setView("integrations")} />}
-                  {view === "admin" && <AdminPage />}
+                  {view === "admin" && isAdmin && <AdminPage />}
                 </div>
               </main>
             </div>

@@ -14,7 +14,7 @@ export function BrandMark({ size = 28 }) {
   );
 }
 
-export default function Sidebar({ view, setView, suppliersCount, onUpgrade, onUpload, mobileOpen, setMobileOpen, plan, planUsed, planLimit, planPct, user, onSignOut, integrationError }) {
+export default function Sidebar({ view, setView, suppliersCount, onUpgrade, onUpload, mobileOpen, setMobileOpen, plan, planUsed, planLimit, planPct, user, onSignOut, integrationError, isAdmin }) {
   const T = useT();
   const { isMobile, isTablet } = useLayout();
   const { t } = useLang();
@@ -75,7 +75,7 @@ export default function Sidebar({ view, setView, suppliersCount, onUpgrade, onUp
         <div style={{ height: 1, background: T.bdr, margin: "10px 2px" }} />
         <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.1em", color: T.t3, padding: "4px 12px 8px", textTransform: "uppercase", fontFamily: SANS }}>{t("nav_manage")}</div>
         <NavItem id="suppliers" label={t("nav_suppliers")} Icon={Users} badge={suppliersCount} />
-        {user?.user_metadata?.role === "admin" && <NavItem id="admin" label={t("nav_admin")} Icon={Settings} />}
+        {isAdmin && <NavItem id="admin" label={t("nav_admin")} Icon={Settings} />}
 
         <div style={{ flex: 1 }} />
 
