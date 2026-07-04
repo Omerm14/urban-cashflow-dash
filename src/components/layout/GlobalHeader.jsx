@@ -1,11 +1,26 @@
 import { useState, useEffect, useRef } from "react";
 import { useT, useLayout, useLang } from "../../contexts/AppContexts";
 import { FONT_UI as SANS } from "../../theme";
+import { SOURCE_NAMES } from "../../views/ActivityView";
 import {
   Bell, Menu, Sun, Moon, AlertTriangle, TrendingUp, ChevronRight, RefreshCw,
 } from "lucide-react";
 
-export default function GlobalHeader({ view, isDark, onToggleTheme, onToggleLang, lang, onMenuOpen, onMissingAlert, onAnomalyAlert, missingCount, anomalyCount, appNotifs, onClearAppNotifs, onSearchOpen }) {
+// Normalizes a persisted /api/notifications item (either a grouped `sync_summary` or a
+// single sync_events row) into the same {id, type, text, ts} shape appNotifs entries use.
+function normalizePersisted(n, t) {
+  const ts = new Date(n.created_at).getTime();
+  const source = SOURCE_NAMES[n.integration_type] || n.integration_type || "";
+  if (n.type === "sync_summary") {
+    return { id: n.id, type: "sync", text: `${source}: ${t("notif_sync_count", { n: n.count })}`, ts };
+  }
+  if (n.event_type === "ocr_failed" || n.event_type === "download_failed") {
+    return { id: n.id, type: "error", text: `${n.source_file || source}: ${n.error_message || t("act_failed")}`, ts };
+  }
+  return { id: n.id, type: "sync", text: n.source_file || source, ts };
+}
+
+export default function GlobalHeader({ view, isDark, onToggleTheme, onToggleLang, lang, onMenuOpen, onMissingAlert, onAnomalyAlert, missingCount, anomalyCount, appNotifs, onClearAppNotifs, onSearchOpen, notifications, unreadCount, onOpenNotifications, onMarkAllRead, onViewActivity }) {
   const T = useT();
   const { isMobile, isTablet } = useLayout();
   const { t } = useLang();
@@ -13,8 +28,10 @@ export default function GlobalHeader({ view, isDark, onToggleTheme, onToggleLang
   const bellRef = useRef(null);
   const TITLES = { dashboard: t("nav_dashboard"), invoices: t("nav_invoices"), calendar: t("nav_calendar"), integrations: t("nav_integrations"), activity: t("nav_activity"), suppliers: t("nav_suppliers"), settings: t("nav_settings"), admin: t("nav_admin") };
   const totalAlerts = (missingCount || 0) + (anomalyCount || 0);
-  const recentAppNotifs = (appNotifs || []).slice(0, 5);
-  const totalCount = totalAlerts + recentAppNotifs.length;
+  const recentAppNotifs = [...(notifications || []).map(n => normalizePersisted(n, t)), ...(appNotifs || [])]
+    .sort((a, b) => b.ts - a.ts)
+    .slice(0, 6);
+  const totalCount = totalAlerts + (unreadCount || 0) + (appNotifs?.length || 0);
 
   useEffect(() => {
     if (!notifOpen) return;
@@ -48,7 +65,7 @@ export default function GlobalHeader({ view, isDark, onToggleTheme, onToggleLang
       </button>
 
       <div ref={bellRef} style={{ position: "relative" }}>
-        <button className="hd-btn" onClick={() => setNotifOpen(v => !v)} aria-label={t("notif_title")} aria-expanded={notifOpen}
+        <button className="hd-btn" onClick={() => setNotifOpen(v => { if (!v) onOpenNotifications?.(); return !v; })} aria-label={t("notif_title")} aria-expanded={notifOpen}
           style={{ position: "relative", background: notifOpen ? T.surf2 : "transparent" }}>
           <Bell size={14} />
           {totalCount > 0 && (
@@ -137,6 +154,12 @@ export default function GlobalHeader({ view, isDark, onToggleTheme, onToggleLang
                   </div>
                 );
               })}
+              <button onClick={() => { onMarkAllRead?.(); setNotifOpen(false); onViewActivity?.(); }}
+                style={{ width: "100%", padding: "10px 14px", background: "transparent", border: "none", borderTop: `1px solid ${T.bdr}`, cursor: "pointer", textAlign: "center", fontFamily: SANS, fontSize: 12, fontWeight: 600, color: T.accent }}
+                onMouseEnter={e => e.currentTarget.style.background = T.surf2}
+                onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
+                {t("notif_view_all")}
+              </button>
             </div>
           </div>
         )}

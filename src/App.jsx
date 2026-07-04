@@ -5,6 +5,8 @@ import { useInvoiceData } from "./hooks/useInvoiceData";
 import { usePlan } from "./hooks/usePlan";
 import { useSyncJob } from "./hooks/useSyncJob";
 import { useUpload } from "./hooks/useUpload";
+import { useNotifications } from "./hooks/useNotifications";
+import { useIntegrationErrors } from "./hooks/useIntegrationErrors";
 import { ThemeCtx, LayoutCtx, LangCtx } from "./contexts/AppContexts";
 import { NIGHT, DAY, FONT_UI as SANS, chartPalette } from "./theme";
 import { MONTHS_SHORT } from "./utils/format";
@@ -63,6 +65,8 @@ export default function App() {
   const [showAnomalyModal, setShowAnomalyModal] = useState(false);
   const [previewAttachment, setPreviewAttachment] = useState(null);
   const [showSearch, setShowSearch] = useState(false);
+  // Manual-upload feedback only — sync/integration events are persisted server-side
+  // and surfaced via useNotifications() instead (uploads have no integration to attach to).
   const [appNotifs, setAppNotifs] = useState([]);
   const [oauthResult, setOauthResult] = useState(null);
   const [onboardingDismissed, setOnboardingDismissed] = useState(false);
@@ -91,6 +95,8 @@ export default function App() {
 
   const { plan, used: planUsed, limit: planLimit, pct: planPct, isAtLimit, refresh: refreshPlan } = usePlan();
   const { jobs: syncJobs, startSync, cancelSync, activeJob } = useSyncJob({ onBatchDone: refreshInvoices });
+  const { notifications: persistedNotifs, unreadCount, markAllRead, refresh: refreshNotifications } = useNotifications();
+  const { hasError: hasIntegrationError, refresh: refreshIntegrationErrors } = useIntegrationErrors();
 
   const addAppNotif = useCallback((notif) => {
     setAppNotifs(prev => [{ ...notif, id: Date.now() + Math.random() }, ...prev].slice(0, 20));
@@ -135,25 +141,24 @@ export default function App() {
     }
   }, []);
 
-  // Sync-job completion notifications
+  // Sync-job completion — refresh the persisted notification list (sync_events already
+  // has this recorded server-side; no need to also push an ephemeral duplicate).
   useEffect(() => {
     Object.values(syncJobs).forEach(job => {
       const key = job.jobId || job.integrationId;
       if (!key || notifiedJobsRef.current.has(key)) return;
-      if (job.done) {
+      if (job.done || job.error) {
         notifiedJobsRef.current.add(key);
-        const added = job.added ?? 0, dupes = job.dupes ?? 0;
-        const parts = [];
-        if (added > 0) parts.push(`${added} invoice${added !== 1 ? "s" : ""} synced`);
-        else parts.push("No new invoices");
-        if (dupes > 0) parts.push(`${dupes} duplicate${dupes !== 1 ? "s" : ""} skipped`);
-        addAppNotif({ type: "sync", text: `${job.integrationId || "Drive"}: ${parts.join(" · ")}`, ts: Date.now() });
-      } else if (job.error) {
-        notifiedJobsRef.current.add(key);
-        addAppNotif({ type: "error", icon: "⚠", text: `Sync error: ${String(job.error).slice(0, 80)}`, ts: Date.now() });
+        refreshNotifications();
       }
     });
-  }, [syncJobs, addAppNotif]);
+  }, [syncJobs, refreshNotifications]);
+
+  // Integration errors surface on the sidebar — refresh whenever the user leaves that
+  // page (e.g. after fixing/reconnecting), without a general-purpose polling loop.
+  useEffect(() => {
+    if (view !== "integrations") refreshIntegrationErrors();
+  }, [view, refreshIntegrationErrors]);
 
   // First-run detection: account had zero invoices when data first loaded
   useEffect(() => {
@@ -289,10 +294,11 @@ export default function App() {
             <Sidebar view={view} setView={setView} suppliersCount={suppliers.length}
               onUpgrade={() => setShowUpgrade(true)} onUpload={() => fileRef.current?.click()}
               mobileOpen={mobileMenuOpen} setMobileOpen={setMobileMenuOpen}
-              plan={plan} planUsed={planUsed} planLimit={planLimit} planPct={planPct} user={user} onSignOut={signOut} />
+              plan={plan} planUsed={planUsed} planLimit={planLimit} planPct={planPct} user={user} onSignOut={signOut}
+              integrationError={hasIntegrationError} />
 
             <div style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0 }}>
-              <GlobalHeader view={view} isDark={isDark} onToggleTheme={() => setIsDark(v => !v)} onToggleLang={() => setLang(l => l === "he" ? "en" : "he")} lang={lang} onMenuOpen={() => setMobileMenuOpen(true)} onMissingAlert={() => setShowMissingModal(true)} onAnomalyAlert={() => setShowAnomalyModal(true)} missingCount={missingSuppliers?.length || 0} anomalyCount={anomalyMap?.size || 0} appNotifs={appNotifs} onClearAppNotifs={() => setAppNotifs([])} onSearchOpen={() => setShowSearch(true)} />
+              <GlobalHeader view={view} isDark={isDark} onToggleTheme={() => setIsDark(v => !v)} onToggleLang={() => setLang(l => l === "he" ? "en" : "he")} lang={lang} onMenuOpen={() => setMobileMenuOpen(true)} onMissingAlert={() => setShowMissingModal(true)} onAnomalyAlert={() => setShowAnomalyModal(true)} missingCount={missingSuppliers?.length || 0} anomalyCount={anomalyMap?.size || 0} appNotifs={appNotifs} onClearAppNotifs={() => setAppNotifs([])} onSearchOpen={() => setShowSearch(true)} notifications={persistedNotifs} unreadCount={unreadCount} onOpenNotifications={refreshNotifications} onMarkAllRead={markAllRead} onViewActivity={() => setView("activity")} />
               {isAtLimit && (
                 <UsageBanner plan={plan} used={planUsed} limit={planLimit} remaining={planLimit - planUsed} onUpgrade={() => setShowUpgrade(true)} />
               )}
@@ -315,14 +321,8 @@ export default function App() {
                     syncJobs={syncJobs} onStartSync={startSync} onCancelSync={cancelSync}
                     onInvoicesRefresh={refreshInvoices} isAtLimit={isAtLimit} onUpgrade={() => setShowUpgrade(true)}
                     oauthResult={oauthResult} onClearOAuthResult={() => setOauthResult(null)}
-                    onNotificationsRefresh={() => addAppNotif({ type: "sync", text: "Integration connected successfully", ts: Date.now() })}
-                    onSyncResult={({ source, added, dupes }) => {
-                      const parts = [];
-                      if (added > 0) parts.push(`${added} invoice${added !== 1 ? "s" : ""} synced`);
-                      else parts.push("No new invoices");
-                      if (dupes > 0) parts.push(`${dupes} duplicate${dupes !== 1 ? "s" : ""} skipped`);
-                      addAppNotif({ type: "sync", text: `${source}: ${parts.join(" · ")}`, ts: Date.now() });
-                    }}
+                    onNotificationsRefresh={refreshNotifications}
+                    onSyncResult={refreshNotifications}
                   />}
                   {view === "activity" && <ActivityView />}
                   {view === "suppliers" && <SuppliersView suppliers={suppliers} loading={invoicesLoading} onAdd={addSupplier} onUpdate={updateSupplier} onDelete={deleteSupplier} />}

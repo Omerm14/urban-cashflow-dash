@@ -14,7 +14,7 @@ export function BrandMark({ size = 28 }) {
   );
 }
 
-export default function Sidebar({ view, setView, suppliersCount, onUpgrade, onUpload, mobileOpen, setMobileOpen, plan, planUsed, planLimit, planPct, user, onSignOut }) {
+export default function Sidebar({ view, setView, suppliersCount, onUpgrade, onUpload, mobileOpen, setMobileOpen, plan, planUsed, planLimit, planPct, user, onSignOut, integrationError }) {
   const T = useT();
   const { isMobile, isTablet } = useLayout();
   const { t } = useLang();
@@ -23,13 +23,17 @@ export default function Sidebar({ view, setView, suppliersCount, onUpgrade, onUp
   const pct = planPct != null ? Math.round(planPct * 100) : Math.round((used / limit) * 100);
   const navigate = (id) => { setView(id); if (isDrawer) setMobileOpen(false); };
 
-  const NavItem = ({ id, label, Icon, badge }) => {
+  // `badge` = numeric count pill (e.g. supplier count); `alert` = presence-only dot for
+  // "something needs attention" (e.g. an integration error) — distinct semantics, not
+  // designed to co-occur on the same nav item today.
+  const NavItem = ({ id, label, Icon, badge, alert }) => {
     const active = view === id;
     return (
       <button className="sb-nav-item" aria-current={active ? "page" : undefined} onClick={() => navigate(id)}>
         <Icon size={15} strokeWidth={1.75} color={active ? T.accent : "currentColor"} style={{ flexShrink: 0 }} aria-hidden="true" />
         <span style={{ flex: 1 }}>{label}</span>
         {badge !== undefined && <span className="sb-badge">{badge}</span>}
+        {alert && <span className="sb-alert-dot" aria-hidden="true" title={t("int_has_errors")} />}
       </button>
     );
   };
@@ -64,7 +68,7 @@ export default function Sidebar({ view, setView, suppliersCount, onUpgrade, onUp
           <NavItem id="dashboard" label={t("nav_dashboard")} Icon={LayoutDashboard} />
           <NavItem id="invoices" label={t("nav_invoices")} Icon={FileText} />
           <NavItem id="calendar" label={t("nav_calendar")} Icon={Calendar} />
-          <NavItem id="integrations" label={t("nav_integrations")} Icon={Zap} />
+          <NavItem id="integrations" label={t("nav_integrations")} Icon={Zap} alert={integrationError} />
           <NavItem id="activity" label={t("nav_activity")} Icon={History} />
         </div>
 
