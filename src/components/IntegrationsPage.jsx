@@ -484,7 +484,13 @@ function IntegrationCard({ type, integration, onRefresh, onInvoicesRefresh, onNo
         setHistoryOpen(true);
         onNotificationsRefresh?.();
       }
-    } catch (e) { showToast(e.message, false); }
+    } catch (e) {
+      showToast(e.message, false);
+      // The backend already recorded the real failure reason on the integration row
+      // (status: 'error' + error_message) — refresh so the card's error banner shows it,
+      // instead of leaving the user stuck on this generic toast.
+      onRefresh();
+    }
     finally { setDiscovering(false); setResyncing(false); }
   };
 
