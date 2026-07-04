@@ -1,11 +1,13 @@
 import { useState, useEffect, useCallback } from "react";
-import { supabase } from "../lib/supabase";
 import { apiFetch } from "../lib/api";
+import { useT, useLang } from "../contexts/AppContexts";
+import { FONT_UI as SANS, FONT_MONO as MONO } from "../theme";
 
 // ─── Brand SVG icons ─────────────────────────────────────────────────────────
+// Third-party brand marks — colors are the providers' own, not app theme.
 
 const GoogleDriveIcon = ({ size = 28 }) => (
-  <svg width={size} height={size} viewBox="0 0 87.3 78" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <svg width={size} height={size} viewBox="0 0 87.3 78" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
     <path d="M6.6 66.85l3.85 6.65c.8 1.4 1.95 2.5 3.3 3.3L27.5 53H0c0 1.55.4 3.1 1.2 4.5z" fill="#0066da"/>
     <path d="M43.65 25L29.9 0C28.55.8 27.4 1.9 26.6 3.3L1.2 48.5A9 9 0 000 53h27.5z" fill="#00ac47"/>
     <path d="M73.55 76.8c1.35-.8 2.5-1.9 3.3-3.3l1.6-2.75L86.1 57.5c.8-1.4 1.2-2.95 1.2-4.5H59.8l5.85 12.2z" fill="#ea4335"/>
@@ -16,19 +18,19 @@ const GoogleDriveIcon = ({ size = 28 }) => (
 );
 
 const GmailIcon = ({ size = 28 }) => (
-  <svg width={size} height={size} viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+  <svg width={size} height={size} viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
     <path d="M24 5.457v13.909c0 .904-.732 1.636-1.636 1.636h-3.819V11.73L12 16.64l-6.545-4.91v9.273H1.636A1.636 1.636 0 010 19.366V5.457c0-2.023 2.309-3.178 3.927-1.964L5.455 4.64 12 9.548l6.545-4.91 1.528-1.145C21.69 2.28 24 3.434 24 5.457z" fill="#EA4335"/>
   </svg>
 );
 
 const GreenInvoiceIcon = ({ size = 28 }) => (
-  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
     <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z" fill="#34d399"/>
   </svg>
 );
 
 const WhatsAppIcon = ({ size = 28 }) => (
-  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
     <path fillRule="evenodd" clipRule="evenodd" d="M12 2C6.477 2 2 6.477 2 12c0 1.89.525 3.658 1.438 5.168L2 22l4.978-1.304A9.96 9.96 0 0012 22c5.523 0 10-4.477 10-10S17.523 2 12 2zm-2.63 5.8c-.21-.49-.432-.5-.63-.508L8.19 7.28c-.2 0-.52.075-.792.375-.27.3-1.032 1.008-1.032 2.457s1.056 2.85 1.204 3.048c.147.198 2.04 3.245 5.01 4.42 2.478.978 2.98.784 3.517.735.537-.05 1.73-.707 1.974-1.39.245-.683.245-1.27.172-1.39-.073-.122-.27-.197-.567-.344-.298-.148-1.73-.854-1.998-.952-.27-.098-.467-.148-.664.148-.197.296-.763.952-.935 1.149-.172.197-.344.222-.641.074-.298-.148-1.258-.463-2.396-1.48-.885-.79-1.483-1.764-1.655-2.062-.173-.297-.018-.457.13-.605.132-.132.297-.344.445-.516.148-.172.197-.296.296-.493.099-.197.05-.37-.025-.518-.074-.148-.656-1.617-.906-2.209z" fill="#25D366"/>
   </svg>
 );
@@ -41,32 +43,34 @@ const ICONS = {
 };
 
 // ─── Provider config ──────────────────────────────────────────────────────────
+// `color`/`accent` are the providers' own brand colors (used for the icon chip
+// and active-sync glow only) — not swapped for theme tokens.
 
 const PROVIDERS = {
   google_drive: {
     label:       "Google Drive",
-    description: "Automatically pull invoice PDFs and images from a Drive folder.",
+    descKey:     "int_desc_drive",
     color:       "#4285f4",
     accent:      "rgba(66,133,244,0.12)",
     authType:    "oauth",
   },
   gmail: {
     label:       "Gmail",
-    description: "Extract invoice attachments from Gmail labels.",
+    descKey:     "int_desc_gmail",
     color:       "#ea4335",
     accent:      "rgba(234,67,53,0.12)",
     authType:    "oauth",
   },
   green_invoice: {
     label:       "חשבונית ירוקה",
-    description: "Import documents directly from your Green Invoice account.",
+    descKey:     "int_desc_green",
     color:       "#34d399",
     accent:      "rgba(52,211,153,0.12)",
     authType:    "apikey",
   },
   whatsapp: {
     label:       "WhatsApp Business",
-    description: "Receive invoice images and PDFs from vendors via WhatsApp.",
+    descKey:     "int_desc_whatsapp",
     color:       "#25d366",
     accent:      "rgba(37,211,102,0.12)",
     authType:    "webhook",
@@ -74,42 +78,45 @@ const PROVIDERS = {
 };
 
 const FREQ_OPTIONS = [
-  { label: "Every hour",  value: 60   },
-  { label: "Every 4h",   value: 240  },
-  { label: "Once a day", value: 1440 },
+  { key: "int_freq_hourly",  value: 60   },
+  { key: "int_freq_4h",      value: 240  },
+  { key: "int_freq_daily",   value: 1440 },
 ];
 
 // ─── Shared UI atoms ──────────────────────────────────────────────────────────
 
-const StatusPill = ({ status }) => {
+const ConnStatusPill = ({ status }) => {
+  const T = useT();
+  const { t } = useLang();
   const map = {
-    connected:    { label: "Connected",    color: "#4ade80", bg: "#052e16" },
-    disconnected: { label: "Disconnected", color: "#475569", bg: "#0d1626" },
-    error:        { label: "Error",        color: "#f87171", bg: "#2d0a0a" },
+    connected:    { key: "int_connected",     color: T.green, bg: T.greenTint },
+    disconnected: { key: "int_not_connected", color: T.t3,    bg: T.surf2 },
+    error:        { key: "int_error",         color: T.red,   bg: T.redTint },
   };
   const s = map[status] || map.disconnected;
   return (
     <span style={{
       display: "inline-flex", alignItems: "center", gap: 5,
       padding: "3px 10px", borderRadius: 20,
-      background: s.bg, color: s.color, fontSize: 11, fontWeight: 700, letterSpacing: ".4px",
+      background: s.bg, color: s.color, fontFamily: SANS, fontSize: 11, fontWeight: 700, letterSpacing: ".4px",
     }}>
-      <span style={{ width: 5, height: 5, borderRadius: "50%", background: s.color, opacity: .9 }} />
-      {s.label}
+      <span aria-hidden="true" style={{ width: 5, height: 5, borderRadius: "50%", background: s.color, opacity: .9 }} />
+      {t(s.key)}
     </span>
   );
 };
 
-const Btn = ({ children, onClick, disabled, variant = "primary", style: extra = {} }) => {
+const Btn = ({ children, onClick, disabled, variant = "primary", style: extra = {}, title }) => {
+  const T = useT();
   const v = {
-    primary:   { background: "linear-gradient(135deg,#3b82f6,#06b6d4)", color: "#fff", border: "none" },
-    secondary: { background: "#131c2e", color: "#94a3b8", border: "1px solid #1e2d45" },
-    danger:    { background: "#1a0606", color: "#f87171", border: "1px solid #7f1d1d" },
+    primary:   { background: T.accent, color: T.accentInk, border: "none" },
+    secondary: { background: T.surf2, color: T.t2, border: `1px solid ${T.bdr}` },
+    danger:    { background: T.redTint, color: T.red, border: `1px solid ${T.redBdr}` },
   }[variant];
   return (
-    <button onClick={onClick} disabled={disabled} style={{
+    <button onClick={onClick} disabled={disabled} title={title} style={{
       padding: "8px 18px", borderRadius: 10,
-      fontFamily: "inherit", fontSize: 13, fontWeight: 600,
+      fontFamily: SANS, fontSize: 13, fontWeight: 600,
       cursor: disabled ? "not-allowed" : "pointer",
       opacity: disabled ? .6 : 1,
       transition: "opacity .15s",
@@ -123,6 +130,8 @@ const Btn = ({ children, onClick, disabled, variant = "primary", style: extra = 
 // ─── Drive folder navigator (breadcrumb tree) ────────────────────────────────
 
 function DriveNavigator({ selectedFolder, selectedFolderName, onSelect }) {
+  const T = useT();
+  const { t } = useLang();
   const [stack,    setStack]    = useState([{ id: "root", name: "My Drive" }]);
   const [children, setChildren] = useState([]);
   const [loading,  setLoading]  = useState(false);
@@ -154,7 +163,7 @@ function DriveNavigator({ selectedFolder, selectedFolderName, onSelect }) {
 
   const isSelected = id => selectedFolder === id;
   const selectedLabel = selectedFolder
-    ? (selectedFolderName || "Selected folder")
+    ? (selectedFolderName || t("int_selected_folder"))
     : null;
 
   return (
@@ -163,14 +172,14 @@ function DriveNavigator({ selectedFolder, selectedFolderName, onSelect }) {
       <div style={{ display: "flex", alignItems: "center", flexWrap: "wrap", gap: 4, marginBottom: 10 }}>
         {stack.map((crumb, i) => (
           <span key={crumb.id} style={{ display: "flex", alignItems: "center", gap: 4 }}>
-            {i > 0 && <span style={{ color: "#334155", fontSize: 11 }}>›</span>}
+            {i > 0 && <span style={{ color: T.t3, fontSize: 11 }} aria-hidden="true">›</span>}
             <button
               onClick={() => navigateTo(i)}
               style={{
                 background: "none", border: "none", cursor: i < stack.length - 1 ? "pointer" : "default",
-                color: i < stack.length - 1 ? "var(--accent)" : "var(--t1)",
-                fontSize: 12, fontWeight: i === stack.length - 1 ? 700 : 400,
-                fontFamily: "inherit", padding: "2px 4px", borderRadius: 4,
+                color: i < stack.length - 1 ? T.accent : T.t1,
+                fontFamily: SANS, fontSize: 12, fontWeight: i === stack.length - 1 ? 700 : 400,
+                padding: "2px 4px", borderRadius: 4,
                 textDecoration: i < stack.length - 1 ? "underline" : "none",
               }}
             >
@@ -184,58 +193,53 @@ function DriveNavigator({ selectedFolder, selectedFolderName, onSelect }) {
       <input
         value={search}
         onChange={e => setSearch(e.target.value)}
-        placeholder="Search folders…"
-        style={{
-          width: "100%", boxSizing: "border-box", marginBottom: 8,
-          padding: "6px 10px", borderRadius: 7, border: "1px solid #1e2d45",
-          background: "#0d1626", color: "#cbd5e1", fontSize: 12, fontFamily: "inherit", outline: "none",
-        }}
+        placeholder={t("int_search_folders")}
+        aria-label={t("int_search_folders")}
+        className="input"
+        style={{ marginBottom: 8, fontSize: 12 }}
       />
 
       {/* Folder list */}
-      <div style={{
-        border: "1px solid #1e2d45", borderRadius: 10, overflow: "hidden",
-        maxHeight: 220, overflowY: "auto",
-      }}>
+      <div style={{ border: `1px solid ${T.bdr}`, borderRadius: 10, overflow: "hidden", maxHeight: 220, overflowY: "auto" }}>
         {/* "Sync all in current folder" row */}
         <div style={{
           display: "flex", alignItems: "center", justifyContent: "space-between",
-          padding: "8px 12px", borderBottom: "1px solid #0d1626",
-          background: isSelected(current.id === "root" ? "" : current.id) ? "#3b82f611" : "transparent",
+          padding: "8px 12px", borderBottom: `1px solid ${T.bdr}`,
+          background: isSelected(current.id === "root" ? "" : current.id) ? T.accentTint : "transparent",
         }}>
-          <span style={{ fontSize: 12, color: "#64748b", fontStyle: "italic" }}>
-            {current.id === "root" ? "Sync all of My Drive" : `Sync all in "${current.name}"`}
+          <span style={{ fontFamily: SANS, fontSize: 12, color: T.t2, fontStyle: "italic" }}>
+            {current.id === "root" ? t("int_sync_all_drive") : t("int_sync_all_in", { folder: current.name })}
           </span>
           <button
             onClick={() => onSelect(current.id === "root" ? "" : current.id, current.id === "root" ? "" : current.name)}
             style={{
-              padding: "3px 12px", borderRadius: 6, fontSize: 11, fontFamily: "inherit", fontWeight: 600,
+              padding: "3px 12px", borderRadius: 6, fontFamily: SANS, fontSize: 11, fontWeight: 600,
               cursor: "pointer",
-              background: isSelected(current.id === "root" ? "" : current.id) ? "var(--accent)" : "var(--surf3)",
-              color:      isSelected(current.id === "root" ? "" : current.id) ? "#fff"    : "#94a3b8",
+              background: isSelected(current.id === "root" ? "" : current.id) ? T.accent : T.surf3,
+              color:      isSelected(current.id === "root" ? "" : current.id) ? T.accentInk : T.t2,
               border: "none",
             }}
           >
-            {isSelected(current.id === "root" ? "" : current.id) ? "✓ Selected" : "Select"}
+            {isSelected(current.id === "root" ? "" : current.id) ? `✓ ${t("int_selected")}` : t("int_select")}
           </button>
         </div>
 
         {loading ? (
-          <div style={{ padding: "14px 12px", color: "#475569", fontSize: 12 }}>Loading…</div>
+          <div style={{ padding: "14px 12px", color: T.t3, fontFamily: SANS, fontSize: 12 }}>{t("loading")}</div>
         ) : !filtered.length ? (
-          <div style={{ padding: "14px 12px", color: "#334155", fontSize: 12 }}>
-            {search ? "No folders match" : "No subfolders"}
+          <div style={{ padding: "14px 12px", color: T.t3, fontFamily: SANS, fontSize: 12 }}>
+            {search ? t("int_no_folders_match") : t("int_no_subfolders")}
           </div>
         ) : (
           filtered.map(f => (
             <div key={f.id} style={{
               display: "flex", alignItems: "center", justifyContent: "space-between",
-              padding: "8px 12px", borderBottom: "1px solid #0d1626",
-              background: isSelected(f.id) ? "#3b82f611" : "transparent",
+              padding: "8px 12px", borderBottom: `1px solid ${T.bdr}`,
+              background: isSelected(f.id) ? T.accentTint : "transparent",
             }}>
               <div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0 }}>
-                <span style={{ color: "#4285f4", fontSize: 14, flexShrink: 0 }}>📁</span>
-                <span style={{ fontSize: 12, color: "#cbd5e1", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                <span style={{ fontSize: 14, flexShrink: 0 }} aria-hidden="true">📁</span>
+                <span style={{ fontFamily: SANS, fontSize: 12, color: T.t2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                   {f.name}
                 </span>
               </div>
@@ -243,23 +247,23 @@ function DriveNavigator({ selectedFolder, selectedFolderName, onSelect }) {
                 <button
                   onClick={() => onSelect(f.id, f.name)}
                   style={{
-                    padding: "3px 10px", borderRadius: 6, fontSize: 11, fontFamily: "inherit", fontWeight: 600,
+                    padding: "3px 10px", borderRadius: 6, fontFamily: SANS, fontSize: 11, fontWeight: 600,
                     cursor: "pointer",
-                    background: isSelected(f.id) ? "var(--accent)" : "var(--surf3)",
-                    color:      isSelected(f.id) ? "#fff"    : "#94a3b8",
+                    background: isSelected(f.id) ? T.accent : T.surf3,
+                    color:      isSelected(f.id) ? T.accentInk : T.t2,
                     border: "none",
                   }}
                 >
-                  {isSelected(f.id) ? "✓" : "Select"}
+                  {isSelected(f.id) ? "✓" : t("int_select")}
                 </button>
                 <button
                   onClick={() => navigateInto(f)}
                   style={{
-                    padding: "3px 10px", borderRadius: 6, fontSize: 11, fontFamily: "inherit",
-                    cursor: "pointer", background: "#0d1626", color: "#475569", border: "1px solid #1e2d45",
+                    padding: "3px 10px", borderRadius: 6, fontFamily: SANS, fontSize: 11,
+                    cursor: "pointer", background: T.surf2, color: T.t3, border: `1px solid ${T.bdr}`,
                   }}
                 >
-                  Open ▶
+                  {t("int_open")} ▶
                 </button>
               </div>
             </div>
@@ -270,15 +274,12 @@ function DriveNavigator({ selectedFolder, selectedFolderName, onSelect }) {
       {/* Confirmation + remove */}
       {selectedLabel && (
         <div style={{ marginTop: 8, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-          <span style={{ fontSize: 11, color: "#4ade80" }}>✓ Syncing: {selectedLabel}</span>
+          <span style={{ fontFamily: SANS, fontSize: 11, color: T.green }}>✓ {t("int_syncing_label")}: {selectedLabel}</span>
           <button
             onClick={() => onSelect("", "")}
-            style={{
-              background: "none", border: "none", cursor: "pointer",
-              fontSize: 11, color: "#64748b", fontFamily: "inherit", padding: "0 2px",
-            }}
+            style={{ background: "none", border: "none", cursor: "pointer", fontFamily: SANS, fontSize: 11, color: T.t3, padding: "0 2px" }}
           >
-            ✕ Remove
+            ✕ {t("int_remove")}
           </button>
         </div>
       )}
@@ -289,6 +290,9 @@ function DriveNavigator({ selectedFolder, selectedFolderName, onSelect }) {
 // ─── Sync event timeline ──────────────────────────────────────────────────────
 
 function EventTimeline({ integrationId, refreshTrigger }) {
+  const T = useT();
+  const { t, lang } = useLang();
+  const locale = lang === "he" ? "he-IL" : "en-GB";
   const [events,     setEvents]     = useState(null);
   const [totalSaved, setTotalSaved] = useState(0);
 
@@ -299,34 +303,34 @@ function EventTimeline({ integrationId, refreshTrigger }) {
   }, [integrationId, refreshTrigger]);
 
   const iconFor = type => ({
-    saved:           { ch: "✓", color: "#4ade80" },
-    dedup_skipped:   { ch: "⊘", color: "#94a3b8" },
-    ocr_failed:      { ch: "✕", color: "#f87171" },
-    download_failed: { ch: "↯", color: "#fb923c" },
-  }[type] || { ch: "·", color: "#475569" });
+    saved:           { ch: "✓", color: T.green },
+    dedup_skipped:   { ch: "⊘", color: T.t2 },
+    ocr_failed:      { ch: "✕", color: T.red },
+    download_failed: { ch: "↯", color: T.amber },
+  }[type] || { ch: "·", color: T.t3 });
 
-  if (!events) return <div style={{ color: "#475569", fontSize: 12 }}>Loading…</div>;
-  if (!events.length) return <div style={{ color: "#475569", fontSize: 12 }}>No sync events yet.</div>;
+  if (!events) return <div style={{ color: T.t3, fontFamily: SANS, fontSize: 12 }}>{t("loading")}</div>;
+  if (!events.length) return <div style={{ color: T.t3, fontFamily: SANS, fontSize: 12 }}>{t("int_no_events")}</div>;
 
   return (
     <div>
       {totalSaved > 0 && (
-        <div style={{ fontSize: 11, color: "#475569", marginBottom: 8 }}>
-          {totalSaved} invoice{totalSaved !== 1 ? "s" : ""} synced in total
+        <div style={{ fontFamily: SANS, fontSize: 11, color: T.t3, marginBottom: 8 }}>
+          {t("int_total_synced", { n: totalSaved })}
         </div>
       )}
       <div style={{ display: "flex", flexDirection: "column", gap: 5, maxHeight: 200, overflowY: "auto" }}>
         {events.map(ev => {
           const { ch, color } = iconFor(ev.event_type);
-          const ts = new Date(ev.created_at).toLocaleString("en-GB", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" });
+          const ts = new Date(ev.created_at).toLocaleString(locale, { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" });
           return (
-            <div key={ev.id} style={{ display: "flex", gap: 10, alignItems: "flex-start", fontSize: 12 }}>
-              <span style={{ color, fontWeight: 700, flexShrink: 0, fontSize: 11 }}>{ch}</span>
+            <div key={ev.id} style={{ display: "flex", gap: 10, alignItems: "flex-start", fontFamily: SANS, fontSize: 12 }}>
+              <span aria-hidden="true" style={{ color, fontWeight: 700, flexShrink: 0, fontSize: 11 }}>{ch}</span>
               <div style={{ flex: 1, minWidth: 0 }}>
-                <span style={{ color: "#94a3b8" }}>{ev.source_file || ev.event_type}</span>
-                {ev.error_message && <div style={{ color: "#f87171", fontSize: 11 }}>{ev.error_message}</div>}
+                <span style={{ color: T.t2 }}>{ev.source_file || ev.event_type}</span>
+                {ev.error_message && <div style={{ color: T.red, fontSize: 11 }}>{ev.error_message}</div>}
               </div>
-              <span style={{ color: "#334155", flexShrink: 0, fontSize: 11 }}>{ts}</span>
+              <span className="num" style={{ color: T.t3, flexShrink: 0, fontSize: 11 }}>{ts}</span>
             </div>
           );
         })}
@@ -338,13 +342,15 @@ function EventTimeline({ integrationId, refreshTrigger }) {
 // ─── Green Invoice modal ──────────────────────────────────────────────────────
 
 function GreenInvoiceModal({ onClose, onSave }) {
+  const T = useT();
+  const { t } = useLang();
   const [apiKey,    setApiKey]    = useState("");
   const [apiSecret, setApiSecret] = useState("");
   const [saving,    setSaving]    = useState(false);
   const [err,       setErr]       = useState(null);
 
   const save = async () => {
-    if (!apiKey || !apiSecret) return setErr("Both fields are required");
+    if (!apiKey || !apiSecret) return setErr(t("int_gi_both_required"));
     setSaving(true); setErr(null);
     try {
       await apiFetch("/api/integrations/green-invoice", { method: "POST", body: { apiKey, apiSecret } });
@@ -355,28 +361,28 @@ function GreenInvoiceModal({ onClose, onSave }) {
 
   return (
     <div className="modal-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
-      <div className="modal" style={{ maxWidth: 420 }}>
+      <div className="modal" role="dialog" aria-modal="true" aria-label={t("int_gi_connect_title")} style={{ maxWidth: 420 }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             <GreenInvoiceIcon size={24} />
-            <span style={{ fontWeight: 700, fontSize: 16, color: "#f1f5f9" }}>Connect Green Invoice</span>
+            <span style={{ fontFamily: SANS, fontWeight: 700, fontSize: 16, color: T.t1 }}>{t("int_gi_connect_title")}</span>
           </div>
-          <button onClick={onClose} style={{ width: 30, height: 30, borderRadius: 8, background: "#131c2e", border: "1px solid #1e2d45", color: "#64748b", cursor: "pointer", fontSize: 14 }}>✕</button>
+          <button onClick={onClose} aria-label={t("close")} style={{ width: 30, height: 30, borderRadius: 8, background: T.surf2, border: `1px solid ${T.bdr}`, color: T.t2, cursor: "pointer", fontSize: 14 }}>✕</button>
         </div>
-        <p style={{ fontSize: 13, color: "#64748b", marginBottom: 18 }}>
-          Enter your API credentials from greeninvoice.co.il → Account Settings → API.
+        <p style={{ fontFamily: SANS, fontSize: 13, color: T.t2, marginBottom: 18 }}>
+          {t("int_gi_instructions")}
         </p>
-        {[["API Key (מזהה)", apiKey, setApiKey], ["API Secret (סיסמה)", apiSecret, setApiSecret]].map(([label, val, setter]) => (
-          <div key={label} style={{ marginBottom: 14 }}>
-            <div style={{ fontSize: 11, fontWeight: 600, color: "#475569", marginBottom: 6, textTransform: "uppercase", letterSpacing: ".5px" }}>{label}</div>
-            <input type="text" value={val} className="input" onChange={e => setter(e.target.value)} />
+        {[["int_gi_api_key", apiKey, setApiKey], ["int_gi_api_secret", apiSecret, setApiSecret]].map(([labelKey, val, setter]) => (
+          <div key={labelKey} style={{ marginBottom: 14 }}>
+            <div style={{ fontFamily: SANS, fontSize: 11, fontWeight: 600, color: T.t3, marginBottom: 6, textTransform: "uppercase", letterSpacing: ".5px" }}>{t(labelKey)}</div>
+            <input type="text" value={val} className="input" aria-label={t(labelKey)} onChange={e => setter(e.target.value)} />
           </div>
         ))}
-        {err && <div style={{ color: "#f87171", fontSize: 12, marginBottom: 12 }}>{err}</div>}
+        {err && <div role="alert" style={{ color: T.red, fontFamily: SANS, fontSize: 12, marginBottom: 12 }}>{err}</div>}
         <div style={{ display: "flex", gap: 10, justifyContent: "flex-end" }}>
-          <Btn variant="secondary" onClick={onClose}>Cancel</Btn>
-          <Btn onClick={save} disabled={saving} style={{ background: "linear-gradient(135deg,#34d399,#059669)" }}>
-            {saving ? "Connecting…" : "Connect"}
+          <Btn variant="secondary" onClick={onClose}>{t("cancel")}</Btn>
+          <Btn onClick={save} disabled={saving}>
+            {saving ? t("int_connecting") : t("int_connect")}
           </Btn>
         </div>
       </div>
@@ -384,13 +390,12 @@ function GreenInvoiceModal({ onClose, onSave }) {
   );
 }
 
-// ─── WhatsApp modal ───────────────────────────────────────────────────────────
-
-// WhatsApp no longer needs a modal — connect is one click, no credentials required from the user.
-
 // ─── Integration card ─────────────────────────────────────────────────────────
 
 function IntegrationCard({ type, integration, onRefresh, onInvoicesRefresh, onNotificationsRefresh, onSyncResult, showToast, onConnectModal, onStartSync, onCancelSync, activeSyncJob, isAtLimit, onUpgrade }) {
+  const T = useT();
+  const { t, lang } = useLang();
+  const locale = lang === "he" ? "he-IL" : "en-GB";
   const cfg       = PROVIDERS[type];
   const Icon      = ICONS[type];
   const status    = integration?.status || "disconnected";
@@ -438,8 +443,8 @@ function IntegrationCard({ type, integration, onRefresh, onInvoicesRefresh, onNo
   const [savingConfig,       setSavingConfig]       = useState(false);
 
   const lastSync = integration?.last_sync
-    ? new Date(integration.last_sync).toLocaleString("en-GB", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })
-    : "Never";
+    ? new Date(integration.last_sync).toLocaleString(locale, { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })
+    : t("int_never");
 
   const loadLabels = useCallback(async () => {
     if (labels !== null || labelsLoading) return;
@@ -483,7 +488,7 @@ function IntegrationCard({ type, integration, onRefresh, onInvoicesRefresh, onNo
         method: "PATCH",
         body: { auto_sync_enabled: autoSync, sync_frequency_min: syncFreq },
       });
-      showToast("Settings saved", true);
+      showToast(t("int_settings_saved"), true);
       setConfigOpen(false);
       onRefresh();
     } catch (e) { showToast(e.message, false); }
@@ -491,7 +496,7 @@ function IntegrationCard({ type, integration, onRefresh, onInvoicesRefresh, onNo
   };
 
   const handleSync = async (isResync = false) => {
-    if (isResync && !confirm("Re-process all historical files? May create duplicates if some slipped through.")) return;
+    if (isResync && !confirm(t("int_resync_confirm"))) return;
     const ep = isResync
       ? `/api/integrations/${integration.id}/resync`
       : `/api/integrations/${integration.id}/sync`;
@@ -507,9 +512,7 @@ function IntegrationCard({ type, integration, onRefresh, onInvoicesRefresh, onNo
       if (res.jobId) {
         // Drive: job started, useSyncJob will poll and update activeSyncJob
         if (res.totalFiles === 0) {
-          const msg = res.filesFound === 0
-            ? "No files found — try a longer lookback window in Settings"
-            : `All ${res.filesFound} file${res.filesFound !== 1 ? "s" : ""} already imported`;
+          const msg = res.filesFound === 0 ? t("int_no_files_found") : t("int_all_imported", { n: res.filesFound });
           showToast(msg, false);
         }
         // Progress shown via activeSyncJob / global bottom bar
@@ -517,9 +520,9 @@ function IntegrationCard({ type, integration, onRefresh, onInvoicesRefresh, onNo
         // Gmail / Green Invoice: result already complete
         const { added = 0, skipped = 0, filesFound = 0, errors = 0 } = res;
         let msg;
-        if (filesFound === 0 || filesFound == null) msg = "No files found — try a longer lookback window in Settings";
-        else if (added === 0) msg = `Found ${filesFound} file${filesFound !== 1 ? "s" : ""} but none were new${errors > 0 ? ` (${errors} failed)` : " (all already imported)"}`;
-        else msg = `${added} new invoice${added !== 1 ? "s" : ""} added from ${cfg.label}`;
+        if (filesFound === 0 || filesFound == null) msg = t("int_no_files_found");
+        else if (added === 0) msg = errors > 0 ? t("int_found_none_new_errors", { n: filesFound, errors }) : t("int_found_none_new", { n: filesFound });
+        else msg = t("int_added_from", { n: added, source: cfg.label });
         showToast(msg, added > 0);
         if (added > 0) { setSyncDone(true); setTimeout(() => setSyncDone(false), 3000); }
         onSyncResult?.({ source: cfg.label || type, added, dupes: skipped, filesFound });
@@ -538,7 +541,7 @@ function IntegrationCard({ type, integration, onRefresh, onInvoicesRefresh, onNo
     if (type === "whatsapp") {
       try {
         await apiFetch("/api/integrations/whatsapp", { method: "POST" });
-        showToast("WhatsApp connected — open Settings to get your vendor link", true);
+        showToast(t("int_wa_connected_toast"), true);
         onRefresh();
       } catch (e) { showToast(e.message, false); }
       return;
@@ -553,10 +556,10 @@ function IntegrationCard({ type, integration, onRefresh, onInvoicesRefresh, onNo
   };
 
   const handleDisconnect = async () => {
-    if (!confirm(`Disconnect ${cfg.label}? Existing invoices are kept.`)) return;
+    if (!confirm(t("int_disconnect_confirm", { label: cfg.label }))) return;
     try {
       await apiFetch(`/api/integrations/${integration.id}`, { method: "DELETE" });
-      showToast(`${cfg.label} disconnected`, true);
+      showToast(t("int_disconnected_toast", { label: cfg.label }), true);
       onRefresh();
     } catch (e) { showToast(e.message, false); }
   };
@@ -566,7 +569,7 @@ function IntegrationCard({ type, integration, onRefresh, onInvoicesRefresh, onNo
   );
 
   const isActive   = discovering || resyncing || isJobSyncing;
-  const cardBorder = isActive ? `1px solid ${cfg.color}55` : hasError ? "1px solid #7f1d1d" : "1px solid #111d2e";
+  const cardBorder = isActive ? `1px solid ${cfg.color}55` : hasError ? `1px solid ${T.redBdr}` : `1px solid ${T.bdr}`;
 
   return (
     <div className="card" style={{
@@ -578,8 +581,8 @@ function IntegrationCard({ type, integration, onRefresh, onInvoicesRefresh, onNo
       {/* Sync progress bar — deterministic for job-based, shimmer for blocking */}
       {(isActive || syncDone) && (
         <div style={{
-          position: "absolute", top: 0, left: 0, right: 0, height: 3,
-          background: syncDone ? "#4ade80" : "transparent",
+          position: "absolute", top: 0, insetInlineStart: 0, insetInlineEnd: 0, height: 3,
+          background: syncDone ? T.green : "transparent",
           transition: "background 0.4s ease",
         }}>
           {!syncDone && isJobSyncing && (
@@ -612,26 +615,26 @@ function IntegrationCard({ type, integration, onRefresh, onInvoicesRefresh, onNo
             <Icon size={26} />
           </div>
           <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontWeight: 700, fontSize: 15, color: "#f1f5f9", marginBottom: 3 }}>{cfg.label}</div>
-            <div style={{ fontSize: 12, color: "#475569", lineHeight: 1.5 }}>{cfg.description}</div>
+            <div style={{ fontFamily: SANS, fontWeight: 700, fontSize: 15, color: T.t1, marginBottom: 3 }}>{cfg.label}</div>
+            <div style={{ fontFamily: SANS, fontSize: 12, color: T.t3, lineHeight: 1.5 }}>{t(cfg.descKey)}</div>
           </div>
-          <StatusPill status={status} />
+          <ConnStatusPill status={status} />
         </div>
 
         {/* Error banner */}
         {hasError && integration?.error_message && (
           <div style={{
-            background: "#2d0a0a", border: "1px solid #7f1d1d", borderRadius: 8,
-            padding: "10px 12px", marginBottom: 14, fontSize: 12, color: "#f87171",
+            background: T.redTint, border: `1px solid ${T.redBdr}`, borderRadius: 8,
+            padding: "10px 12px", marginBottom: 14, fontFamily: SANS, fontSize: 12, color: T.red,
             display: "flex", gap: 8, alignItems: "flex-start",
           }}>
-            <span style={{ flexShrink: 0 }}>⚠</span>
+            <span style={{ flexShrink: 0 }} aria-hidden="true">⚠</span>
             <div style={{ flex: 1 }}>
               {integration.error_message}
               {cfg.authType === "oauth" && (
                 <button onClick={handleConnect}
-                  style={{ marginLeft: 8, color: "#38bdf8", background: "none", border: "none", cursor: "pointer", fontSize: 12, fontFamily: "inherit", textDecoration: "underline" }}>
-                  Re-authorize
+                  style={{ marginInlineStart: 8, color: T.accent, background: "none", border: "none", cursor: "pointer", fontFamily: SANS, fontSize: 12, textDecoration: "underline" }}>
+                  {t("int_reauthorize")}
                 </button>
               )}
             </div>
@@ -640,14 +643,14 @@ function IntegrationCard({ type, integration, onRefresh, onInvoicesRefresh, onNo
 
         {/* Stats */}
         {connected && (
-          <div style={{ display: "flex", gap: 24, marginBottom: 16, fontSize: 12 }}>
+          <div style={{ display: "flex", gap: 24, marginBottom: 16, fontFamily: SANS, fontSize: 12 }}>
             <div>
-              <div style={{ color: "#334155", marginBottom: 2 }}>Last sync</div>
-              <div style={{ color: "#94a3b8", fontWeight: 600 }}>{lastSync}</div>
+              <div style={{ color: T.t3, marginBottom: 2 }}>{t("int_last_sync")}</div>
+              <div className="num" style={{ color: T.t2, fontWeight: 600 }}>{lastSync}</div>
             </div>
             <div>
-              <div style={{ color: "#334155", marginBottom: 2 }}>Invoices synced</div>
-              <div style={{ color: "#94a3b8", fontWeight: 600 }}>{integration?.sync_count || 0}</div>
+              <div style={{ color: T.t3, marginBottom: 2 }}>{t("int_invoices_synced")}</div>
+              <div className="num" style={{ color: T.t2, fontWeight: 600 }}>{integration?.sync_count || 0}</div>
             </div>
           </div>
         )}
@@ -655,8 +658,8 @@ function IntegrationCard({ type, integration, onRefresh, onInvoicesRefresh, onNo
         {/* Actions */}
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap", paddingBottom: connected ? 16 : 22 }}>
           {!connected ? (
-            <Btn onClick={handleConnect} style={{ background: `linear-gradient(135deg,${cfg.color},${cfg.color}cc)`, boxShadow: `0 4px 16px ${cfg.color}30` }}>
-              Connect
+            <Btn onClick={handleConnect} style={{ background: `linear-gradient(135deg,${cfg.color},${cfg.color}cc)`, color: "#fff", boxShadow: `0 4px 16px ${cfg.color}30` }}>
+              {t("int_connect")}
             </Btn>
           ) : (
             <>
@@ -664,25 +667,25 @@ function IntegrationCard({ type, integration, onRefresh, onInvoicesRefresh, onNo
               <Btn
                 onClick={isAtLimit ? onUpgrade : () => handleSync(false)}
                 disabled={isActive}
-                title={isAtLimit ? 'Invoice limit reached — upgrade your plan' : undefined}
-                style={syncDone ? { background:"#052e16", color:"#4ade80", borderColor:"#166534" } : isAtLimit ? { opacity:.6 } : {}}>
-                {discovering ? "Finding files…"
-                  : isJobSyncing ? `File ${Math.min(activeSyncJob.cursor, activeSyncJob.totalFiles)} / ${activeSyncJob.totalFiles}`
-                  : resyncing ? "Re-syncing…"
-                  : syncDone ? "✓ Done"
-                  : isAtLimit ? "🔒 Sync Now"
-                  : "Sync Now"}
+                title={isAtLimit ? t("int_limit_reached") : undefined}
+                style={syncDone ? { background: T.greenTint, color: T.green, border: `1px solid ${T.greenBdr}` } : isAtLimit ? { opacity: .6 } : {}}>
+                {discovering ? t("int_finding_files")
+                  : isJobSyncing ? t("int_file_progress", { cursor: Math.min(activeSyncJob.cursor, activeSyncJob.totalFiles), total: activeSyncJob.totalFiles })
+                  : resyncing ? t("int_resyncing")
+                  : syncDone ? `✓ ${t("int_done")}`
+                  : isAtLimit ? `🔒 ${t("int_sync")}`
+                  : t("int_sync")}
               </Btn>
               )}
               {isJobSyncing && (
                 <Btn variant="danger" onClick={() => onCancelSync?.(integration.id)} style={{ padding: "0 14px" }}>
-                  Stop
+                  {t("int_stop")}
                 </Btn>
               )}
               <Btn variant="secondary" onClick={openConfig} style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                <span style={{ fontSize: 14 }}>⚙</span> {configOpen ? "Close" : "Settings"}
+                <span style={{ fontSize: 14 }} aria-hidden="true">⚙</span> {configOpen ? t("close") : t("int_settings")}
               </Btn>
-              <Btn variant="danger" onClick={handleDisconnect}>Disconnect</Btn>
+              <Btn variant="danger" onClick={handleDisconnect}>{t("int_disconnect")}</Btn>
             </>
           )}
         </div>
@@ -690,17 +693,17 @@ function IntegrationCard({ type, integration, onRefresh, onInvoicesRefresh, onNo
 
       {/* Settings panel */}
       {connected && configOpen && (
-        <div style={{ borderTop: "1px solid #111d2e", padding: "18px 22px 0" }}>
+        <div style={{ borderTop: `1px solid ${T.bdr}`, padding: "18px 22px 0" }}>
 
           {/* Drive folder navigator */}
           {type === "google_drive" && (
             <div style={{ marginBottom: 18 }}>
-              <div style={{ fontSize: 11, fontWeight: 600, color: "#475569", textTransform: "uppercase", letterSpacing: ".5px", marginBottom: 10 }}>
-                Sync folder
+              <div style={{ fontFamily: SANS, fontSize: 11, fontWeight: 600, color: T.t3, textTransform: "uppercase", letterSpacing: ".5px", marginBottom: 10 }}>
+                {t("int_sync_folder")}
               </div>
               <DriveNavigator
                 selectedFolder={selectedFolder}
-                selectedFolderName={selectedFolderName || (selectedFolder ? "Selected folder" : "")}
+                selectedFolderName={selectedFolderName || (selectedFolder ? t("int_selected_folder") : "")}
                 onSelect={(id, name) => { setSelectedFolder(id); setSelectedFolderName(name || ""); }}
               />
             </div>
@@ -710,35 +713,35 @@ function IntegrationCard({ type, integration, onRefresh, onInvoicesRefresh, onNo
           {type === "gmail" && (
             <div style={{ marginBottom: 18 }}>
               <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
-                <div style={{ fontSize: 11, fontWeight: 600, color: "#475569", textTransform: "uppercase", letterSpacing: ".5px" }}>Labels to scan</div>
-                <button onClick={reloadLabels} disabled={labelsLoading} title="Refresh"
-                  style={{ background: "none", border: "none", color: "#334155", cursor: "pointer", fontSize: 14, padding: 0 }}>↺</button>
+                <div style={{ fontFamily: SANS, fontSize: 11, fontWeight: 600, color: T.t3, textTransform: "uppercase", letterSpacing: ".5px" }}>{t("int_labels_to_scan")}</div>
+                <button onClick={reloadLabels} disabled={labelsLoading} title={t("int_refresh")} aria-label={t("int_refresh")}
+                  style={{ background: "none", border: "none", color: T.t3, cursor: "pointer", fontSize: 14, padding: 0 }}>↺</button>
               </div>
               {labelsLoading ? (
-                <div style={{ color: "#475569", fontSize: 12 }}>Loading labels…</div>
+                <div style={{ color: T.t3, fontFamily: SANS, fontSize: 12 }}>{t("int_loading_labels")}</div>
               ) : !labels?.length ? (
-                <div style={{ color: "#475569", fontSize: 12 }}>No custom labels found.</div>
+                <div style={{ color: T.t3, fontFamily: SANS, fontSize: 12 }}>{t("int_no_labels")}</div>
               ) : (
                 <>
                   <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
                     {labels.map(l => (
                       <label key={l.id} style={{
                         display: "flex", alignItems: "center", gap: 5, cursor: "pointer",
-                        padding: "5px 12px", borderRadius: 20, fontSize: 12,
-                        background: selectedLabels.includes(l.id) ? "var(--accent-tint)" : "var(--surf2)",
-                        border: `1px solid ${selectedLabels.includes(l.id) ? "var(--accent)" : "var(--surf3)"}`,
-                        color: selectedLabels.includes(l.id) ? "#38bdf8" : "#64748b",
+                        padding: "5px 12px", borderRadius: 20, fontFamily: SANS, fontSize: 12,
+                        background: selectedLabels.includes(l.id) ? T.accentTint : T.surf2,
+                        border: `1px solid ${selectedLabels.includes(l.id) ? T.accent : T.surf3}`,
+                        color: selectedLabels.includes(l.id) ? T.accent : T.t2,
                         transition: "all .15s",
                       }}>
                         <input type="checkbox" checked={selectedLabels.includes(l.id)} onChange={() => toggleLabel(l.id)}
-                          style={{ accentColor: "var(--accent)", width: 12, height: 12 }} />
+                          style={{ accentColor: T.accent, width: 12, height: 12 }} />
                         {l.name}
                       </label>
                     ))}
                   </div>
                   {selectedLabels.length > 0 && (
-                    <div style={{ marginTop: 6, fontSize: 11, color: "#4ade80" }}>
-                      ✓ {selectedLabels.length} label{selectedLabels.length !== 1 ? "s" : ""} selected (OR logic)
+                    <div style={{ marginTop: 6, fontFamily: SANS, fontSize: 11, color: T.green }}>
+                      ✓ {t("int_labels_selected", { n: selectedLabels.length })}
                     </div>
                   )}
                 </>
@@ -749,27 +752,29 @@ function IntegrationCard({ type, integration, onRefresh, onInvoicesRefresh, onNo
           {/* Gmail additional filters */}
           {type === "gmail" && (
             <div style={{ marginBottom: 18 }}>
-              <div style={{ fontSize: 11, fontWeight: 600, color: "#475569", textTransform: "uppercase", letterSpacing: ".5px", marginBottom: 10 }}>
-                Additional filters
+              <div style={{ fontFamily: SANS, fontSize: 11, fontWeight: 600, color: T.t3, textTransform: "uppercase", letterSpacing: ".5px", marginBottom: 10 }}>
+                {t("int_additional_filters")}
               </div>
               <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
                 <div>
-                  <div style={{ fontSize: 11, color: "#475569", marginBottom: 4 }}>Sender (from:)</div>
+                  <div style={{ fontFamily: SANS, fontSize: 11, color: T.t3, marginBottom: 4 }}>{t("int_filter_from")}</div>
                   <input
                     type="text"
                     className="input"
-                    placeholder="e.g. invoices@vendor.com or @vendor.co.il"
+                    placeholder={t("int_filter_from_placeholder")}
+                    aria-label={t("int_filter_from")}
                     value={fromFilter}
                     onChange={e => setFromFilter(e.target.value)}
                     style={{ fontSize: 12 }}
                   />
                 </div>
                 <div>
-                  <div style={{ fontSize: 11, color: "#475569", marginBottom: 4 }}>Subject contains</div>
+                  <div style={{ fontFamily: SANS, fontSize: 11, color: T.t3, marginBottom: 4 }}>{t("int_filter_subject")}</div>
                   <input
                     type="text"
                     className="input"
-                    placeholder="e.g. invoice or חשבונית"
+                    placeholder={t("int_filter_subject_placeholder")}
+                    aria-label={t("int_filter_subject")}
                     value={subjFilter}
                     onChange={e => setSubjFilter(e.target.value)}
                     style={{ fontSize: 12 }}
@@ -783,10 +788,10 @@ function IntegrationCard({ type, integration, onRefresh, onInvoicesRefresh, onNo
           {type === "whatsapp" && integration?.config?.wa_link && (
             <div style={{ marginBottom: 18 }}>
               {/* Inbox code badge */}
-              <div style={{ fontSize: 11, fontWeight: 600, color: "#475569", marginBottom: 8, textTransform: "uppercase", letterSpacing: ".5px" }}>Your Vendor Inbox Code</div>
+              <div style={{ fontFamily: SANS, fontSize: 11, fontWeight: 600, color: T.t3, marginBottom: 8, textTransform: "uppercase", letterSpacing: ".5px" }}>{t("int_inbox_code")}</div>
               <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 16 }}>
-                <span style={{
-                  fontFamily: "monospace", fontSize: 22, fontWeight: 800, letterSpacing: 4,
+                <span className="num" style={{
+                  fontFamily: MONO, fontSize: 22, fontWeight: 700, letterSpacing: 4,
                   color: "#25d366", background: "rgba(37,211,102,0.08)",
                   border: "1px solid rgba(37,211,102,0.25)", borderRadius: 10,
                   padding: "8px 18px",
@@ -796,37 +801,37 @@ function IntegrationCard({ type, integration, onRefresh, onInvoicesRefresh, onNo
               </div>
 
               {/* QR code + instructions side by side */}
-              <div style={{ display: "flex", gap: 16, alignItems: "flex-start", marginBottom: 14 }}>
+              <div style={{ display: "flex", gap: 16, alignItems: "flex-start", marginBottom: 14, flexWrap: "wrap" }}>
                 <img
-                  src={`https://api.qrserver.com/v1/create-qr-code/?size=120x120&color=25d366&bgcolor=0d1626&data=${encodeURIComponent(integration.config.wa_link)}`}
-                  alt="WhatsApp QR code"
+                  src={`https://api.qrserver.com/v1/create-qr-code/?size=120x120&color=25d366&bgcolor=${T.isDark ? "0d1626" : "ffffff"}&data=${encodeURIComponent(integration.config.wa_link)}`}
+                  alt={t("int_wa_qr_alt")}
                   width={120} height={120}
-                  style={{ borderRadius: 10, border: "1px solid #1e2d45", flexShrink: 0 }}
+                  style={{ borderRadius: 10, border: `1px solid ${T.bdr}`, flexShrink: 0 }}
                 />
-                <div style={{ fontSize: 12, color: "#64748b", lineHeight: 1.6 }}>
-                  <div style={{ color: "#94a3b8", fontWeight: 600, marginBottom: 4 }}>How to use</div>
-                  <ol style={{ margin: 0, paddingLeft: 16 }}>
-                    <li>Share the QR code or the link below with your vendors.</li>
-                    <li>Vendor taps the link — WhatsApp opens with your code pre-filled.</li>
-                    <li><strong>Vendor sends the pre-filled code as a text message first</strong> — this registers their number.</li>
-                    <li>Vendor then attaches the invoice (PDF or photo) and sends it.</li>
-                    <li>Invoice appears in your dashboard automatically.</li>
+                <div style={{ fontFamily: SANS, fontSize: 12, color: T.t2, lineHeight: 1.6 }}>
+                  <div style={{ color: T.t1, fontWeight: 600, marginBottom: 4 }}>{t("int_wa_how_to")}</div>
+                  <ol style={{ margin: 0, paddingInlineStart: 16 }}>
+                    <li>{t("int_wa_step1")}</li>
+                    <li>{t("int_wa_step2")}</li>
+                    <li>{t("int_wa_step3")}</li>
+                    <li>{t("int_wa_step4")}</li>
+                    <li>{t("int_wa_step5")}</li>
                   </ol>
                 </div>
               </div>
 
               {/* Shareable link */}
-              <div style={{ fontSize: 11, fontWeight: 600, color: "#475569", marginBottom: 6, textTransform: "uppercase", letterSpacing: ".5px" }}>Shareable Link</div>
-              <div style={{ display: "flex", gap: 8, alignItems: "center", background: "#0a1628", borderRadius: 8, padding: "8px 12px", border: "1px solid #1e2d45" }}>
-                <code style={{ fontSize: 11, color: "#38bdf8", flex: 1, wordBreak: "break-all" }}>{integration.config.wa_link}</code>
+              <div style={{ fontFamily: SANS, fontSize: 11, fontWeight: 600, color: T.t3, marginBottom: 6, textTransform: "uppercase", letterSpacing: ".5px" }}>{t("int_shareable_link")}</div>
+              <div style={{ display: "flex", gap: 8, alignItems: "center", background: T.surf2, borderRadius: 8, padding: "8px 12px", border: `1px solid ${T.bdr}` }}>
+                <code style={{ fontFamily: MONO, fontSize: 11, color: T.accent, flex: 1, wordBreak: "break-all" }}>{integration.config.wa_link}</code>
                 <button
                   onClick={() => { navigator.clipboard.writeText(integration.config.wa_link); }}
-                  style={{ padding: "3px 10px", background: "#1e2d45", border: "none", borderRadius: 6, color: "#94a3b8", cursor: "pointer", fontSize: 11, fontFamily: "inherit", flexShrink: 0 }}>
-                  Copy
+                  style={{ padding: "3px 10px", background: T.surf3, border: "none", borderRadius: 6, color: T.t2, cursor: "pointer", fontFamily: SANS, fontSize: 11, flexShrink: 0 }}>
+                  {t("int_copy")}
                 </button>
               </div>
-              <div style={{ fontSize: 11, color: "#334155", marginTop: 6 }}>
-                Once registered, vendors can send invoices directly without the code. To register manually, ask them to send the text <strong style={{ color: "#475569" }}>{integration.config.inbox_code}</strong> first.
+              <div style={{ fontFamily: SANS, fontSize: 11, color: T.t3, marginTop: 6 }}>
+                {t("int_wa_register_note")} <strong style={{ color: T.t2 }}>{integration.config.inbox_code}</strong> {t("int_wa_register_note2")}
               </div>
             </div>
           )}
@@ -834,31 +839,32 @@ function IntegrationCard({ type, integration, onRefresh, onInvoicesRefresh, onNo
           {/* Lookback window (Drive + Gmail only) */}
           {type !== "whatsapp" && type !== "green_invoice" && (
             <div style={{ marginBottom: 18 }}>
-              <div style={{ fontSize: 11, fontWeight: 600, color: "#475569", textTransform: "uppercase", letterSpacing: ".5px", marginBottom: 8 }}>
-                How far back to search
+              <div style={{ fontFamily: SANS, fontSize: 11, fontWeight: 600, color: T.t3, textTransform: "uppercase", letterSpacing: ".5px", marginBottom: 8 }}>
+                {t("int_lookback_title")}
               </div>
               <select
                 value={lookbackDays}
                 onChange={e => setLookbackDays(Number(e.target.value))}
                 className="input"
+                aria-label={t("int_lookback_title")}
                 style={{ fontSize: 12, padding: "6px 10px" }}
               >
-                <option value={0}>Since last sync (smart — default)</option>
-                <option value={7}>Last 7 days</option>
-                <option value={30}>Last 30 days</option>
-                <option value={90}>Last 3 months</option>
-                <option value={180}>Last 6 months</option>
-                <option value={365}>Last year</option>
-                <option value={-1}>All time (may be slow)</option>
+                <option value={0}>{t("int_lookback_smart")}</option>
+                <option value={7}>{t("int_lookback_7")}</option>
+                <option value={30}>{t("int_lookback_30")}</option>
+                <option value={90}>{t("int_lookback_90")}</option>
+                <option value={180}>{t("int_lookback_180")}</option>
+                <option value={365}>{t("int_lookback_365")}</option>
+                <option value={-1}>{t("int_lookback_all")}</option>
               </select>
               {lookbackDays === -1 && (
-                <div style={{ marginTop: 6, fontSize: 11, color: "#fb923c" }}>
-                  ⚠ All-time scan can be slow for large {type === "gmail" ? "inboxes" : "drives"}.
+                <div style={{ marginTop: 6, fontFamily: SANS, fontSize: 11, color: T.amber }}>
+                  ⚠ {type === "gmail" ? t("int_lookback_slow_gmail") : t("int_lookback_slow_drive")}
                 </div>
               )}
               {lookbackDays === 0 && (
-                <div style={{ marginTop: 6, fontSize: 11, color: "#475569" }}>
-                  Only new items since the last successful sync are checked. Use "Resync All" below to re-scan from the beginning.
+                <div style={{ marginTop: 6, fontFamily: SANS, fontSize: 11, color: T.t3 }}>
+                  {t("int_lookback_smart_note")}
                 </div>
               )}
             </div>
@@ -867,17 +873,17 @@ function IntegrationCard({ type, integration, onRefresh, onInvoicesRefresh, onNo
           {/* Auto-sync (not applicable for webhook-driven integrations) */}
           {cfg.authType !== "webhook" && (
           <div style={{ marginBottom: 18 }}>
-            <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", fontSize: 13, color: "#94a3b8", marginBottom: 8 }}>
+            <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", fontFamily: SANS, fontSize: 13, color: T.t2, marginBottom: 8 }}>
               <input type="checkbox" checked={autoSync} onChange={e => setAutoSync(e.target.checked)}
-                style={{ accentColor: "var(--accent)", width: 14, height: 14 }} />
-              Auto-sync enabled
+                style={{ accentColor: T.accent, width: 14, height: 14 }} />
+              {t("int_auto_sync_enabled")}
             </label>
             {autoSync && (
               <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                <span style={{ fontSize: 12, color: "#475569" }}>Frequency:</span>
+                <span style={{ fontFamily: SANS, fontSize: 12, color: T.t3 }}>{t("int_frequency")}:</span>
                 <select value={syncFreq} onChange={e => setSyncFreq(Number(e.target.value))}
-                  className="input" style={{ width: "auto", fontSize: 12, padding: "5px 10px" }}>
-                  {FREQ_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+                  className="input" aria-label={t("int_frequency")} style={{ width: "auto", fontSize: 12, padding: "5px 10px" }}>
+                  {FREQ_OPTIONS.map(o => <option key={o.value} value={o.value}>{t(o.key)}</option>)}
                 </select>
               </div>
             )}
@@ -887,16 +893,16 @@ function IntegrationCard({ type, integration, onRefresh, onInvoicesRefresh, onNo
           {/* Save + Resync */}
           <div style={{ display: "flex", gap: 8, paddingBottom: 18 }}>
             <Btn onClick={saveConfig} disabled={savingConfig}>
-              {savingConfig ? "Saving…" : "Save Settings"}
+              {savingConfig ? t("int_saving") : t("int_save_settings")}
             </Btn>
             {type !== "whatsapp" && (
               <Btn
                 variant="secondary"
                 onClick={isAtLimit ? onUpgrade : () => handleSync(true)}
                 disabled={isActive}
-                title={isAtLimit ? 'Invoice limit reached — upgrade your plan' : undefined}
-                style={{ fontSize: 12, ...(isAtLimit ? { opacity:.6 } : {}) }}>
-                {resyncing ? "Resyncing…" : isAtLimit ? "🔒 Resync All" : "↺ Resync All (from beginning)"}
+                title={isAtLimit ? t("int_limit_reached") : undefined}
+                style={{ fontSize: 12, ...(isAtLimit ? { opacity: .6 } : {}) }}>
+                {resyncing ? t("int_resyncing") : isAtLimit ? `🔒 ${t("int_resync_all")}` : `↺ ${t("int_resync_all")}`}
               </Btn>
             )}
           </div>
@@ -905,11 +911,11 @@ function IntegrationCard({ type, integration, onRefresh, onInvoicesRefresh, onNo
 
       {/* Sync history */}
       {connected && (
-        <div style={{ borderTop: "1px solid #0d1626", padding: "10px 22px 14px" }}>
+        <div style={{ borderTop: `1px solid ${T.bdr}`, padding: "10px 22px 14px" }}>
           <button onClick={() => setHistoryOpen(h => !h)}
-            style={{ background: "none", border: "none", color: "#334155", cursor: "pointer", fontFamily: "inherit", fontSize: 12, padding: 0, display: "flex", alignItems: "center", gap: 5 }}>
-            <span style={{ fontSize: 10 }}>{historyOpen ? "▲" : "▼"}</span>
-            Sync history
+            style={{ background: "none", border: "none", color: T.t3, cursor: "pointer", fontFamily: SANS, fontSize: 12, padding: 0, display: "flex", alignItems: "center", gap: 5 }}>
+            <span style={{ fontSize: 10 }} aria-hidden="true">{historyOpen ? "▲" : "▼"}</span>
+            {t("int_sync_history")}
           </button>
           {historyOpen && (
             <div style={{ marginTop: 10 }}>
@@ -925,9 +931,11 @@ function IntegrationCard({ type, integration, onRefresh, onInvoicesRefresh, onNo
 // ─── Main page ────────────────────────────────────────────────────────────────
 
 export default function IntegrationsPage({ oauthResult, onClearOAuthResult, onInvoicesRefresh, onNotificationsRefresh, onSyncResult, onStartSync, onCancelSync, syncJobs, isAtLimit, onUpgrade }) {
-  const [integrations,      setIntegrations]      = useState([]);
-  const [loading,           setLoading]           = useState(true);
-  const [toast,             setToast]             = useState(null);
+  const T = useT();
+  const { t } = useLang();
+  const [integrations,   setIntegrations]   = useState([]);
+  const [loading,        setLoading]        = useState(true);
+  const [toast,          setToast]          = useState(null);
   const [showGreenModal, setShowGreenModal] = useState(false);
 
   const showToast = useCallback((text, ok) => {
@@ -948,18 +956,13 @@ export default function IntegrationsPage({ oauthResult, onClearOAuthResult, onIn
   useEffect(() => {
     if (!oauthResult) return;
     if (oauthResult.connected) {
-      showToast(
-        `${PROVIDERS[oauthResult.connected]?.label || oauthResult.connected} connected — open Settings to pick a folder or label.`,
-        true
-      );
+      showToast(t("int_oauth_connected", { label: PROVIDERS[oauthResult.connected]?.label || oauthResult.connected }), true);
     } else if (oauthResult.error) {
-      const msg = oauthResult.error === 'access_denied'
-        ? "Access denied — you may not be on the authorized test-user list. Contact support to get access, or ask the account owner to add your email in Google Cloud Console."
-        : `Connection failed: ${oauthResult.error}`;
+      const msg = oauthResult.error === "access_denied" ? t("int_oauth_access_denied") : t("int_oauth_failed", { error: oauthResult.error });
       showToast(msg, false);
     }
     onClearOAuthResult();
-  }, [oauthResult, showToast, onClearOAuthResult]);
+  }, [oauthResult, showToast, onClearOAuthResult]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const getIntegration = type => integrations.find(i => i.type === type);
   const hasAnyError    = integrations.some(i => i.status === "error");
@@ -969,31 +972,31 @@ export default function IntegrationsPage({ oauthResult, onClearOAuthResult, onIn
   };
 
   if (loading) return (
-    <div style={{ color: "#475569", padding: "60px 0", textAlign: "center", fontSize: 14 }}>
-      Loading integrations…
+    <div style={{ color: T.t3, padding: "60px 0", textAlign: "center", fontFamily: SANS, fontSize: 14 }}>
+      {t("int_loading_page")}
     </div>
   );
 
   return (
     <div>
       <div style={{ marginBottom: 28 }}>
-        <div style={{ fontWeight: 800, fontSize: 22, color: "#f1f5f9", marginBottom: 6 }}>Auto-Sync Integrations</div>
-        <div style={{ fontSize: 14, color: "#475569" }}>
-          Connect your invoice sources. Cashflow will automatically pull in new invoices — no manual uploads needed.
+        <div style={{ fontFamily: SANS, fontWeight: 800, fontSize: 22, color: T.t1, marginBottom: 6 }}>{t("int_page_title")}</div>
+        <div style={{ fontFamily: SANS, fontSize: 14, color: T.t3 }}>
+          {t("int_page_sub")}
         </div>
         {hasAnyError && (
-          <div style={{ marginTop: 14, padding: "10px 16px", background: "#2d0a0a", border: "1px solid #7f1d1d", borderRadius: 10, fontSize: 13, color: "#f87171" }}>
-            ⚠ One or more integrations have errors — expand the card to re-authorize.
+          <div style={{ marginTop: 14, padding: "10px 16px", background: T.redTint, border: `1px solid ${T.redBdr}`, borderRadius: 10, fontFamily: SANS, fontSize: 13, color: T.red }}>
+            ⚠ {t("int_has_errors")}
           </div>
         )}
       </div>
 
       {toast && (
-        <div style={{
-          marginBottom: 20, padding: "10px 16px", borderRadius: 10, fontSize: 13, animation: "fadeIn .3s",
-          background: toast.ok ? "#052e16" : "#2d0a0a",
-          border:     `1px solid ${toast.ok ? "#166534" : "#7f1d1d"}`,
-          color:      toast.ok ? "#4ade80" : "#f87171",
+        <div role="status" style={{
+          marginBottom: 20, padding: "10px 16px", borderRadius: 10, fontFamily: SANS, fontSize: 13, animation: "fadeIn .3s",
+          background: toast.ok ? T.greenTint : T.redTint,
+          border:     `1px solid ${toast.ok ? T.greenBdr : T.redBdr}`,
+          color:      toast.ok ? T.green : T.red,
         }}>
           {toast.ok ? "✓ " : "✕ "}{toast.text}
         </div>
@@ -1027,7 +1030,7 @@ export default function IntegrationsPage({ oauthResult, onClearOAuthResult, onIn
       {showGreenModal && (
         <GreenInvoiceModal
           onClose={() => setShowGreenModal(false)}
-          onSave={() => { setShowGreenModal(false); load(); showToast("Green Invoice connected", true); }}
+          onSave={() => { setShowGreenModal(false); load(); showToast(t("int_gi_connected_toast"), true); }}
         />
       )}
     </div>
