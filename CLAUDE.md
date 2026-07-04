@@ -15,10 +15,10 @@ support. Live product with real users — every change follows the workflow and 
 npm run dev      # Vite (5173) + Express backend (3001) concurrently
 npm run build    # Vite build — dual HTML entry points (index.html + app.html)
 npm run preview  # Preview production build
+npm test         # Vitest (tests/ — plans, dedup, OAuth token merge, trust proxy, i18n parity, theme sync)
 ```
 
-No test runner or linter is currently configured. For any new logic, add a minimal test alongside
-it (propose the test setup if none exists) rather than assuming a test gate.
+No linter is configured. For any new logic, add a minimal vitest test alongside it in `tests/`.
 
 ## Architecture
 
@@ -28,12 +28,19 @@ it (propose the test setup if none exists) rather than assuming a test gate.
 - Vite proxies `/api/*` to `http://localhost:3001` in dev
 - These differ in cold-start behavior; changes to server bootstrap must work in both.
 
-### Frontend (`src/`)
-- `src/App.jsx` — ~2400-line monolith; owns most app state, theme, language (HE/EN), layout detection
-- `src/hooks/useInvoiceData.js` — primary data-fetching hook (invoices + suppliers from Supabase)
-- `src/contexts/AuthContext.jsx` — Supabase auth via React context
-- `src/i18n/en.js` + `src/i18n/he.js` — all UI strings; ALWAYS add keys to both, verify RTL for Hebrew
-- `src/constants.js` — `PALETTE`; `src/constants/plans.js` — plan tiers
+### Frontend (`src/`) — "Night Ledger" design system
+- `src/theme.js` — design tokens (NIGHT/DAY themes, fonts, CVD-validated chart palettes). Mirrored as
+  CSS custom properties in `src/index.css`; `tests/theme.test.js` enforces the two stay in sync.
+- `src/App.jsx` — thin root: state wiring, providers, view switch (no React Router — `view` state string)
+- `src/views/` — Login, Dashboard, Invoices, Suppliers, Settings, Onboarding (first-run experience)
+- `src/components/layout/` — Sidebar, GlobalHeader; `src/components/` — shared pieces (StatusPill, TermsPicker, SearchOverlay, modals)
+- `src/contexts/AppContexts.jsx` — Theme/Layout/Lang contexts (+ `src/contexts/AuthContext.jsx` for Supabase auth)
+- `src/hooks/useInvoiceData.js` — primary data hook; `src/hooks/useUpload.js` — manual upload → OCR pipeline
+- `src/i18n/en.js` + `src/i18n/he.js` — all UI strings; ALWAYS add keys to both (`tests/i18n.test.js` enforces parity), verify RTL for Hebrew
+- Styling: CSS custom properties + classes with **logical properties** (RTL mirrors automatically);
+  theme/direction switched via `data-theme` / `dir` on `<html>`. Chart colors come from
+  `chartPalette(isDark)` — 8 fixed slots, order is the colorblind-safety mechanism, never reorder.
+- `src/constants.js` — `STATUS`; `src/constants/plans.js` — plan tiers
 
 ### Backend (`server/`)
 - `server/middleware/auth.js` — Supabase JWT validation on all routes except the WhatsApp webhook
@@ -61,13 +68,13 @@ it (propose the test setup if none exists) rather than assuming a test gate.
   - **Stripe** (global) and **Meshulam** (Israeli market). Plan limits enforced server-side in
     `server/lib/plans.js`. Any billing change must account for both, and for the case where both
     fire for one user. Payment code is the highest-scrutiny area in this repo.
-- **Migrations:** `supabase/migrations/`, numbered sequentially (001–010), run via Supabase CLI/dashboard.
+- **Migrations:** `supabase/migrations/`, numbered sequentially (001–012), run via Supabase CLI/dashboard.
 
 ### External Services
 | Service | Purpose |
 |---|---|
 | Supabase | PostgreSQL DB, auth, RLS, file metadata |
-| ⚠️ Object storage | Invoice files (presigned URLs). **VERIFY: audit read this as Supabase Storage / R2; /init read it as AWS S3. Confirm which is real and correct this line before any storage ticket.** |
+| Object storage | Invoice files via `server/lib/storage.js` — Supabase Storage (default) ⇄ Cloudflare R2 (S3-compatible, via AWS SDK), selected per-row by `STORAGE_BACKEND` env; presigned URLs |
 | Anthropic Claude | OCR + invoice extraction |
 | Google Drive / Gmail | Invoice source integrations |
 | WhatsApp Business (Meta) | Invoice source via webhooks |

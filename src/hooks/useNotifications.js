@@ -1,22 +1,9 @@
 import { useState, useEffect, useCallback } from "react";
-import { supabase } from "../lib/supabase";
 import { useAuth } from "../contexts/AuthContext";
 
 const STORAGE_KEY = "cashflow_notifications_last_seen";
 
-const apiFetch = async (path) => {
-  const { data: { session } } = await supabase.auth.getSession();
-  const res = await fetch(path, {
-    headers: {
-      "Content-Type": "application/json",
-      ...(session ? { Authorization: `Bearer ${session.access_token}` } : {}),
-    },
-  });
-  let json;
-  try { json = await res.json(); } catch { json = {}; }
-  if (!res.ok) throw new Error(json.error || `Error ${res.status}`);
-  return json;
-};
+import { apiFetch } from "../lib/api";
 
 export const useNotifications = () => {
   const { user } = useAuth();

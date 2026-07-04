@@ -102,6 +102,9 @@ app.use('/api/billing', auth, billingRoutes.router);
 app.use('/api/stripe', auth, stripeRoutes.router);
 
 // Cron (secured by CRON_SECRET header)
+// Account management (strict rate limit — permanent destructive operation)
+app.delete('/api/account', accountLimiter, auth, require('./routes/account').deleteAccount);
+
 app.get('/api/cron/sync', require('./routes/cron').runSync);
 app.get('/api/cron/gc',   require('./routes/gc').runGc);
 app.get('/api/cron/migrate', require('./routes/migrate').runMigrate);

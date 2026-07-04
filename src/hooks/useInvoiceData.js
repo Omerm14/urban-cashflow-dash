@@ -10,10 +10,14 @@ export const useInvoiceData = () => {
   const [suppliers, setSuppliers] = useState([]);
   const [invoices,  setInvoices]  = useState([]);
   const [loading,   setLoading]   = useState(true);
+  const [loadError, setLoadError] = useState(null);
+  const [loadAttempt, setLoadAttempt] = useState(0);
 
   useEffect(() => {
     if (!user) return;
     let mounted = true;
+    setLoading(true);
+    setLoadError(null);
     Promise.all([
       supabase.from('invoices').select('*').eq('user_id', user.id).order('created_at'),
       supabase.from('suppliers').select('*').eq('user_id', user.id),
@@ -21,12 +25,15 @@ export const useInvoiceData = () => {
       if (!mounted) return;
       if (ie) console.error('invoices load error:', ie.message);
       if (se) console.error('suppliers load error:', se.message);
+      if (ie || se) setLoadError((ie || se).message);
       setInvoices(invs  ?? []);
       setSuppliers(sups ?? []);
       setLoading(false);
     });
     return () => { mounted = false; };
-  }, [user]);
+  }, [user, loadAttempt]);
+
+  const retryLoad = useCallback(() => setLoadAttempt(a => a + 1), []);
 
   // Invoice CRUD
   const addInvoice = useCallback(async data => {
@@ -122,10 +129,13 @@ export const useInvoiceData = () => {
 
   const computed = useMemo(() => {
     const today = new Date(); today.setHours(0, 0, 0, 0);
+    // Canonicalise status casing once so every consumer (filters, KPIs, pills)
+    // compares a single form — DB rows from older sync paths may be lowercase.
+    const CANON = { paid: STATUS.PAID, unpaid: STATUS.UNPAID, overdue: STATUS.OVERDUE, credit: STATUS.CREDIT };
     return invoices.map(inv => {
       const sup = matchSupplier(inv.supplier, suppliers);
       const due = inv.due_date || inv.dueDate || (calcDueDate(inv.invoice_date || inv.invoiceDate, sup)?.toISOString().split("T")[0] ?? null);
-      let status = inv.status;
+      let status = CANON[String(inv.status || "").toLowerCase()] || inv.status || STATUS.UNPAID;
       if (status !== STATUS.PAID && status !== STATUS.CREDIT && due && new Date(due) < today) status = STATUS.OVERDUE;
       return {
         ...inv,
@@ -185,7 +195,7 @@ export const useInvoiceData = () => {
   }, [computed, monthlyData]);
 
   return {
-    suppliers, invoices, computed, dupeIds, monthlyData, allNames, color, maxTotal, kpis, loading,
+    suppliers, invoices, computed, dupeIds, monthlyData, allNames, color, maxTotal, kpis, loading, loadError, retryLoad,
     missingSuppliers, anomalyMap,
     addInvoice, updateInvoice, deleteInvoice, bulkMarkPaid, bulkMarkUnpaid, bulkDelete,
     addSupplier, updateSupplier, deleteSupplier,
