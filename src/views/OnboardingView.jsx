@@ -38,9 +38,6 @@ export default function OnboardingView({ onUploadClick, onNavigate, extracting, 
   return (
     <div style={{ maxWidth: 760, margin: "0 auto", padding: isMobile ? "24px 0 60px" : "48px 0 80px", animation: "slideUp 0.4s cubic-bezier(.16,1,.3,1)" }}>
       <style>{`
-        .ob-scanline { position: relative; overflow: hidden; }
-        .ob-scanline::after { content: ""; position: absolute; left: 0; right: 0; height: 2px; background: var(--accent); animation: obScan 1.6s ease-in-out infinite; }
-        @keyframes obScan { 0%, 100% { top: 15% } 50% { top: 80% } }
         .ob-field { animation: kpiIn .4s ease both; }
       `}</style>
 
@@ -100,7 +97,7 @@ export default function OnboardingView({ onUploadClick, onNavigate, extracting, 
           {phase === "reading" && (
             <div className="card" style={{ padding: "22px 24px" }}>
               <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-                <span className="ob-scanline" aria-hidden="true" style={{ width: 36, height: 46, borderRadius: 6, background: T.surf3, border: `1px solid ${T.bdr2}`, flexShrink: 0, display: "block" }} />
+                <span className="scanline" aria-hidden="true" style={{ width: 36, height: 46, borderRadius: 6, background: T.surf3, border: `1px solid ${T.bdr2}`, flexShrink: 0, display: "block" }} />
                 <div style={{ flex: 1 }}>
                   <div style={{ fontFamily: DISPLAY, fontWeight: 700, fontSize: 15, color: T.t1 }}>{t("ob_reading_title")}</div>
                   <div style={{ fontFamily: SANS, fontSize: 12.5, color: T.t3, marginTop: 3 }}>

@@ -69,6 +69,7 @@ body {
 @keyframes barRise { from { transform: scaleY(0) } to { transform: scaleY(1) } }
 @keyframes shimmer { 0% { background-position: -200% 0 } 100% { background-position: 200% 0 } }
 @keyframes confettiFall { 0% { transform: translateY(0) rotate(0); opacity: 1 } 100% { transform: translateY(-140px) rotate(480deg); opacity: 0 } }
+@keyframes scanMove { 0%, 100% { top: 15% } 50% { top: 80% } }
 @keyframes floatCard {
   0%   { transform: translateY(110%) rotate(var(--rot)); opacity: 0 }
   8%   { opacity: 1 }
@@ -215,6 +216,10 @@ body {
 .cal-day:hover { border-color: var(--bdr2); }
 .cal-day.today { border-color: var(--accent-bdr); box-shadow: 0 0 0 1px var(--accent-tint); }
 .chip { border-radius: 4px; padding: 3px 7px; font-size: 10px; font-weight: 700; color: #fff; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-bottom: 2px; cursor: default; }
+
+/* Scanline "reading your document" motif — shared by OnboardingView and IntegrationWizard */
+.scanline { position: relative; overflow: hidden; }
+.scanline::after { content: ""; position: absolute; inset-inline: 0; height: 2px; background: var(--accent); animation: scanMove 1.6s ease-in-out infinite; }
 
 /* Modal overlays & panels (EditInvoiceModal, AlertModals, IntegrationsPage, AttachmentPreviewModal) */
 .modal-overlay, .overlay {

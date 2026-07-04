@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { apiFetch } from "../lib/api";
 import { useT, useLang } from "../contexts/AppContexts";
 import { FONT_UI as SANS, FONT_MONO as MONO } from "../theme";
+import IntegrationWizard from "./IntegrationWizard";
 
 // ─── Brand SVG icons ─────────────────────────────────────────────────────────
 // Third-party brand marks — colors are the providers' own, not app theme.
@@ -35,7 +36,7 @@ const WhatsAppIcon = ({ size = 28 }) => (
   </svg>
 );
 
-const ICONS = {
+export const ICONS = {
   google_drive:  GoogleDriveIcon,
   gmail:         GmailIcon,
   green_invoice: GreenInvoiceIcon,
@@ -46,7 +47,7 @@ const ICONS = {
 // `color`/`accent` are the providers' own brand colors (used for the icon chip
 // and active-sync glow only) — not swapped for theme tokens.
 
-const PROVIDERS = {
+export const PROVIDERS = {
   google_drive: {
     label:       "Google Drive",
     descKey:     "int_desc_drive",
@@ -106,7 +107,7 @@ const ConnStatusPill = ({ status }) => {
   );
 };
 
-const Btn = ({ children, onClick, disabled, variant = "primary", style: extra = {}, title }) => {
+export const Btn = ({ children, onClick, disabled, variant = "primary", style: extra = {}, title }) => {
   const T = useT();
   const v = {
     primary:   { background: T.accent, color: T.accentInk, border: "none" },
@@ -129,7 +130,7 @@ const Btn = ({ children, onClick, disabled, variant = "primary", style: extra = 
 
 // ─── Drive folder navigator (breadcrumb tree) ────────────────────────────────
 
-function DriveNavigator({ selectedFolder, selectedFolderName, onSelect }) {
+export function DriveNavigator({ selectedFolder, selectedFolderName, onSelect }) {
   const T = useT();
   const { t } = useLang();
   const [stack,    setStack]    = useState([{ id: "root", name: "My Drive" }]);
@@ -339,60 +340,9 @@ function EventTimeline({ integrationId, refreshTrigger }) {
   );
 }
 
-// ─── Green Invoice modal ──────────────────────────────────────────────────────
-
-function GreenInvoiceModal({ onClose, onSave }) {
-  const T = useT();
-  const { t } = useLang();
-  const [apiKey,    setApiKey]    = useState("");
-  const [apiSecret, setApiSecret] = useState("");
-  const [saving,    setSaving]    = useState(false);
-  const [err,       setErr]       = useState(null);
-
-  const save = async () => {
-    if (!apiKey || !apiSecret) return setErr(t("int_gi_both_required"));
-    setSaving(true); setErr(null);
-    try {
-      await apiFetch("/api/integrations/green-invoice", { method: "POST", body: { apiKey, apiSecret } });
-      onSave();
-    } catch (e) { setErr(e.message); }
-    finally { setSaving(false); }
-  };
-
-  return (
-    <div className="modal-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
-      <div className="modal" role="dialog" aria-modal="true" aria-label={t("int_gi_connect_title")} style={{ maxWidth: 420 }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <GreenInvoiceIcon size={24} />
-            <span style={{ fontFamily: SANS, fontWeight: 700, fontSize: 16, color: T.t1 }}>{t("int_gi_connect_title")}</span>
-          </div>
-          <button onClick={onClose} aria-label={t("close")} style={{ width: 30, height: 30, borderRadius: 8, background: T.surf2, border: `1px solid ${T.bdr}`, color: T.t2, cursor: "pointer", fontSize: 14 }}>✕</button>
-        </div>
-        <p style={{ fontFamily: SANS, fontSize: 13, color: T.t2, marginBottom: 18 }}>
-          {t("int_gi_instructions")}
-        </p>
-        {[["int_gi_api_key", apiKey, setApiKey], ["int_gi_api_secret", apiSecret, setApiSecret]].map(([labelKey, val, setter]) => (
-          <div key={labelKey} style={{ marginBottom: 14 }}>
-            <div style={{ fontFamily: SANS, fontSize: 11, fontWeight: 600, color: T.t3, marginBottom: 6, textTransform: "uppercase", letterSpacing: ".5px" }}>{t(labelKey)}</div>
-            <input type="text" value={val} className="input" aria-label={t(labelKey)} onChange={e => setter(e.target.value)} />
-          </div>
-        ))}
-        {err && <div role="alert" style={{ color: T.red, fontFamily: SANS, fontSize: 12, marginBottom: 12 }}>{err}</div>}
-        <div style={{ display: "flex", gap: 10, justifyContent: "flex-end" }}>
-          <Btn variant="secondary" onClick={onClose}>{t("cancel")}</Btn>
-          <Btn onClick={save} disabled={saving}>
-            {saving ? t("int_connecting") : t("int_connect")}
-          </Btn>
-        </div>
-      </div>
-    </div>
-  );
-}
-
 // ─── Integration card ─────────────────────────────────────────────────────────
 
-function IntegrationCard({ type, integration, onRefresh, onInvoicesRefresh, onNotificationsRefresh, onSyncResult, showToast, onConnectModal, onStartSync, onCancelSync, activeSyncJob, isAtLimit, onUpgrade }) {
+function IntegrationCard({ type, integration, onRefresh, onInvoicesRefresh, onNotificationsRefresh, onSyncResult, showToast, onStartWizard, onStartSync, onCancelSync, activeSyncJob, isAtLimit, onUpgrade }) {
   const T = useT();
   const { t, lang } = useLang();
   const locale = lang === "he" ? "he-IL" : "en-GB";
@@ -536,17 +486,9 @@ function IntegrationCard({ type, integration, onRefresh, onInvoicesRefresh, onNo
     finally { setDiscovering(false); setResyncing(false); }
   };
 
-  const handleConnect = async () => {
-    // WhatsApp: one-click connect, no credentials needed from the user
-    if (type === "whatsapp") {
-      try {
-        await apiFetch("/api/integrations/whatsapp", { method: "POST" });
-        showToast(t("int_wa_connected_toast"), true);
-        onRefresh();
-      } catch (e) { showToast(e.message, false); }
-      return;
-    }
-    if (cfg.authType !== "oauth") { onConnectModal(type); return; }
+  // Fast-path reconnect for an already-connected OAuth integration that errored
+  // out (e.g. revoked token) — skips the wizard's intro step entirely.
+  const handleReauthorize = async () => {
     try {
       const { url } = await apiFetch(
         `/api/integrations/google/auth-url?type=${type}&returnUrl=${encodeURIComponent(window.location.origin + '/app')}`
@@ -632,7 +574,7 @@ function IntegrationCard({ type, integration, onRefresh, onInvoicesRefresh, onNo
             <div style={{ flex: 1 }}>
               {integration.error_message}
               {cfg.authType === "oauth" && (
-                <button onClick={handleConnect}
+                <button onClick={handleReauthorize}
                   style={{ marginInlineStart: 8, color: T.accent, background: "none", border: "none", cursor: "pointer", fontFamily: SANS, fontSize: 12, textDecoration: "underline" }}>
                   {t("int_reauthorize")}
                 </button>
@@ -658,7 +600,7 @@ function IntegrationCard({ type, integration, onRefresh, onInvoicesRefresh, onNo
         {/* Actions */}
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap", paddingBottom: connected ? 16 : 22 }}>
           {!connected ? (
-            <Btn onClick={handleConnect} style={{ background: `linear-gradient(135deg,${cfg.color},${cfg.color}cc)`, color: "#fff", boxShadow: `0 4px 16px ${cfg.color}30` }}>
+            <Btn onClick={() => onStartWizard(type)} style={{ background: `linear-gradient(135deg,${cfg.color},${cfg.color}cc)`, color: "#fff", boxShadow: `0 4px 16px ${cfg.color}30` }}>
               {t("int_connect")}
             </Btn>
           ) : (
@@ -936,7 +878,10 @@ export default function IntegrationsPage({ oauthResult, onClearOAuthResult, onIn
   const [integrations,   setIntegrations]   = useState([]);
   const [loading,        setLoading]        = useState(true);
   const [toast,          setToast]          = useState(null);
-  const [showGreenModal, setShowGreenModal] = useState(false);
+  const [wizard,         setWizard]         = useState(null); // { type, step } | null
+
+  const openWizard  = (type, step = "intro") => setWizard({ type, step });
+  const closeWizard = () => setWizard(null);
 
   const showToast = useCallback((text, ok) => {
     setToast({ text, ok });
@@ -957,6 +902,7 @@ export default function IntegrationsPage({ oauthResult, onClearOAuthResult, onIn
     if (!oauthResult) return;
     if (oauthResult.connected) {
       showToast(t("int_oauth_connected", { label: PROVIDERS[oauthResult.connected]?.label || oauthResult.connected }), true);
+      load().then(() => openWizard(oauthResult.connected, "configure"));
     } else if (oauthResult.error) {
       const msg = oauthResult.error === "access_denied" ? t("int_oauth_access_denied") : t("int_oauth_failed", { error: oauthResult.error });
       showToast(msg, false);
@@ -966,10 +912,6 @@ export default function IntegrationsPage({ oauthResult, onClearOAuthResult, onIn
 
   const getIntegration = type => integrations.find(i => i.type === type);
   const hasAnyError    = integrations.some(i => i.status === "error");
-
-  const handleConnectModal = type => {
-    if (type === "green_invoice") setShowGreenModal(true);
-  };
 
   if (loading) return (
     <div style={{ color: T.t3, padding: "60px 0", textAlign: "center", fontFamily: SANS, fontSize: 14 }}>
@@ -1016,7 +958,7 @@ export default function IntegrationsPage({ oauthResult, onClearOAuthResult, onIn
               onNotificationsRefresh={onNotificationsRefresh}
               onSyncResult={onSyncResult}
               showToast={showToast}
-              onConnectModal={handleConnectModal}
+              onStartWizard={t => openWizard(t)}
               onStartSync={onStartSync}
               onCancelSync={onCancelSync}
               activeSyncJob={activeSyncJob}
@@ -1027,10 +969,17 @@ export default function IntegrationsPage({ oauthResult, onClearOAuthResult, onIn
         })}
       </div>
 
-      {showGreenModal && (
-        <GreenInvoiceModal
-          onClose={() => setShowGreenModal(false)}
-          onSave={() => { setShowGreenModal(false); load(); showToast(t("int_gi_connected_toast"), true); }}
+      {wizard && (
+        <IntegrationWizard
+          type={wizard.type}
+          initialStep={wizard.step}
+          integration={getIntegration(wizard.type)}
+          onClose={closeWizard}
+          onRefresh={load}
+          onInvoicesRefresh={onInvoicesRefresh}
+          onStartSync={onStartSync}
+          syncJobs={syncJobs}
+          showToast={showToast}
         />
       )}
     </div>
