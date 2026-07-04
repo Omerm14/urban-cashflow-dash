@@ -24,9 +24,11 @@ const GmailIcon = ({ size = 28 }) => (
   </svg>
 );
 
+// No public brand glyph for Green Invoice (חשבונית ירוקה) — a receipt silhouette
+// in their brand teal stands in, instead of a generic icon that reads as an error.
 const GreenInvoiceIcon = ({ size = 28 }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z" fill="#34d399"/>
+    <path fillRule="evenodd" clipRule="evenodd" d="M5 2 L19 2 L19 22 L15.5 20 L12 22 L8.5 20 L5 22 Z M8 6.4 L16 6.4 L16 8 L8 8 Z M8 10.4 L16 10.4 L16 12 L8 12 Z M8 14.4 L13 14.4 L13 16 L8 16 Z" fill="#34d399"/>
   </svg>
 );
 
