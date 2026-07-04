@@ -98,6 +98,15 @@ const logSyncEvent = (integrationId, userId, eventType, fields = {}) => {
   }).then(({ error }) => { if (error) console.error('[sync_events]', error.message); });
 };
 
+// ─── Mid-sync cancellation (blocking syncs only — Drive uses sync_jobs.status instead) ──────
+// Gmail/Green Invoice run as a single request, so a second, concurrent request (which may
+// land on a different server instance) is the only way to signal "stop" — checked via the DB,
+// not in-memory state, since nothing else is shared between those two requests.
+const isCancelRequested = async integrationId => {
+  const { data } = await supabase.from('integrations').select('cancel_requested').eq('id', integrationId).single();
+  return !!data?.cancel_requested;
+};
+
 // ─── Core pipeline: buffer → extract → save ─────────────────────────────────
 
 const md5 = buf => crypto.createHash('md5').update(buf).digest('hex');
@@ -453,6 +462,9 @@ exports.syncGmail = async (integration, userId) => {
   let added = 0, skipped = 0, errors = 0;
 
   for (const msg of messages) {
+    if (await isCancelRequested(integration.id)) {
+      return { added, skipped, filesFound: messages.length, errors, cancelled: true };
+    }
     try {
       const { data: message } = await gmail.users.messages.get({
         userId: 'me', id: msg.id, format: 'full',
@@ -520,11 +532,13 @@ exports.syncGreenInvoice = async (integration, userId) => {
   // query params — that 405s, the API only accepts POST here). type:500 = Purchase Order,
   // the closest Green Invoice document type to "an invoice owed to a supplier"; if a given
   // account tracks incoming invoices under a different type this filter needs adjusting.
-  const lastSync = integration.last_sync ? integration.last_sync.split('T')[0] : null;
-  const docsRes  = await fetch('https://api.greeninvoice.co.il/api/v1/documents/search', {
+  const lookback  = integration.config?.lookback_days ?? 0;
+  const cutoffISO = computeCutoff(integration.last_sync, lookback);
+  const fromDate  = cutoffISO ? cutoffISO.split('T')[0] : null;
+  const docsRes   = await fetch('https://api.greeninvoice.co.il/api/v1/documents/search', {
     method:  'POST',
     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-    body:    JSON.stringify({ type: 500, ...(lastSync ? { fromDate: lastSync } : {}), page: 1, pageSize: 100 }),
+    body:    JSON.stringify({ type: 500, ...(fromDate ? { fromDate } : {}), page: 1, pageSize: 100 }),
   });
   if (!docsRes.ok) throw new Error(`Green Invoice documents fetch failed: ${await greenInvoiceErrorDetail(docsRes)}`);
   const { items = [] } = await docsRes.json();
@@ -534,6 +548,9 @@ exports.syncGreenInvoice = async (integration, userId) => {
   let added = 0, skipped = 0, errors = 0;
 
   for (const doc of items) {
+    if (await isCancelRequested(integration.id)) {
+      return { added, skipped, filesFound: items.length, errors, cancelled: true };
+    }
     const supplierName = doc.client?.name || doc.from?.name || '';
     const sup          = matchSupplier(supplierName, suppliers);
     const invoiceDate  = doc.date ? doc.date.split('T')[0] : '';
