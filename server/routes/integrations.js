@@ -254,22 +254,26 @@ exports.resync = async (req, res) => {
     if (integration.type === 'gmail')              result = await sync.syncGmail(resetIntegration, req.user.id);
     else if (integration.type === 'green_invoice') result = await sync.syncGreenInvoice(resetIntegration, req.user.id);
 
+    // Cancelled partway through a from-scratch resync — leave last_sync null (already
+    // cleared above) so the next attempt still pulls the full history, not just from here.
     await supabase.from('integrations').update({
-      last_sync:     new Date().toISOString(),
-      sync_count:    (integration.sync_count || 0) + result.added,
-      status:        'connected',
-      error_message: null,
-      error_count:   0,
+      ...(result.cancelled ? {} : { last_sync: new Date().toISOString() }),
+      sync_count:       (integration.sync_count || 0) + result.added,
+      status:           'connected',
+      error_message:    null,
+      error_count:      0,
+      cancel_requested: false,
     }).eq('id', integration.id);
 
     res.json({ ok: true, ...result });
   } catch (err) {
     console.error('[resync] error:', err.message);
     await supabase.from('integrations').update({
-      status:        'error',
-      error_message: err.message,
-      error_count:   (integration.error_count || 0) + 1,
-      last_error_at: new Date().toISOString(),
+      status:           'error',
+      error_message:    err.message,
+      error_count:      (integration.error_count || 0) + 1,
+      last_error_at:    new Date().toISOString(),
+      cancel_requested: false,
     }).eq('id', integration.id);
     res.status(500).json({ error: 'Internal server error' });
   }
@@ -483,12 +487,16 @@ exports.triggerSync = async (req, res) => {
     if (integration.type === 'gmail')              result = await sync.syncGmail(integration, req.user.id);
     else if (integration.type === 'green_invoice') result = await sync.syncGreenInvoice(integration, req.user.id);
 
+    // On cancellation, don't advance last_sync — the loop stopped partway through, so the
+    // next sync should re-scan from the same starting point rather than skip whatever it
+    // never reached (already-saved items are deduped on re-scan, so this is safe).
     await supabase.from('integrations').update({
-      last_sync:     new Date().toISOString(),
-      sync_count:    (integration.sync_count || 0) + result.added,
-      status:        'connected',
-      error_message: null,
-      error_count:   0,
+      ...(result.cancelled ? {} : { last_sync: new Date().toISOString() }),
+      sync_count:       (integration.sync_count || 0) + result.added,
+      status:           'connected',
+      error_message:    null,
+      error_count:      0,
+      cancel_requested: false,
     }).eq('id', integration.id);
 
     res.json({ ok: true, jobId: null, ...result });
@@ -496,13 +504,27 @@ exports.triggerSync = async (req, res) => {
     console.error('[integrations] sync error:', err.message);
     const isInvalidGrant = err.message?.includes('invalid_grant');
     await supabase.from('integrations').update({
-      status:        isInvalidGrant ? 'disconnected' : 'error',
-      error_message: isInvalidGrant ? 'Google authorization expired. Please reconnect.' : err.message,
-      error_count:   isInvalidGrant ? 0 : (integration.error_count || 0) + 1,
-      last_error_at: new Date().toISOString(),
+      status:           isInvalidGrant ? 'disconnected' : 'error',
+      error_message:    isInvalidGrant ? 'Google authorization expired. Please reconnect.' : err.message,
+      error_count:      isInvalidGrant ? 0 : (integration.error_count || 0) + 1,
+      last_error_at:    new Date().toISOString(),
+      cancel_requested: false,
     }).eq('id', integration.id);
     res.status(isInvalidGrant ? 401 : 500).json({ error: isInvalidGrant ? 'invalid_grant' : 'Internal server error' });
   }
+};
+
+// POST /api/integrations/:id/cancel-sync — request cancellation of a blocking sync
+// (Gmail/Green Invoice) already in flight. Sets a flag the running sync loop polls
+// between items; the original sync request resolves shortly after with cancelled:true.
+exports.cancelBlockingSync = async (req, res) => {
+  const { error } = await supabase
+    .from('integrations')
+    .update({ cancel_requested: true })
+    .eq('id', req.params.id)
+    .eq('user_id', req.user.id);
+  if (error) { console.error('[integrations] cancelBlockingSync error:', error.message); return res.status(500).json({ error: 'Internal server error' }); }
+  res.json({ ok: true });
 };
 
 // POST /api/sync-jobs/:jobId/cancel — hard-stop a running or pending job

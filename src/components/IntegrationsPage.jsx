@@ -434,6 +434,8 @@ function IntegrationCard({ type, integration, onRefresh, onInvoicesRefresh, onNo
             filters:      { from: fromFilter, subject: subjFilter },
             lookback_days: lookbackDays,
           }
+        : type === "green_invoice"
+        ? { lookback_days: lookbackDays }
         : integration?.config || {};
       await apiFetch(`/api/integrations/${integration.id}/config`, { method: "PATCH", body: { config } });
       await apiFetch(`/api/integrations/${integration.id}/auto-sync`, {
@@ -470,9 +472,10 @@ function IntegrationCard({ type, integration, onRefresh, onInvoicesRefresh, onNo
         // Progress shown via activeSyncJob / global bottom bar
       } else {
         // Gmail / Green Invoice: result already complete
-        const { added = 0, skipped = 0, filesFound = 0, errors = 0 } = res;
+        const { added = 0, skipped = 0, filesFound = 0, errors = 0, cancelled = false } = res;
         let msg;
-        if (filesFound === 0 || filesFound == null) msg = t("int_no_files_found");
+        if (cancelled) msg = t("int_sync_cancelled", { n: added });
+        else if (filesFound === 0 || filesFound == null) msg = t("int_no_files_found");
         else if (added === 0) msg = errors > 0 ? t("int_found_none_new_errors", { n: filesFound, errors }) : t("int_found_none_new", { n: filesFound });
         else msg = t("int_added_from", { n: added, source: cfg.label });
         showToast(msg, added > 0);
@@ -484,8 +487,24 @@ function IntegrationCard({ type, integration, onRefresh, onInvoicesRefresh, onNo
         setHistoryOpen(true);
         onNotificationsRefresh?.();
       }
-    } catch (e) { showToast(e.message, false); }
+    } catch (e) {
+      showToast(e.message, false);
+      // The backend already recorded the real failure reason on the integration row
+      // (status: 'error' + error_message) — refresh so the card's error banner shows it,
+      // instead of leaving the user stuck on this generic toast.
+      onRefresh();
+    }
     finally { setDiscovering(false); setResyncing(false); }
+  };
+
+  // Signals the in-flight blocking sync (Gmail/Green Invoice) to stop between items —
+  // Drive uses its own job-based cancellation (onCancelSync) instead, this is unrelated to it.
+  const [cancelling, setCancelling] = useState(false);
+  const handleCancelBlockingSync = async () => {
+    setCancelling(true);
+    try { await apiFetch(`/api/integrations/${integration.id}/cancel-sync`, { method: "POST" }); }
+    catch (e) { showToast(e.message, false); }
+    finally { setCancelling(false); }
   };
 
   // Fast-path reconnect for an already-connected OAuth integration that errored
@@ -624,6 +643,11 @@ function IntegrationCard({ type, integration, onRefresh, onInvoicesRefresh, onNo
               {isJobSyncing && (
                 <Btn variant="danger" onClick={() => onCancelSync?.(integration.id)} style={{ padding: "0 14px" }}>
                   {t("int_stop")}
+                </Btn>
+              )}
+              {type !== "google_drive" && (discovering || resyncing) && (
+                <Btn variant="danger" onClick={handleCancelBlockingSync} disabled={cancelling} style={{ padding: "0 14px" }}>
+                  {cancelling ? t("int_stopping") : t("int_stop")}
                 </Btn>
               )}
               <Btn variant="secondary" onClick={openConfig} style={{ display: "flex", alignItems: "center", gap: 6 }}>
@@ -780,8 +804,8 @@ function IntegrationCard({ type, integration, onRefresh, onInvoicesRefresh, onNo
             </div>
           )}
 
-          {/* Lookback window (Drive + Gmail only) */}
-          {type !== "whatsapp" && type !== "green_invoice" && (
+          {/* Lookback window (not applicable to WhatsApp — push-driven, no historical scan) */}
+          {type !== "whatsapp" && (
             <div style={{ marginBottom: 18 }}>
               <div style={{ fontFamily: SANS, fontSize: 11, fontWeight: 600, color: T.t3, textTransform: "uppercase", letterSpacing: ".5px", marginBottom: 8 }}>
                 {t("int_lookback_title")}
@@ -803,7 +827,7 @@ function IntegrationCard({ type, integration, onRefresh, onInvoicesRefresh, onNo
               </select>
               {lookbackDays === -1 && (
                 <div style={{ marginTop: 6, fontFamily: SANS, fontSize: 11, color: T.amber }}>
-                  ⚠ {type === "gmail" ? t("int_lookback_slow_gmail") : t("int_lookback_slow_drive")}
+                  ⚠ {type === "gmail" ? t("int_lookback_slow_gmail") : type === "green_invoice" ? t("int_lookback_slow_green") : t("int_lookback_slow_drive")}
                 </div>
               )}
               {lookbackDays === 0 && (
