@@ -3,17 +3,20 @@ import { apiFetch } from "../lib/api";
 import { useT, useLang } from "../contexts/AppContexts";
 import { FONT_UI as SANS, FONT_DISPLAY as DISPLAY, FONT_MONO as MONO } from "../theme";
 import { PROVIDERS, ICONS, DriveNavigator } from "./IntegrationsPage";
-import { X, Check, ArrowRight, ShieldCheck } from "lucide-react";
+import { X, Check, ArrowRight, Eye, SlidersHorizontal, Unlink } from "lucide-react";
 
 // Per-provider intro copy — what happens and what permissions are requested,
 // shown BEFORE the OAuth redirect (or before entering credentials) so
-// "Connect" is never a bare button with zero context.
+// "Connect" is never a bare button with zero context. Bullets are paired
+// with BULLET_ICONS by position: [scope/read-only, what you control, reversibility].
 const INTRO_COPY = {
   google_drive: { introKey: "wiz_drive_intro", bullets: ["wiz_drive_b1", "wiz_drive_b2", "wiz_drive_b3"] },
   gmail:        { introKey: "wiz_gmail_intro", bullets: ["wiz_gmail_b1", "wiz_gmail_b2", "wiz_gmail_b3"] },
   green_invoice:{ introKey: "wiz_green_intro", bullets: ["wiz_green_b1", "wiz_green_b2", "wiz_green_b3"] },
   whatsapp:     { introKey: "wiz_wa_intro",    bullets: ["wiz_wa_b1", "wiz_wa_b2", "wiz_wa_b3"] },
 };
+
+const BULLET_ICONS = [Eye, SlidersHorizontal, Unlink];
 
 // The user-facing step sequence per provider. 'syncing' is automatic (no user
 // action) so it's excluded from the progress dots but still a real step.
@@ -30,19 +33,28 @@ const FREQ_OPTIONS = [
   { key: "int_freq_daily",  value: 1440 },
 ];
 
+const AUTOSYNC_NOTE_KEY = { 60: "wiz_done_autosync_hourly", 240: "wiz_done_autosync_4h", 1440: "wiz_done_autosync_daily" };
+
 function StepDots({ sequence, step }) {
   const T = useT();
+  const { t } = useLang();
   const dotSteps = sequence.filter(s => s !== "syncing");
   const activeIdx = step === "syncing" ? dotSteps.length - 1 : dotSteps.indexOf(step);
+  if (dotSteps.length < 2) return null;
   return (
-    <div style={{ display: "flex", gap: 6, justifyContent: "center", marginBottom: 22 }} aria-hidden="true">
-      {dotSteps.map((s, i) => (
-        <span key={s} style={{
-          width: i === activeIdx ? 18 : 6, height: 6, borderRadius: 3,
-          background: i <= activeIdx ? T.accent : T.surf3,
-          transition: "all .25s ease",
-        }} />
-      ))}
+    <div style={{ textAlign: "center", marginBottom: 22 }}>
+      <div style={{ fontFamily: SANS, fontSize: 11, color: T.t3, marginBottom: 8 }}>
+        {t("wiz_step_of", { n: activeIdx + 1, total: dotSteps.length })}
+      </div>
+      <div style={{ display: "flex", gap: 6, justifyContent: "center" }} aria-hidden="true">
+        {dotSteps.map((s, i) => (
+          <span key={s} style={{
+            width: i === activeIdx ? 18 : 6, height: 6, borderRadius: 3,
+            background: i <= activeIdx ? T.accent : T.surf3,
+            transition: "all .25s ease",
+          }} />
+        ))}
+      </div>
     </div>
   );
 }
@@ -192,10 +204,10 @@ export default function IntegrationWizard({ type, initialStep, integration, onCl
 
   return (
     <div className="modal-overlay" onClick={e => e.target === e.currentTarget && step !== "syncing" && onClose()}>
-      <div className="modal" role="dialog" aria-modal="true" aria-label={titleForStep} style={{ maxWidth: 460 }}>
+      <div className="modal" role="dialog" aria-modal="true" aria-label={titleForStep} style={{ maxWidth: step === "configure" ? 520 : 460 }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 18 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-            <span aria-hidden="true" style={{ width: 40, height: 40, borderRadius: 11, background: cfg.accent, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+            <span aria-hidden="true" style={{ width: 40, height: 40, borderRadius: 11, background: cfg.accent, boxShadow: `0 0 0 1px ${cfg.color}30`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
               <Icon size={20} />
             </span>
             <span style={{ fontFamily: DISPLAY, fontWeight: 700, fontSize: 16, color: T.t1 }}>{titleForStep}</span>
@@ -209,17 +221,22 @@ export default function IntegrationWizard({ type, initialStep, integration, onCl
 
         <StepDots sequence={sequence} step={step} />
 
+        <div key={step} style={{ animation: "slideUp .28s cubic-bezier(.16,1,.3,1)" }}>
+
         {/* ── intro ── */}
         {step === "intro" && (
           <>
             <p style={{ fontFamily: SANS, fontSize: 13.5, color: T.t2, lineHeight: 1.6, marginBottom: 16 }}>{t(intro.introKey)}</p>
             <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 24 }}>
-              {intro.bullets.map(k => (
-                <div key={k} style={{ display: "flex", gap: 9, alignItems: "flex-start" }}>
-                  <ShieldCheck size={14} color={T.accent} style={{ flexShrink: 0, marginTop: 2 }} aria-hidden="true" />
-                  <span style={{ fontFamily: SANS, fontSize: 12.5, color: T.t2, lineHeight: 1.5 }}>{t(k)}</span>
-                </div>
-              ))}
+              {intro.bullets.map((k, i) => {
+                const BulletIcon = BULLET_ICONS[i] || Eye;
+                return (
+                  <div key={k} style={{ display: "flex", gap: 9, alignItems: "flex-start" }}>
+                    <BulletIcon size={14} color={T.accent} style={{ flexShrink: 0, marginTop: 2 }} aria-hidden="true" />
+                    <span style={{ fontFamily: SANS, fontSize: 12.5, color: T.t2, lineHeight: 1.5 }}>{t(k)}</span>
+                  </div>
+                );
+              })}
             </div>
             <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
               <button className="btn btn-ghost" onClick={onClose}>{t("cancel")}</button>
@@ -291,18 +308,25 @@ export default function IntegrationWizard({ type, initialStep, integration, onCl
               </div>
             )}
 
-            <div style={{ marginBottom: 16 }}>
-              <div style={{ fontFamily: SANS, fontSize: 11, fontWeight: 600, color: T.t3, textTransform: "uppercase", letterSpacing: ".5px", marginBottom: 8 }}>{t("int_lookback_title")}</div>
-              <select value={lookbackDays} onChange={e => setLookbackDays(Number(e.target.value))} className="input" aria-label={t("int_lookback_title")} style={{ fontSize: 12, padding: "6px 10px" }}>
-                <option value={0}>{t("int_lookback_smart")}</option>
-                <option value={7}>{t("int_lookback_7")}</option>
-                <option value={30}>{t("int_lookback_30")}</option>
-                <option value={90}>{t("int_lookback_90")}</option>
-              </select>
-            </div>
+            {/* Sync preferences — grouped separately from the source picker above so
+                the primary decision (what to sync) isn't visually flattened together
+                with secondary, sensibly-defaulted options. */}
+            <div style={{ border: `1px solid ${T.bdr}`, borderRadius: 10, padding: "14px 14px 16px", marginBottom: 20, background: T.surf2 }}>
+              <div style={{ fontFamily: SANS, fontSize: 10.5, fontWeight: 700, color: T.t3, textTransform: "uppercase", letterSpacing: ".6px", marginBottom: 12 }}>
+                {t("wiz_sync_prefs")}
+              </div>
 
-            <div style={{ marginBottom: 20 }}>
-              <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", fontFamily: SANS, fontSize: 13, color: T.t2, marginBottom: 8 }}>
+              <div style={{ marginBottom: 14 }}>
+                <div style={{ fontFamily: SANS, fontSize: 12, color: T.t2, marginBottom: 6 }}>{t("int_lookback_title")}</div>
+                <select value={lookbackDays} onChange={e => setLookbackDays(Number(e.target.value))} className="input" aria-label={t("int_lookback_title")} style={{ fontSize: 12, padding: "6px 10px" }}>
+                  <option value={0}>{t("int_lookback_smart")}</option>
+                  <option value={7}>{t("int_lookback_7")}</option>
+                  <option value={30}>{t("int_lookback_30")}</option>
+                  <option value={90}>{t("int_lookback_90")}</option>
+                </select>
+              </div>
+
+              <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", fontFamily: SANS, fontSize: 13, color: T.t2, marginBottom: autoSync ? 10 : 0 }}>
                 <input type="checkbox" checked={autoSync} onChange={e => setAutoSync(e.target.checked)} style={{ accentColor: T.accent, width: 14, height: 14 }} />
                 {t("int_auto_sync_enabled")}
               </label>
@@ -331,26 +355,37 @@ export default function IntegrationWizard({ type, initialStep, integration, onCl
             <div style={{ display: "flex", justifyContent: "center", marginBottom: 18 }}>
               <span className="scanline" aria-hidden="true" style={{ width: 44, height: 56, borderRadius: 8, background: T.surf3, border: `1px solid ${T.bdr2}`, display: "block" }} />
             </div>
-            <p style={{ fontFamily: SANS, fontSize: 13, color: T.t2 }}>
+            <p style={{ fontFamily: SANS, fontSize: 13, color: T.t2, marginBottom: 4 }}>
               {type === "google_drive" ? t("wiz_syncing_sub_drive") : type === "gmail" ? t("wiz_syncing_sub_gmail") : t("wiz_syncing_sub_green")}
               {activeJob?.totalFiles > 0 && <span className="num"> · {Math.min(activeJob.cursor || 0, activeJob.totalFiles)}/{activeJob.totalFiles}</span>}
             </p>
+            <p style={{ fontFamily: SANS, fontSize: 11.5, color: T.t3 }}>{t("wiz_syncing_hint")}</p>
           </div>
         )}
 
         {/* ── done ── */}
         {step === "done" && (
           <div style={{ textAlign: "center", padding: "4px 0" }}>
-            <div style={{ width: 52, height: 52, borderRadius: "50%", background: syncResult?.error ? T.amberTint : T.greenTint, border: `1px solid ${syncResult?.error ? T.amberBdr : T.greenBdr}`, display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px" }}>
+            <div style={{ width: 52, height: 52, borderRadius: "50%", background: syncResult?.error ? T.amberTint : T.greenTint, border: `1px solid ${syncResult?.error ? T.amberBdr : T.greenBdr}`, display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 14px" }}>
               <Check size={24} color={syncResult?.error ? T.amber : T.green} strokeWidth={2} aria-hidden="true" />
             </div>
-            <p style={{ fontFamily: SANS, fontSize: 13.5, color: T.t2, marginBottom: 22, lineHeight: 1.6 }}>
+            {!syncResult?.error && syncResult?.added > 0 && (
+              <div className="num" style={{ fontFamily: DISPLAY, fontWeight: 800, fontSize: 34, color: T.t1, lineHeight: 1.1 }}>
+                {syncResult.added}
+              </div>
+            )}
+            <p style={{ fontFamily: SANS, fontSize: 13.5, color: T.t2, marginBottom: syncResult?.error || !(autoSync && (type === "google_drive" || type === "gmail")) ? 22 : 12, lineHeight: 1.6 }}>
               {syncResult?.error
                 ? t("wiz_done_error", { error: syncResult.error })
                 : syncResult?.added > 0
-                  ? t("wiz_done_added", { n: syncResult.added })
+                  ? t("wiz_done_added")
                   : t("wiz_done_none")}
             </p>
+            {!syncResult?.error && autoSync && (type === "google_drive" || type === "gmail") && (
+              <div style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "5px 12px", borderRadius: 20, background: T.surf2, border: `1px solid ${T.bdr}`, fontFamily: SANS, fontSize: 11.5, color: T.t2, marginBottom: 22 }}>
+                ↻ {t(AUTOSYNC_NOTE_KEY[syncFreq] || "wiz_done_autosync_hourly")}
+              </div>
+            )}
             <button className="btn btn-accent" onClick={onClose} style={{ width: "100%" }}>{t("wiz_finish")}</button>
           </div>
         )}
@@ -385,6 +420,8 @@ export default function IntegrationWizard({ type, initialStep, integration, onCl
             <button className="btn btn-accent" onClick={onClose} style={{ width: "100%" }}>{t("wiz_finish")}</button>
           </div>
         )}
+
+        </div>
       </div>
     </div>
   );
