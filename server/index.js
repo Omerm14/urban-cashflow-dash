@@ -61,7 +61,17 @@ app.post('/api/stripe/webhook',
 app.use(express.json({ limit: '20mb' }));
 
 app.post('/api/extract',    extractLimiter, auth, require('./routes/extract'));
-app.get('/api/admin/usage',      require('./routes/admin'));
+
+// Admin
+const admin = require('./routes/admin');
+app.get('/api/admin/whoami',                        admin.whoami);
+app.get('/api/admin/usage',                         admin.usage);
+app.get('/api/admin/users',                         admin.listUsers);
+app.delete('/api/admin/users/:userId',              admin.deleteUser);
+app.post('/api/admin/users/:userId/ban',            admin.banUser);
+app.post('/api/admin/users/:userId/unban',          admin.unbanUser);
+app.get('/api/admin/subscriptions',                 admin.listSubscriptions);
+app.patch('/api/admin/subscriptions/:userId',       admin.updateSubscription);
 
 // Integrations
 const integrations = require('./routes/integrations');

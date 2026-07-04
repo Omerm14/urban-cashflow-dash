@@ -47,7 +47,17 @@ const googleApiLimiter = rateLimit({ windowMs: 60_000,    max: 20,  standardHead
 const accountLimiter   = rateLimit({ windowMs: 3_600_000, max: 3,   standardHeaders: true, legacyHeaders: false, message: { error: 'Too many account operations, please wait' } });
 
 app.post('/api/extract',    extractLimiter, auth, require('../server/routes/extract'));
-app.get('/api/admin/usage',      require('../server/routes/admin'));
+
+// Admin
+const admin = require('../server/routes/admin');
+app.get('/api/admin/whoami',                        admin.whoami);
+app.get('/api/admin/usage',                         admin.usage);
+app.get('/api/admin/users',                         admin.listUsers);
+app.delete('/api/admin/users/:userId',              admin.deleteUser);
+app.post('/api/admin/users/:userId/ban',            admin.banUser);
+app.post('/api/admin/users/:userId/unban',          admin.unbanUser);
+app.get('/api/admin/subscriptions',                 admin.listSubscriptions);
+app.patch('/api/admin/subscriptions/:userId',       admin.updateSubscription);
 
 // Integrations
 const integrations = require('../server/routes/integrations');
