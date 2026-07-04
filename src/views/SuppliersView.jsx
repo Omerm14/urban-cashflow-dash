@@ -2,10 +2,11 @@ import { useState, useRef } from "react";
 import { useT, useLayout, useLang } from "../contexts/AppContexts";
 import { FONT_UI as SANS, FONT_MONO as MONO, chartPalette } from "../theme";
 import TermsPicker from "../components/TermsPicker";
+import ListSkeleton from "../components/ListSkeleton";
 import { parseCSV } from "../utils/invoice";
 import { Check, X, Pencil, Trash2, Plus } from "lucide-react";
 
-export default function SuppliersView({ suppliers, onAdd, onUpdate, onDelete }) {
+export default function SuppliersView({ suppliers, loading, onAdd, onUpdate, onDelete }) {
   const T = useT();
   const { isMobile } = useLayout();
   const { t } = useLang();
@@ -15,6 +16,9 @@ export default function SuppliersView({ suppliers, onAdd, onUpdate, onDelete }) 
   const [editData, setEditData] = useState({});
   const [csvToast, setCsvToast] = useState(null);
   const csvRef = useRef(null);
+
+  if (loading) return <ListSkeleton rows={5} label={t("nav_suppliers")} />;
+
   const TERMS = ["all", "shotef_plus(75)", "shotef_plus(45)", "shotef_plus(30)", "shotef", "immediate", "net75", "net45", "net30"];
   const filtered = filterTerm === "all" ? suppliers : suppliers.filter(s => s.terms === filterTerm);
   const inp = { flex: 1, padding: "6px 10px", background: T.surf2, border: `1px solid ${T.bdr}`, borderRadius: 5, fontFamily: SANS, fontSize: 12, color: T.t1, minWidth: 0, outline: "none" };

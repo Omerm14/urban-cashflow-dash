@@ -309,7 +309,7 @@ export default function App() {
                         extracting={extracting} uploadProgress={uploadProgress}
                         invoices={invoices} onContinue={() => setOnboardingDismissed(true)} />
                     : <DashboardView invoices={invoices} suppliers={suppliers} loading={invoicesLoading} onPayAll={handlePayAll} chartData={chartData} supplierNames={allNames} supplierColor={getSupplierColor} user={user} onMissingAlert={() => setShowMissingModal(true)} onAnomalyAlert={() => setShowAnomalyModal(true)} missingSuppliers={missingSuppliers} anomalyMap={anomalyMap} onViewMonth={handleViewMonth} onNavigateFiltered={(status) => { setView("invoices"); setInitialFilterStatus(status); }} />)}
-                  {view === "invoices" && <InvoicesView invoices={invoices} selectedMonth={selectedMonth} onMonthChange={setSelectedMonth} onMarkPaid={handleMarkPaid} onAddSupplier={addSupplier} onDeleteInvoice={deleteInvoice} onBulkPaid={handleBulkPaid} onBulkUnpaid={handleBulkUnpaid} onBulkDelete={bulkDelete} preSelectAll={preSelectAll} onEditInvoice={setEditInvoice} anomalyMap={anomalyMap} missingSuppliers={missingSuppliers} initialFilterStatus={initialFilterStatus} initialSelectedId={deepLinkInvoiceId} onViewAttachment={handleViewAttachment} supplierColor={getSupplierColor} />}
+                  {view === "invoices" && <InvoicesView invoices={invoices} loading={invoicesLoading} selectedMonth={selectedMonth} onMonthChange={setSelectedMonth} onMarkPaid={handleMarkPaid} onAddSupplier={addSupplier} onDeleteInvoice={deleteInvoice} onBulkPaid={handleBulkPaid} onBulkUnpaid={handleBulkUnpaid} onBulkDelete={bulkDelete} preSelectAll={preSelectAll} onEditInvoice={setEditInvoice} anomalyMap={anomalyMap} missingSuppliers={missingSuppliers} initialFilterStatus={initialFilterStatus} initialSelectedId={deepLinkInvoiceId} onViewAttachment={handleViewAttachment} supplierColor={getSupplierColor} />}
                   {view === "calendar" && <CalendarView computed={invoices} calMonth={calMonth} setCalMonth={setCalMonth} color={getSupplierColor} />}
                   {view === "integrations" && <IntegrationsPage
                     syncJobs={syncJobs} onStartSync={startSync} onCancelSync={cancelSync}
@@ -325,7 +325,7 @@ export default function App() {
                     }}
                   />}
                   {view === "activity" && <ActivityView />}
-                  {view === "suppliers" && <SuppliersView suppliers={suppliers} onAdd={addSupplier} onUpdate={updateSupplier} onDelete={deleteSupplier} />}
+                  {view === "suppliers" && <SuppliersView suppliers={suppliers} loading={invoicesLoading} onAdd={addSupplier} onUpdate={updateSupplier} onDelete={deleteSupplier} />}
                   {view === "settings" && <SettingsView onUpgrade={() => setShowUpgrade(true)} onSignOut={signOut} user={user} invoices={invoices} suppliers={suppliers} onNavigateToIntegrations={() => setView("integrations")} />}
                   {view === "admin" && <AdminPage />}
                 </div>

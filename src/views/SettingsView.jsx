@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { supabase } from "../lib/supabase";
 import { usePlan } from "../hooks/usePlan";
+import { downloadCSV } from "../utils/csv";
 import { useT, useLayout, useLang } from "../contexts/AppContexts";
 import { FONT_UI as SANS, FONT_DISPLAY as DISPLAY, FONT_MONO as MONO } from "../theme";
 import {
@@ -119,16 +120,7 @@ export default function SettingsView({ onUpgrade, onSignOut, user, invoices, sup
   };
   const inp = { width: "100%", padding: "9px 12px", background: T.surf2, border: `1px solid ${T.bdr}`, borderRadius: 6, fontFamily: SANS, fontSize: 13, color: T.t1, outline: "none" };
   const sel = { ...inp, cursor: "pointer" };
-  const { plan: settingsPlan, used, limit, pct: planPctRaw } = usePlan();
-
-  const downloadCSV = (filename, rows, cols) => {
-    const escape = v => `"${String(v ?? "").replace(/"/g, '""')}"`;
-    const csv = [cols.join(","), ...rows.map(r => cols.map(c => escape(r[c])).join(","))].join("\n");
-    const blob = new Blob([csv], { type: "text/csv" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a"); a.href = url; a.download = filename; a.click();
-    URL.revokeObjectURL(url);
-  };
+  const { plan: settingsPlan, used, limit, pct: planPctRaw, loading: planLoading } = usePlan();
 
   const exportInvoices = () => downloadCSV("invoices.csv", invoices || [], ["supplier", "invoice_no", "invoice_date", "due_date", "amount", "status", "notes"]);
   const exportSuppliers = () => downloadCSV("suppliers.csv", suppliers || [], ["name", "terms", "notes"]);
@@ -282,6 +274,9 @@ export default function SettingsView({ onUpgrade, onSignOut, user, invoices, sup
         </Section>
 
         <Section id="billing" title={t("set_billing")} desc="">
+          {planLoading ? (
+            <div className="shimmer" style={{ height: 96, marginBottom: 14 }} aria-busy="true" aria-label={t("set_billing")} />
+          ) : (
           <div style={{ background: T.surf2, border: `1px solid ${T.bdr}`, borderRadius: 10, padding: 16, marginBottom: 14 }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 12, gap: 10 }}>
               <div>
@@ -298,6 +293,7 @@ export default function SettingsView({ onUpgrade, onSignOut, user, invoices, sup
             </div>
             <div style={{ height: 4, background: T.surf3, borderRadius: 2 }}><div style={{ height: "100%", width: `${Math.min(pct, 100)}%`, background: pct >= 90 ? T.red : T.accent, borderRadius: 2 }} /></div>
           </div>
+          )}
         </Section>
 
         <Section id="integrations" title={t("set_integrations")} desc="">

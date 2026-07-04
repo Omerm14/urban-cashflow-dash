@@ -2,10 +2,12 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { useT, useLayout, useLang } from "../contexts/AppContexts";
 import { FONT_UI as SANS, FONT_DISPLAY as DISPLAY, FONT_MONO as MONO, chartPalette } from "../theme";
 import { fmt, fmtMonth, fmtDate, nextMonthYM } from "../utils/format";
+import { downloadCSV } from "../utils/csv";
 import StatusPill from "../components/StatusPill";
 import TermsPicker from "../components/TermsPicker";
+import ListSkeleton from "../components/ListSkeleton";
 import {
-  Calendar, Filter, X, Check, CheckCircle2, AlertTriangle, Zap, Paperclip, Pencil,
+  Calendar, Filter, X, Check, CheckCircle2, AlertTriangle, Zap, Paperclip, Pencil, Download,
 } from "lucide-react";
 
 const SOURCE_LABELS = { google_drive: { icon: "📁", label: "Drive" }, gmail: { icon: "✉️", label: "Gmail" }, whatsapp: { icon: "💬", label: "WA" }, green_invoice: { icon: "🧾", label: "GI" } };
@@ -225,7 +227,7 @@ function GroupedView({ invoices, selectedMonth, onMonthChange, selectedIds, onTo
   );
 }
 
-export default function InvoicesView({ invoices, selectedMonth, onMonthChange, onMarkPaid, onAddSupplier, onDeleteInvoice, onBulkPaid, onBulkUnpaid, onBulkDelete, preSelectAll, onEditInvoice, onViewAttachment, anomalyMap, missingSuppliers, initialFilterStatus, initialSelectedId, supplierColor: supplierColorProp }) {
+export default function InvoicesView({ invoices, loading, selectedMonth, onMonthChange, onMarkPaid, onAddSupplier, onDeleteInvoice, onBulkPaid, onBulkUnpaid, onBulkDelete, preSelectAll, onEditInvoice, onViewAttachment, anomalyMap, missingSuppliers, initialFilterStatus, initialSelectedId, supplierColor: supplierColorProp }) {
   const T = useT();
   const { isMobile, isTablet } = useLayout();
   const { t } = useLang();
@@ -273,8 +275,15 @@ export default function InvoicesView({ invoices, selectedMonth, onMonthChange, o
   const [newSupplierTerms, setNewSupplierTerms] = useState("shotef");
   const toggleSelect = useCallback((id) => { setSelectedIds(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; }); }, []);
   const toggleAll = useCallback((ids) => { setSelectedIds(prev => { const allSel = ids.every(id => prev.has(id)); const n = new Set(prev); if (allSel) ids.forEach(id => n.delete(id)); else ids.forEach(id => n.add(id)); return n; }); }, []);
+
+  if (loading) return <ListSkeleton rows={6} label={t("inv_title")} />;
+
   const selInvs = invoices.filter(i => selectedIds.has(i.id));
   const selTotal = selInvs.reduce((s, i) => s + i.amount, 0);
+  const handleExportSelected = () => downloadCSV(
+    `invoices-${selectedMonth}.csv`, selInvs,
+    ["supplier", "invoiceNo", "invoiceDate", "dueDate", "amount", "status"]
+  );
 
   const handleConfirmPay = () => {
     const ids = [...selectedIds], count = ids.length, total = selTotal, nm = nextMonthYM(selectedMonth);
@@ -445,6 +454,7 @@ export default function InvoicesView({ invoices, selectedMonth, onMonthChange, o
             <span style={{ fontFamily: SANS, fontWeight: 500, color: T.t2, fontSize: 13, flex: 1 }}>
               {t("inv_selected", { n: selectedIds.size })} · <span className="num" style={{ color: T.t1 }}>{fmt(selTotal)}</span>
             </span>
+            <button className="btn btn-ghost btn-pill" style={{ padding: "7px 14px" }} onClick={handleExportSelected}><Download size={12} aria-hidden="true" />{t("inv_export")}</button>
             <button className="btn btn-ghost btn-pill" style={{ padding: "7px 14px" }} onClick={() => { onBulkUnpaid?.([...selectedIds]); setSelectedIds(new Set()); }}><X size={12} aria-hidden="true" />{t("inv_unpaid")}</button>
             <button className="btn btn-accent btn-pill" style={{ padding: "7px 18px" }} onClick={() => setShowPayConfirm(true)}>{t("inv_pay_selected")} →</button>
             <button className="btn btn-danger btn-pill" style={{ padding: "7px 14px" }} onClick={() => { if (window.confirm(t("inv_bulk_delete_confirm", { n: selectedIds.size }))) { onBulkDelete?.([...selectedIds]); setSelectedIds(new Set()); } }}>
