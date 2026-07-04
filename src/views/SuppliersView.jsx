@@ -4,7 +4,7 @@ import { FONT_UI as SANS, FONT_MONO as MONO, chartPalette } from "../theme";
 import TermsPicker from "../components/TermsPicker";
 import ListSkeleton from "../components/ListSkeleton";
 import { parseCSV } from "../utils/invoice";
-import { Check, X, Pencil, Trash2, Plus } from "lucide-react";
+import { Check, X, Pencil, Trash2, Plus, Repeat } from "lucide-react";
 
 export default function SuppliersView({ suppliers, loading, onAdd, onUpdate, onDelete }) {
   const T = useT();
@@ -15,7 +15,13 @@ export default function SuppliersView({ suppliers, loading, onAdd, onUpdate, onD
   const [editId, setEditId] = useState(null);
   const [editData, setEditData] = useState({});
   const [csvToast, setCsvToast] = useState(null);
+  const [actionToast, setActionToast] = useState(null); // { text, ok }
   const csvRef = useRef(null);
+
+  const showActionToast = (text, ok) => {
+    setActionToast({ text, ok });
+    setTimeout(() => setActionToast(null), ok ? 3000 : 4000);
+  };
 
   if (loading) return <ListSkeleton rows={5} label={t("nav_suppliers")} />;
 
@@ -45,6 +51,16 @@ export default function SuppliersView({ suppliers, loading, onAdd, onUpdate, onD
           {csvToast}
         </div>
       )}
+      {actionToast && (
+        <div role="status" style={{
+          marginBottom: 10, padding: "8px 14px", borderRadius: 7, fontFamily: SANS, fontSize: 13, animation: "fadeIn 0.2s",
+          background: actionToast.ok ? T.greenTint : T.redTint,
+          border: `1px solid ${actionToast.ok ? T.greenBdr : T.redBdr}`,
+          color: actionToast.ok ? T.green : T.red,
+        }}>
+          {actionToast.text}
+        </div>
+      )}
       <input ref={csvRef} type="file" accept=".csv,.txt" style={{ display: "none" }} onChange={handleCSV} />
       <div style={{ display: "flex", gap: 6, marginBottom: 14, flexWrap: "wrap", alignItems: "center" }}>
         {TERMS.map(term => (
@@ -67,13 +83,20 @@ export default function SuppliersView({ suppliers, loading, onAdd, onUpdate, onD
           <div key={sup.id} style={{ padding: "11px 14px", borderTop: idx > 0 ? `1px solid ${T.bdr}` : "none" }}>
             {editId === sup.id ? (
               <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                <div style={{ display: "flex", gap: 7, flexWrap: "wrap" }}>
+                <div style={{ display: "flex", gap: 7, flexWrap: "wrap", alignItems: "center" }}>
                   <input value={editData.name ?? ""} placeholder={t("sup_name")} onChange={e => setEditData(d => ({ ...d, name: e.target.value }))} style={inp} />
                   <TermsPicker value={editData.terms || "shotef"} onChange={v => setEditData(d => ({ ...d, terms: v }))} />
+                  <label style={{ display: "flex", alignItems: "center", gap: 5, fontFamily: SANS, fontSize: 12, color: T.t2, cursor: "pointer", flexShrink: 0 }}>
+                    <input type="checkbox" checked={!!editData.recurring} onChange={e => setEditData(d => ({ ...d, recurring: e.target.checked }))} />
+                    {t("sup_recurring_manual")}
+                  </label>
                 </div>
                 <div style={{ display: "flex", gap: 7 }}>
                   <input value={editData.notes ?? ""} placeholder={t("sup_notes")} onChange={e => setEditData(d => ({ ...d, notes: e.target.value }))} style={inp} />
-                  <button onClick={async () => { try { await onUpdate?.(sup.id, editData); } catch { /* keep editing */ } setEditId(null); }} style={{ padding: "6px 12px", background: T.greenTint, border: `1px solid ${T.greenBdr}`, borderRadius: 5, color: T.green, cursor: "pointer", fontFamily: SANS, fontSize: 12, fontWeight: 600, display: "flex", alignItems: "center", gap: 3, flexShrink: 0 }}><Check size={11} aria-hidden="true" />{t("sup_save")}</button>
+                  <button onClick={async () => {
+                    try { await onUpdate?.(sup.id, editData); setEditId(null); showActionToast(t("sup_updated_ok"), true); }
+                    catch (e) { showActionToast(e.message || t("sup_update_error"), false); }
+                  }} style={{ padding: "6px 12px", background: T.greenTint, border: `1px solid ${T.greenBdr}`, borderRadius: 5, color: T.green, cursor: "pointer", fontFamily: SANS, fontSize: 12, fontWeight: 600, display: "flex", alignItems: "center", gap: 3, flexShrink: 0 }}><Check size={11} aria-hidden="true" />{t("sup_save")}</button>
                   <button onClick={() => setEditId(null)} aria-label={t("cancel")} style={{ padding: "6px 10px", background: "transparent", border: `1px solid ${T.bdr}`, borderRadius: 5, color: T.t2, cursor: "pointer", display: "flex", alignItems: "center", flexShrink: 0 }}><X size={11} /></button>
                 </div>
               </div>
@@ -82,12 +105,19 @@ export default function SuppliersView({ suppliers, loading, onAdd, onUpdate, onD
                 <span aria-hidden="true" style={{ width: 26, height: 26, borderRadius: "50%", background: palette[idx % palette.length], display: "flex", alignItems: "center", justifyContent: "center", fontFamily: SANS, fontWeight: 700, fontSize: 11, color: "#fff", flexShrink: 0 }}>{sup.name.charAt(0)}</span>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontFamily: SANS, fontSize: 13, fontWeight: 600, color: T.t1 }}>{sup.name}</div>
-                  <div style={{ fontFamily: MONO, fontSize: 11, color: T.t3 }}>{sup.terms}</div>
+                  <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
+                    <span style={{ fontFamily: MONO, fontSize: 11, color: T.t3 }}>{sup.terms}</span>
+                    {sup.recurring && <Repeat size={10} color={T.accent} aria-hidden="true" title={t("sup_recurring_manual")} />}
+                  </div>
                 </div>
                 {!isMobile && sup.notes && <span style={{ fontFamily: SANS, fontSize: 12, color: T.t3, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 140 }}>{sup.notes}</span>}
                 <div style={{ display: "flex", gap: 5, flexShrink: 0 }}>
-                  <button onClick={() => { setEditId(sup.id); setEditData({ name: sup.name, terms: sup.terms, notes: sup.notes }); }} aria-label={t("sup_edit")} style={{ padding: "3px 8px", background: "transparent", border: `1px solid ${T.bdr}`, borderRadius: 4, color: T.t2, cursor: "pointer", fontFamily: SANS, fontSize: 11, display: "flex", alignItems: "center", gap: 3 }}><Pencil size={10} aria-hidden="true" />{!isMobile && t("sup_edit")}</button>
-                  <button onClick={() => onDelete?.(sup.id)} aria-label={t("sup_delete")} style={{ padding: "3px 7px", background: "transparent", border: `1px solid ${T.redBdr}`, borderRadius: 4, color: T.red, cursor: "pointer", display: "flex", alignItems: "center" }}><Trash2 size={10} /></button>
+                  <button onClick={() => { setEditId(sup.id); setEditData({ name: sup.name, terms: sup.terms, notes: sup.notes, recurring: !!sup.recurring }); }} aria-label={t("sup_edit")} style={{ padding: "3px 8px", background: "transparent", border: `1px solid ${T.bdr}`, borderRadius: 4, color: T.t2, cursor: "pointer", fontFamily: SANS, fontSize: 11, display: "flex", alignItems: "center", gap: 3 }}><Pencil size={10} aria-hidden="true" />{!isMobile && t("sup_edit")}</button>
+                  <button onClick={async () => {
+                    if (!confirm(t("sup_delete_confirm", { name: sup.name }))) return;
+                    try { await onDelete?.(sup.id); showActionToast(t("sup_deleted_ok"), true); }
+                    catch (e) { showActionToast(e.message || t("sup_delete_error"), false); }
+                  }} aria-label={t("sup_delete")} style={{ padding: "3px 7px", background: "transparent", border: `1px solid ${T.redBdr}`, borderRadius: 4, color: T.red, cursor: "pointer", display: "flex", alignItems: "center" }}><Trash2 size={10} /></button>
                 </div>
               </div>
             )}
@@ -95,7 +125,10 @@ export default function SuppliersView({ suppliers, loading, onAdd, onUpdate, onD
         ))}
       </div>
       <div style={{ display: "flex", gap: 8, marginTop: 12, flexWrap: "wrap" }}>
-        <button className="btn btn-ghost" onClick={() => onAdd?.({ name: "New Supplier", terms: "shotef", notes: "" })}>
+        <button className="btn btn-ghost" onClick={async () => {
+          try { await onAdd?.({ name: "New Supplier", terms: "shotef", notes: "" }); showActionToast(t("sup_added_ok"), true); }
+          catch (e) { showActionToast(e.message || t("sup_add_error"), false); }
+        }}>
           <Plus size={13} aria-hidden="true" />{t("sup_add")}
         </button>
       </div>

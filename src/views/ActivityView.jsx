@@ -5,7 +5,7 @@ import { useT, useLayout, useLang } from "../contexts/AppContexts";
 import { FONT_UI as SANS, FONT_MONO as MONO } from "../theme";
 import { History, FileText, Copy, AlertTriangle, Download } from "lucide-react";
 
-const SOURCE_NAMES = { google_drive: "Google Drive", gmail: "Gmail", whatsapp: "WhatsApp", green_invoice: "Green Invoice" };
+export const SOURCE_NAMES = { google_drive: "Google Drive", gmail: "Gmail", whatsapp: "WhatsApp", green_invoice: "Green Invoice" };
 
 // The audit trail: every auto-synced file's origin, timestamp, and outcome.
 // Reads sync_events directly under RLS, same pattern as invoices/suppliers.

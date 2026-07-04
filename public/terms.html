@@ -7,23 +7,23 @@
 <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+<link href="https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:wght@500;600;700&family=Hanken+Grotesk:wght@400;500;600;700;800&family=Assistant:wght@400;500;600;700&display=swap" rel="stylesheet" />
 <style>
-  :root{--bg:#060b14;--surface:#0d111a;--surface-2:#111827;--border:#1e2535;--primary:#6366f1;--secondary:#818cf8;--text:#f1f5f9;--muted:#64748b;--muted-2:#94a3b8;--maxw:800px}
+  :root{--bg:#0A0F0D;--surface:#111917;--surface-2:#17211E;--border:#22312B;--border-2:#2E423B;--primary:#3DD6A3;--secondary:#8FE8C9;--success:#3BD68C;--alert:#E8604C;--text:#F2F1EA;--muted:#6E7B74;--muted-2:#A8B5AE;--radius:16px;--maxw:800px}
   *{box-sizing:border-box;margin:0;padding:0}
-  body{background:var(--bg);color:var(--text);font-family:'IBM Plex Sans',system-ui,sans-serif;line-height:1.8;-webkit-font-smoothing:antialiased}
+  body{background:var(--bg);color:var(--text);font-family:'Hanken Grotesk','Assistant',system-ui,sans-serif;line-height:1.8;-webkit-font-smoothing:antialiased}
+  h1,h2,h3{font-family:'Schibsted Grotesk','Hanken Grotesk','Assistant',sans-serif}
   a{color:var(--primary);text-decoration:none}
   a:hover{text-decoration:underline}
-  nav{position:sticky;top:0;background:rgba(6,11,20,.85);backdrop-filter:blur(16px);border-bottom:1px solid var(--border);padding:0 24px;z-index:100}
+  nav{position:sticky;top:0;background:rgba(10,15,13,.85);backdrop-filter:blur(16px);border-bottom:1px solid var(--border);padding:0 24px;z-index:100}
   .nav-inner{max-width:var(--maxw);margin:0 auto;height:64px;display:flex;align-items:center;justify-content:space-between}
   .logo{font-weight:800;font-size:18px;color:var(--text);display:flex;align-items:center;gap:8px;text-decoration:none}
-  .logo-icon{width:28px;height:28px;border-radius:8px;background:linear-gradient(135deg,#6366f1,#818cf8);display:grid;place-items:center;flex-shrink:0}
-  .logo-icon svg{width:16px;height:16px}
+  .logo .mark{width:28px;height:28px;flex:0 0 28px;display:block}
   .back{font-size:14px;color:var(--muted-2);transition:color .2s;text-decoration:none}
   .back:hover{color:var(--text);text-decoration:none}
   .wrap{max-width:var(--maxw);margin:0 auto;padding:56px 24px 80px}
   .hero{text-align:center;margin-bottom:48px;padding-bottom:40px;border-bottom:1px solid var(--border)}
-  .hero .tag{display:inline-block;font-size:12px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--secondary);background:rgba(129,140,248,.1);border:1px solid rgba(129,140,248,.25);padding:5px 14px;border-radius:100px;margin-bottom:18px}
+  .hero .tag{display:inline-block;font-size:12px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--secondary);background:rgba(143,232,201,.12);border:1px solid rgba(143,232,201,.3);padding:5px 14px;border-radius:100px;margin-bottom:18px}
   .hero h1{font-size:clamp(28px,4vw,40px);font-weight:800;letter-spacing:-.02em}
   .hero p{color:var(--muted-2);margin-top:12px;font-size:15px}
   .content h2{font-size:20px;font-weight:800;margin:36px 0 14px;padding-left:16px;border-left:3px solid var(--primary)}
@@ -40,10 +40,34 @@
 </head>
 <body>
 
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <linearGradient id="cashflowArcGrad" x1="50" y1="10" x2="85" y2="80" gradientUnits="userSpaceOnUse">
+      <stop offset="0"   stop-color="#1d4ed8"/>
+      <stop offset="0.5" stop-color="#3DD6A3"/>
+      <stop offset="1"   stop-color="#8FE8C9"/>
+    </linearGradient>
+    <linearGradient id="cashflowArrowGrad" x1="76" y1="68" x2="90" y2="44" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#3DD6A3"/>
+      <stop offset="1" stop-color="#8FE8C9"/>
+    </linearGradient>
+    <symbol id="cashflowMark" viewBox="0 0 100 100">
+      <path d="M 67 21 A 34 34 0 1 0 79 67" stroke="url(#cashflowArcGrad)" stroke-width="12" stroke-linecap="round" fill="none"/>
+      <path d="M 37 26 L 57 26 L 65 34 L 65 64 Q 65 66 63 66 L 37 66 Q 35 66 35 64 L 35 28 Q 35 26 37 26 Z" fill="white"/>
+      <path d="M 57 26 L 65 34 L 57 34 Z" fill="#8FE8C9"/>
+      <line x1="41" y1="44" x2="61" y2="44" stroke="#07120E" stroke-width="2.8" stroke-linecap="round"/>
+      <line x1="41" y1="51" x2="61" y2="51" stroke="#07120E" stroke-width="2.8" stroke-linecap="round"/>
+      <line x1="41" y1="58" x2="52" y2="58" stroke="#07120E" stroke-width="2.8" stroke-linecap="round"/>
+      <path d="M 76 68 Q 89 72 85 52" stroke="url(#cashflowArrowGrad)" stroke-width="5.5" stroke-linecap="round" fill="none"/>
+      <path d="M 85 44 L 93 55 L 79 57 Z" fill="#8FE8C9"/>
+    </symbol>
+  </defs>
+</svg>
+
 <nav>
   <div class="nav-inner">
     <a href="/" class="logo">
-      <span class="logo-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="13" y2="17"/></svg></span>
+      <svg class="mark"><use href="#cashflowMark"/></svg>
       Cashflow
     </a>
     <a href="/" class="back">← Back to Home</a>

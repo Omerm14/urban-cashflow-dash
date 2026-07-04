@@ -171,6 +171,13 @@ const he = {
   sup_cancel: "ביטול",
   sup_delete: "מחיקה",
   sup_edit: "עריכה",
+  sup_delete_confirm: "למחוק את {name}? לא ניתן לבטל פעולה זו.",
+  sup_add_error: "לא ניתן היה להוסיף ספק",
+  sup_updated_ok: "הספק עודכן",
+  sup_update_error: "לא ניתן היה לשמור שינויים",
+  sup_deleted_ok: "הספק נמחק",
+  sup_delete_error: "לא ניתן היה למחוק את הספק",
+  sup_recurring_manual: "חוזר",
   sup_no_results: "אין ספקים עדיין",
   sup_invoices: "חשבוניות",
   sup_imported: "{n} ספקים יובאו",
@@ -402,6 +409,8 @@ const he = {
   notif_anomaly_sub_plural: "{n} ספקים מחוץ לטווח הרגיל",
   notif_recent: "פעילות אחרונה",
   notif_no_activity: "אין פעילות עדיין — העלו חשבוניות או סנכרנו אינטגרציות.",
+  notif_view_all: "כל הפעילות",
+  notif_sync_count: "{n} סונכרנו",
 
   // Search
   search_placeholder: "חיפוש חשבוניות, ספקים…",

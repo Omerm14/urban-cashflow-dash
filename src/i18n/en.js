@@ -81,6 +81,13 @@ const en = {
   sup_cancel: "Cancel",
   sup_delete: "Delete",
   sup_edit: "Edit",
+  sup_delete_confirm: "Delete {name}? This cannot be undone.",
+  sup_add_error: "Couldn't add supplier",
+  sup_updated_ok: "Supplier updated",
+  sup_update_error: "Couldn't save changes",
+  sup_deleted_ok: "Supplier deleted",
+  sup_delete_error: "Couldn't delete supplier",
+  sup_recurring_manual: "Recurring",
   sup_no_results: "No suppliers yet",
   sup_invoices: "invoices",
   sup_imported: "{n} suppliers imported",
@@ -415,6 +422,8 @@ const en = {
   // Notifications (overhaul additions)
   notif_recent: "Recent activity",
   notif_no_activity: "No activity yet — upload invoices or sync integrations.",
+  notif_view_all: "View all activity",
+  notif_sync_count: "{n} synced",
 
   // System
   attachment_error: "Could not load the attachment preview.",

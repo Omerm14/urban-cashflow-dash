@@ -168,6 +168,10 @@ body {
   background: var(--surf3); color: var(--t3);
   padding: 2px 7px; border-radius: 10px;
 }
+.sb-alert-dot {
+  margin-inline-start: auto; width: 7px; height: 7px; border-radius: 50%;
+  background: var(--red); flex-shrink: 0;
+}
 
 /* Header */
 .hd {
