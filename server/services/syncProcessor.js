@@ -264,9 +264,64 @@ const computeCutoff = (lastSync, lookbackDays) => {
   return lastSync ? new Date(lastSync).toISOString() : null;              // since last_sync
 };
 
+// ─── Listing pagination ──────────────────────────────────────────────────────
+// Safety ceilings so a listing loop can't run away on a pathological account;
+// comfortably above realistic folder/inbox sizes while still bounded.
+
+const DRIVE_LIST_PAGE_SIZE  = 200;
+const DRIVE_LIST_MAX_PAGES  = 10;   // up to 2000 files listed per run
+const DRIVE_PROCESS_PER_RUN = 50;   // matches the previous default cap; overflow hands off to sync_jobs
+
+const GMAIL_LIST_PAGE_SIZE = 200;
+const GMAIL_LIST_MAX_PAGES = 10;    // up to 2000 messages listed per run
+
+const listAllDriveFiles = async (drive, conditions) => {
+  const files = [];
+  let pageToken;
+  for (let page = 0; page < DRIVE_LIST_MAX_PAGES; page++) {
+    const { data } = await drive.files.list({
+      q:        conditions,
+      fields:   'nextPageToken, files(id,name,mimeType)',
+      pageSize: DRIVE_LIST_PAGE_SIZE,
+      pageToken,
+    });
+    files.push(...(data.files || []));
+    pageToken = data.nextPageToken;
+    if (!pageToken) break;
+  }
+  return files;
+};
+
+const listAllGmailMessages = async (gmail, q) => {
+  const messages = [];
+  let pageToken;
+  for (let page = 0; page < GMAIL_LIST_MAX_PAGES; page++) {
+    const { data } = await gmail.users.messages.list({
+      userId: 'me', q, maxResults: GMAIL_LIST_PAGE_SIZE, pageToken,
+    });
+    messages.push(...(data.messages || []));
+    pageToken = data.nextPageToken;
+    if (!pageToken) break;
+  }
+  return messages;
+};
+
 // ─── Google Drive sync ───────────────────────────────────────────────────────
 
 exports.syncGoogleDrive = async (integration, userId) => {
+  // A previous run may have handed off overflow files to sync_jobs (see below);
+  // let that finish (picked up by cron's stale-job resume) before starting a new discovery.
+  const { data: activeJob } = await supabase
+    .from('sync_jobs')
+    .select('id')
+    .eq('integration_id', integration.id)
+    .in('status', ['pending', 'running'])
+    .maybeSingle();
+  if (activeJob) {
+    console.log(`[sync:drive] sync_jobs ${activeJob.id} still in progress for integration ${integration.id}; skipping this run`);
+    return { added: 0, skipped: 0, filesFound: 0, errors: 0 };
+  }
+
   const auth  = makeOAuth2({ ...integration.credentials, _userId: userId, _type: 'google_drive' });
   const drive = google.drive({ version: 'v3', auth });
 
@@ -291,11 +346,7 @@ exports.syncGoogleDrive = async (integration, userId) => {
     'trashed = false',
   ].filter(Boolean).join(' and ');
 
-  const { data: { files = [] } } = await drive.files.list({
-    q:        conditions,
-    fields:   'files(id,name,mimeType)',
-    pageSize: 50,
-  });
+  const files = await listAllDriveFiles(drive, conditions);
 
   console.log(`[sync:drive] ${files.length} file(s) found for user ${userId}`);
 
@@ -319,8 +370,14 @@ exports.syncGoogleDrive = async (integration, userId) => {
     return true;
   });
 
-  for (let i = 0; i < filesToProcess.length; i += CONCURRENCY) {
-    const batch = filesToProcess.slice(i, i + CONCURRENCY);
+  // Bound synchronous downloads+OCR per run to stay well under the 60s function
+  // limit; anything beyond that hands off to sync_jobs (same contract the manual
+  // Drive-sync job path already uses), resumed by cron's stale-job pickup.
+  const toProcessNow = filesToProcess.slice(0, DRIVE_PROCESS_PER_RUN);
+  const leftover      = filesToProcess.slice(DRIVE_PROCESS_PER_RUN);
+
+  for (let i = 0; i < toProcessNow.length; i += CONCURRENCY) {
+    const batch = toProcessNow.slice(i, i + CONCURRENCY);
     const batchResults = await Promise.all(batch.map(async file => {
       try {
         const resp   = await drive.files.get({ fileId: file.id, alt: 'media' }, { responseType: 'arraybuffer' });
@@ -343,6 +400,18 @@ exports.syncGoogleDrive = async (integration, userId) => {
       skipped += contentSkipped;
       if (saved.length) seenFiles.add(file.name.toLowerCase());
     }
+  }
+
+  if (leftover.length) {
+    const { error: jobErr } = await supabase.from('sync_jobs').insert({
+      integration_id: integration.id,
+      user_id:        userId,
+      status:         'pending',
+      file_list:      leftover,
+      total_files:    leftover.length,
+    });
+    if (jobErr) console.error('[sync:drive] failed to hand off leftover files to sync_jobs:', jobErr.message);
+    else console.log(`[sync:drive] ${leftover.length} file(s) handed off to sync_jobs for continuation`);
   }
 
   return { added, skipped, filesFound: files.length, errors };
@@ -375,9 +444,7 @@ exports.syncGmail = async (integration, userId) => {
   const q = parts.join(' ');
 
   console.log(`[sync:gmail] query: ${q}`);
-  const { data: { messages = [] } } = await gmail.users.messages.list({
-    userId: 'me', q, maxResults: 100,
-  });
+  const messages = await listAllGmailMessages(gmail, q);
 
   console.log(`[sync:gmail] ${messages.length} message(s) for user ${userId}`);
 
