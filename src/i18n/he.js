@@ -132,7 +132,6 @@ const he = {
   inv_paid_of: "{paid} מתוך {total} שולמו",
   inv_overdue_of: "{n} באיחור",
   inv_none_month: "אין חשבוניות לתשלום ב{month}",
-  inv_missing_label: "ספקים חסרים החודש:",
   inv_selected: "{n} נבחרו",
   inv_delete_confirm: "למחוק את החשבונית?",
   inv_bulk_delete_confirm: "למחוק {n} חשבוניות?",

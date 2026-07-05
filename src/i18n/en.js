@@ -373,7 +373,6 @@ const en = {
   inv_paid_of: "{paid} of {total} paid",
   inv_overdue_of: "{n} overdue",
   inv_none_month: "No invoices due in {month}",
-  inv_missing_label: "Missing suppliers this month:",
   inv_selected: "{n} selected",
   inv_delete_confirm: "Delete this invoice?",
   inv_bulk_delete_confirm: "Delete {n} invoices?",
