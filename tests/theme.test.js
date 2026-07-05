@@ -17,7 +17,7 @@ describe("theme tokens stay in sync with index.css", () => {
     "--bg": T.bg, "--surf": T.surf, "--surf2": T.surf2, "--surf3": T.surf3,
     "--t1": T.t1, "--t2": T.t2, "--t3": T.t3,
     "--accent": T.accent, "--accent-ink": T.accentInk,
-    "--brass": T.brass, "--green": T.green, "--red": T.red, "--amber": T.amber,
+    "--brass": T.brass, "--green": T.green, "--red": T.red, "--amber": T.amber, "--blue": T.blue,
   });
 
   it("night tokens appear in CSS", () => {

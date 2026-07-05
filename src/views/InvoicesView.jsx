@@ -7,7 +7,7 @@ import StatusPill from "../components/StatusPill";
 import TermsPicker from "../components/TermsPicker";
 import ListSkeleton from "../components/ListSkeleton";
 import {
-  Calendar, Filter, X, Check, CheckCircle2, AlertTriangle, Zap, Paperclip, Pencil, Download,
+  Calendar, Filter, X, Check, CheckCircle2, AlertTriangle, Zap, Paperclip, Pencil, Download, Clock,
 } from "lucide-react";
 
 const SOURCE_LABELS = { google_drive: { icon: "📁", label: "Drive" }, gmail: { icon: "✉️", label: "Gmail" }, whatsapp: { icon: "💬", label: "WA" }, green_invoice: { icon: "🧾", label: "GI" } };
@@ -146,7 +146,7 @@ function SupplierGroup({ supplier, invoices, selectedIds, onToggleSelect, onTogg
   );
 }
 
-function GroupedView({ invoices, selectedMonth, onMonthChange, selectedIds, onToggleSelect, onToggleAll, onMarkPaid, onSelectAll, onAllPaid, onEditInvoice, onViewAttachment, anomalyMap, missingSuppliers, onDeleteInvoice, onAddSupplier, supplierColor }) {
+function GroupedView({ invoices, selectedMonth, onMonthChange, selectedIds, onToggleSelect, onToggleAll, onMarkPaid, onSelectAll, onAllPaid, onEditInvoice, onViewAttachment, anomalyMap, onDeleteInvoice, onAddSupplier, supplierColor }) {
   const T = useT();
   const { isMobile } = useLayout();
   const { t } = useLang();
@@ -208,15 +208,6 @@ function GroupedView({ invoices, selectedMonth, onMonthChange, selectedIds, onTo
           <div style={{ fontFamily: SANS, fontSize: 13 }}>{t("inv_none_month", { month: fmtMonth(selectedMonth) })}</div>
         </div>
       )}
-      {missingSuppliers?.length > 0 && (
-        <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 14px", background: T.amberTint, border: `1px solid ${T.amberBdr}`, borderRadius: 10, marginBottom: 10 }}>
-          <AlertTriangle size={14} color={T.amber} style={{ flexShrink: 0 }} aria-hidden="true" />
-          <div style={{ flex: 1 }}>
-            <span style={{ fontFamily: SANS, fontSize: 13, fontWeight: 600, color: T.amber }}>{t("inv_missing_label")} </span>
-            <span style={{ fontFamily: SANS, fontSize: 13, color: T.t2 }}>{missingSuppliers.join(", ")}</span>
-          </div>
-        </div>
-      )}
       {groups.map(([supplier, supInvoices]) => (
         <SupplierGroup key={supplier} supplier={supplier} invoices={supInvoices} selectedIds={selectedIds}
           onToggleSelect={onToggleSelect} onToggleAll={onToggleAll} onMarkPaid={onMarkPaid}
@@ -227,7 +218,7 @@ function GroupedView({ invoices, selectedMonth, onMonthChange, selectedIds, onTo
   );
 }
 
-export default function InvoicesView({ invoices, loading, selectedMonth, onMonthChange, onMarkPaid, onAddSupplier, onDeleteInvoice, onBulkPaid, onBulkUnpaid, onBulkDelete, preSelectAll, onEditInvoice, onViewAttachment, anomalyMap, missingSuppliers, initialFilterStatus, initialSelectedId, supplierColor: supplierColorProp }) {
+export default function InvoicesView({ invoices, loading, selectedMonth, onMonthChange, onMarkPaid, onAddSupplier, onDeleteInvoice, onBulkPaid, onBulkUnpaid, onBulkDelete, preSelectAll, onEditInvoice, onViewAttachment, anomalyMap, missingSuppliers, onMissingAlert, initialFilterStatus, initialSelectedId, supplierColor: supplierColorProp }) {
   const T = useT();
   const { isMobile, isTablet } = useLayout();
   const { t } = useLang();
@@ -261,6 +252,7 @@ export default function InvoicesView({ invoices, loading, selectedMonth, onMonth
     if (filterSuppliers.size > 0 && !filterSuppliers.has(inv.supplier)) return false;
     return true;
   });
+  const overdueThisMonth = invoices.filter(inv => inv.dueDate?.startsWith(selectedMonth) && (inv.status === "Overdue" || inv.status === "overdue"));
 
   useEffect(() => {
     if (preSelectAll) {
@@ -345,7 +337,19 @@ export default function InvoicesView({ invoices, loading, selectedMonth, onMonth
           )}
         </div>
         {selectedIds.size > 0 && <button onClick={() => setSelectedIds(new Set())} style={{ display: "flex", alignItems: "center", gap: 5, padding: "6px 10px", borderRadius: 6, background: "transparent", border: `1px solid ${T.redBdr}`, color: T.red, cursor: "pointer", fontFamily: SANS, fontSize: 12 }}><X size={12} aria-hidden="true" />{t("notif_clear")}</button>}
-        <div className="num" style={{ marginInlineStart: "auto", fontSize: 11, color: T.t3 }}>{filteredInvoices.length}{activeFilters > 0 ? ` / ${invoices.length}` : ""} {t("inv_invoices")}</div>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, marginInlineStart: "auto" }}>
+          {overdueThisMonth.length > 0 && (
+            <button onClick={() => setFilterStatuses(new Set(["Overdue"]))} style={{ display: "flex", alignItems: "center", gap: 5, padding: "5px 10px", borderRadius: 999, background: T.redTint, border: `1px solid ${T.redBdr}`, color: T.red, cursor: "pointer", fontFamily: SANS, fontSize: 12, fontWeight: 600, whiteSpace: "nowrap" }}>
+              <Clock size={12} aria-hidden="true" />{t("inv_overdue_of", { n: overdueThisMonth.length })}
+            </button>
+          )}
+          {missingSuppliers?.length > 0 && (
+            <button onClick={() => onMissingAlert?.()} style={{ display: "flex", alignItems: "center", gap: 5, padding: "5px 10px", borderRadius: 999, background: T.amberTint, border: `1px solid ${T.amberBdr}`, color: T.amber, cursor: "pointer", fontFamily: SANS, fontSize: 12, fontWeight: 600, whiteSpace: "nowrap" }}>
+              <AlertTriangle size={12} aria-hidden="true" />{t("dash_missing_title", { n: missingSuppliers.length })}
+            </button>
+          )}
+          <div className="num" style={{ fontSize: 11, color: T.t3 }}>{filteredInvoices.length}{activeFilters > 0 ? ` / ${invoices.length}` : ""} {t("inv_invoices")}</div>
+        </div>
       </div>
 
       {(isMobile || viewMode === "grouped") ? (
@@ -353,7 +357,7 @@ export default function InvoicesView({ invoices, loading, selectedMonth, onMonth
           selectedIds={selectedIds} onToggleSelect={toggleSelect} onToggleAll={toggleAll}
           onMarkPaid={onMarkPaid} onSelectAll={ids => setSelectedIds(new Set(ids))}
           onAllPaid={() => setShowCelebration(true)} onEditInvoice={onEditInvoice} onViewAttachment={onViewAttachment}
-          anomalyMap={anomalyMap} missingSuppliers={missingSuppliers}
+          anomalyMap={anomalyMap}
           onDeleteInvoice={onDeleteInvoice} onAddSupplier={onAddSupplier} supplierColor={supplierColor} />
       ) : (
         <div className="card" style={{ overflow: "hidden" }}>

@@ -11,6 +11,7 @@ import {
 const isUnpaid = (i) => i.status !== "Paid" && i.status !== "paid";
 const isPaid = (i) => i.status === "Paid" || i.status === "paid";
 const isOverdue = (i) => i.status === "Overdue" || i.status === "overdue";
+const isCredit = (i) => i.status === "Credit" || i.status === "credit";
 
 // Eased count-up for KPI values. Animates from the previously displayed value
 // (not zero) so small data edits nudge rather than replay; snaps immediately
@@ -480,8 +481,8 @@ export default function DashboardView({ invoices, suppliers, loading, onPayAll, 
                 </div>
               </div>
               <span className="num" style={{ fontSize: 13, color: T.t1 }}>{fmt(inv.amount)}</span>
-              <span className={`pill ${isOverdue(inv) ? "pill-overdue" : isPaid(inv) ? "pill-paid" : "pill-pending"}`}>
-                <i aria-hidden="true" />{isOverdue(inv) ? t("inv_overdue") : isPaid(inv) ? t("inv_paid") : t("inv_unpaid")}
+              <span className={`pill ${isOverdue(inv) ? "pill-overdue" : isCredit(inv) ? "pill-credit" : isPaid(inv) ? "pill-paid" : "pill-pending"}`}>
+                <i aria-hidden="true" />{isOverdue(inv) ? t("inv_overdue") : isCredit(inv) ? t("inv_credit") : isPaid(inv) ? t("inv_paid") : t("inv_unpaid")}
               </span>
             </div>
             );

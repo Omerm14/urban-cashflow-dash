@@ -28,6 +28,7 @@ export const NIGHT = {
   green: "#3BD68C", greenTint: "rgba(59,214,140,0.10)", greenBdr: "rgba(59,214,140,0.28)",
   red: "#E8604C",   redTint: "rgba(232,96,76,0.12)",    redBdr: "rgba(232,96,76,0.30)",
   amber: "#E0A93D", amberTint: "rgba(224,169,61,0.12)", amberBdr: "rgba(224,169,61,0.30)",
+  blue: "#3987E5",  blueTint: "rgba(57,135,229,0.12)",  blueBdr: "rgba(57,135,229,0.30)",
 };
 // Legacy aliases (inline styles written pre-refactor)
 NIGHT.indigo = NIGHT.accent; NIGHT.indigoTint = NIGHT.accentTint; NIGHT.indigoBdr = NIGHT.accentBdr;
@@ -47,6 +48,7 @@ export const DAY = {
   green: "#0C8A47", greenTint: "rgba(12,138,71,0.09)",  greenBdr: "rgba(12,138,71,0.28)",
   red: "#C2482F",   redTint: "rgba(194,72,47,0.09)",    redBdr: "rgba(194,72,47,0.28)",
   amber: "#A36A00", amberTint: "rgba(163,106,0,0.09)",  amberBdr: "rgba(163,106,0,0.28)",
+  blue: "#2A78D6",  blueTint: "rgba(42,120,214,0.09)",  blueBdr: "rgba(42,120,214,0.28)",
 };
 DAY.indigo = DAY.accent; DAY.indigoTint = DAY.accentTint; DAY.indigoBdr = DAY.accentBdr;
 
