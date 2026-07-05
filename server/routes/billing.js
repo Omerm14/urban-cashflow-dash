@@ -1,12 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { getPlanUsage, ensureSubscription } = require('../lib/plans');
-const { createClient } = require('@supabase/supabase-js');
-
-const supabase = createClient(
-  process.env.SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_ROLE_KEY
-);
+const supabase = require('../lib/supabase');
 
 const MESHULAM_USER_ID  = process.env.MESHULAM_USER_ID  || '';
 const MESHULAM_API_KEY  = process.env.MESHULAM_API_KEY  || '';
