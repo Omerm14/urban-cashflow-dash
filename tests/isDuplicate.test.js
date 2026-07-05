@@ -1,24 +1,17 @@
 import { describe, it, expect } from 'vitest';
+import { isDuplicate } from '../server/services/syncProcessor.js';
 
-// Inline the pure logic extracted from syncProcessor.js so tests don't need
-// to import the full module (which has side-effectful requires for Supabase etc.)
-
-const normSup = s => (s || '').toLowerCase().trim().replace(/\s+/g, ' ');
-
-const isDuplicate = (candidate, existing, strict = false) => existing.some(inv => {
-  const sameSup    = normSup(inv.supplier)  === normSup(candidate.supplier);
-  const exactMatch = sameSup && inv.invoice_no && candidate.invoice_no &&
-                     inv.invoice_no.trim() === candidate.invoice_no.trim();
-  const fuzzyMatch = !strict && sameSup &&
-                     Number(inv.amount) === Number(candidate.amount) &&
-                     inv.invoice_date   === candidate.invoice_date;
-  return exactMatch || fuzzyMatch;
-});
+// Real dedup logic from syncProcessor.js, now importable because server/lib/supabase.js
+// (CASH-29) no longer throws at require-time without live env vars.
 
 const INV = (supplier, invoice_no, amount, invoice_date) =>
   ({ supplier, invoice_no, amount, invoice_date });
 
-describe('isDuplicate', () => {
+describe('isDuplicate (real module)', () => {
+  it('is backed by the real syncProcessor.js export, not a shadow copy', () => {
+    expect(typeof isDuplicate).toBe('function');
+  });
+
   const existing = [
     INV('Acme Ltd', 'INV-001', 100, '2024-01-15'),
     INV('Beta Corp', null,     200, '2024-02-10'),
@@ -66,5 +59,4 @@ describe('isDuplicate', () => {
   it('returns false for empty existing list', () => {
     expect(isDuplicate(INV('Acme Ltd', 'INV-001', 100, '2024-01-15'), [])).toBe(false);
   });
-
 });

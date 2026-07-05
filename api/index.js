@@ -38,13 +38,11 @@ app.post('/api/stripe/webhook',
 
 app.use(express.json({ limit: '20mb' }));
 
-// Per-IP rate limits on expensive endpoints — same values as server/index.js
-// (tests/routeParity.test.js keeps the two route tables from drifting again).
-const rateLimit = require('express-rate-limit');
-const extractLimiter   = rateLimit({ windowMs: 60_000,    max: 120, standardHeaders: true, legacyHeaders: false, message: { error: 'Too many requests, please slow down' } });
-const syncLimiter      = rateLimit({ windowMs: 60_000,    max: 10,  standardHeaders: true, legacyHeaders: false, message: { error: 'Too many sync requests, please wait' } });
-const googleApiLimiter = rateLimit({ windowMs: 60_000,    max: 20,  standardHeaders: true, legacyHeaders: false, message: { error: 'Too many requests' } });
-const accountLimiter   = rateLimit({ windowMs: 3_600_000, max: 3,   standardHeaders: true, legacyHeaders: false, message: { error: 'Too many account operations, please wait' } });
+// Per-IP rate limits on expensive endpoints — same instances as server/index.js
+// via server/middleware/rateLimiters.js, so the two entrypoints' limiter
+// coverage and values can't drift apart again (CASH-17; tests/routeParity.test.js
+// and tests/rateLimiters.test.js both guard this).
+const { extractLimiter, syncLimiter, googleApiLimiter, accountLimiter } = require('../server/middleware/rateLimiters');
 
 app.post('/api/extract',    extractLimiter, auth, require('../server/routes/extract'));
 
