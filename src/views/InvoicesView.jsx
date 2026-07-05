@@ -201,20 +201,23 @@ function GroupedView({ invoices, selectedMonth, onMonthChange, selectedIds, onTo
               <span style={{ fontFamily: SANS, fontSize: 12, fontWeight: 600, color: T.accent, flex: 1, minWidth: 0 }}>{isMobile ? fmtMonth(selectedMonth) : `${t("inv_total_due")} · ${fmtMonth(selectedMonth)}`}</span>
               <span className="num" style={{ fontWeight: 500, fontSize: isMobile ? 15 : 18, color: T.t1, flexShrink: 0 }}>{fmt(monthTotal)}</span>
             </div>
-            <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap", marginTop: 8 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 16, flexWrap: "wrap", marginTop: 10, paddingTop: 8, borderTop: `1px solid ${T.accentBdr}` }}>
               {paidAmount > 0 && (
-                <button onClick={() => onFilterStatus?.("Paid")} style={{ display: "flex", alignItems: "center", gap: 5, padding: "4px 9px", borderRadius: 999, background: T.greenTint, border: `1px solid ${T.greenBdr}`, color: T.green, cursor: "pointer", fontFamily: SANS, fontSize: 11, fontWeight: 600, whiteSpace: "nowrap" }}>
-                  {t("inv_paid")} {fmt(paidAmount)}
+                <button onClick={() => onFilterStatus?.("Paid")} style={{ display: "flex", alignItems: "center", gap: 6, background: "none", border: "none", padding: 0, cursor: "pointer", fontFamily: SANS, fontSize: 12, color: T.t2, whiteSpace: "nowrap" }}>
+                  <span style={{ width: 6, height: 6, borderRadius: "50%", background: T.green, flexShrink: 0 }} aria-hidden="true" />
+                  {t("inv_paid")}&nbsp;<span className="num" style={{ color: T.t1, fontWeight: 600 }}>{fmt(paidAmount)}</span>
                 </button>
               )}
               {outstandingAmount > 0 && (
-                <button onClick={() => onFilterStatus?.("Unpaid")} style={{ display: "flex", alignItems: "center", gap: 5, padding: "4px 9px", borderRadius: 999, background: T.amberTint, border: `1px solid ${T.amberBdr}`, color: T.amber, cursor: "pointer", fontFamily: SANS, fontSize: 11, fontWeight: 600, whiteSpace: "nowrap" }}>
-                  {t("inv_unpaid")} {fmt(outstandingAmount)}
+                <button onClick={() => onFilterStatus?.("Unpaid")} style={{ display: "flex", alignItems: "center", gap: 6, background: "none", border: "none", padding: 0, cursor: "pointer", fontFamily: SANS, fontSize: 12, color: T.t2, whiteSpace: "nowrap" }}>
+                  <span style={{ width: 6, height: 6, borderRadius: "50%", background: T.amber, flexShrink: 0 }} aria-hidden="true" />
+                  {t("inv_unpaid")}&nbsp;<span className="num" style={{ color: T.t1, fontWeight: 600 }}>{fmt(outstandingAmount)}</span>
                 </button>
               )}
               {overdueAmount > 0 && (
-                <button onClick={() => onFilterStatus?.("Overdue")} style={{ display: "flex", alignItems: "center", gap: 5, padding: "4px 9px", borderRadius: 999, background: T.redTint, border: `1px solid ${T.redBdr}`, color: T.red, cursor: "pointer", fontFamily: SANS, fontSize: 11, fontWeight: 600, whiteSpace: "nowrap" }}>
-                  {t("inv_overdue")} {fmt(overdueAmount)}
+                <button onClick={() => onFilterStatus?.("Overdue")} style={{ display: "flex", alignItems: "center", gap: 6, background: "none", border: "none", padding: 0, cursor: "pointer", fontFamily: SANS, fontSize: 12, color: T.t2, whiteSpace: "nowrap" }}>
+                  <span style={{ width: 6, height: 6, borderRadius: "50%", background: T.red, flexShrink: 0 }} aria-hidden="true" />
+                  {t("inv_overdue")}&nbsp;<span className="num" style={{ color: T.t1, fontWeight: 600 }}>{fmt(overdueAmount)}</span>
                 </button>
               )}
               {unpaid.length > 0 && <button onClick={() => onSelectAll(unpaid.map(i => i.id))} style={{ marginInlineStart: "auto", padding: "4px 9px", background: "transparent", border: `1px solid ${T.accentBdr}`, borderRadius: 5, color: T.accent, cursor: "pointer", fontFamily: SANS, fontSize: 12, fontWeight: 600, whiteSpace: "nowrap" }}>{t("inv_select_all")} ({unpaid.length})</button>}
