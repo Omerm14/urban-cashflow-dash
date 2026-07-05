@@ -86,6 +86,7 @@ const isDuplicate = (candidate, existing, strict = false) => existing.some(inv =
                      inv.invoice_date   === candidate.invoice_date;
   return exactMatch || fuzzyMatch;
 });
+exports.isDuplicate = isDuplicate;
 
 // ─── Audit logging ───────────────────────────────────────────────────────────
 

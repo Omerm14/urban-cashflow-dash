@@ -1,38 +1,48 @@
 import { describe, it, expect } from 'vitest';
+import { createRequire } from 'node:module';
 
-// Test the PLANS config directly (pure data, no DB dependency).
-// The full getPlanUsage / assertInvoiceLimit functions require a live Supabase
-// connection; those are integration-tested in staging. Here we verify the
-// config values that enforcement logic relies on are correct, plus the error
-// shape assertInvoiceLimit is documented to throw.
+// server/lib/plans.js pulls in server/lib/supabase.js via a plain CommonJS
+// require() at import time. Vitest's `vi.mock` only intercepts ESM import
+// specifiers reachable from the test file's own import graph — it does not
+// see a require() call made from inside an already-CommonJS module, so a
+// factory-based vi.mock of '../server/lib/supabase.js' silently has no
+// effect here. Instead we substitute the dependency the same way Node's own
+// module loader resolves it: by seeding require.cache for the resolved path
+// before plans.js is first required, so plans.js's own require('./supabase')
+// gets our fake client instead of constructing a real one.
+const require = createRequire(import.meta.url);
+const supabasePath = require.resolve('../server/lib/supabase.js');
 
-const PLANS = {
-  free:       { invoicesPerMonth: 20,        sources: 1, autoSync: false, auditTrail: false, name: 'Free' },
-  basic:      { invoicesPerMonth: 50,        sources: 2, autoSync: false, auditTrail: false, name: 'Basic' },
-  pro:        { invoicesPerMonth: 150,       sources: 4, autoSync: true,  auditTrail: true,  name: 'Pro' },
-  enterprise: { invoicesPerMonth: Infinity,  sources: 4, autoSync: true,  auditTrail: true,  name: 'Enterprise' },
+const mockState = {
+  subscription: { plan: 'free', status: 'active' },
+  invoiceCount: 0,
 };
 
-// Mirror of the enforcement logic in assertInvoiceLimit so we can unit-test it
-// without hitting Supabase.
-const shouldBlock = (plan, used) => {
-  const limit = PLANS[plan]?.invoicesPerMonth ?? 20;
-  if (limit === Infinity) return false;
-  return used / limit >= 1;
+const queryBuilder = () => ({
+  select: () => queryBuilder(),
+  eq: () => queryBuilder(),
+  gte: () => queryBuilder(),
+  upsert: () => Promise.resolve({ data: null, error: null }),
+  single: () => Promise.resolve({ data: mockState.subscription, error: null }),
+  // The invoice-count query is awaited directly (no .single()), so the
+  // builder itself must be thenable — mirrors the real supabase-js builder.
+  then: (resolve) => resolve({ data: null, error: null, count: mockState.invoiceCount }),
+});
+
+require.cache[supabasePath] = {
+  id: supabasePath,
+  filename: supabasePath,
+  loaded: true,
+  exports: { from: () => queryBuilder() },
 };
 
-const makeLimitError = (plan, used) => {
-  const limit = PLANS[plan]?.invoicesPerMonth ?? 20;
-  const err = new Error('Plan invoice limit reached');
-  err.statusCode = 402;
-  err.code = 'PLAN_LIMIT_REACHED';
-  err.used  = used;
-  err.limit = limit;
-  err.plan  = plan;
-  return err;
-};
+const { PLANS, assertInvoiceLimit, getPlanUsage } = await import('../server/lib/plans.js');
 
-describe('PLANS config', () => {
+describe('PLANS config (real module)', () => {
+  it('is backed by the real server/lib/plans.js export, not a shadow copy', () => {
+    expect(typeof assertInvoiceLimit).toBe('function');
+  });
+
   it('free plan has 20 invoice limit', () => {
     expect(PLANS.free.invoicesPerMonth).toBe(20);
   });
@@ -60,29 +70,48 @@ describe('PLANS config', () => {
   });
 });
 
-describe('plan enforcement logic', () => {
-  it('blocks free user at exactly 20 invoices', () => {
-    expect(shouldBlock('free', 20)).toBe(true);
+describe('assertInvoiceLimit (real module, mocked Supabase)', () => {
+  it('blocks free user at exactly 20 invoices', async () => {
+    mockState.subscription = { plan: 'free', status: 'active' };
+    mockState.invoiceCount = 20;
+    await expect(assertInvoiceLimit('user-1')).rejects.toMatchObject({
+      statusCode: 402,
+      code: 'PLAN_LIMIT_REACHED',
+      plan: 'free',
+      limit: 20,
+      used: 20,
+    });
   });
 
-  it('allows free user at 19 invoices', () => {
-    expect(shouldBlock('free', 19)).toBe(false);
+  it('allows free user at 19 invoices', async () => {
+    mockState.subscription = { plan: 'free', status: 'active' };
+    mockState.invoiceCount = 19;
+    const usage = await assertInvoiceLimit('user-1');
+    expect(usage.pct).toBeLessThan(1);
   });
 
-  it('blocks pro user at 150 invoices', () => {
-    expect(shouldBlock('pro', 150)).toBe(true);
+  it('blocks pro user at 150 invoices', async () => {
+    mockState.subscription = { plan: 'pro', status: 'active' };
+    mockState.invoiceCount = 150;
+    await expect(assertInvoiceLimit('user-1')).rejects.toMatchObject({
+      statusCode: 402,
+      code: 'PLAN_LIMIT_REACHED',
+      plan: 'pro',
+      limit: 150,
+    });
   });
 
-  it('never blocks enterprise (unlimited)', () => {
-    expect(shouldBlock('enterprise', 1_000_000)).toBe(false);
+  it('never blocks enterprise (unlimited)', async () => {
+    mockState.subscription = { plan: 'enterprise', status: 'active' };
+    mockState.invoiceCount = 1_000_000;
+    const usage = await assertInvoiceLimit('user-1');
+    expect(usage.remaining).toBe(Infinity);
   });
 
-  it('assertInvoiceLimit error has 402 statusCode and PLAN_LIMIT_REACHED code', () => {
-    const err = makeLimitError('free', 20);
-    expect(err.statusCode).toBe(402);
-    expect(err.code).toBe('PLAN_LIMIT_REACHED');
-    expect(err.limit).toBe(20);
-    expect(err.used).toBe(20);
-    expect(err.plan).toBe('free');
+  it('getPlanUsage returns plan/limit/used/remaining/pct for a real subscription row', async () => {
+    mockState.subscription = { plan: 'basic', status: 'active' };
+    mockState.invoiceCount = 10;
+    const usage = await getPlanUsage('user-1');
+    expect(usage).toMatchObject({ plan: 'basic', limit: 50, used: 10, remaining: 40 });
   });
 });
