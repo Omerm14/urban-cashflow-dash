@@ -1,10 +1,5 @@
-const { createClient } = require('@supabase/supabase-js');
 const storage = require('../lib/storage');
-
-const supabaseAdmin = createClient(
-  process.env.SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_ROLE_KEY,
-);
+const supabaseAdmin = require('../lib/supabase');
 
 const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
 const MAX_BYTES = 2 * 1024 * 1024; // 2MB
