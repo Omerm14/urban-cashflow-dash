@@ -371,6 +371,7 @@ const en = {
   inv_total: "Total",
   inv_total_due: "Total due",
   inv_paid_of: "{paid} of {total} paid",
+  inv_overdue_of: "{n} overdue",
   inv_none_month: "No invoices due in {month}",
   inv_missing_label: "Missing suppliers this month:",
   inv_selected: "{n} selected",

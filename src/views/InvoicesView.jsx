@@ -156,6 +156,8 @@ function GroupedView({ invoices, selectedMonth, onMonthChange, selectedIds, onTo
   const progress = monthInvoices.length > 0 ? Math.round((paidCount / monthInvoices.length) * 100) : 0;
   const allPaid = monthInvoices.length > 0 && paidCount === monthInvoices.length;
   const monthTotal = monthInvoices.reduce((s, i) => s + Number(i.amount), 0);
+  const overdueInvoices = monthInvoices.filter(i => i.status === "Overdue" || i.status === "overdue");
+  const overdueTotal = overdueInvoices.reduce((s, i) => s + Number(i.amount), 0);
   const prevAllPaid = useRef(false);
   useEffect(() => { if (allPaid && !prevAllPaid.current && monthInvoices.length > 0) onAllPaid(); prevAllPaid.current = allPaid; }, [allPaid]); // eslint-disable-line react-hooks/exhaustive-deps
   const groups = Object.entries(monthInvoices.reduce((acc, inv) => { (acc[inv.supplier] = acc[inv.supplier] || []).push(inv); return acc; }, {})).sort(([a], [b]) => a.localeCompare(b));
@@ -193,6 +195,12 @@ function GroupedView({ invoices, selectedMonth, onMonthChange, selectedIds, onTo
               <div style={{ height: "100%", width: `${progress}%`, background: allPaid ? T.green : T.accent, borderRadius: 2, transition: "width 0.6s cubic-bezier(.16,1,.3,1)" }} />
             </div>
           </div>
+          {overdueInvoices.length > 0 && (
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 14px", background: T.redTint, border: `1px solid ${T.redBdr}`, borderRadius: 8, marginBottom: 8 }}>
+              <span style={{ fontFamily: SANS, fontSize: 12, fontWeight: 600, color: T.red }}>{t("inv_overdue_of", { n: overdueInvoices.length })}</span>
+              <span className="num" style={{ fontWeight: 500, fontSize: 13, color: T.red }}>{fmt(overdueTotal)}</span>
+            </div>
+          )}
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 14px", background: T.accentTint, border: `1px solid ${T.accentBdr}`, borderRadius: 8, marginBottom: 12, gap: 8 }}>
             <span style={{ fontFamily: SANS, fontSize: 12, fontWeight: 600, color: T.accent, flex: 1, minWidth: 0 }}>{isMobile ? fmtMonth(selectedMonth) : `${t("inv_total_due")} · ${fmtMonth(selectedMonth)}`}</span>
             <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
@@ -213,7 +221,7 @@ function GroupedView({ invoices, selectedMonth, onMonthChange, selectedIds, onTo
           <AlertTriangle size={14} color={T.amber} style={{ flexShrink: 0 }} aria-hidden="true" />
           <div style={{ flex: 1 }}>
             <span style={{ fontFamily: SANS, fontSize: 13, fontWeight: 600, color: T.amber }}>{t("inv_missing_label")} </span>
-            <span style={{ fontFamily: SANS, fontSize: 13, color: T.t2 }}>{missingSuppliers.join(", ")}</span>
+            <span style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", minWidth: 20, height: 20, padding: "0 6px", borderRadius: 999, background: T.amber, color: T.bg, fontFamily: SANS, fontSize: 12, fontWeight: 700 }}>{missingSuppliers.length}</span>
           </div>
         </div>
       )}

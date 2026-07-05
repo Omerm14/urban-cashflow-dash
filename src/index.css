@@ -19,6 +19,7 @@
   --green: #3BD68C; --green-tint: rgba(59,214,140,0.10); --green-bdr: rgba(59,214,140,0.28);
   --red: #E8604C; --red-tint: rgba(232,96,76,0.12); --red-bdr: rgba(232,96,76,0.30);
   --amber: #E0A93D; --amber-tint: rgba(224,169,61,0.12); --amber-bdr: rgba(224,169,61,0.30);
+  --blue: #3987E5; --blue-tint: rgba(57,135,229,0.12); --blue-bdr: rgba(57,135,229,0.30);
 
   /* Legacy aliases still referenced by older components */
   --primary: var(--accent);
@@ -43,6 +44,7 @@
   --green: #0C8A47; --green-tint: rgba(12,138,71,0.09); --green-bdr: rgba(12,138,71,0.28);
   --red: #C2482F; --red-tint: rgba(194,72,47,0.09); --red-bdr: rgba(194,72,47,0.28);
   --amber: #A36A00; --amber-tint: rgba(163,106,0,0.09); --amber-bdr: rgba(163,106,0,0.28);
+  --blue: #2A78D6; --blue-tint: rgba(42,120,214,0.09); --blue-bdr: rgba(42,120,214,0.28);
 
   --shadow-pop: 0 8px 32px rgba(20, 32, 27, 0.14);
   --shadow-modal: 0 20px 60px rgba(20, 32, 27, 0.22);
@@ -116,7 +118,7 @@ body {
 .pill-paid    { color: var(--green); background: var(--green-tint); }
 .pill-pending { color: var(--amber); background: var(--amber-tint); }
 .pill-overdue { color: var(--red);   background: var(--red-tint); }
-.pill-credit  { color: var(--accent); background: var(--accent-tint); }
+.pill-credit  { color: var(--blue); background: var(--blue-tint); }
 .pill-neutral { color: var(--t2); background: var(--surf3); }
 
 /* ── Inputs ── */
