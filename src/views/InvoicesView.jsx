@@ -146,7 +146,7 @@ function SupplierGroup({ supplier, invoices, selectedIds, onToggleSelect, onTogg
   );
 }
 
-function GroupedView({ invoices, selectedMonth, onMonthChange, selectedIds, onToggleSelect, onToggleAll, onMarkPaid, onSelectAll, onAllPaid, onEditInvoice, onViewAttachment, anomalyMap, onDeleteInvoice, onAddSupplier, supplierColor }) {
+function GroupedView({ invoices, selectedMonth, onMonthChange, selectedIds, onToggleSelect, onToggleAll, onMarkPaid, onSelectAll, onAllPaid, onEditInvoice, onViewAttachment, anomalyMap, onDeleteInvoice, onAddSupplier, supplierColor, onFilterStatus }) {
   const T = useT();
   const { isMobile } = useLayout();
   const { t } = useLang();
@@ -156,6 +156,9 @@ function GroupedView({ invoices, selectedMonth, onMonthChange, selectedIds, onTo
   const progress = monthInvoices.length > 0 ? Math.round((paidCount / monthInvoices.length) * 100) : 0;
   const allPaid = monthInvoices.length > 0 && paidCount === monthInvoices.length;
   const monthTotal = monthInvoices.reduce((s, i) => s + Number(i.amount), 0);
+  const paidAmount = monthInvoices.filter(i => isPaidStatus(i.status)).reduce((s, i) => s + Number(i.amount), 0);
+  const outstandingAmount = monthInvoices.filter(i => i.status === "Unpaid" || i.status === "unpaid").reduce((s, i) => s + Number(i.amount), 0);
+  const overdueAmount = monthInvoices.filter(i => i.status === "Overdue" || i.status === "overdue").reduce((s, i) => s + Number(i.amount), 0);
   const prevAllPaid = useRef(false);
   useEffect(() => { if (allPaid && !prevAllPaid.current && monthInvoices.length > 0) onAllPaid(); prevAllPaid.current = allPaid; }, [allPaid]); // eslint-disable-line react-hooks/exhaustive-deps
   const groups = Object.entries(monthInvoices.reduce((acc, inv) => { (acc[inv.supplier] = acc[inv.supplier] || []).push(inv); return acc; }, {})).sort(([a], [b]) => a.localeCompare(b));
@@ -193,11 +196,28 @@ function GroupedView({ invoices, selectedMonth, onMonthChange, selectedIds, onTo
               <div style={{ height: "100%", width: `${progress}%`, background: allPaid ? T.green : T.accent, borderRadius: 2, transition: "width 0.6s cubic-bezier(.16,1,.3,1)" }} />
             </div>
           </div>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 14px", background: T.accentTint, border: `1px solid ${T.accentBdr}`, borderRadius: 8, marginBottom: 12, gap: 8 }}>
-            <span style={{ fontFamily: SANS, fontSize: 12, fontWeight: 600, color: T.accent, flex: 1, minWidth: 0 }}>{isMobile ? fmtMonth(selectedMonth) : `${t("inv_total_due")} · ${fmtMonth(selectedMonth)}`}</span>
-            <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
-              {unpaid.length > 0 && <button onClick={() => onSelectAll(unpaid.map(i => i.id))} style={{ padding: "4px 9px", background: "transparent", border: `1px solid ${T.accentBdr}`, borderRadius: 5, color: T.accent, cursor: "pointer", fontFamily: SANS, fontSize: 12, fontWeight: 600, whiteSpace: "nowrap" }}>{isMobile ? `${t("inv_select_all")} (${unpaid.length})` : `${t("inv_select_all")} (${unpaid.length})`}</button>}
-              <span className="num" style={{ fontWeight: 500, fontSize: isMobile ? 15 : 18, color: T.t1 }}>{fmt(monthTotal)}</span>
+          <div style={{ padding: "10px 14px", background: T.accentTint, border: `1px solid ${T.accentBdr}`, borderRadius: 8, marginBottom: 12 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
+              <span style={{ fontFamily: SANS, fontSize: 12, fontWeight: 600, color: T.accent, flex: 1, minWidth: 0 }}>{isMobile ? fmtMonth(selectedMonth) : `${t("inv_total_due")} · ${fmtMonth(selectedMonth)}`}</span>
+              <span className="num" style={{ fontWeight: 500, fontSize: isMobile ? 15 : 18, color: T.t1, flexShrink: 0 }}>{fmt(monthTotal)}</span>
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap", marginTop: 8 }}>
+              {paidAmount > 0 && (
+                <button onClick={() => onFilterStatus?.("Paid")} style={{ display: "flex", alignItems: "center", gap: 5, padding: "4px 9px", borderRadius: 999, background: T.greenTint, border: `1px solid ${T.greenBdr}`, color: T.green, cursor: "pointer", fontFamily: SANS, fontSize: 11, fontWeight: 600, whiteSpace: "nowrap" }}>
+                  {t("inv_paid")} {fmt(paidAmount)}
+                </button>
+              )}
+              {outstandingAmount > 0 && (
+                <button onClick={() => onFilterStatus?.("Unpaid")} style={{ display: "flex", alignItems: "center", gap: 5, padding: "4px 9px", borderRadius: 999, background: T.amberTint, border: `1px solid ${T.amberBdr}`, color: T.amber, cursor: "pointer", fontFamily: SANS, fontSize: 11, fontWeight: 600, whiteSpace: "nowrap" }}>
+                  {t("inv_unpaid")} {fmt(outstandingAmount)}
+                </button>
+              )}
+              {overdueAmount > 0 && (
+                <button onClick={() => onFilterStatus?.("Overdue")} style={{ display: "flex", alignItems: "center", gap: 5, padding: "4px 9px", borderRadius: 999, background: T.redTint, border: `1px solid ${T.redBdr}`, color: T.red, cursor: "pointer", fontFamily: SANS, fontSize: 11, fontWeight: 600, whiteSpace: "nowrap" }}>
+                  {t("inv_overdue")} {fmt(overdueAmount)}
+                </button>
+              )}
+              {unpaid.length > 0 && <button onClick={() => onSelectAll(unpaid.map(i => i.id))} style={{ marginInlineStart: "auto", padding: "4px 9px", background: "transparent", border: `1px solid ${T.accentBdr}`, borderRadius: 5, color: T.accent, cursor: "pointer", fontFamily: SANS, fontSize: 12, fontWeight: 600, whiteSpace: "nowrap" }}>{t("inv_select_all")} ({unpaid.length})</button>}
             </div>
           </div>
         </>
@@ -357,7 +377,7 @@ export default function InvoicesView({ invoices, loading, selectedMonth, onMonth
           selectedIds={selectedIds} onToggleSelect={toggleSelect} onToggleAll={toggleAll}
           onMarkPaid={onMarkPaid} onSelectAll={ids => setSelectedIds(new Set(ids))}
           onAllPaid={() => setShowCelebration(true)} onEditInvoice={onEditInvoice} onViewAttachment={onViewAttachment}
-          anomalyMap={anomalyMap}
+          anomalyMap={anomalyMap} onFilterStatus={s => setFilterStatuses(new Set([s]))}
           onDeleteInvoice={onDeleteInvoice} onAddSupplier={onAddSupplier} supplierColor={supplierColor} />
       ) : (
         <div className="card" style={{ overflow: "hidden" }}>
