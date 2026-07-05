@@ -7,7 +7,6 @@ const express = require('express');
 
 const app       = express();
 const auth      = require('./middleware/auth');
-const rateLimit = require('express-rate-limit');
 
 // Trust exactly one hop (Vercel's edge proxy) so req.ip resolves to the real
 // client IP instead of the proxy address. `true`/trust-all would let clients
@@ -15,11 +14,10 @@ const rateLimit = require('express-rate-limit');
 app.set('trust proxy', 1);
 
 // Protect expensive endpoints from abuse while allowing generous legitimate use.
-// Limits are per-IP; well above any real single-user burst.
-const extractLimiter   = rateLimit({ windowMs: 60_000,      max: 120, standardHeaders: true, legacyHeaders: false, message: { error: 'Too many requests, please slow down' } });
-const syncLimiter      = rateLimit({ windowMs: 60_000,      max: 10,  standardHeaders: true, legacyHeaders: false, message: { error: 'Too many sync requests, please wait' } });
-const googleApiLimiter = rateLimit({ windowMs: 60_000,      max: 20,  standardHeaders: true, legacyHeaders: false, message: { error: 'Too many requests' } });
-const accountLimiter   = rateLimit({ windowMs: 3_600_000,   max: 3,   standardHeaders: true, legacyHeaders: false, message: { error: 'Too many account operations, please wait' } });
+// Limits are per-IP; well above any real single-user burst. Shared with
+// api/index.js via server/middleware/rateLimiters.js so the two entrypoints
+// can't drift apart again (CASH-17).
+const { extractLimiter, syncLimiter, googleApiLimiter, accountLimiter } = require('./middleware/rateLimiters');
 
 // WhatsApp + Stripe webhooks registered BEFORE global json parser — both need
 // rawBody preserved for signature verification (HMAC / Stripe-Signature).
