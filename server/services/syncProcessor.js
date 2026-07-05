@@ -529,19 +529,26 @@ exports.syncGreenInvoice = async (integration, userId) => {
   if (!authRes.ok) throw new Error(`Green Invoice auth failed: ${await greenInvoiceErrorDetail(authRes)}`);
   const { token } = await authRes.json();
 
-  // Document search is POST /documents/search with a JSON body (not GET /documents with
-  // query params — that 405s, the API only accepts POST here). type:500 = Purchase Order,
-  // the closest Green Invoice document type to "an invoice owed to a supplier"; if a given
-  // account tracks incoming invoices under a different type this filter needs adjusting.
+  // Green Invoice's Documents API only returns documents this account ISSUES (invoices/receipts
+  // sent to ITS OWN clients) — there's no "incoming supplier invoice" document type there.
+  // Expenses is the resource for money owed to suppliers, so that's the correct source here.
+  // minAmount/maxAmount are marked required by the API despite being a filter range — pass a
+  // wide-open range rather than omit them.
   const lookback  = integration.config?.lookback_days ?? 0;
   const cutoffISO = computeCutoff(integration.last_sync, lookback);
   const fromDate  = cutoffISO ? cutoffISO.split('T')[0] : null;
-  const docsRes   = await fetch('https://api.greeninvoice.co.il/api/v1/documents/search', {
+  const docsRes   = await fetch('https://api.greeninvoice.co.il/api/v1/expenses/search', {
     method:  'POST',
     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-    body:    JSON.stringify({ type: 500, ...(fromDate ? { fromDate } : {}), page: 1, pageSize: 100 }),
+    body:    JSON.stringify({
+      ...(fromDate ? { fromDate } : {}),
+      minAmount: 0,
+      maxAmount: Number.MAX_SAFE_INTEGER,
+      page:      1,
+      pageSize:  100,
+    }),
   });
-  if (!docsRes.ok) throw new Error(`Green Invoice documents fetch failed: ${await greenInvoiceErrorDetail(docsRes)}`);
+  if (!docsRes.ok) throw new Error(`Green Invoice expenses fetch failed: ${await greenInvoiceErrorDetail(docsRes)}`);
   const { items = [] } = await docsRes.json();
 
   const suppliers        = await getSuppliers(userId);
@@ -552,7 +559,7 @@ exports.syncGreenInvoice = async (integration, userId) => {
     if (await isCancelRequested(integration.id)) {
       return { added, skipped, filesFound: items.length, errors, cancelled: true };
     }
-    const supplierName = doc.client?.name || doc.from?.name || '';
+    const supplierName = doc.supplier?.name || '';
     const sup          = matchSupplier(supplierName, suppliers);
     const invoiceDate  = doc.date ? doc.date.split('T')[0] : '';
     const dueDate      = doc.dueDate ? doc.dueDate.split('T')[0]
@@ -560,10 +567,10 @@ exports.syncGreenInvoice = async (integration, userId) => {
 
     const candidate = {
       user_id:          userId,
-      supplier:         sup?.name || supplierName,
+      supplier:         sup?.name || supplierName || 'Unknown supplier',
       invoice_no:       doc.number?.toString() || '',
       invoice_date:     invoiceDate,
-      amount:           doc.amount || doc.total || 0,
+      amount:           doc.amount ?? 0,
       due_date:         dueDate || '',
       status:           'Unpaid',
       notes:            'Imported from Green Invoice',
