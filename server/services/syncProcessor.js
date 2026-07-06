@@ -657,22 +657,29 @@ exports.processGoogleDriveFileBatch = async (integration, userId, files) => {
   const results = [];
   let errors = 0, skipped = 0;
 
-  await Promise.all(files.map(async file => {
-    try {
-      const resp   = await drive.files.get({ fileId: file.id, alt: 'media' }, { responseType: 'arraybuffer' });
-      const buffer = Buffer.from(resp.data);
-      const { saved, skipped: contentSkipped } = await processFile(
-        buffer, file.name, file.mimeType, userId, suppliers, existingInvoices,
-        integration.id, 'google_drive', { folder_id: folderId, drive_file_id: file.id },
-      );
-      for (const inv of saved) { results.push(inv); existingInvoices.push(inv); }
-      skipped += contentSkipped;
-    } catch (err) {
-      errors++;
-      console.error(`[sync:drive:batch] ${file.name}:`, err.message);
-      logSyncEvent(integration.id, userId, 'download_failed', { source_file: file.name, error_message: err.message });
-    }
-  }));
+  // Bounded concurrency — mirrors the CONCURRENCY=3 batcher in syncGoogleDrive,
+  // so this job-based path can't fire unbounded simultaneous Claude calls and
+  // trigger a 429 cascade on large batches.
+  const CONCURRENCY = 3;
+  for (let i = 0; i < files.length; i += CONCURRENCY) {
+    const chunk = files.slice(i, i + CONCURRENCY);
+    await Promise.all(chunk.map(async file => {
+      try {
+        const resp   = await drive.files.get({ fileId: file.id, alt: 'media' }, { responseType: 'arraybuffer' });
+        const buffer = Buffer.from(resp.data);
+        const { saved, skipped: contentSkipped } = await processFile(
+          buffer, file.name, file.mimeType, userId, suppliers, existingInvoices,
+          integration.id, 'google_drive', { folder_id: folderId, drive_file_id: file.id },
+        );
+        for (const inv of saved) { results.push(inv); existingInvoices.push(inv); }
+        skipped += contentSkipped;
+      } catch (err) {
+        errors++;
+        console.error(`[sync:drive:batch] ${file.name}:`, err.message);
+        logSyncEvent(integration.id, userId, 'download_failed', { source_file: file.name, error_message: err.message });
+      }
+    }));
+  }
 
   return { results, skipped, errors };
 };
