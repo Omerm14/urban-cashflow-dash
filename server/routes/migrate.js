@@ -47,7 +47,10 @@ exports.runMigrate = async (req, res) => {
       .select('id', { count: 'exact', head: true })
       .eq('attachment_backend', 'supabase')
       .not('attachment_path', 'is', null);
-    if (cErr) return res.status(500).json({ error: cErr.message });
+    if (cErr) {
+      console.error('[migrate] error:', cErr.message);
+      return res.status(500).json({ error: 'Internal server error' });
+    }
 
     if (dryRun) return res.json({ dryRun: true, remaining: remaining || 0 });
 
@@ -58,7 +61,10 @@ exports.runMigrate = async (req, res) => {
       .not('attachment_path', 'is', null)
       .order('id')
       .limit(limit);
-    if (error) return res.status(500).json({ error: error.message });
+    if (error) {
+      console.error('[migrate] error:', error.message);
+      return res.status(500).json({ error: 'Internal server error' });
+    }
 
     // Stop processing well before the serverless timeout and return progress, so
     // the endpoint never 504s regardless of file sizes / network speed. The
@@ -103,6 +109,6 @@ exports.runMigrate = async (req, res) => {
     res.json({ ok: true, processed, migrated, failed, remaining: remainingAfter, errors });
   } catch (err) {
     console.error('[migrate] error:', err.message);
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: 'Internal server error' });
   }
 };
