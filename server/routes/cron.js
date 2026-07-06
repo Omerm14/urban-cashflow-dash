@@ -24,7 +24,10 @@ exports.runSync = async (req, res) => {
     .eq('auto_sync_enabled', true)
     .eq('status', 'connected');
 
-  if (error) return res.status(500).json({ error: error.message });
+  if (error) {
+    console.error('[cron] error:', error.message);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
 
   const now = Date.now();
   const due = (integrations || []).filter(i => {

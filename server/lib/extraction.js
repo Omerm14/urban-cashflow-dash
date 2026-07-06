@@ -82,6 +82,16 @@ const extractJson = (text, wantArray) => {
 
 // ─── Anthropic call with bounded retry/backoff ───────────────────────────────
 // Retries transient 429/5xx/network errors; surfaces 4xx (bad request) at once.
+// 429s get a much longer backoff than 5xx/network errors — sustained rate-limiting
+// needs tens of seconds to clear, not the sub-second gap that's enough for a blip.
+const DEFAULT_BACKOFF_MS    = [500, 1000];
+const RATE_LIMIT_BACKOFF_MS = [30000, 60000];
+
+const getRetryDelayMs = (attempt, isRateLimited) => {
+  const table = isRateLimited ? RATE_LIMIT_BACKOFF_MS : DEFAULT_BACKOFF_MS;
+  return table[Math.min(attempt - 1, table.length - 1)];
+};
+
 const callClaude = async ({ messages, maxTokens }) => {
   const MAX_ATTEMPTS = 3;
   let lastErr;
@@ -90,10 +100,11 @@ const callClaude = async ({ messages, maxTokens }) => {
       return await client.messages.create({ model: MODEL, max_tokens: maxTokens, messages });
     } catch (err) {
       const status = err.status || err.statusCode;
-      const retryable = status === 429 || status >= 500 || status === undefined;
+      const isRateLimited = status === 429;
+      const retryable = isRateLimited || status >= 500 || status === undefined;
       lastErr = err;
       if (!retryable || attempt === MAX_ATTEMPTS) break;
-      await new Promise(r => setTimeout(r, 500 * 2 ** (attempt - 1)));
+      await new Promise(r => setTimeout(r, getRetryDelayMs(attempt, isRateLimited)));
     }
   }
   throw lastErr;
