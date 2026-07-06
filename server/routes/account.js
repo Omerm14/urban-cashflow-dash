@@ -6,7 +6,7 @@ async function deleteAccount(req, res) {
     res.json({ ok: true });
   } catch (err) {
     console.error('deleteAccount error', err);
-    res.status(500).json({ error: err.message || 'Failed to delete account' });
+    res.status(500).json({ error: 'Failed to delete account' });
   }
 }
 

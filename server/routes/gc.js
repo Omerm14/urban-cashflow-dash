@@ -35,7 +35,10 @@ exports.runGc = async (req, res) => {
       .from('invoices')
       .select('attachment_path')
       .not('attachment_path', 'is', null);
-    if (error) return res.status(500).json({ error: error.message });
+    if (error) {
+      console.error('[gc] error:', error.message);
+      return res.status(500).json({ error: 'Internal server error' });
+    }
     const referenced = new Set((rows || []).map(r => r.attachment_path));
 
     const allKeys = await storage.listAllKeys();
@@ -56,6 +59,6 @@ exports.runGc = async (req, res) => {
     res.json({ ok: true, backend, totalObjects: allKeys.length, referenced: referenced.size, orphans: orphans.length, deleted: dryRun ? 0 : orphans.length, dryRun });
   } catch (err) {
     console.error('[gc] error:', err.message);
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: 'Internal server error' });
   }
 };
