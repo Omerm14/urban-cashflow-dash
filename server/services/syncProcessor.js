@@ -316,6 +316,23 @@ const listAllGmailMessages = async (gmail, q) => {
   return messages;
 };
 
+// Splits Gmail messages into ones still needing download/OCR vs. ones already
+// represented by an invoice from a prior sync (matched by Gmail message id,
+// stored in invoices.sync_source_meta.message_id — see processFile's syncMeta).
+const partitionSeenGmailMessages = (messages, importedRows) => {
+  const seenMessageIds = new Set(
+    (importedRows || []).map(r => r.sync_source_meta?.message_id).filter(Boolean)
+  );
+  const toProcess   = [];
+  const skippedIds  = [];
+  for (const msg of messages) {
+    if (seenMessageIds.has(msg.id)) skippedIds.push(msg.id);
+    else toProcess.push(msg);
+  }
+  return { toProcess, skippedIds };
+};
+exports.partitionSeenGmailMessages = partitionSeenGmailMessages;
+
 // ─── Google Drive sync ───────────────────────────────────────────────────────
 
 exports.syncGoogleDrive = async (integration, userId) => {
@@ -460,9 +477,24 @@ exports.syncGmail = async (integration, userId) => {
 
   const suppliers        = await getSuppliers(userId);
   const existingInvoices = await getExistingInvoices(userId);
-  let added = 0, skipped = 0, errors = 0;
 
-  for (const msg of messages) {
+  // Pre-filter: skip messages already represented by an invoice from a prior sync
+  // (e.g. a "resync" that clears last_sync) — mirrors syncGoogleDrive's seenFiles
+  // filter so re-running a sync with no new mail doesn't re-pay for OCR.
+  const { data: importedRows } = await supabase
+    .from('invoices')
+    .select('sync_source_meta')
+    .eq('user_id', userId)
+    .eq('sync_source', 'gmail');
+  const { toProcess, skippedIds } = partitionSeenGmailMessages(messages, importedRows);
+  skippedIds.forEach(id => {
+    console.log(`[sync:gmail] skipping already-imported message: ${id}`);
+    logSyncEvent(integration.id, userId, 'dedup_skipped', { source_file: `msg:${id}` });
+  });
+
+  let added = 0, skipped = skippedIds.length, errors = 0;
+
+  for (const msg of toProcess) {
     if (await isCancelRequested(integration.id)) {
       return { added, skipped, filesFound: messages.length, errors, cancelled: true };
     }
