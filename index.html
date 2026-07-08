@@ -6,6 +6,11 @@
 <title>Cashflow — Stop Chasing Invoices. Start Managing Cash Flow.</title>
 <meta name="description" content="Cashflow automatically collects, reads, and organizes every invoice you receive — from Gmail, WhatsApp, Google Drive, and Green Invoice — so you always know what you owe and when." />
 <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
+<link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
+<link rel="shortcut icon" href="/favicon.ico" />
+<link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+<link rel="manifest" href="/site.webmanifest" />
 <meta property="og:type" content="website" />
 <meta property="og:title" content="Cashflow — Stop Chasing Invoices. Start Managing Cash Flow." />
 <meta property="og:description" content="Cashflow automatically collects, reads, and organizes every invoice you receive — from Gmail, WhatsApp, Google Drive, and Green Invoice — so you always know what you owe and when." />
@@ -346,6 +351,9 @@
   /* Footer */
   footer{border-top:1px solid var(--border);padding:34px 0}
   .foot-inner{display:flex;align-items:center;justify-content:space-between;gap:20px;flex-wrap:wrap;font-size:14px;color:var(--muted)}
+  .foot-brand{display:flex;flex-direction:column;gap:6px}
+  .foot-logo{font-size:16px}
+  .foot-logo .mark{width:22px;height:22px;flex:0 0 22px}
   .foot-links{display:flex;gap:24px}
   .foot-links a{color:var(--muted-2);transition:color .2s}
   .foot-links a:hover{color:var(--text)}
@@ -840,30 +848,13 @@
 <!-- SVG logo mark (defined once, reused) -->
 <svg width="0" height="0" style="position:absolute" aria-hidden="true">
   <defs>
-    <linearGradient id="cashflowArcGrad" x1="50" y1="10" x2="85" y2="80" gradientUnits="userSpaceOnUse">
-      <stop offset="0"   stop-color="#1d4ed8"/>
-      <stop offset="0.5" stop-color="#3DD6A3"/>
-      <stop offset="1"   stop-color="#8FE8C9"/>
+    <linearGradient id="cashflowMarkGrad" x1="20%" y1="0%" x2="85%" y2="100%">
+      <stop offset="0%" stop-color="#3DD6A3"/>
+      <stop offset="100%" stop-color="#1FA97A"/>
     </linearGradient>
-    <linearGradient id="cashflowArrowGrad" x1="76" y1="68" x2="90" y2="44" gradientUnits="userSpaceOnUse">
-      <stop offset="0" stop-color="#3DD6A3"/>
-      <stop offset="1" stop-color="#8FE8C9"/>
-    </linearGradient>
-    <symbol id="cashflowMark" viewBox="0 0 100 100">
-      <!-- C-arc: center (50,50), r=34, opens right, from ~1 o'clock to ~4 o'clock -->
-      <path d="M 67 21 A 34 34 0 1 0 79 67" stroke="url(#cashflowArcGrad)" stroke-width="12" stroke-linecap="round" fill="none"/>
-      <!-- Document body -->
-      <path d="M 37 26 L 57 26 L 65 34 L 65 64 Q 65 66 63 66 L 37 66 Q 35 66 35 64 L 35 28 Q 35 26 37 26 Z" fill="white"/>
-      <!-- Fold triangle (cyan) -->
-      <path d="M 57 26 L 65 34 L 57 34 Z" fill="#8FE8C9"/>
-      <!-- Text lines (dark navy) -->
-      <line x1="41" y1="44" x2="61" y2="44" stroke="#07120E" stroke-width="2.8" stroke-linecap="round"/>
-      <line x1="41" y1="51" x2="61" y2="51" stroke="#07120E" stroke-width="2.8" stroke-linecap="round"/>
-      <line x1="41" y1="58" x2="52" y2="58" stroke="#07120E" stroke-width="2.8" stroke-linecap="round"/>
-      <!-- Arrow body -->
-      <path d="M 76 68 Q 89 72 85 52" stroke="url(#cashflowArrowGrad)" stroke-width="5.5" stroke-linecap="round" fill="none"/>
-      <!-- Arrowhead (filled triangle) -->
-      <path d="M 85 44 L 93 55 L 79 57 Z" fill="#8FE8C9"/>
+    <symbol id="cashflowMark" viewBox="0 0 96 96">
+      <path d="M 66,26 A 30,30 0 1 0 66,70" stroke="url(#cashflowMarkGrad)" stroke-width="13" stroke-linecap="round" fill="none"/>
+      <path d="M 60,42 A 11,11 0 1 0 60,54" stroke="url(#cashflowMarkGrad)" stroke-width="8" stroke-linecap="round" fill="none" opacity="0.55"/>
     </symbol>
   </defs>
 </svg>
@@ -1306,7 +1297,10 @@
 <!-- FOOTER -->
 <footer id="contact">
   <div class="wrap foot-inner">
-    <div>© 2026 Cashflow. All rights reserved.</div>
+    <div class="foot-brand">
+      <a href="/" class="logo foot-logo"><svg class="mark"><use href="#cashflowMark"/></svg> Cashflow</a>
+      <span>© 2026 Cashflow. All rights reserved.</span>
+    </div>
     <div class="foot-links"><a href="/privacy.html">Privacy Policy</a><a href="/terms.html">Terms of Service</a><a href="mailto:hello@gocashflow.co">Contact</a></div>
     <div>Built for Israeli businesses 🇮🇱</div>
   </div>

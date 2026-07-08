@@ -8,9 +8,13 @@ export function BrandMark({ size = 28 }) {
   return (
     <span aria-hidden="true" style={{
       width: size, height: size, borderRadius: size * 0.28, background: "var(--accent)",
-      display: "inline-flex", alignItems: "center", justifyContent: "center",
-      color: "var(--accent-ink)", fontFamily: DISPLAY, fontWeight: 700, fontSize: size * 0.52, flexShrink: 0,
-    }}>₪</span>
+      display: "inline-flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
+    }}>
+      <svg viewBox="0 0 96 96" width={size * 0.6} height={size * 0.6}>
+        <path d="M 66,26 A 30,30 0 1 0 66,70" stroke="var(--accent-ink)" strokeWidth="13" strokeLinecap="round" fill="none" />
+        <path d="M 60,42 A 11,11 0 1 0 60,54" stroke="var(--accent-ink)" strokeWidth="8" strokeLinecap="round" fill="none" opacity="0.55" />
+      </svg>
+    </span>
   );
 }
 
