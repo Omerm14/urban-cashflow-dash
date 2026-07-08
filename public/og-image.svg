@@ -71,25 +71,25 @@
   <!-- ===== INTEGRATION ICONS row ===== -->
   <g transform="translate(434, 367)">
     <rect width="40" height="40" rx="10" fill="#17211E" stroke="#22312B"/>
-    <text x="20" y="27" font-size="19" text-anchor="middle" font-family="sans-serif">✉️</text>
+    <text x="20" y="27" font-size="19" text-anchor="middle" font-family="sans-serif" fill="#000">✉️</text>
   </g>
   <text x="454" y="421" font-family="'Hanken Grotesk', sans-serif" font-size="12" fill="#6E7B74" text-anchor="middle">Gmail</text>
 
   <g transform="translate(534, 367)">
     <rect width="40" height="40" rx="10" fill="#17211E" stroke="#22312B"/>
-    <text x="20" y="27" font-size="19" text-anchor="middle" font-family="sans-serif">💬</text>
+    <text x="20" y="27" font-size="19" text-anchor="middle" font-family="sans-serif" fill="#000">💬</text>
   </g>
   <text x="554" y="421" font-family="'Hanken Grotesk', sans-serif" font-size="12" fill="#6E7B74" text-anchor="middle">WhatsApp</text>
 
   <g transform="translate(634, 367)">
     <rect width="40" height="40" rx="10" fill="#17211E" stroke="#22312B"/>
-    <text x="20" y="27" font-size="19" text-anchor="middle" font-family="sans-serif">📁</text>
+    <text x="20" y="27" font-size="19" text-anchor="middle" font-family="sans-serif" fill="#000">📁</text>
   </g>
   <text x="654" y="421" font-family="'Hanken Grotesk', sans-serif" font-size="12" fill="#6E7B74" text-anchor="middle">Drive</text>
 
   <g transform="translate(734, 367)">
     <rect width="40" height="40" rx="10" fill="#17211E" stroke="#22312B"/>
-    <text x="20" y="27" font-size="19" text-anchor="middle" font-family="sans-serif">🧾</text>
+    <text x="20" y="27" font-size="19" text-anchor="middle" font-family="sans-serif" fill="#000">🧾</text>
   </g>
   <text x="754" y="421" font-family="'Hanken Grotesk', sans-serif" font-size="12" fill="#6E7B74" text-anchor="middle">חשבונית</text>
 
