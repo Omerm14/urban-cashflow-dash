@@ -5,6 +5,10 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Cashflow — Stop Chasing Invoices. Start Managing Cash Flow.</title>
 <meta name="description" content="Cashflow automatically collects, reads, and organizes every invoice you receive — from Gmail, WhatsApp, Google Drive, and Green Invoice — so you always know what you owe and when." />
+<link rel="canonical" href="https://gocashflow.co/" />
+<link rel="alternate" hreflang="en" href="https://gocashflow.co/" />
+<link rel="alternate" hreflang="he" href="https://gocashflow.co/he" />
+<link rel="alternate" hreflang="x-default" href="https://gocashflow.co/" />
 <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
 <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
 <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
@@ -12,6 +16,10 @@
 <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
 <link rel="manifest" href="/site.webmanifest" />
 <meta property="og:type" content="website" />
+<meta property="og:site_name" content="Cashflow" />
+<meta property="og:locale" content="en_US" />
+<meta property="og:locale:alternate" content="he_IL" />
+<meta property="og:url" content="https://gocashflow.co/" />
 <meta property="og:title" content="Cashflow — Stop Chasing Invoices. Start Managing Cash Flow." />
 <meta property="og:description" content="Cashflow automatically collects, reads, and organizes every invoice you receive — from Gmail, WhatsApp, Google Drive, and Green Invoice — so you always know what you owe and when." />
 <meta property="og:image" content="https://gocashflow.co/og-image.png" />
@@ -839,6 +847,107 @@
     window.location.replace('/login' + window.location.hash);
   }
 </script>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "Organization",
+      "@id": "https://gocashflow.co/#organization",
+      "name": "Cashflow",
+      "url": "https://gocashflow.co/",
+      "logo": "https://gocashflow.co/icon-512.png",
+      "email": "hello@gocashflow.co",
+      "areaServed": "IL",
+      "availableLanguage": ["en", "he"]
+    },
+    {
+      "@type": "SoftwareApplication",
+      "@id": "https://gocashflow.co/#software",
+      "name": "Cashflow",
+      "url": "https://gocashflow.co/",
+      "applicationCategory": "BusinessApplication",
+      "operatingSystem": "Web",
+      "description": "Cashflow automatically collects, reads, and organizes every invoice you receive — from Gmail, WhatsApp, Google Drive, and Green Invoice — so you always know what you owe and when.",
+      "publisher": { "@id": "https://gocashflow.co/#organization" },
+      "offers": [
+        {
+          "@type": "Offer",
+          "name": "Free",
+          "price": "0",
+          "priceCurrency": "ILS",
+          "url": "https://gocashflow.co/#pricing"
+        },
+        {
+          "@type": "Offer",
+          "name": "Basic",
+          "price": "99",
+          "priceCurrency": "ILS",
+          "url": "https://gocashflow.co/#pricing"
+        },
+        {
+          "@type": "Offer",
+          "name": "Pro",
+          "price": "199",
+          "priceCurrency": "ILS",
+          "url": "https://gocashflow.co/#pricing"
+        },
+        {
+          "@type": "Offer",
+          "name": "Enterprise",
+          "url": "https://gocashflow.co/#pricing"
+        }
+      ]
+    },
+    {
+      "@type": "FAQPage",
+      "@id": "https://gocashflow.co/#faq",
+      "mainEntity": [
+        {
+          "@type": "Question",
+          "name": "Does it support Hebrew invoices?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Yes. Our AI extraction engine is specifically tuned for Israeli invoice formats, including Hebrew text, ח.פ./ע.מ. registration numbers, and DD/MM/YYYY date formats."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Is my data secure?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "All data is stored in isolated, per-user databases with row-level security. File attachments are stored on encrypted cloud storage. We never share your data."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "How does the WhatsApp integration work?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "You forward invoice images or PDFs to a designated WhatsApp Business number. Our system receives them via webhook, extracts the data, and adds them to your dashboard automatically."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Can I import existing invoices?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Yes. You can upload PDFs and images manually, or import a batch via CSV. Duplicate detection ensures clean data."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Do I need a developer to set it up?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "No. The entire setup — including Google OAuth, WhatsApp webhook, and Green Invoice API key — is done through a guided UI with no code required."
+          }
+        }
+      ]
+    }
+  ]
+}
+</script>
 </head>
 <body>
 <div id="pageBg" aria-hidden="true"><div class="pg-blob p1"></div><div class="pg-blob p2"></div><div class="pg-blob p3"></div><div class="pg-blob p4"></div></div>
@@ -870,6 +979,7 @@
       <a href="#pricing">Pricing</a>
       <a href="#contact">Contact</a>
     </div>
+    <a href="/he" hreflang="he" lang="he" class="nav-lang" style="font-size:14px;font-weight:500;color:var(--muted-2);margin-right:16px;transition:color .2s;" onmouseover="this.style.color='var(--text)'" onmouseout="this.style.color='var(--muted-2)'">עברית</a>
     <a href="/login" class="nav-signin" style="font-size:14px;font-weight:500;color:var(--muted-2);margin-right:8px;transition:color .2s;" onmouseover="this.style.color='var(--text)'" onmouseout="this.style.color='var(--muted-2)'">Sign In</a>
     <a class="btn btn-primary" href="/login">Get Started Free</a>
     <!-- Mobile hamburger -->
