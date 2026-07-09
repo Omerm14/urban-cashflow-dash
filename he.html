@@ -1,0 +1,1682 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Cashflow — תפסיקו לרדוף אחרי חשבוניות. תתחילו לנהל תזרים מזומנים.</title>
+<meta name="description" content="Cashflow אוספת, קוראת ומארגנת אוטומטית כל חשבונית שאתם מקבלים — מ-Gmail, וואטסאפ, Google Drive וחשבונית ירוקה — כך שתמיד תדעו כמה אתם חייבים ומתי." />
+<link rel="canonical" href="https://gocashflow.co/he" />
+<link rel="alternate" hreflang="he" href="https://gocashflow.co/he" />
+<link rel="alternate" hreflang="en" href="https://gocashflow.co/" />
+<link rel="alternate" hreflang="x-default" href="https://gocashflow.co/" />
+<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
+<link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
+<link rel="shortcut icon" href="/favicon.ico" />
+<link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+<link rel="manifest" href="/site.webmanifest" />
+<meta property="og:type" content="website" />
+<meta property="og:site_name" content="Cashflow" />
+<meta property="og:locale" content="he_IL" />
+<meta property="og:locale:alternate" content="en_US" />
+<meta property="og:url" content="https://gocashflow.co/he" />
+<meta property="og:title" content="Cashflow — תפסיקו לרדוף אחרי חשבוניות. תתחילו לנהל תזרים מזומנים." />
+<meta property="og:description" content="Cashflow אוספת, קוראת ומארגנת אוטומטית כל חשבונית שאתם מקבלים — מ-Gmail, וואטסאפ, Google Drive וחשבונית ירוקה — כך שתמיד תדעו כמה אתם חייבים ומתי." />
+<meta property="og:image" content="https://gocashflow.co/og-image.png" />
+<meta property="og:image:type" content="image/png" />
+<meta property="og:image:width" content="1200" />
+<meta property="og:image:height" content="630" />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content="Cashflow — תפסיקו לרדוף אחרי חשבוניות. תתחילו לנהל תזרים מזומנים." />
+<meta name="twitter:description" content="Cashflow אוספת, קוראת ומארגנת אוטומטית כל חשבונית שאתם מקבלים — מ-Gmail, וואטסאפ, Google Drive וחשבונית ירוקה — כך שתמיד תדעו כמה אתם חייבים ומתי." />
+<meta name="twitter:image" content="https://gocashflow.co/og-image.png" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:wght@500;600;700&family=Hanken+Grotesk:wght@400;500;600;700;800&family=Assistant:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<style>
+  :root{
+    --bg:#0A0F0D;
+    --surface:#111917;
+    --surface-2:#17211E;
+    --border:#22312B;
+    --border-2:#2E423B;
+    --primary:#3DD6A3;
+    --secondary:#8FE8C9;
+    --indigo:#3DD6A3;
+    --success:#3BD68C;
+    --alert:#E8604C;
+    --text:#F2F1EA;
+    --muted:#6E7B74;
+    --muted-2:#A8B5AE;
+    --radius:16px;
+    --maxw:1180px;
+    --ease:cubic-bezier(.22,.61,.36,1);
+  }
+
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{scroll-behavior:smooth}
+  h1,h2,h3{font-family:'Schibsted Grotesk','Hanken Grotesk','Assistant',sans-serif}
+
+  /* ===== Global kinetic background ===== */
+  #pageBg{position:fixed;inset:0;z-index:-2;background:#0A0F0D;overflow:hidden;pointer-events:none}
+  .pg-blob{position:absolute;border-radius:50%;filter:blur(120px);will-change:transform;pointer-events:none}
+  .pg-blob.p1{width:700px;height:700px;background:radial-gradient(circle,rgba(31,169,122,.55),transparent 70%);top:-200px;left:-200px;animation:pgdrift1 22s ease-in-out infinite alternate}
+  .pg-blob.p2{width:600px;height:600px;background:radial-gradient(circle,rgba(143,232,201,.3),transparent 70%);top:30%;right:-220px;animation:pgdrift2 28s ease-in-out infinite alternate}
+  .pg-blob.p3{width:500px;height:500px;background:radial-gradient(circle,rgba(61,214,163,.28),transparent 70%);bottom:10%;left:20%;animation:pgdrift3 25s ease-in-out infinite alternate}
+  .pg-blob.p4{width:400px;height:400px;background:radial-gradient(circle,rgba(217,169,63,.15),transparent 70%);bottom:-100px;right:5%;animation:pgdrift4 20s ease-in-out infinite alternate}
+  @keyframes pgdrift1{to{transform:translate(120px,160px) scale(1.15)}}
+  @keyframes pgdrift2{to{transform:translate(-100px,140px) scale(1.12)}}
+  @keyframes pgdrift3{to{transform:translate(80px,-120px) scale(1.1)}}
+  @keyframes pgdrift4{to{transform:translate(-60px,80px) scale(1.08)}}
+  /* Mouse spotlight */
+  #pgSpot{position:fixed;width:900px;height:900px;border-radius:50%;pointer-events:none;z-index:-1;transform:translate(-50%,-50%);
+    background:radial-gradient(circle at center,rgba(61,214,163,.1) 0%,rgba(143,232,201,.05) 30%,transparent 65%);
+    filter:blur(40px);transition:left .5s cubic-bezier(.25,.46,.45,.94),top .5s cubic-bezier(.25,.46,.45,.94);
+    will-change:left,top;left:50%;top:50%}
+  /* Noise texture overlay for depth */
+  #pageNoise{position:fixed;inset:0;z-index:-1;pointer-events:none;opacity:.032;
+    background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    background-size:256px 256px}
+
+  body{
+    background:transparent;
+    color:var(--text);
+    font-family:'Hanken Grotesk','Assistant',system-ui,-apple-system,sans-serif;
+    line-height:1.6;
+    -webkit-font-smoothing:antialiased;
+    overflow-x:hidden;
+  }
+  .heb{font-family:'Assistant','Hanken Grotesk',sans-serif;direction:rtl;unicode-bidi:isolate}
+  a{color:inherit;text-decoration:none}
+  button{font-family:inherit}
+  ::selection{background:rgba(61,214,163,.32)}
+
+  /* Film grain overlay */
+  body::after{
+    content:"";position:fixed;inset:0;z-index:9999;pointer-events:none;opacity:.035;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+
+  /* Scroll progress bar */
+  #progress{position:fixed;top:0;left:0;height:2px;width:0;z-index:200;
+    background:linear-gradient(90deg,var(--primary),var(--secondary));box-shadow:0 0 10px rgba(61,214,163,.6)}
+
+  .wrap{max-width:var(--maxw);margin:0 auto;padding:0 24px}
+  section{position:relative}
+
+  .eyebrow{display:inline-flex;align-items:center;gap:8px;font-size:12px;font-weight:600;
+    letter-spacing:.14em;text-transform:uppercase;color:var(--secondary)}
+  .eyebrow::before{content:"";width:18px;height:1px;background:var(--secondary);display:inline-block}
+
+  h2.section-title{font-size:clamp(28px,4vw,44px);font-weight:800;letter-spacing:-.02em;line-height:1.1;margin:16px 0 0}
+  .section-head{max-width:640px;margin-bottom:56px}
+  .section-head p{color:var(--muted-2);margin-top:14px;font-size:17px}
+
+  /* Buttons */
+  .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;font-size:15px;font-weight:600;
+    cursor:pointer;padding:13px 24px;border-radius:12px;border:1px solid transparent;
+    transition:transform .25s var(--ease),box-shadow .25s var(--ease),background .25s var(--ease),border-color .25s var(--ease);white-space:nowrap}
+  .btn-primary{background:linear-gradient(135deg,#3DD6A3,#1FA97A);color:#07120E;box-shadow:0 8px 24px -8px rgba(61,214,163,.6)}
+  .btn-primary:hover{transform:translateY(-2px);box-shadow:0 14px 34px -8px rgba(61,214,163,.75)}
+  .btn-ghost{background:transparent;border-color:var(--border-2);color:var(--text)}
+  .btn-ghost:hover{border-color:var(--primary);background:rgba(61,214,163,.06);transform:translateY(-2px)}
+  .btn-block{width:100%}
+  .btn-lg{padding:17px 34px;font-size:17px;border-radius:14px}
+  .btn:focus-visible,a:focus-visible,.faq-q:focus-visible{outline:2px solid var(--secondary);outline-offset:3px}
+
+  /* Logo mark */
+  .logo{font-weight:800;font-size:19px;letter-spacing:-.01em;display:flex;align-items:center;gap:10px}
+  .logo .mark{width:34px;height:34px;flex:0 0 34px;display:block;overflow:visible}
+
+  /* Nav */
+  nav{position:fixed;top:0;left:0;right:0;z-index:150;transition:background .3s var(--ease),border-color .3s var(--ease);border-bottom:1px solid transparent}
+  nav.scrolled{background:rgba(6,11,20,.82);backdrop-filter:blur(14px);border-bottom:1px solid var(--border)}
+  .nav-inner{display:flex;align-items:center;justify-content:space-between;height:72px}
+  .nav-links{display:flex;gap:34px;align-items:center}
+  .nav-links a{font-size:14px;font-weight:500;color:var(--muted-2);transition:color .2s;position:relative}
+  .nav-links a::after{content:"";position:absolute;inset-inline-start:0;bottom:-6px;width:0;height:2px;background:var(--primary);transition:width .25s var(--ease)}
+  .nav-links a:hover{color:var(--text)}
+  .nav-links a:hover::after{width:100%}
+
+  /* Hero */
+  .hero{padding:150px 0 90px;overflow:hidden}
+  .hero-bg{position:absolute;inset:0;z-index:0;overflow:hidden}
+  .blob{position:absolute;border-radius:50%;filter:blur(90px);will-change:transform}
+  .blob.b1{width:520px;height:520px;background:radial-gradient(circle,#1d4ed8,transparent 70%);opacity:.25;top:-160px;left:-120px;animation:drift1 16s var(--ease) infinite alternate}
+  .blob.b2{width:460px;height:460px;background:radial-gradient(circle,#8FE8C9,transparent 70%);opacity:.18;top:40px;right:-140px;animation:drift2 19s var(--ease) infinite alternate}
+  .blob.b3{width:380px;height:380px;background:radial-gradient(circle,#3DD6A3,transparent 70%);opacity:.15;bottom:-160px;left:30%;animation:drift3 22s var(--ease) infinite alternate}
+  @keyframes drift1{to{transform:translate(80px,60px) scale(1.1)}}
+  @keyframes drift2{to{transform:translate(-70px,90px) scale(1.08)}}
+  @keyframes drift3{to{transform:translate(60px,-50px) scale(1.12)}}
+  .grid-overlay{position:absolute;inset:0;z-index:0;opacity:.4;
+    background-image:linear-gradient(rgba(61,214,163,.04) 1px,transparent 1px),linear-gradient(90deg,rgba(61,214,163,.04) 1px,transparent 1px);
+    background-size:54px 54px;
+    -webkit-mask-image:radial-gradient(ellipse 80% 60% at 50% 30%,#000 30%,transparent 75%);
+    mask-image:radial-gradient(ellipse 80% 60% at 50% 30%,#000 30%,transparent 75%)}
+
+  .hero-grid{position:relative;z-index:2;display:grid;grid-template-columns:1.05fr .95fr;gap:60px;align-items:center}
+  .hero-copy{max-width:600px}
+  .hero-pill{display:inline-flex;align-items:center;gap:9px;background:var(--surface);border:1px solid var(--border);
+    padding:7px 14px 7px 10px;border-radius:100px;font-size:13px;color:var(--muted-2);margin-bottom:26px}
+  .hero-pill .dot{width:7px;height:7px;border-radius:50%;background:var(--success);box-shadow:0 0 0 3px rgba(217,169,63,.18)}
+  h1{font-size:clamp(38px,5.4vw,62px);font-weight:900;letter-spacing:-.035em;line-height:1.03}
+  h1 .accent{background:linear-gradient(120deg,var(--primary),var(--secondary));-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
+  .hero-tagline-heb{font-size:18px;font-weight:500;color:var(--muted-2);margin:18px 0 0}
+  .hero-sub{font-size:18px;color:var(--muted-2);margin:22px 0 32px;max-width:540px}
+  .hero-actions{display:flex;gap:14px;flex-wrap:wrap}
+  .trust-line{margin-top:26px;font-size:13px;color:var(--muted);display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+  .trust-line .sep{width:4px;height:4px;border-radius:50%;background:var(--border-2)}
+
+  /* Hero visual */
+  .converge{position:relative;height:460px;perspective:1200px}
+  .converge-inner{position:absolute;inset:0;transform-style:preserve-3d;transition:transform .3s var(--ease)}
+  .source-chip{position:absolute;display:flex;align-items:center;gap:9px;background:var(--surface);border:1px solid var(--border);
+    padding:10px 14px;border-radius:12px;font-size:13px;font-weight:600;box-shadow:0 12px 30px -16px rgba(0,0,0,.7);
+    animation:floatChip 5s ease-in-out infinite}
+  .source-chip .ic{width:26px;height:26px;border-radius:7px;display:grid;place-items:center;font-size:14px}
+  .source-chip.s1{top:4%;left:0;animation-delay:0s}
+  .source-chip.s2{top:28%;right:0;animation-delay:.8s}
+  .source-chip.s3{bottom:26%;left:-2%;animation-delay:1.6s}
+  .source-chip.s4{bottom:2%;right:6%;animation-delay:2.4s}
+  @keyframes floatChip{0%,100%{transform:translateY(0)}50%{transform:translateY(-9px)}}
+
+  .dash-card{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%) translateZ(40px);width:308px;
+    background:linear-gradient(180deg,var(--surface-2),var(--surface));border:1px solid var(--border);border-radius:18px;padding:18px;
+    box-shadow:0 40px 80px -30px rgba(0,0,0,.85);z-index:3}
+  .dash-card::before{content:"";position:absolute;inset:-1px;border-radius:18px;padding:1px;
+    background:linear-gradient(135deg,rgba(61,214,163,.55),transparent 50%,rgba(143,232,201,.45));
+    -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude;pointer-events:none}
+  .dash-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
+  .dash-head .title{font-size:13px;font-weight:700;color:var(--muted-2)}
+  .dash-head .live{font-size:10px;font-weight:600;color:var(--success);display:flex;align-items:center;gap:5px}
+  .dash-head .live::before{content:"";width:6px;height:6px;border-radius:50%;background:var(--success);animation:pulse 1.6s infinite}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+  .kpi-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px}
+  .kpi{background:var(--bg);border:1px solid var(--border);border-radius:11px;padding:11px 12px}
+  .kpi .label{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+  .kpi .val{font-size:19px;font-weight:800;letter-spacing:-.02em;margin-top:3px;font-variant-numeric:tabular-nums}
+  .kpi .val.warn{color:var(--alert)}
+  .kpi .val.ok{color:var(--success)}
+  .inv-list{position:relative}
+  .inv-line{display:flex;align-items:center;justify-content:space-between;padding:9px 0;border-top:1px solid var(--border);font-size:12px}
+  .inv-line .who{display:flex;align-items:center;gap:8px;color:var(--muted-2)}
+  .inv-line .sw{width:6px;height:18px;border-radius:3px}
+  .inv-line .amt{font-weight:700;font-variant-numeric:tabular-nums}
+  .inv-line.fresh{animation:freshRow .8s var(--ease)}
+  @keyframes freshRow{0%{background:rgba(61,214,163,.16);transform:translateX(-6px);opacity:0}100%{background:transparent;transform:none;opacity:1}}
+
+  /* Sync toast in hero */
+  .sync-toast{position:absolute;top:-18px;left:50%;transform:translateX(-50%) translateY(-8px);z-index:5;
+    display:flex;align-items:center;gap:9px;background:var(--surface-2);border:1px solid var(--border-2);
+    padding:8px 14px;border-radius:100px;font-size:12px;font-weight:600;white-space:nowrap;
+    box-shadow:0 16px 36px -16px rgba(0,0,0,.8);opacity:0;pointer-events:none;transition:opacity .4s var(--ease),transform .4s var(--ease)}
+  .sync-toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+  .sync-toast .check{width:16px;height:16px;border-radius:50%;background:var(--success);display:grid;place-items:center;color:#06281d;font-size:10px;font-weight:900}
+
+  /* Problem */
+  .problem{padding:90px 0}
+  .prob-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px}
+  .prob-card{position:relative;overflow:hidden;background:var(--surface);border-radius:20px;padding:0;transition:transform .4s var(--ease),box-shadow .4s var(--ease)}
+  .prob-card-inner{padding:36px 28px 32px;position:relative;z-index:1;border:1px solid transparent;border-radius:20px;height:100%;transition:border-color .4s var(--ease)}
+  .prob-card:nth-child(1) .prob-card-inner{border-color:rgba(239,68,68,.2)}
+  .prob-card:nth-child(2) .prob-card-inner{border-color:rgba(224,169,61,.2)}
+  .prob-card:nth-child(3) .prob-card-inner{border-color:rgba(61,214,163,.2)}
+  .prob-card::after{content:"";position:absolute;inset:-2px;border-radius:22px;opacity:0;transition:opacity .4s var(--ease);z-index:0}
+  .prob-card:nth-child(1)::after{background:linear-gradient(145deg,rgba(239,68,68,.45),transparent 60%)}
+  .prob-card:nth-child(2)::after{background:linear-gradient(145deg,rgba(224,169,61,.45),transparent 60%)}
+  .prob-card:nth-child(3)::after{background:linear-gradient(145deg,rgba(61,214,163,.45),transparent 60%)}
+  .prob-card:hover{transform:translateY(-8px)}
+  .prob-card:nth-child(1):hover{box-shadow:0 32px 64px -20px rgba(239,68,68,.35)}
+  .prob-card:nth-child(2):hover{box-shadow:0 32px 64px -20px rgba(224,169,61,.35)}
+  .prob-card:nth-child(3):hover{box-shadow:0 32px 64px -20px rgba(61,214,163,.35)}
+  .prob-card:hover::after{opacity:1}
+  .prob-card-inner::before{content:"";position:absolute;top:0;left:24px;right:24px;height:2px;border-radius:0 0 2px 2px}
+  .prob-card:nth-child(1) .prob-card-inner::before{background:linear-gradient(90deg,#E8604C,transparent)}
+  .prob-card:nth-child(2) .prob-card-inner::before{background:linear-gradient(90deg,#E0A93D,transparent)}
+  .prob-card:nth-child(3) .prob-card-inner::before{background:linear-gradient(90deg,#3DD6A3,transparent)}
+  .prob-stat{font-size:42px;font-weight:900;line-height:1;margin-bottom:4px;letter-spacing:-.04em;transition:transform .4s var(--ease)}
+  .prob-card:nth-child(1) .prob-stat{color:#E8604C}
+  .prob-card:nth-child(2) .prob-stat{color:#E0A93D}
+  .prob-card:nth-child(3) .prob-stat{color:#3DD6A3}
+  .prob-stat-label{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.09em;font-weight:700;margin-bottom:26px}
+  .prob-card:hover .prob-stat{transform:scale(1.05)}
+  .prob-icon-wrap{width:44px;height:44px;border-radius:12px;display:grid;place-items:center;margin-bottom:16px;transition:transform .35s var(--ease)}
+  .prob-card:nth-child(1) .prob-icon-wrap{background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.25)}
+  .prob-card:nth-child(2) .prob-icon-wrap{background:rgba(224,169,61,.12);border:1px solid rgba(224,169,61,.25)}
+  .prob-card:nth-child(3) .prob-icon-wrap{background:rgba(61,214,163,.12);border:1px solid rgba(61,214,163,.25)}
+  .prob-card:hover .prob-icon-wrap{transform:scale(1.08)}
+  .prob-icon-wrap svg{width:22px;height:22px}
+  .prob-card h3{font-size:18px;font-weight:800;margin-bottom:10px;letter-spacing:-.01em}
+  .prob-card p{color:var(--muted-2);font-size:14.5px;line-height:1.65}
+  .prob-solve{text-align:center;margin-top:44px;font-size:clamp(20px,2.6vw,28px);font-weight:700;letter-spacing:-.02em}
+  .prob-solve b{color:var(--secondary)}
+
+  /* Features (with cursor spotlight) */
+  .features{padding:90px 0}
+  .feat-grid{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+  .feat-card{position:relative;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);
+    padding:26px;display:flex;gap:18px;align-items:flex-start;overflow:hidden;
+    transition:border-color .3s var(--ease),transform .3s var(--ease)}
+  .feat-card::before{content:"";position:absolute;inset:0;opacity:0;transition:opacity .3s;pointer-events:none;
+    background:radial-gradient(380px circle at var(--mx,50%) var(--my,50%),rgba(61,214,163,.12),transparent 60%)}
+  .feat-card:hover{border-color:rgba(61,214,163,.45);transform:translateY(-3px)}
+  .feat-card:hover::before{opacity:1}
+  .feat-ic{flex:0 0 46px;width:46px;height:46px;border-radius:12px;display:grid;place-items:center;font-size:22px;
+    background:linear-gradient(135deg,rgba(61,214,163,.16),rgba(143,232,201,.1));border:1px solid rgba(61,214,163,.2);position:relative;z-index:1}
+  .feat-card>div{position:relative;z-index:1}
+  .feat-card h3{font-size:16px;font-weight:700;margin-bottom:6px}
+  .feat-card p{font-size:14px;color:var(--muted-2)}
+  .feat-card .heb{display:inline}
+
+  /* Integrations */
+  .integrations{padding:90px 0}
+  .integ-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:18px}
+  .integ-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:28px 24px;transition:border-color .3s var(--ease),transform .3s var(--ease)}
+  .integ-card:hover{border-color:var(--border-2);transform:translateY(-4px)}
+  .integ-logo{width:48px;height:48px;border-radius:13px;display:grid;place-items:center;font-size:24px;margin-bottom:16px;color:#fff}
+  .integ-card h3{font-size:17px;font-weight:700;margin-bottom:7px}
+  .integ-card p{font-size:14px;color:var(--muted-2)}
+  .integ-more{text-align:center;margin-top:36px;color:var(--muted);font-size:14px}
+
+  /* How */
+  .how{padding:90px 0}
+  .steps{display:grid;grid-template-columns:repeat(3,1fr);gap:24px;position:relative}
+  .steps::before{content:"";position:absolute;top:34px;left:14%;right:14%;height:1px;
+    background:linear-gradient(90deg,transparent,var(--primary),var(--secondary),transparent);opacity:.5}
+  .step{position:relative;z-index:1}
+  .step-num{width:68px;height:68px;border-radius:18px;display:grid;place-items:center;font-size:24px;font-weight:800;
+    margin-bottom:22px;background:var(--surface);border:1px solid var(--border);color:var(--primary)}
+  .step h3{font-size:19px;font-weight:700;margin-bottom:9px}
+  .step p{color:var(--muted-2);font-size:15px}
+
+  /* Stats */
+  .stats{padding:50px 0}
+  .stats-card{background:linear-gradient(135deg,var(--surface-2),var(--surface));border:1px solid var(--border);border-radius:22px;
+    padding:46px 30px;display:grid;grid-template-columns:repeat(4,1fr);gap:24px;box-shadow:0 30px 60px -40px rgba(0,0,0,.8)}
+  .stat{text-align:center;position:relative}
+  .stat:not(:last-child)::after{content:"";position:absolute;inset-inline-end:0;top:14%;height:72%;width:1px;background:var(--border)}
+  .stat .num{font-size:clamp(30px,4vw,46px);font-weight:900;letter-spacing:-.03em;line-height:1;
+    background:linear-gradient(120deg,var(--primary),var(--secondary));-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
+  .stat .lbl{margin-top:12px;font-size:14px;color:var(--muted-2)}
+  .stat .sub-lbl{margin-top:5px;font-size:12px;color:var(--muted);font-style:italic}
+
+  /* Hero metrics ticker */
+  .hero-metrics{display:flex;gap:28px;flex-wrap:wrap;margin-top:24px;padding-top:20px;border-top:1px solid var(--border)}
+  .hmet{display:flex;align-items:center;gap:10px}
+  .hmet-val{font-size:22px;font-weight:900;letter-spacing:-.03em;background:linear-gradient(120deg,var(--primary),var(--secondary));
+    -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;line-height:1}
+  .hmet-info{display:flex;flex-direction:column;gap:1px}
+  .hmet-label{font-size:12px;font-weight:600;color:var(--text);line-height:1.2}
+  .hmet-sub{font-size:11px;color:var(--muted);line-height:1.2}
+  .hmet-divider{width:1px;height:32px;background:var(--border);flex-shrink:0}
+  @media(max-width:600px){.hero-metrics{gap:16px}.hmet-divider{display:none}}
+  @keyframes metricPop{0%{opacity:0;transform:translateY(6px)}100%{opacity:1;transform:none}}
+  .hero-metrics.visible .hmet:nth-child(1){animation:metricPop .45s var(--ease) .05s both}
+  .hero-metrics.visible .hmet:nth-child(3){animation:metricPop .45s var(--ease) .15s both}
+  .hero-metrics.visible .hmet:nth-child(5){animation:metricPop .45s var(--ease) .25s both}
+
+  /* Pricing */
+  .pricing{padding:90px 0}
+  .price-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:22px;align-items:stretch}
+  .price-card{background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:34px 28px;
+    display:flex;flex-direction:column;position:relative;transition:transform .3s var(--ease)}
+  .price-card:hover{transform:translateY(-4px)}
+  .price-card.popular{border-color:rgba(61,214,163,.6);box-shadow:0 0 0 1px rgba(61,214,163,.3),0 30px 70px -30px rgba(61,214,163,.4);
+    background:linear-gradient(180deg,rgba(61,214,163,.06),var(--surface) 40%)}
+  .badge{position:absolute;top:-13px;left:50%;transform:translateX(-50%);background:linear-gradient(135deg,var(--primary),var(--secondary));
+    color:#fff;font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;padding:6px 16px;border-radius:100px;white-space:nowrap}
+  .plan-name{font-size:15px;font-weight:700;color:var(--muted-2);letter-spacing:.02em}
+  .plan-price{font-size:42px;font-weight:900;letter-spacing:-.03em;margin:14px 0 4px;line-height:1}
+  .plan-price small{font-size:15px;font-weight:500;color:var(--muted)}
+  .plan-price.contact{font-size:30px}
+  .plan-list{list-style:none;margin:26px 0;display:flex;flex-direction:column;gap:13px;flex:1}
+  .plan-list li{font-size:14px;color:var(--muted-2);display:flex;gap:11px;align-items:flex-start}
+  .plan-list li::before{content:"";flex:0 0 18px;width:18px;height:18px;border-radius:50%;margin-top:1px;background:rgba(217,169,63,.15);
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2310b981' stroke-width='3.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='20 6 9 17 4 12'/%3E%3C/svg%3E");
+    background-repeat:no-repeat;background-position:center}
+
+  /* FAQ */
+  .faq{padding:90px 0}
+  .faq-wrap{max-width:780px;margin:0 auto}
+  .faq-item{border:1px solid var(--border);border-radius:14px;margin-bottom:14px;background:var(--surface);overflow:hidden;transition:border-color .3s}
+  .faq-item.open{border-color:rgba(61,214,163,.4)}
+  .faq-q{width:100%;background:none;border:none;color:var(--text);cursor:pointer;font-size:16px;font-weight:600;text-align:right;
+    padding:21px 24px;display:flex;align-items:center;justify-content:space-between;gap:16px}
+  .faq-q .chev{flex:0 0 auto;transition:transform .35s var(--ease);color:var(--primary)}
+  .faq-item.open .chev{transform:rotate(180deg)}
+  .faq-a{max-height:0;overflow:hidden;transition:max-height .4s var(--ease)}
+  .faq-a-inner{padding:0 24px 22px;color:var(--muted-2);font-size:15px}
+
+  /* CTA banner */
+  .cta-banner{padding:60px 0 90px}
+  .cta-card{position:relative;overflow:hidden;background:linear-gradient(135deg,#14251E,#0E1613);
+    border:1px solid rgba(61,214,163,.3);border-radius:26px;padding:70px 30px;text-align:center;box-shadow:0 40px 90px -40px rgba(61,214,163,.45)}
+  .cta-card .glowblob{position:absolute;width:400px;height:400px;border-radius:50%;filter:blur(80px);opacity:.4;
+    background:radial-gradient(circle,var(--primary),transparent 70%);top:-180px;left:50%;transform:translateX(-50%)}
+  .cta-card h2{font-size:clamp(28px,4vw,42px);font-weight:900;letter-spacing:-.03em;position:relative}
+  .cta-card p{color:var(--muted-2);margin:16px 0 32px;font-size:17px;position:relative}
+  .cta-card .btn{position:relative}
+
+  /* Footer */
+  footer{border-top:1px solid var(--border);padding:34px 0}
+  .foot-inner{display:flex;align-items:center;justify-content:space-between;gap:20px;flex-wrap:wrap;font-size:14px;color:var(--muted)}
+  .foot-brand{display:flex;flex-direction:column;gap:6px}
+  .foot-logo{font-size:16px}
+  .foot-logo .mark{width:22px;height:22px;flex:0 0 22px}
+  .foot-links{display:flex;gap:24px}
+  .foot-links a{color:var(--muted-2);transition:color .2s}
+  .foot-links a:hover{color:var(--text)}
+
+  /* Reveal */
+  .reveal{opacity:0;transform:translateY(26px);transition:opacity .7s var(--ease),transform .7s var(--ease)}
+  .reveal.in{opacity:1;transform:none}
+  .reveal.d1{transition-delay:.08s}
+  .reveal.d2{transition-delay:.16s}
+  .reveal.d3{transition-delay:.24s}
+
+  /* ===== Modal ===== */
+  .modal-overlay{position:fixed;inset:0;z-index:300;display:flex;align-items:center;justify-content:center;padding:20px;
+    background:rgba(6,8,12,.72);backdrop-filter:blur(8px);opacity:0;visibility:hidden;transition:opacity .3s var(--ease),visibility .3s}
+  .modal-overlay.open{opacity:1;visibility:visible}
+  .modal{position:relative;width:100%;max-width:460px;background:linear-gradient(180deg,var(--surface-2),var(--surface));
+    border:1px solid var(--border-2);border-radius:22px;padding:36px 32px;box-shadow:0 50px 100px -30px rgba(0,0,0,.9);
+    transform:translateY(18px) scale(.98);transition:transform .35s var(--ease)}
+  .modal-overlay.open .modal{transform:none}
+  .modal-close{position:absolute;top:16px;right:16px;width:34px;height:34px;border-radius:9px;border:1px solid var(--border);
+    background:var(--surface);color:var(--muted-2);cursor:pointer;font-size:18px;line-height:1;display:grid;place-items:center;transition:.2s}
+  .modal-close:hover{color:var(--text);border-color:var(--border-2)}
+  .modal h3{font-size:24px;font-weight:800;letter-spacing:-.02em}
+  .modal .sub{color:var(--muted-2);font-size:15px;margin-top:8px;margin-bottom:24px}
+  .field{margin-bottom:16px}
+  .field label{display:block;font-size:13px;font-weight:600;color:var(--muted-2);margin-bottom:7px}
+  .field input,.field select{width:100%;background:var(--bg);border:1px solid var(--border);border-radius:11px;color:var(--text);
+    font-family:inherit;font-size:15px;padding:12px 14px;transition:border-color .2s,box-shadow .2s;outline:none}
+  .field input::placeholder{color:#6E7B74}
+  .field input:focus,.field select:focus{border-color:var(--primary);box-shadow:0 0 0 3px rgba(61,214,163,.18)}
+  .field.error input,.field.error select{border-color:var(--alert)}
+  .field .msg{font-size:12px;color:var(--alert);margin-top:6px;display:none}
+  .field.error .msg{display:block}
+  .modal .btn{margin-top:6px}
+  .modal .fine{text-align:center;font-size:12px;color:var(--muted);margin-top:14px}
+  /* success state */
+  .modal-success{text-align:center;display:none}
+  .modal-success.show{display:block;animation:fadeUp .5s var(--ease)}
+  @keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
+  .check-circle{width:74px;height:74px;margin:6px auto 22px;border-radius:50%;background:rgba(217,169,63,.12);
+    border:1px solid rgba(217,169,63,.4);display:grid;place-items:center}
+  .check-circle svg{width:38px;height:38px}
+  .check-circle path{stroke:var(--success);stroke-width:3;stroke-linecap:round;stroke-linejoin:round;fill:none;
+    stroke-dasharray:40;stroke-dashoffset:40;animation:draw .6s .15s var(--ease) forwards}
+  @keyframes draw{to{stroke-dashoffset:0}}
+  .modal-success h3{margin-bottom:8px}
+  .modal-success p{color:var(--muted-2);font-size:15px}
+  .modal-success .pos{display:inline-block;margin-top:18px;background:var(--surface);border:1px solid var(--border);
+    border-radius:10px;padding:10px 18px;font-size:14px;color:var(--muted-2)}
+  .modal-success .pos b{color:var(--text)}
+
+  @media (prefers-reduced-motion:reduce){
+    *{animation:none!important;transition-duration:.001ms!important}
+    .reveal{opacity:1;transform:none}
+    html{scroll-behavior:auto}
+  }
+
+  /* Responsive */
+  @media (max-width:960px){
+    .hero-grid{grid-template-columns:1fr;gap:50px}
+    .converge{height:360px;max-width:480px;margin:0 auto}
+    .prob-grid,.feat-grid,.integ-grid,.steps,.price-grid{grid-template-columns:1fr 1fr}
+    .stats-card{grid-template-columns:1fr 1fr;gap:36px 24px}
+    .stat:nth-child(2)::after,.stat:nth-child(4)::after{display:none}
+    .steps::before{display:none}
+    .nav-links{display:none}
+    #mobileMenuBtn{display:block!important}
+    nav .btn-primary{display:none}
+  }
+  @media (max-width:600px){
+    .wrap{padding:0 18px}
+    .hero{padding:100px 0 60px}
+    .converge{display:none}
+    .hero-grid{display:block}
+    .prob-grid,.feat-grid,.integ-grid,.steps,.price-grid,.stats-card{grid-template-columns:1fr}
+    .stat::after{display:none!important}
+    .price-card.popular{order:-1}
+    .hero-actions{flex-direction:column}
+    .hero-actions .btn{width:100%}
+    .foot-inner{flex-direction:column;text-align:center}
+    .stats-card{padding:30px 20px;gap:24px 16px}
+    .stat .num{font-size:clamp(28px,8vw,40px)}
+    .fx-item{padding:10px 12px}
+    .fx-ic{flex:0 0 32px;width:32px;height:32px}
+    .fx-stage{height:320px}
+    .ig-caption{font-size:14px}
+    .imap-more{font-size:13px}
+  }
+  @media (max-width:600px){
+    nav>.wrap>.nav-signin{display:none}
+  }
+
+
+  /* ============ FEATURES v2 ============ */
+  .feat-bento{display:grid;grid-template-columns:repeat(6,1fr);gap:16px;grid-auto-rows:minmax(150px,auto)}
+  .fcard{position:relative;background:var(--surface);border:1px solid var(--border);border-radius:18px;padding:24px;overflow:hidden;display:flex;flex-direction:column;transition:border-color .3s var(--ease),transform .3s var(--ease)}
+  .fcard::before{content:"";position:absolute;inset:0;opacity:0;transition:opacity .35s;pointer-events:none;z-index:0;
+    background:radial-gradient(420px circle at var(--mx,50%) var(--my,50%),rgba(61,214,163,.12),transparent 60%)}
+  .fcard::after{content:"";position:absolute;left:0;bottom:0;height:2px;width:0;z-index:2;
+    background:linear-gradient(90deg,var(--primary),var(--secondary));transition:width .45s var(--ease)}
+  .fcard:hover{border-color:rgba(61,214,163,.45);transform:translateY(-3px)}
+  .fcard:hover::before{opacity:1}
+  .fcard:hover::after{width:100%}
+  .fcard>*{position:relative;z-index:1}
+  .fico{width:46px;height:46px;border-radius:12px;display:grid;place-items:center;margin-bottom:16px;
+    background:linear-gradient(135deg,rgba(61,214,163,.18),rgba(143,232,201,.10));border:1px solid rgba(61,214,163,.22)}
+  .fico svg{width:24px;height:24px;transition:transform .3s var(--ease)}
+  .fcard:hover .fico svg{transform:scale(1.1)}
+  .fcard h3{font-size:17px;font-weight:700;margin-bottom:7px}
+  .fcard p{font-size:14px;color:var(--muted-2)}
+  .f-ai{grid-column:span 3;grid-row:span 2}
+  .f-ingest,.f-kpi,.f-dup,.f-audit{grid-column:span 3}
+  .f-cal,.f-terms,.f-bulk{grid-column:span 2}
+
+  /* AI extraction scene */
+  .fx-extract{margin-top:auto;padding-top:18px;display:flex;gap:18px;align-items:stretch}
+  .fx-doc{position:relative;width:170px;flex:0 0 170px;border-radius:12px;background:#0a0c11;border:1px solid var(--border);padding:16px 15px;overflow:hidden}
+  .fx-dh{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+  .fx-dh .lg{width:24px;height:24px;border-radius:6px;background:linear-gradient(135deg,var(--primary),var(--secondary))}
+  .fx-dh .iv{font-size:10px;font-weight:800;letter-spacing:.12em;color:var(--muted-2)}
+  .fx-bar{height:7px;border-radius:4px;background:#1d2433;margin-bottom:10px}
+  .fx-bar.w70{width:70%}.fx-bar.w45{width:45%}.fx-bar.w55{width:55%}.fx-bar.w35{width:35%}
+  .fx-sep{height:1px;background:var(--border);margin:12px 0}
+  .fx-tot{display:flex;justify-content:space-between;align-items:center}
+  .fx-tot .fx-bar{margin:0}
+  .fx-bar.strong{background:linear-gradient(90deg,var(--primary),var(--secondary));height:9px;width:64px}
+  .fx-scan{position:absolute;left:0;right:0;height:30px;top:-30px;background:linear-gradient(180deg,transparent,rgba(143,232,201,.35),transparent);box-shadow:0 0 22px rgba(143,232,201,.5);animation:fxscan 6.5s ease-in-out infinite}
+  @keyframes fxscan{0%{top:-30px}26%{top:185px}30%{opacity:1}31%{opacity:0}100%{opacity:0;top:185px}}
+  .fx-box{position:absolute;border:1.5px solid var(--secondary);border-radius:7px;box-shadow:0 0 0 3px rgba(143,232,201,.12);opacity:0}
+  .fx-box i{position:absolute;top:-9px;left:6px;font-size:8px;font-weight:700;font-style:normal;letter-spacing:.04em;
+    background:var(--secondary);color:#04222b;padding:1px 6px;border-radius:5px}
+  .fx-box.s{left:13px;top:48px;width:120px;height:16px;animation:fxbox 6.5s ease-in-out infinite;animation-delay:.6s}
+  .fx-box.d{left:13px;top:96px;width:96px;height:16px;animation:fxbox 6.5s ease-in-out infinite;animation-delay:1.4s}
+  .fx-box.t{left:13px;bottom:16px;width:142px;height:18px;animation:fxbox 6.5s ease-in-out infinite;animation-delay:2.2s}
+  @keyframes fxbox{0%,6%{opacity:0;transform:scale(.94)}10%{opacity:1;transform:scale(1)}90%{opacity:1}96%,100%{opacity:0}}
+  .fx-out{flex:1;display:flex;flex-direction:column;gap:8px;justify-content:center}
+  .fx-out-h{font-size:11px;font-weight:700;color:var(--muted-2);display:flex;align-items:center;gap:7px;margin-bottom:2px}
+  .fx-out-h::before{content:"";width:6px;height:6px;border-radius:50%;background:var(--success);box-shadow:0 0 8px var(--success)}
+  .fx-field{display:flex;align-items:center;justify-content:space-between;background:#0a0c11;border:1px solid var(--border);
+    border-radius:9px;padding:8px 12px;opacity:1;animation:fxin 6.5s var(--ease) infinite}
+  .fx-field:nth-child(2){animation-delay:.9s}.fx-field:nth-child(3){animation-delay:2.5s}
+  .fx-field:nth-child(4){animation-delay:1.7s}.fx-field:nth-child(5){animation-delay:3.0s}
+  @keyframes fxin{0%,8%{opacity:0;transform:translateX(8px)}14%{opacity:1;transform:none}93%{opacity:1}98%{opacity:0}}
+  .fx-field .fk{font-size:11px;color:var(--muted)}
+  .fx-field .fv{font-size:13px;font-weight:700;font-variant-numeric:tabular-nums}
+  .fx-field .fv.msk{letter-spacing:2px;color:var(--muted-2)}
+  .fx-field .fv.ok{color:var(--secondary)}
+  .fx-badge{margin-top:4px;align-self:flex-start;font-size:11px;font-weight:600;color:var(--secondary);
+    background:rgba(143,232,201,.1);border:1px solid rgba(143,232,201,.25);padding:5px 11px;border-radius:100px;
+    opacity:1;animation:fxin 6.5s var(--ease) infinite;animation-delay:3.4s}
+
+  /* Multi-source flow */
+  .fx-flow{margin-top:auto;padding-top:18px;display:flex;align-items:center;gap:14px}
+  .fx-srcs{display:flex;flex-direction:column;gap:7px}
+  .fx-src{display:inline-flex;align-items:center;gap:8px;font-size:12px;color:var(--muted-2);
+    background:#0a0c11;border:1px solid var(--border);border-radius:8px;padding:5px 10px}
+  .fx-src i{width:8px;height:8px;border-radius:3px}
+  .fx-pipe{flex:1;position:relative;height:96px}
+  .fx-pipe svg{width:100%;height:100%}
+  .fx-hub{display:flex;align-items:center;gap:8px;background:linear-gradient(135deg,rgba(61,214,163,.16),rgba(143,232,201,.1));
+    border:1px solid rgba(61,214,163,.3);border-radius:11px;padding:10px 13px;font-size:12.5px;font-weight:700;color:var(--text)}
+  .fx-hub .pp{width:9px;height:9px;border-radius:50%;background:var(--success);box-shadow:0 0 10px var(--success);animation:pulse 1.5s infinite}
+
+  /* KPI real strip */
+  .fx-kpi{margin-top:auto;padding-top:16px}
+  .fx-kpi img{width:100%;border-radius:10px;border:1px solid var(--border);display:block}
+
+  @media (max-width:960px){
+    .feat-bento{grid-template-columns:repeat(2,1fr)}
+    .f-ai{grid-column:span 2;grid-row:span 1}
+    .f-ingest,.f-kpi,.f-dup,.f-audit{grid-column:span 2}
+    .f-cal,.f-terms,.f-bulk{grid-column:span 1}
+  }
+  @media (max-width:600px){
+    .feat-bento{grid-template-columns:1fr}
+    .feat-bento>*{grid-column:span 1!important;grid-row:auto!important}
+    .fx-extract{flex-direction:column}.fx-doc{width:100%;flex:none}
+  }
+
+  /* ============ INTEGRATIONS map ============ */
+  .imap{position:relative;aspect-ratio:2/1;max-width:880px;margin:8px auto 0}
+  .imap-lines{position:absolute;inset:0;width:100%;height:100%;z-index:0}
+  .imap-lines path{fill:none;stroke:url(#imapGrad);stroke-width:1.6;stroke-dasharray:5 7;opacity:.55;
+    animation:dash 22s linear infinite}
+  @keyframes dash{to{stroke-dashoffset:-300}}
+  .imap-pulse{fill:var(--secondary)}
+  .imap-hub{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);z-index:3;
+    display:flex;flex-direction:column;align-items:center;gap:8px;
+    background:linear-gradient(180deg,var(--surface-2),var(--surface));border:1px solid rgba(61,214,163,.4);
+    border-radius:20px;padding:18px 22px;box-shadow:0 0 0 1px rgba(61,214,163,.15),0 24px 60px -24px rgba(61,214,163,.5)}
+  .imap-hub::after{content:"";position:absolute;inset:-6px;border-radius:24px;border:1px solid rgba(61,214,163,.3);
+    opacity:.6;animation:hubring 2.6s ease-out infinite}
+  @keyframes hubring{0%{transform:scale(1);opacity:.6}100%{transform:scale(1.18);opacity:0}}
+  .imap-hub .hm{width:42px;height:42px}
+  .imap-hub b{font-size:14px;font-weight:800;letter-spacing:-.01em}
+  .imap-node{position:absolute;transform:translate(-50%,-50%);z-index:2;width:172px;
+    background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:14px;text-align:center;
+    transition:border-color .25s var(--ease),transform .25s var(--ease),box-shadow .25s var(--ease)}
+  .imap-node:hover{transform:translate(-50%,-50%) translateY(-3px);border-color:rgba(61,214,163,.5);box-shadow:0 16px 40px -20px rgba(0,0,0,.8)}
+  .imap-logo{width:42px;height:42px;margin:0 auto 9px;display:block}
+  .imap-node .nm{font-size:14px;font-weight:700}
+  .imap-node .ds{font-size:11.5px;color:var(--muted);margin-top:3px;line-height:1.4}
+  .imap-n1{left:18%;top:25%}.imap-n2{left:82%;top:25%}.imap-n3{left:18%;top:75%}.imap-n4{left:82%;top:75%}
+  .imap-more{text-align:center;margin-top:30px;color:var(--muted);font-size:14px;display:flex;gap:10px;align-items:center;justify-content:center;flex-wrap:wrap}
+  .imap-more b{font-weight:400}
+  .imap-more .soon{display:inline-flex;align-items:center;gap:6px;background:var(--surface);border:1px dashed var(--border-2);
+    border-radius:100px;padding:5px 13px;font-size:12.5px;color:var(--muted-2)}
+  .imap-more .soon::before{content:"";width:6px;height:6px;border-radius:50%;background:var(--muted)}
+  @media (max-width:760px){
+    .imap{aspect-ratio:auto;display:grid;grid-template-columns:1fr 1fr;gap:12px;max-width:430px}
+    .imap-lines{display:none}
+    .imap-hub{position:static;transform:none;grid-column:span 2;justify-self:center;flex-direction:row}
+    .imap-hub::after{display:none}
+    .imap-node{position:static;transform:none;width:auto}
+    .imap-node:hover{transform:translateY(-3px)}
+  }
+
+  /* ============ HOW IT WORKS — guided tour ============ */
+  .tr{display:grid;grid-template-columns:.82fr 1.18fr;gap:36px;align-items:center;margin-top:8px}
+  .tr-rail{display:flex;flex-direction:column;gap:8px;position:relative}
+  .tr-step{display:flex;gap:15px;align-items:flex-start;text-align:left;background:transparent;border:1px solid transparent;
+    border-radius:14px;padding:16px;cursor:pointer;transition:background .3s var(--ease),border-color .3s var(--ease);width:100%}
+  .tr-step:hover{background:var(--surface)}
+  .tr-step.active{background:var(--surface);border-color:var(--border)}
+  .tr-num{position:relative;flex:0 0 40px;width:40px;height:40px;display:grid;place-items:center}
+  .tr-num svg{position:absolute;inset:0;width:40px;height:40px;transform:rotate(-90deg)}
+  .tr-num .ring{fill:none;stroke:var(--border);stroke-width:2.5}
+  .tr-num .ring-fg{fill:none;stroke:url(#fGrad);stroke-width:2.5;stroke-linecap:round;stroke-dasharray:100.5;stroke-dashoffset:100.5}
+  .tr-step.active .ring-fg.run{animation:ring 5.2s linear forwards}
+  @keyframes ring{to{stroke-dashoffset:0}}
+  .tr-num b{font-size:14px;font-weight:800;color:var(--muted-2);transition:color .3s}
+  .tr-step.active .tr-num b{color:var(--text)}
+  .tr-step h4{font-size:16px;font-weight:700;margin-bottom:4px}
+  .tr-step p{font-size:13.5px;color:var(--muted-2);line-height:1.5}
+  .tr-step:not(.active) h4{color:var(--muted-2)}
+  .tr-device{position:relative}
+  .tr-device::after{content:"";position:absolute;left:8%;right:8%;bottom:-22px;height:40px;border-radius:50%;
+    background:radial-gradient(ellipse,rgba(61,214,163,.28),transparent 70%);filter:blur(8px);z-index:0}
+  .tr-frame{position:relative;z-index:1;border:1px solid var(--border-2);border-radius:14px;overflow:hidden;
+    background:var(--surface);box-shadow:0 40px 90px -40px rgba(0,0,0,.9)}
+  .tr-bar{display:flex;align-items:center;gap:8px;padding:10px 14px;background:var(--surface-2);border-bottom:1px solid var(--border)}
+  .tr-bar .dots{display:flex;gap:6px}
+  .tr-bar .dots i{width:10px;height:10px;border-radius:50%;display:block}
+  .tr-url{margin-left:8px;font-size:11.5px;color:var(--muted-2);background:var(--bg);border:1px solid var(--border);
+    padding:4px 14px;border-radius:7px;display:flex;align-items:center;gap:7px}
+  .tr-url::before{content:"";width:9px;height:9px;border-radius:2px;background:linear-gradient(135deg,var(--primary),var(--secondary))}
+  .tr-stage{position:relative;width:100%;aspect-ratio:208/100;background:var(--bg)}
+  .tr-stage img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center top;opacity:0;transition:opacity .55s var(--ease)}
+  .tr-stage img.active{opacity:1}
+  @media (max-width:860px){
+    .tr{grid-template-columns:1fr;gap:24px}
+    .tr-device{order:-1}
+    .tr-rail{flex-direction:row;overflow-x:auto;gap:10px;padding-bottom:6px}
+    .tr-step{flex:0 0 230px}
+  }
+
+
+  /* ===== Features explorer ===== */
+  .fx{display:grid;grid-template-columns:1.02fr 1fr;gap:30px;align-items:start}
+  .fx-list{display:flex;flex-direction:column;gap:6px}
+  .fx-item{display:flex;gap:14px;align-items:flex-start;padding:14px 16px;border-radius:14px;border:1px solid transparent;cursor:pointer;position:relative;transition:background .25s var(--ease),border-color .25s var(--ease)}
+  .fx-item::before{content:"";position:absolute;left:0;top:16px;bottom:16px;width:3px;border-radius:3px;background:linear-gradient(var(--primary),var(--secondary));opacity:0;transition:opacity .25s}
+  .fx-item:hover{background:var(--surface)}
+  .fx-item.active{background:var(--surface-2);border-color:var(--border)}
+  .fx-item.active::before{opacity:1}
+  .fx-ic{flex:0 0 40px;width:40px;height:40px;border-radius:11px;display:grid;place-items:center;background:linear-gradient(135deg,rgba(61,214,163,.16),rgba(143,232,201,.1));border:1px solid rgba(61,214,163,.2)}
+  .fx-ic svg{width:21px;height:21px}
+  .fx-tx h3{font-size:15.5px;font-weight:700;margin-bottom:3px}
+  .fx-tx p{font-size:13.5px;color:var(--muted-2);line-height:1.5}
+  .fx-item:not(.active) .fx-tx p{display:none}
+  .fx-stage{position:sticky;top:90px;border:1px solid var(--border-2);border-radius:20px;background:linear-gradient(180deg,var(--surface-2),var(--surface));overflow:hidden;height:430px;box-shadow:0 40px 90px -50px rgba(0,0,0,.85)}
+  .fx-stage-inner{position:relative;width:100%;height:100%}
+  .fx-scene{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;padding:34px;opacity:0;transform:scale(.97);transition:opacity .45s var(--ease),transform .45s var(--ease);pointer-events:none}
+  .fx-scene.active{opacity:1;transform:none;pointer-events:auto}
+  /* AI scene */
+  .fx-ai{flex-direction:row}
+  .ai-doc{position:relative;width:150px;height:190px;flex:0 0 auto;border-radius:12px;background:var(--bg);border:1px solid var(--border);padding:16px;overflow:hidden}
+  .ai-doc .dl{height:8px;border-radius:4px;background:#222a3a;margin-bottom:13px}
+  .ai-doc .dl.t{width:70%;background:#2e3850}
+  .ai-doc .dl.s{width:48%}
+  .ai-doc .dl.tot{width:60%;height:11px;background:linear-gradient(90deg,rgba(61,214,163,.5),rgba(143,232,201,.4));margin-top:18px}
+  .ai-scan{position:absolute;left:0;right:0;height:30px;top:-30px;background:linear-gradient(180deg,transparent,rgba(143,232,201,.32),transparent);box-shadow:0 0 20px rgba(143,232,201,.5);animation:scan 3.2s ease-in-out infinite}
+  @keyframes scan{0%{top:-30px}55%{top:178px}100%{top:178px}}
+  .ai-fields{display:flex;flex-direction:column;gap:11px}
+  .ai-chip{display:flex;align-items:center;gap:10px;background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:9px 13px;font-size:13px;color:var(--muted-2);opacity:1;animation:chipIn .6s var(--ease) both}
+  .ai-chip .ck{margin-inline-start:auto;width:17px;height:17px;border-radius:50%;background:var(--success);display:grid;place-items:center;color:#06281d;font-size:10px;font-weight:900}
+  @keyframes chipIn{from{opacity:0;transform:translateX(-8px)}to{opacity:1;transform:none}}
+  /* Source scene */
+  .src-rows{display:flex;flex-direction:column;gap:11px;width:100%;max-width:340px}
+  .src-row{display:flex;align-items:center;gap:11px;background:var(--bg);border:1px solid var(--border);border-radius:11px;padding:12px 15px;font-size:14px;font-weight:600}
+  .src-row .d{width:9px;height:9px;border-radius:50%}
+  .src-row .flex{flex:1}
+  .src-row .cnt{font-size:12px;color:var(--muted);font-weight:600}
+  .src-row .ck{width:18px;height:18px;border-radius:50%;background:rgba(217,169,63,.16);color:var(--success);display:grid;place-items:center;font-size:11px;font-weight:900}
+  /* KPI scene */
+  .kpi-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;width:100%;max-width:360px}
+  .kt{background:var(--bg);border:1px solid var(--border);border-radius:12px;padding:13px 15px}
+  .kt .k{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+  .kt .v{font-size:20px;font-weight:800;margin-top:4px;font-variant-numeric:tabular-nums}
+  .spark{display:flex;align-items:flex-end;gap:8px;height:60px;width:100%;max-width:360px}
+  .spark i{flex:1;border-radius:4px 4px 0 0;background:linear-gradient(180deg,var(--primary),rgba(143,232,201,.3))}
+  /* Calendar scene */
+  .cal{width:100%;max-width:330px;background:var(--bg);border:1px solid var(--border);border-radius:14px;padding:16px}
+  .cal-h{font-size:14px;font-weight:700;text-align:center;margin-bottom:12px}
+  .cal-w{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-bottom:6px}
+  .cal-w span{text-align:center;font-size:10px;color:var(--muted)}
+  .cal-g{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}
+  .cal .cell{aspect-ratio:1;display:grid;place-items:center;font-size:11px;color:var(--muted-2);border-radius:7px;position:relative}
+  .cal .cell.off{visibility:hidden}
+  .cal .cell.due{color:var(--text)}
+  .cal .cell.due::after{content:"";position:absolute;bottom:3px;width:4px;height:4px;border-radius:50%;background:var(--secondary)}
+  .cal .cell.today{background:linear-gradient(135deg,var(--primary),#1FA97A);color:#fff;font-weight:700}
+  /* Terms scene */
+  .terms-card{width:100%;max-width:360px;background:var(--bg);border:1px solid var(--border);border-radius:14px;padding:20px}
+  .terms-card .trow{display:flex;align-items:center;gap:11px;font-size:14px;font-weight:700;margin-bottom:16px}
+  .terms-card .av{width:30px;height:30px;border-radius:50%;background:linear-gradient(135deg,#a855f7,#3DD6A3)}
+  .seg{display:flex;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:4px;gap:4px;margin-bottom:16px}
+  .seg span{flex:1;text-align:center;font-size:12px;font-weight:600;color:var(--muted-2);padding:7px 0;border-radius:7px}
+  .seg span.on{background:linear-gradient(135deg,var(--primary),var(--secondary));color:#fff}
+  .terms-card .due{font-size:13px;color:var(--muted-2)}
+  .terms-card .due b{color:var(--text)}
+  .terms-card .due .auto{font-style:normal;font-size:10px;color:var(--secondary);border:1px solid rgba(143,232,201,.3);border-radius:5px;padding:2px 7px;margin-inline-start:6px}
+  /* Bulk scene */
+  .bulk{width:100%;max-width:360px;position:relative}
+  .brow{display:flex;align-items:center;gap:12px;background:var(--bg);border:1px solid var(--border);border-radius:11px;padding:13px 15px;margin-bottom:10px}
+  .brow .cb{width:20px;height:20px;border-radius:6px;background:linear-gradient(135deg,var(--primary),#1FA97A);color:#fff;display:grid;place-items:center;font-size:11px;font-weight:900}
+  .brow .bar{flex:1;height:8px;border-radius:4px;background:#222a3a}
+  .brow .amt{font-size:13px;font-weight:700;font-variant-numeric:tabular-nums}
+  .bpay{margin-top:16px;display:flex;align-items:center;justify-content:center;gap:10px;background:linear-gradient(135deg,var(--primary),var(--secondary));color:#fff;font-weight:700;font-size:15px;padding:13px;border-radius:12px;box-shadow:0 14px 34px -10px rgba(61,214,163,.7)}
+  /* Duplicate scene */
+  .dup{position:relative;width:260px;height:210px}
+  .dcard{position:absolute;width:140px;height:172px;border-radius:12px;background:var(--bg);border:1px solid var(--border);padding:14px}
+  .dcard.a{left:10px;top:20px;transform:rotate(-7deg)}
+  .dcard.b{right:10px;top:8px;transform:rotate(6deg);border-color:rgba(217,169,63,.45)}
+  .dcard .dc-hdr{height:7px;border-radius:3px;background:#22312B;margin-bottom:10px;width:60%}
+  .dcard .dc-ln{height:5px;border-radius:3px;background:#1a2236;margin-bottom:7px}
+  .dcard .dc-ln.w80{width:80%}.dcard .dc-ln.w55{width:55%}.dcard .dc-ln.w70{width:70%}
+  .dcard .dc-divider{height:1px;background:var(--border);margin:10px 0}
+  .dcard .dc-amt{font-size:13px;font-weight:800;color:var(--text);font-variant-numeric:tabular-nums}
+  .dcard .dc-src{font-size:9px;color:var(--muted);margin-top:3px;font-weight:600;text-transform:uppercase;letter-spacing:.06em}
+  .dcard.b .dc-amt{color:#3BD68C}
+  .dbadge{position:absolute;left:50%;bottom:-10px;transform:translateX(-50%);white-space:nowrap;display:flex;align-items:center;gap:8px;background:var(--surface-2);border:1px solid rgba(217,169,63,.4);border-radius:100px;padding:8px 15px;font-size:12.5px;font-weight:600;box-shadow:0 16px 36px -16px rgba(0,0,0,.8)}
+  .dbadge i{width:17px;height:17px;border-radius:50%;background:var(--success);color:#06281d;display:grid;place-items:center;font-size:10px;font-weight:900}
+  /* Audit scene */
+  .log{display:flex;flex-direction:column;gap:9px;width:100%;max-width:360px}
+  .lrow{display:flex;align-items:center;gap:10px;background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:11px 14px;font-size:13px;color:var(--muted-2)}
+  .lrow b{color:var(--text);font-weight:600}
+  .lrow .d{width:8px;height:8px;border-radius:50%}
+  .lrow .flex{flex:1}
+  .lrow .ok{font-size:11px;color:var(--success);background:rgba(217,169,63,.14);padding:3px 9px;border-radius:6px;font-weight:600}
+  .lrow .skip{font-size:11px;color:var(--muted);font-weight:600}
+
+  /* ===== Integrations hub ===== */
+  .ig-hub{position:relative;max-width:780px;height:440px;margin:10px auto 0}
+  .ig-lines{position:absolute;inset:0;width:100%;height:100%;z-index:1}
+  .ig-lines .conn{stroke:var(--border-2);stroke-width:1.5;fill:none;stroke-dasharray:5 8;transition:stroke .25s,stroke-width .25s}
+  .ig-lines .conn.hot{stroke:url(#igln);stroke-width:2.4;stroke-dasharray:none}
+  .ig-core{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:98px;height:98px;border-radius:26px;display:grid;place-items:center;z-index:3;background:linear-gradient(180deg,var(--surface-2),var(--surface));border:1px solid var(--border-2);box-shadow:0 0 0 1px rgba(61,214,163,.2),0 24px 60px -22px rgba(61,214,163,.6)}
+  .ig-core svg{width:50px;height:50px}
+  .ig-core::after{content:"";position:absolute;inset:-12px;border-radius:34px;border:1px solid rgba(61,214,163,.4);animation:igpulse 2.6s ease-out infinite}
+  @keyframes igpulse{0%{transform:scale(.92);opacity:.85}100%{transform:scale(1.28);opacity:0}}
+  .ig-sat{position:absolute;transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center;gap:9px;cursor:pointer;z-index:2}
+  .ig-sat .badge{position:relative;top:auto;left:auto;transform:none;width:64px;height:64px;border-radius:17px;display:grid;place-items:center;background:var(--surface);border:1px solid var(--border);box-shadow:0 16px 34px -16px rgba(0,0,0,.75);transition:transform .25s var(--ease),border-color .25s}
+  .ig-sat .badge svg{width:36px;height:36px}
+  .ig-sat .lbl{font-size:13px;font-weight:600;color:var(--muted-2);transition:color .25s}
+  .ig-sat:hover .badge,.ig-sat.active .badge{transform:scale(1.1) !important;border-color:rgba(61,214,163,.55)}
+  .ig-sat:hover .lbl,.ig-sat.active .lbl{color:var(--text)}
+  .ig-caption{text-align:center;color:var(--muted-2);max-width:580px;margin:14px auto 0;font-size:15px;min-height:46px;line-height:1.5}
+
+  /* ===== How stepper ===== */
+  .wk{display:grid;grid-template-columns:.82fr 1.18fr;gap:40px;align-items:center}
+  .wk-steps{display:flex;flex-direction:column;gap:6px}
+  .wk-step{display:flex;gap:16px;align-items:flex-start;padding:16px;border-radius:14px;border:1px solid transparent;cursor:pointer;transition:background .25s var(--ease),border-color .25s var(--ease)}
+  .wk-step:hover{background:var(--surface)}
+  .wk-step.active{background:var(--surface);border-color:var(--border)}
+  .wk-num{position:relative;flex:0 0 44px;width:44px;height:44px}
+  .wk-num svg{position:absolute;inset:0;width:44px;height:44px;transform:rotate(-90deg)}
+  .wk-num .track{stroke:var(--border);stroke-width:3;fill:none}
+  .wk-num .wk-ring{stroke:url(#wkg);stroke-width:3;fill:none;stroke-linecap:round;stroke-dasharray:126;stroke-dashoffset:126}
+  .wk-num .wk-ring.run{animation:wkfill 5s linear forwards}
+  @keyframes wkfill{from{stroke-dashoffset:126}to{stroke-dashoffset:0}}
+  .wk-num .n{position:absolute;inset:0;display:grid;place-items:center;font-weight:800;font-size:16px;color:var(--muted);transition:color .25s}
+  .wk-step.active .wk-num .n{color:var(--text)}
+  .wk-tx h3{font-size:17px;font-weight:700;margin-bottom:4px}
+  .wk-tx p{font-size:14px;color:var(--muted-2);line-height:1.55}
+  .wk-step:not(.active) .wk-tx p{display:none}
+  .wk-frame{border:1px solid var(--border-2);border-radius:16px;overflow:hidden;background:var(--surface);box-shadow:0 50px 100px -40px rgba(0,0,0,.85)}
+  .wk-bar{display:flex;align-items:center;gap:8px;padding:11px 15px;background:var(--surface-2);border-bottom:1px solid var(--border)}
+  .wk-bar .dots{display:flex;gap:7px}
+  .wk-bar .dots i{width:11px;height:11px;border-radius:50%;display:block}
+  .wk-url{margin-inline-start:10px;font-size:12px;color:var(--muted-2);background:var(--bg);border:1px solid var(--border);padding:5px 16px;border-radius:7px;display:flex;align-items:center;gap:7px}
+  .wk-url::before{content:"";width:10px;height:10px;border-radius:2px;background:linear-gradient(135deg,var(--primary),var(--secondary))}
+  .wk-stage{position:relative;width:100%;padding:28px;background:var(--bg);min-height:220px;display:flex;flex-direction:column;gap:14px}
+  .wk-kpi{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .wk-kt{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px 16px}
+  .wk-kt .k{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px}
+  .wk-kt .v{font-size:22px;font-weight:800;font-variant-numeric:tabular-nums}
+  .wk-kt .v.red{color:#E8604C}.wk-kt .v.amber{color:#E0A93D}.wk-kt .v.green{color:#3BD68C}.wk-kt .v.blue{color:#3987E5}
+  .wk-bar-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .wk-mini-spark{display:flex;align-items:flex-end;gap:5px;height:44px;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:10px 14px}
+  .wk-mini-spark i{flex:1;border-radius:3px 3px 0 0;background:linear-gradient(180deg,var(--primary),rgba(143,232,201,.25))}
+  .wk-invoice-row{display:flex;align-items:center;gap:10px;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:11px 14px;font-size:13px;font-weight:600}
+  .wk-invoice-row .wdot{width:8px;height:8px;border-radius:50%}
+  .wk-invoice-row .wamt{margin-inline-end:auto;font-size:11px;color:var(--muted-2)}
+  .wk-invoice-row .wbadge{font-size:10px;padding:3px 8px;border-radius:6px;font-weight:700}
+  .wk-invoice-row .wbadge.due{background:rgba(224,169,61,.15);color:#E0A93D}
+  .wk-invoice-row .wbadge.paid{background:rgba(217,169,63,.15);color:#3BD68C}
+  .wk-shot{display:none;flex-direction:column;gap:10px}
+  .wk-shot.active{display:flex}
+  .wk-scene-title{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:4px}
+  .wk-src-row{display:flex;align-items:center;gap:10px;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:11px 14px;font-size:13px;font-weight:600}
+  .wk-src-icon{width:28px;height:28px;border-radius:8px;display:grid;place-items:center;font-size:14px;background:var(--surface-2);flex:0 0 28px}
+  .wk-src-count{margin-inline-start:auto;margin-inline-end:8px;font-size:11px;color:var(--muted-2)}
+  .wk-src-total{font-size:12px;color:var(--muted-2);text-align:center;padding:6px 0}
+  .wk-group-hdr{display:flex;justify-content:space-between;align-items:center;font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;padding:2px 4px}
+  .wk-ghamt{color:var(--text);font-size:14px}
+  .wk-pay-btn{background:linear-gradient(135deg,#3BD68C,#059669);color:#fff;border-radius:12px;padding:14px 20px;text-align:center;font-size:14px;font-weight:700;margin-top:4px;letter-spacing:.01em}
+
+  @media (max-width:880px){
+    .fx{grid-template-columns:1fr;gap:20px}
+    .fx-stage{position:static;order:-1;height:380px}
+    .fx-item:not(.active) .fx-tx p{display:block}
+    .wk{grid-template-columns:1fr;gap:24px}
+    .wk-preview{order:-1}
+    .wk-step:not(.active) .wk-tx p{display:block}
+  }
+  @media (max-width:640px){
+    .ig-hub{height:380px}
+    .ig-sat .badge{width:52px;height:52px}.ig-sat .badge svg{width:28px;height:28px}
+    .ig-core{width:80px;height:80px}.ig-core svg{width:40px;height:40px}
+    .fx-ai{flex-direction:column}
+  }
+
+  /* ===== 480px — small phones ===== */
+  @media (max-width:480px){
+    /* Hero: shrink the animated visual so it doesn't eat vertical space */
+    .converge{height:300px}
+    .dash-card{width:260px}
+    .source-chip{font-size:12px;padding:8px 11px}
+    /* Hero copy */
+    .hero{padding:100px 0 50px}
+    .hero-sub{font-size:16px;margin-bottom:24px}
+    .hero-tagline-heb{font-size:16px}
+    /* Section headings */
+    h2.section-title{font-size:clamp(22px,7vw,34px)}
+    /* Sections vertical rhythm */
+    .problem,.features,.integrations,.how-it-works,.pricing,.faq,.stats,.cta-section{padding:60px 0}
+    /* Pricing cards: tighter padding */
+    .price-card{padding:24px 20px}
+    /* How-it-works tour steps: full width */
+    .tr-step{flex:0 0 200px}
+    /* Stats */
+    .stat-val-lg{font-size:clamp(28px,8vw,42px)}
+    /* Pricing toggle pill */
+    .billing-toggle{flex-wrap:wrap;justify-content:center}
+    /* FAQ */
+    .faq-q{font-size:15px;padding:16px 0}
+    /* Integration grid: already 1-col, just tighten */
+    .imap{max-width:100%}
+    /* Nav mobile menu */
+    #mobileMenu a{font-size:15px;padding:12px 0}
+    /* CTA section */
+    .cta-inner{padding:40px 20px}
+    /* Footer */
+    .foot-copy{font-size:12px}
+  }
+
+  /* ===== 375px — iPhone SE / smallest ===== */
+  @media (max-width:375px){
+    .wrap{padding:0 14px}
+    .converge{height:260px}
+    .dash-card{width:230px;padding:14px}
+    .hero-pill{font-size:12px}
+    .btn-lg{padding:14px 22px;font-size:15px}
+    .price-card{padding:20px 16px}
+  }
+
+</style>
+<script>
+  // If Supabase OAuth callback lands here, forward to the React app
+  if (window.location.hash && (window.location.hash.includes('access_token') || window.location.hash.includes('error_description'))) {
+    window.location.replace('/login' + window.location.hash);
+  }
+</script>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "Organization",
+      "@id": "https://gocashflow.co/he#organization",
+      "name": "Cashflow",
+      "url": "https://gocashflow.co/",
+      "logo": "https://gocashflow.co/icon-512.png",
+      "email": "hello@gocashflow.co",
+      "areaServed": "IL",
+      "availableLanguage": ["en", "he"],
+      "inLanguage": "he"
+    },
+    {
+      "@type": "SoftwareApplication",
+      "@id": "https://gocashflow.co/he#software",
+      "name": "Cashflow",
+      "url": "https://gocashflow.co/he#pricing",
+      "applicationCategory": "BusinessApplication",
+      "operatingSystem": "Web",
+      "inLanguage": "he",
+      "description": "Cashflow אוספת, קוראת ומארגנת אוטומטית כל חשבונית שאתם מקבלים — מ-Gmail, וואטסאפ, Google Drive וחשבונית ירוקה — כך שתמיד תדעו כמה אתם חייבים ומתי.",
+      "publisher": { "@id": "https://gocashflow.co/he#organization" },
+      "offers": [
+        {
+          "@type": "Offer",
+          "name": "Free",
+          "price": "0",
+          "priceCurrency": "ILS",
+          "url": "https://gocashflow.co/he#pricing"
+        },
+        {
+          "@type": "Offer",
+          "name": "Basic",
+          "price": "99",
+          "priceCurrency": "ILS",
+          "url": "https://gocashflow.co/he#pricing"
+        },
+        {
+          "@type": "Offer",
+          "name": "Pro",
+          "price": "199",
+          "priceCurrency": "ILS",
+          "url": "https://gocashflow.co/he#pricing"
+        },
+        {
+          "@type": "Offer",
+          "name": "Enterprise",
+          "url": "https://gocashflow.co/he#pricing"
+        }
+      ]
+    },
+    {
+      "@type": "FAQPage",
+      "@id": "https://gocashflow.co/he#faq",
+      "inLanguage": "he",
+      "mainEntity": [
+        {
+          "@type": "Question",
+          "name": "האם המערכת תומכת בחשבוניות בעברית?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "כן. מנוע חילוץ הנתונים שלנו מותאם במיוחד לפורמטים של חשבוניות ישראליות, כולל טקסט בעברית, מספרי ח.פ./ע.מ., ותבניות תאריך בפורמט DD/MM/YYYY."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "האם הנתונים שלי מאובטחים?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "כל הנתונים מאוחסנים במסדי נתונים מבודדים לכל משתמש, עם אבטחה ברמת שורה (Row-Level Security). קבצים מצורפים מאוחסנים באחסון ענן מוצפן. אנחנו לעולם לא משתפים את הנתונים שלכם."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "איך עובדת האינטגרציה עם WhatsApp?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "אתם מעבירים תמונות או קבצי PDF של חשבוניות למספר WhatsApp Business ייעודי. המערכת שלנו מקבלת אותם דרך webhook, מחלצת את הנתונים, ומוסיפה אותם ללוח הבקרה שלכם אוטומטית."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "האם אפשר לייבא חשבוניות קיימות?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "כן. אפשר להעלות קבצי PDF ותמונות באופן ידני, או לייבא קבוצה שלמה דרך קובץ CSV. זיהוי כפילויות שומר על ניקיון הנתונים."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "האם אני צריך מפתח כדי להגדיר את המערכת?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "לא. כל תהליך ההגדרה — כולל Google OAuth, webhook של WhatsApp ומפתח API של חשבונית ירוקה — מתבצע דרך ממשק מודרך, ללא צורך בקוד."
+          }
+        }
+      ]
+    }
+  ]
+}
+</script>
+</head>
+<body>
+<div id="pageBg" aria-hidden="true"><div class="pg-blob p1"></div><div class="pg-blob p2"></div><div class="pg-blob p3"></div><div class="pg-blob p4"></div></div>
+<div id="pgSpot" aria-hidden="true"></div>
+<div id="pageNoise" aria-hidden="true"></div>
+<div id="progress"></div>
+
+<!-- SVG logo mark (defined once, reused) -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <linearGradient id="cashflowMarkGrad" x1="20%" y1="0%" x2="85%" y2="100%">
+      <stop offset="0%" stop-color="#3DD6A3"/>
+      <stop offset="100%" stop-color="#1FA97A"/>
+    </linearGradient>
+    <symbol id="cashflowMark" viewBox="0 0 96 96">
+      <path d="M 66,26 A 30,30 0 1 0 66,70" stroke="url(#cashflowMarkGrad)" stroke-width="13" stroke-linecap="round" fill="none"/>
+      <path d="M 60,42 A 11,11 0 1 0 60,54" stroke="url(#cashflowMarkGrad)" stroke-width="8" stroke-linecap="round" fill="none" opacity="0.55"/>
+    </symbol>
+  </defs>
+</svg>
+
+<!-- NAV -->
+<nav id="nav">
+  <div class="wrap nav-inner">
+    <a href="/he" class="logo"><svg class="mark"><use href="#cashflowMark"/></svg> Cashflow</a>
+    <div class="nav-links">
+      <a href="#features">תכונות</a>
+      <a href="#integrations">אינטגרציות</a>
+      <a href="#pricing">תמחור</a>
+      <a href="#contact">יצירת קשר</a>
+    </div>
+    <a href="/" hreflang="en" lang="en" class="nav-lang" style="font-size:14px;font-weight:500;color:var(--muted-2);margin-inline-end:16px;transition:color .2s;" onmouseover="this.style.color='var(--text)'" onmouseout="this.style.color='var(--muted-2)'">English</a>
+    <a href="/login" class="nav-signin" style="font-size:14px;font-weight:500;color:var(--muted-2);margin-inline-end:8px;transition:color .2s;" onmouseover="this.style.color='var(--text)'" onmouseout="this.style.color='var(--muted-2)'">התחברות</a>
+    <a class="btn btn-primary" href="/login">התחילו בחינם</a>
+    <!-- Mobile hamburger -->
+    <button id="mobileMenuBtn" aria-label="פתיחת תפריט" style="display:none;background:none;border:1px solid var(--border);border-radius:8px;padding:8px 10px;color:var(--text);cursor:pointer;font-size:18px;line-height:1;">☰</button>
+  </div>
+  <!-- Mobile dropdown menu -->
+  <div id="mobileMenu" style="display:none;flex-direction:column;gap:0;background:rgba(6,11,20,.97);backdrop-filter:blur(14px);border-top:1px solid var(--border);padding:12px 0;">
+    <a href="#features" style="padding:14px 24px;color:var(--muted-2);font-size:15px;font-weight:500;border-bottom:1px solid var(--border);">תכונות</a>
+    <a href="#integrations" style="padding:14px 24px;color:var(--muted-2);font-size:15px;font-weight:500;border-bottom:1px solid var(--border);">אינטגרציות</a>
+    <a href="#pricing" style="padding:14px 24px;color:var(--muted-2);font-size:15px;font-weight:500;border-bottom:1px solid var(--border);">תמחור</a>
+    <a href="#contact" style="padding:14px 24px;color:var(--muted-2);font-size:15px;font-weight:500;border-bottom:1px solid var(--border);">יצירת קשר</a>
+    <a href="/" hreflang="en" lang="en" style="padding:14px 24px;color:var(--muted-2);font-size:15px;font-weight:500;border-bottom:1px solid var(--border);">English</a>
+    <a href="/login" style="padding:14px 24px;color:var(--primary);font-size:15px;font-weight:600;">התחברות ←</a>
+  </div>
+</nav>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-bg" aria-hidden="true"><div class="blob b1"></div><div class="blob b2"></div><div class="blob b3"></div></div>
+  <div class="grid-overlay" aria-hidden="true"></div>
+
+  <div class="wrap hero-grid">
+    <div class="hero-copy">
+      <div class="hero-pill"><span class="dot"></span> פעיל עכשיו · הרשמה חינם תוך דקות</div>
+      <h1>תפסיקו לרדוף אחרי חשבוניות. <span class="accent">תתחילו לנהל תזרים מזומנים.</span></h1>
+      <p class="hero-tagline-heb">כל החשבוניות שלכם. במקום אחד. אוטומטי לגמרי.</p>
+      <p class="hero-sub">Cashflow אוספת, קוראת ומארגנת אוטומטית כל חשבונית שאתם מקבלים — מ-Gmail, וואטסאפ, Google Drive וחשבונית ירוקה — כך שתמיד תדעו כמה אתם חייבים ומתי.</p>
+      <div class="hero-actions">
+        <a class="btn btn-primary btn-lg" href="/login">התחילו בחינם</a>
+        <a href="#pricing" class="btn btn-ghost btn-lg">צפייה במחירים</a>
+      </div>
+      <div class="trust-line">
+        <span>מהימן על ידי עסקים ישראליים</span><span class="sep"></span>
+        <span>עברית ואנגלית</span><span class="sep"></span>
+        <span>תואם GDPR</span>
+      </div>
+
+      <!-- Impact metrics row -->
+      <div class="hero-metrics">
+        <div class="hmet">
+          <div class="hmet-val" data-count="3.2" data-suffix="h">0h</div>
+          <div class="hmet-info">
+            <span class="hmet-label">שעות שנחסכות בשבוע</span>
+            <span class="hmet-sub">בממוצע בקרב משתמשים פעילים</span>
+          </div>
+        </div>
+        <div class="hmet-divider"></div>
+        <div class="hmet">
+          <div class="hmet-val" data-count="94" data-suffix="%">0%</div>
+          <div class="hmet-info">
+            <span class="hmet-label">פחות תשלומים באיחור</span>
+            <span class="hmet-sub">לעומת מעקב ידני</span>
+          </div>
+        </div>
+        <div class="hmet-divider"></div>
+        <div class="hmet">
+          <div class="hmet-val" data-count="8" data-suffix="s">0s</div>
+          <div class="hmet-info">
+            <span class="hmet-label">זמן עיבוד חשבונית</span>
+            <span class="hmet-sub">מהעלאה ועד ללוח הבקרה</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Signature visual -->
+    <div class="converge" id="converge" aria-hidden="true">
+      <div class="converge-inner" id="convergeInner">
+        <div class="source-chip s1"><span class="ic" style="background:rgba(234,67,53,.16);color:#ea4335">✉️</span> Gmail</div>
+        <div class="source-chip s2"><span class="ic" style="background:rgba(52,168,83,.16);color:#34a853">📁</span> Drive</div>
+        <div class="source-chip s3"><span class="ic" style="background:rgba(37,211,102,.16);color:#25d366">💬</span> WhatsApp</div>
+        <div class="source-chip s4"><span class="ic" style="background:rgba(217,169,63,.16);color:#3BD68C">🧾</span> חשבונית ירוקה</div>
+
+        <svg style="position:absolute;inset:0;width:100%;height:100%;z-index:1" viewBox="0 0 400 460" fill="none" preserveAspectRatio="none">
+          <defs><linearGradient id="ln" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0" stop-color="#3DD6A3" stop-opacity="0"/><stop offset="1" stop-color="#8FE8C9" stop-opacity=".55"/>
+          </linearGradient></defs>
+          <path d="M70 45 C140 90, 160 170, 200 220" stroke="url(#ln)" stroke-width="1.5" stroke-dasharray="4 6"/>
+          <path d="M340 145 C280 180, 250 200, 200 225" stroke="url(#ln)" stroke-width="1.5" stroke-dasharray="4 6"/>
+          <path d="M60 345 C130 310, 160 260, 200 235" stroke="url(#ln)" stroke-width="1.5" stroke-dasharray="4 6"/>
+          <path d="M330 420 C265 360, 230 280, 200 240" stroke="url(#ln)" stroke-width="1.5" stroke-dasharray="4 6"/>
+        </svg>
+
+        <div class="dash-card" id="dashCard">
+          <div class="sync-toast" id="syncToast"><span class="check">✓</span><span id="syncText">חשבונית חדשה סונכרנה</span></div>
+          <div class="dash-head">
+            <span class="title">לוח בקרת תזרים מזומנים</span>
+            <span class="live">חי</span>
+          </div>
+          <div class="kpi-row">
+            <div class="kpi"><div class="label">יתרה לתשלום</div><div class="val" data-count="84210" data-prefix="₪">₪0</div></div>
+            <div class="kpi"><div class="label">באיחור</div><div class="val warn" data-count="6400" data-prefix="₪">₪0</div></div>
+            <div class="kpi"><div class="label">חודש הבא</div><div class="val" data-count="41780" data-prefix="₪">₪0</div></div>
+            <div class="kpi"><div class="label">שולם החודש</div><div class="val ok" data-count="129500" data-prefix="₪">₪0</div></div>
+          </div>
+          <div class="inv-list" id="invList">
+            <div class="inv-line"><span class="who"><span class="sw" style="background:#3DD6A3"></span>Spotify IL</span><span class="amt">₪1,290</span></div>
+            <div class="inv-line"><span class="who"><span class="sw" style="background:#8FE8C9"></span>כהן חשמל</span><span class="amt">₪3,850</span></div>
+            <div class="inv-line"><span class="who"><span class="sw" style="background:#E8604C"></span>אריזות בע"מ</span><span class="amt">₪6,400</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- PROBLEM -->
+<section class="problem">
+  <div class="wrap">
+    <div class="prob-grid">
+      <div class="prob-card reveal">
+        <div class="prob-card-inner">
+          <div class="prob-stat">+4</div>
+          <div class="prob-stat-label">מקומות לכל חשבונית</div>
+          <div class="prob-icon-wrap"><svg viewBox="0 0 24 24" fill="none" stroke="#E8604C" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"/><line x1="12" y1="11" x2="12" y2="17"/><line x1="9" y1="14" x2="15" y2="14"/></svg></div>
+          <h3>חשבוניות בכל מקום</h3><p>מיילים, הודעות וואטסאפ, תיקיות ב-Google Drive ופורטלים של רואי חשבון. שום דבר לא נמצא במקום אחד.</p>
+        </div>
+      </div>
+      <div class="prob-card reveal d1">
+        <div class="prob-card-inner">
+          <div class="prob-stat">23%</div>
+          <div class="prob-stat-label">מהחשבוניות משולמות באיחור</div>
+          <div class="prob-icon-wrap"><svg viewBox="0 0 24 24" fill="none" stroke="#E0A93D" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15.5 14"/><path d="M16.5 3.5l1 2M7.5 3.5l-1 2"/></svg></div>
+          <h3>תאריכי תשלום מתפספסים</h3><p>בלי תמונה מרוכזת של מה שצריך לשלם, חשבוניות באיחור פוגעות ביחסים עם ספקים ובדירוג האשראי שלכם.</p>
+        </div>
+      </div>
+      <div class="prob-card reveal d2">
+        <div class="prob-card-inner">
+          <div class="prob-stat">0<span style="font-size:24px;font-weight:700;opacity:.7"> ימים</span></div>
+          <div class="prob-stat-label">התראה מראש</div>
+          <div class="prob-icon-wrap"><svg viewBox="0 0 24 24" fill="none" stroke="#3DD6A3" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19"/><path d="M1 1l22 22"/></svg></div>
+          <h3>אין ראות תזרימית</h3><p>אתם לא יודעים כמה תצטרכו לשלם בחודש הבא עד הרגע האחרון — והפתעות כואבות.</p>
+        </div>
+      </div>
+    </div>
+    <p class="prob-solve reveal">Cashflow פותרת את שלוש הבעיות — <b>אוטומטית.</b></p>
+  </div>
+</section>
+
+<!-- FEATURES -->
+<section class="features" id="features">
+  <div class="wrap">
+    <div class="section-head reveal" style="text-align:center;margin-left:auto;margin-right:auto"><span class="eyebrow">מה מקבלים</span><h2 class="section-title">פחות רדיפה. יותר ידיעה.</h2><p>שמונה דברים ש-Cashflow עושה בשבילכם אוטומטית — עברו עם העכבר על כל אחד כדי לראות אותו בפעולה.</p></div>
+    <svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs><linearGradient id="fGrad" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#3DD6A3"/><stop offset="1" stop-color="#8FE8C9"/></linearGradient></defs></svg>
+    <div class="fx reveal" id="fx">
+      <div class="fx-list">
+        <div class="fx-item active" data-i="0"><div class="fx-ic"><svg viewBox="0 0 24 24" fill="none" stroke="#3DD6A3" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2h7l5 5v15H6z"/><path d="M13 2v5h5"/><path d="M9.5 12.3l.8 1.7 1.7.8-1.7.8-.8 1.7-.8-1.7-1.7-.8 1.7-.8z"/></svg></div><div class="fx-tx"><h3>חילוץ נתונים מבוסס AI</h3><p>קורא PDF ותמונות ומחלץ ספק, סכום, תאריך ותאריך תשלום — גם בעברית וגם בסריקות מסובבות.</p></div></div><div class="fx-item" data-i="1"><div class="fx-ic"><svg viewBox="0 0 24 24" fill="none" stroke="#3DD6A3" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 14l2.5 4.5h11L20 14"/><path d="M4 14V5a1 1 0 011-1h14a1 1 0 011 1v9"/><path d="M12 4.5v7m0 0l-2.5-2.5M12 11.5l2.5-2.5"/></svg></div><div class="fx-tx"><h3>קליטה ממקורות מרובים</h3><p>מושכת חשבוניות אוטומטית מ-Gmail, Drive, WhatsApp Business וחשבונית ירוקה לפי לוח הזמנים שתגדירו.</p></div></div><div class="fx-item" data-i="2"><div class="fx-ic"><svg viewBox="0 0 24 24" fill="none" stroke="#3DD6A3" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 20h18"/><path d="M6.5 20v-6"/><path d="M12 20V5"/><path d="M17.5 20v-9"/></svg></div><div class="fx-tx"><h3>מדדי לוח בקרה בזמן אמת</h3><p>יתרה לתשלום, באיחור, תחזית לחודש הבא וסה"כ ששולם — מתעדכן בזמן אמת.</p></div></div><div class="fx-item" data-i="3"><div class="fx-ic"><svg viewBox="0 0 24 24" fill="none" stroke="#3DD6A3" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 9.5h18M8 3v4M16 3v4"/></svg></div><div class="fx-tx"><h3>לוח שנה לתזרים מזומנים</h3><p>כל תשלום עתידי מופיע בלוח שנה. דעו בדיוק מה צריך לשלם השבוע, החודש והרבעון.</p></div></div><div class="fx-item" data-i="4"><div class="fx-ic"><svg viewBox="0 0 24 24" fill="none" stroke="#3DD6A3" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></svg></div><div class="fx-tx"><h3>תנאי תשלום לספקים</h3><p>הגדירו תנאים לכל ספק (מיידי, שוטף+30/45/75 או מותאם אישית) ותאריכי התשלום יחושבו לבד.</p></div></div><div class="fx-item" data-i="5"><div class="fx-ic"><svg viewBox="0 0 24 24" fill="none" stroke="#3DD6A3" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 13l3.5 3.5L13 9"/><path d="M11 15.5l1.5 1.5 7-7.5"/></svg></div><div class="fx-tx"><h3>פעולות תשלום מרוכזות</h3><p>בחרו חודש, סקרו הכל, וסמנו הכל כשולם בלחיצה אחת. בנוי למהירות.</p></div></div><div class="fx-item" data-i="6"><div class="fx-ic"><svg viewBox="0 0 24 24" fill="none" stroke="#3DD6A3" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="11" height="11" rx="2"/><path d="M8.5 15.5V18a2 2 0 002 2H18a2 2 0 002-2v-7.5a2 2 0 00-2-2h-2.5"/></svg></div><div class="fx-tx"><h3>זיהוי כפילויות</h3><p>טביעת אצבע לכל קובץ מבטיחה שאותה חשבונית משני מקורות לעולם לא תיספר פעמיים.</p></div></div><div class="fx-item" data-i="7"><div class="fx-ic"><svg viewBox="0 0 24 24" fill="none" stroke="#3DD6A3" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6h11M9 12h11M9 18h11"/><path d="M3 6l1.3 1.3L6.5 4.7"/><path d="M3 12l1.3 1.3L6.5 10.7"/><path d="M3 18l1.3 1.3L6.5 16.7"/></svg></div><div class="fx-tx"><h3>יומן ביקורת מלא</h3><p>כל חשבונית שמסונכרנת מתועדת עם מקור, זמן ותוצאה — שובל נקי לרואה החשבון שלכם.</p></div></div>
+      </div>
+      <div class="fx-stage"><div class="fx-stage-inner">
+
+        <div class="fx-scene fx-ai active">
+          <div class="ai-doc"><div class="ai-scan"></div><div class="dl t"></div><div class="dl"></div><div class="dl s"></div><div class="dl"></div><div class="dl s"></div><div class="dl tot"></div></div>
+          <div class="ai-fields">
+            <div class="ai-chip" style="animation-delay:.25s"><span>ספק</span><i class="ck">&#10003;</i></div>
+            <div class="ai-chip" style="animation-delay:.7s"><span>סכום &nbsp;&#8362;3,850</span><i class="ck">&#10003;</i></div>
+            <div class="ai-chip" style="animation-delay:1.15s"><span>לתשלום &nbsp;15/05/2026</span><i class="ck">&#10003;</i></div>
+          </div>
+        </div>
+
+        <div class="fx-scene fx-src">
+          <div class="src-rows">
+            <div class="src-row"><span class="d" style="background:#ea4335"></span>Gmail<span class="flex"></span><span class="cnt">3 חדשות</span><i class="ck">&#10003;</i></div>
+            <div class="src-row"><span class="d" style="background:#34a853"></span>Google Drive<span class="flex"></span><span class="cnt">חדשה אחת</span><i class="ck">&#10003;</i></div>
+            <div class="src-row"><span class="d" style="background:#25d366"></span>WhatsApp<span class="flex"></span><span class="cnt">2 חדשות</span><i class="ck">&#10003;</i></div>
+            <div class="src-row"><span class="d" style="background:#3BD68C"></span>חשבונית ירוקה<span class="flex"></span><span class="cnt">5 חדשות</span><i class="ck">&#10003;</i></div>
+          </div>
+        </div>
+
+        <div class="fx-scene fx-kpi">
+          <div class="kpi-grid">
+            <div class="kt"><div class="k">יתרה לתשלום</div><div class="v" style="color:#3DD6A3">&#8362;95,858</div></div>
+            <div class="kt"><div class="k">באיחור</div><div class="v" style="color:#E8604C">&#8362;47,313</div></div>
+            <div class="kt"><div class="k">חודש הבא</div><div class="v" style="color:#E0A93D">&#8362;48,544</div></div>
+            <div class="kt"><div class="k">סה"כ שולם</div><div class="v" style="color:#3BD68C">&#8362;18,299</div></div>
+          </div>
+          <div class="spark"><i style="height:40%"></i><i style="height:70%"></i><i style="height:52%"></i><i style="height:88%"></i><i style="height:64%"></i><i style="height:96%"></i></div>
+        </div>
+
+        <div class="fx-scene fx-cal">
+          <div class="cal"><div class="cal-h">מאי 2026</div><div class="cal-w"><span>א</span><span>ב</span><span>ג</span><span>ד</span><span>ה</span><span>ו</span><span>ש</span></div><div class="cal-g"><div class="cell">1</div><div class="cell">2</div><div class="cell">3</div><div class="cell">4</div><div class="cell">5</div><div class="cell">6</div><div class="cell">7</div><div class="cell">8</div><div class="cell due">9</div><div class="cell">10</div><div class="cell">11</div><div class="cell">12</div><div class="cell">13</div><div class="cell">14</div><div class="cell today">15</div><div class="cell">16</div><div class="cell">17</div><div class="cell">18</div><div class="cell">19</div><div class="cell">20</div><div class="cell">21</div><div class="cell due">22</div><div class="cell">23</div><div class="cell">24</div><div class="cell">25</div><div class="cell">26</div><div class="cell">27</div><div class="cell due">28</div><div class="cell">29</div><div class="cell">30</div><div class="cell">31</div><div class="cell off"></div><div class="cell off"></div><div class="cell off"></div><div class="cell off"></div></div></div>
+        </div>
+
+        <div class="fx-scene fx-terms">
+          <div class="terms-card">
+            <div class="trow"><span class="av"></span><b>תנאי ספק</b></div>
+            <div class="seg"><span>מיידי</span><span>+30</span><span class="on">+45</span><span>+75</span></div>
+            <div class="due">חשבונית 31/03 &larr; <b>לתשלום 15/05/2026</b> <i class="auto">אוטומטי</i></div>
+          </div>
+        </div>
+
+        <div class="fx-scene fx-bulk">
+          <div class="bulk">
+            <div class="brow"><i class="cb">&#10003;</i><span class="bar"></span><span class="amt">&#8362;7,385</span></div>
+            <div class="brow"><i class="cb">&#10003;</i><span class="bar"></span><span class="amt">&#8362;1,005</span></div>
+            <div class="brow"><i class="cb">&#10003;</i><span class="bar"></span><span class="amt">&#8362;212</span></div>
+            <div class="bpay">תשלום 5 &middot; &#8362;10,655 <span>&larr;</span></div>
+          </div>
+        </div>
+
+        <div class="fx-scene fx-dup">
+          <div class="dup">
+            <div class="dcard a">
+              <div class="dc-hdr"></div>
+              <div class="dc-ln w80"></div><div class="dc-ln w55"></div><div class="dc-ln w70"></div>
+              <div class="dc-divider"></div>
+              <div class="dc-amt">₪3,450</div>
+              <div class="dc-src">מ-Gmail</div>
+            </div>
+            <div class="dcard b">
+              <div class="dc-hdr"></div>
+              <div class="dc-ln w80"></div><div class="dc-ln w55"></div><div class="dc-ln w70"></div>
+              <div class="dc-divider"></div>
+              <div class="dc-amt">₪3,450</div>
+              <div class="dc-src">מ-Drive ✓</div>
+            </div>
+            <div class="dbadge"><i>&#10003;</i> כפילות זוהתה &mdash; נספרה פעם אחת</div>
+          </div>
+        </div>
+
+        <div class="fx-scene fx-audit">
+          <div class="log">
+            <div class="lrow"><span class="d" style="background:#25d366"></span><b>WhatsApp</b> &middot; 09:24 <span class="flex"></span><span class="ok">נוסף</span></div>
+            <div class="lrow"><span class="d" style="background:#ea4335"></span><b>Gmail</b> &middot; 09:25 <span class="flex"></span><span class="ok">נוסף</span></div>
+            <div class="lrow"><span class="d" style="background:#34a853"></span><b>Drive</b> &middot; 09:27 <span class="flex"></span><span class="skip">כפילות דולגה</span></div>
+            <div class="lrow"><span class="d" style="background:#3BD68C"></span><b>חשבונית ירוקה</b> &middot; 09:31 <span class="flex"></span><span class="ok">נוסף</span></div>
+          </div>
+        </div>
+
+      </div></div>
+    </div>
+  </div>
+</section>
+
+<!-- INTEGRATIONS -->
+<section class="integrations" id="integrations">
+  <div class="wrap">
+    <div class="section-head reveal" style="text-align:center;margin-left:auto;margin-right:auto"><span class="eyebrow">אינטגרציות</span><h2 class="section-title">מתחברת לכלים שאתם כבר משתמשים בהם</h2></div>
+    <div class="ig-hub reveal" id="igHub">
+      <svg class="ig-lines" viewBox="0 0 800 440" preserveAspectRatio="none" aria-hidden="true">
+        <defs><linearGradient id="igln" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#3DD6A3"/><stop offset="1" stop-color="#8FE8C9"/></linearGradient></defs>
+        <path id="igp0" class="conn" d="M176 95 Q288 198 400 220"/><path id="igp1" class="conn" d="M624 95 Q512 198 400 220"/><path id="igp2" class="conn" d="M176 345 Q288 242 400 220"/><path id="igp3" class="conn" d="M624 345 Q512 242 400 220"/>
+        <circle r="3.5" fill="#8FE8C9" opacity=".9"><animateMotion dur="2.4s" begin="0.0s" repeatCount="indefinite"><mpath href="#igp0"/></animateMotion></circle><circle r="3.5" fill="#8FE8C9" opacity=".9"><animateMotion dur="2.4s" begin="0.6s" repeatCount="indefinite"><mpath href="#igp1"/></animateMotion></circle><circle r="3.5" fill="#8FE8C9" opacity=".9"><animateMotion dur="2.4s" begin="1.2s" repeatCount="indefinite"><mpath href="#igp2"/></animateMotion></circle><circle r="3.5" fill="#8FE8C9" opacity=".9"><animateMotion dur="2.4s" begin="1.8s" repeatCount="indefinite"><mpath href="#igp3"/></animateMotion></circle>
+      </svg>
+      <div class="ig-core"><svg viewBox="0 0 32 32"><use href="#cashflowMark"/></svg></div>
+      <div class="ig-sat" data-i="0" style="left:22%;top:21.591%"><div class="badge"><svg viewBox="0 0 24 24"><rect x="2.5" y="5" width="19" height="14" rx="2.5" fill="#fff"/><path d="M3 7l9 6 9-6" fill="none" stroke="#ea4335" stroke-width="2.2" stroke-linejoin="round"/></svg></div><div class="lbl">Gmail</div></div><div class="ig-sat" data-i="1" style="left:78%;top:21.591%"><div class="badge"><svg viewBox="0 0 24 24"><polygon points="8,2 16,2 22,13 14,13" fill="#4285f4"/><polygon points="2,13 8,2 12,9 6,20" fill="#34a853"/><polygon points="6,20 22,13 18,20" fill="#fbbc04"/></svg></div><div class="lbl">Drive</div></div><div class="ig-sat" data-i="2" style="left:22%;top:78.409%"><div class="badge"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" fill="#25d366"/><path d="M8.6 7.6c2.6-1.2 6.3-.2 7.2 3 .7 2.6-.9 5.1-3.4 5.6-1.1.2-2.1 0-3-.5l-2.2.6.6-2.1c-1.2-1.8-1-4.2.8-5.6z" fill="none" stroke="#fff" stroke-width="1.4"/><path d="M10 10.2c.3 1.9 1.4 3 3.2 3.4l.7-1-1.4-.7-.6.6c-.7-.3-1.1-.8-1.4-1.5l.6-.6-.6-1.4z" fill="#fff"/></svg></div><div class="lbl">WhatsApp</div></div><div class="ig-sat" data-i="3" style="left:78%;top:78.409%"><div class="badge"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="5" fill="#3BD68C"/><path d="M7.8 12.4l2.6 2.6 5.8-6.2" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></div><div class="lbl">חשבונית ירוקה</div></div>
+    </div>
+    <p class="ig-caption reveal" id="igCap">Cashflow מושכת חשבוניות אוטומטית מכל מקור &mdash; עברו עם העכבר מעל לוגו כדי לראות איך.</p>
+    <p class="integ-more reveal">אינטגרציות נוספות בקרוב.</p>
+  </div>
+</section>
+
+<!-- HOW -->
+
+<section class="how" id="how">
+  <div class="wrap">
+    <div class="section-head reveal"><span class="eyebrow">איך זה עובד</span><h2 class="section-title">מוכנים לעבודה תוך דקות</h2></div>
+    <svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs><linearGradient id="wkg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#3DD6A3"/><stop offset="1" stop-color="#8FE8C9"/></linearGradient></defs></svg>
+    <div class="wk reveal" id="wk">
+      <div class="wk-steps"><div class="wk-step active" data-i="0">
+      <div class="wk-num"><svg viewBox="0 0 44 44"><circle class="track" cx="22" cy="22" r="20"/><circle class="wk-ring run" cx="22" cy="22" r="20"/></svg><span class="n">1</span></div>
+      <div class="wk-tx"><h3>הכל נוחת במקום אחד</h3><p>חברו את Gmail, Drive, WhatsApp וחשבונית ירוקה — או גררו קבצים ישירות. Cashflow קוראת כל חשבונית ומתייקת אותה בלוח הבקרה שלכם.</p></div></div><div class="wk-step" data-i="1">
+      <div class="wk-num"><svg viewBox="0 0 44 44"><circle class="track" cx="22" cy="22" r="20"/><circle class="wk-ring" cx="22" cy="22" r="20"/></svg><span class="n">2</span></div>
+      <div class="wk-tx"><h3>מקובצות ומוכנות לתשלום</h3><p>כל חוב מסודר לפי ספק וחודש תשלום. בחרו חודש שלם בתנועה אחת.</p></div></div><div class="wk-step" data-i="2">
+      <div class="wk-num"><svg viewBox="0 0 44 44"><circle class="track" cx="22" cy="22" r="20"/><circle class="wk-ring" cx="22" cy="22" r="20"/></svg><span class="n">3</span></div>
+      <div class="wk-tx"><h3>שלמו את כל החודש בפעולה אחת</h3><p>סקרו את הקבוצה, ראו את הסכום הכולל, וסמנו הכל כשולם באישור אחד.</p></div></div><div class="wk-step" data-i="3">
+      <div class="wk-num"><svg viewBox="0 0 44 44"><circle class="track" cx="22" cy="22" r="20"/><circle class="wk-ring" cx="22" cy="22" r="20"/></svg><span class="n">4</span></div>
+      <div class="wk-tx"><h3>מסודרים, בכל חודש</h3><p>אינבוקס אפס לחשבונות שלכם — ואז ישר לחודש הבא.</p></div></div></div>
+      <div class="wk-preview"><div class="wk-frame">
+        <div class="wk-bar"><span class="dots"><i style="background:#E8604C"></i><i style="background:#E0A93D"></i><i style="background:#3BD68C"></i></span><span class="wk-url">gocashflow.co/app</span></div>
+        <div class="wk-stage">
+  <div class="wk-shot active" data-i="0">
+    <div class="wk-scene-title">מקורות מסתנכרנים עכשיו</div>
+    <div class="wk-src-row"><span class="wk-src-icon">✉️</span><span>Gmail</span><span class="wk-src-count">12 חשבוניות</span><span class="wbadge paid">מסונכרן</span></div>
+    <div class="wk-src-row"><span class="wk-src-icon">▲</span><span>Google Drive</span><span class="wk-src-count">7 חשבוניות</span><span class="wbadge paid">מסונכרן</span></div>
+    <div class="wk-src-row"><span class="wk-src-icon">💬</span><span>WhatsApp</span><span class="wk-src-count">3 חשבוניות</span><span class="wbadge due">ממתין</span></div>
+    <div class="wk-src-row"><span class="wk-src-icon">🟢</span><span>חשבונית ירוקה</span><span class="wk-src-count">5 חשבוניות</span><span class="wbadge paid">מסונכרן</span></div>
+    <div class="wk-src-total">27 חשבוניות יובאו · OCR הושלם</div>
+  </div>
+  <div class="wk-shot" data-i="1">
+    <div class="wk-scene-title">חובות לפי חודש</div>
+    <div class="wk-group-hdr"><span>יוני 2025</span><span class="wk-ghamt">₪47,313</span></div>
+    <div class="wk-invoice-row"><span class="wdot" style="background:#E8604C"></span>כהן חשמל<span class="wamt">₪8,400</span><span class="wbadge due">באיחור</span></div>
+    <div class="wk-invoice-row"><span class="wdot" style="background:#E0A93D"></span>אריזות בע"מ<span class="wamt">₪12,900</span><span class="wbadge due">לתשלום 30 ביוני</span></div>
+    <div class="wk-group-hdr" style="margin-top:8px"><span>יולי 2025</span><span class="wk-ghamt">₪48,544</span></div>
+    <div class="wk-invoice-row"><span class="wdot" style="background:#3987E5"></span>ציוד משרדי בע"מ<span class="wamt">₪6,200</span><span class="wbadge" style="background:rgba(96,165,250,.15);color:#3987E5">בקרוב</span></div>
+  </div>
+  <div class="wk-shot" data-i="2">
+    <div class="wk-scene-title">קבוצת יוני — מוכנה לסימון כשולם</div>
+    <div class="wk-invoice-row"><input type="checkbox" checked disabled style="margin-inline-end:4px;accent-color:#3BD68C"><span class="wdot" style="background:#E8604C"></span>כהן חשמל<span class="wamt">₪8,400</span></div>
+    <div class="wk-invoice-row"><input type="checkbox" checked disabled style="margin-inline-end:4px;accent-color:#3BD68C"><span class="wdot" style="background:#E0A93D"></span>אריזות בע"מ<span class="wamt">₪12,900</span></div>
+    <div class="wk-invoice-row"><input type="checkbox" checked disabled style="margin-inline-end:4px;accent-color:#3BD68C"><span class="wdot" style="background:#3987E5"></span>ספק א׳<span class="wamt">₪25,844</span></div>
+    <div class="wk-pay-btn">✓ סמנו הכל כשולם · ₪47,313</div>
+  </div>
+  <div class="wk-shot" data-i="3">
+    <div class="wk-kpi">
+      <div class="wk-kt"><div class="k">יתרה לתשלום</div><div class="v blue">₪48,544</div></div>
+      <div class="wk-kt"><div class="k">באיחור</div><div class="v green">₪0</div></div>
+      <div class="wk-kt"><div class="k">חודש הבא</div><div class="v amber">₪48,544</div></div>
+      <div class="wk-kt"><div class="k">סה"כ שולם</div><div class="v green">₪65,612</div></div>
+    </div>
+    <div class="wk-mini-spark"><i style="height:55%"></i><i style="height:70%"></i><i style="height:45%"></i><i style="height:85%"></i><i style="height:60%"></i><i style="height:90%"></i><i style="height:100%"></i></div>
+    <div class="wk-invoice-row"><span class="wdot" style="background:#3BD68C"></span>כהן חשמל<span class="wamt">₪8,400 · שולם ב-28 ביוני</span><span class="wbadge paid">שולם</span></div>
+    <div class="wk-invoice-row"><span class="wdot" style="background:#3BD68C"></span>אריזות בע"מ<span class="wamt">₪12,900 · שולם ב-28 ביוני</span><span class="wbadge paid">שולם</span></div>
+  </div>
+</div>
+      </div></div>
+    </div>
+  </div>
+</section>
+
+<!-- STATS -->
+<section class="stats">
+  <div class="wrap">
+    <div class="stats-card reveal">
+      <div class="stat">
+        <div class="num" data-count="3.2" data-suffix="h">0h</div>
+        <div class="lbl">נחסך בשבוע, למשתמש</div>
+        <div class="sub-lbl">בממוצע בין חשבונות פעילים</div>
+      </div>
+      <div class="stat">
+        <div class="num" data-count="94" data-suffix="%">0%</div>
+        <div class="lbl">פחות תשלומים באיחור</div>
+        <div class="sub-lbl">לעומת מעקב ידני אחר חשבוניות</div>
+      </div>
+      <div class="stat">
+        <div class="num" data-count="8" data-suffix="s">&lt;0s</div>
+        <div class="lbl">זמן חילוץ נתוני חשבונית</div>
+        <div class="sub-lbl">מ-PDF ללוח הבקרה, אוטומטי לחלוטין</div>
+      </div>
+      <div class="stat">
+        <div class="num" data-count="100" data-suffix="%">0%</div>
+        <div class="lbl">תמיכה מלאה במסמכים בעברית</div>
+        <div class="sub-lbl">כיוון RTL, סריקות מסובבות, מסמכים מעורבים</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- PRICING -->
+<section class="pricing" id="pricing">
+  <div class="wrap">
+    <div class="section-head reveal" style="margin-left:auto;margin-right:auto;text-align:center"><span class="eyebrow">תמחור</span><h2 class="section-title">תמחור פשוט ושקוף</h2><p>התחילו בחינם. התרחיבו ככל שתגדלו. בלי עמלות נסתרות.</p></div>
+    <div class="price-grid" style="grid-template-columns:repeat(4,1fr)" id="priceGrid">
+      <!-- Free -->
+      <div class="price-card reveal">
+        <div class="plan-name">חינם</div>
+        <div class="plan-price">₪0<small>/חודש</small></div>
+        <ul class="plan-list">
+          <li>עד 20 חשבוניות בחודש</li>
+          <li>מקור סנכרון אחד</li>
+          <li>העלאה ידנית + OCR</li>
+          <li>לוח בקרה ולוח שנה</li>
+        </ul>
+        <a class="btn btn-ghost btn-block" href="/login" rel="noopener">התחילו בחינם</a>
+      </div>
+      <!-- Basic -->
+      <div class="price-card reveal d1">
+        <div class="plan-name">בסיסי</div>
+        <div class="plan-price">₪99<small>/חודש</small></div>
+        <ul class="plan-list">
+          <li>עד 50 חשבוניות בחודש</li>
+          <li>2 מקורות סנכרון</li>
+          <li>העלאה ידנית + OCR</li>
+          <li>לוח בקרה, לוח שנה וייצוא CSV</li>
+          <li>תמיכה במייל</li>
+        </ul>
+        <button class="btn btn-ghost btn-block" onclick="checkout('basic')">בחרו בסיסי</button>
+      </div>
+      <!-- Pro -->
+      <div class="price-card popular reveal d2">
+        <div class="badge">הכי פופולרי</div>
+        <div class="plan-name">Pro</div>
+        <div class="plan-price">₪199<small>/חודש</small></div>
+        <ul class="plan-list">
+          <li>עד 150 חשבוניות בחודש</li>
+          <li>כל 4 מקורות הסנכרון</li>
+          <li>סנכרון אוטומטי מתוזמן</li>
+          <li>פעולות מרוכזות וייבוא CSV</li>
+          <li>יומן ביקורת מלא</li>
+          <li>תמיכה בעדיפות גבוהה</li>
+        </ul>
+        <button class="btn btn-primary btn-block" onclick="checkout('pro')">בחרו Pro</button>
+      </div>
+      <!-- Enterprise -->
+      <div class="price-card reveal d3">
+        <div class="plan-name">Enterprise</div>
+        <div class="plan-price contact">צרו קשר</div>
+        <ul class="plan-list">
+          <li>חשבוניות ללא הגבלה</li>
+          <li>אינטגרציות מותאמות אישית</li>
+          <li>ליווי הטמעה ייעודי</li>
+          <li>תמיכת SLA ותאימות רגולטורית</li>
+          <li>אפשרות White-label</li>
+        </ul>
+        <a class="btn btn-ghost btn-block" href="mailto:hello@gocashflow.co">יצירת קשר</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FAQ -->
+<section class="faq">
+  <div class="wrap">
+    <div class="section-head reveal" style="margin-left:auto;margin-right:auto;text-align:center"><span class="eyebrow">תמיכה</span><h2 class="section-title">שאלות נפוצות</h2></div>
+    <div class="faq-wrap">
+      <div class="faq-item reveal"><button class="faq-q">האם המערכת תומכת בחשבוניות בעברית?<span class="chev">▾</span></button><div class="faq-a"><div class="faq-a-inner">כן. מנוע חילוץ הנתונים שלנו מותאם במיוחד לפורמטים של חשבוניות ישראליות, כולל טקסט בעברית, מספרי ח.פ./ע.מ., ותבניות תאריך בפורמט DD/MM/YYYY.</div></div></div>
+      <div class="faq-item reveal"><button class="faq-q">האם הנתונים שלי מאובטחים?<span class="chev">▾</span></button><div class="faq-a"><div class="faq-a-inner">כל הנתונים מאוחסנים במסדי נתונים מבודדים לכל משתמש, עם אבטחה ברמת שורה (Row-Level Security). קבצים מצורפים מאוחסנים באחסון ענן מוצפן. אנחנו לעולם לא משתפים את הנתונים שלכם.</div></div></div>
+      <div class="faq-item reveal"><button class="faq-q">איך עובדת האינטגרציה עם WhatsApp?<span class="chev">▾</span></button><div class="faq-a"><div class="faq-a-inner">אתם מעבירים תמונות או קבצי PDF של חשבוניות למספר WhatsApp Business ייעודי. המערכת שלנו מקבלת אותם דרך webhook, מחלצת את הנתונים, ומוסיפה אותם ללוח הבקרה שלכם אוטומטית.</div></div></div>
+      <div class="faq-item reveal"><button class="faq-q">האם אפשר לייבא חשבוניות קיימות?<span class="chev">▾</span></button><div class="faq-a"><div class="faq-a-inner">כן. אפשר להעלות קבצי PDF ותמונות באופן ידני, או לייבא קבוצה שלמה דרך קובץ CSV. זיהוי כפילויות שומר על ניקיון הנתונים.</div></div></div>
+      <div class="faq-item reveal"><button class="faq-q">האם אני צריך מפתח כדי להגדיר את המערכת?<span class="chev">▾</span></button><div class="faq-a"><div class="faq-a-inner">לא. כל תהליך ההגדרה — כולל Google OAuth, webhook של WhatsApp ומפתח API של חשבונית ירוקה — מתבצע דרך ממשק מודרך, ללא צורך בקוד.</div></div></div>
+    </div>
+  </div>
+</section>
+
+<!-- CTA -->
+<section class="cta-banner">
+  <div class="wrap">
+    <div class="cta-card reveal">
+      <div class="glowblob" aria-hidden="true"></div>
+      <h2>מוכנים לקחת שליטה על תזרים המזומנים שלכם?</h2>
+      <p>הצטרפו לעסקים שכבר מנהלים חשבוניות באוטומציה מלאה.</p>
+      <a class="btn btn-primary btn-lg" href="/app">התחילו בחינם — לא נדרש כרטיס אשראי</a>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer id="contact">
+  <div class="wrap foot-inner">
+    <div class="foot-brand">
+      <a href="/he" class="logo foot-logo"><svg class="mark"><use href="#cashflowMark"/></svg> Cashflow</a>
+      <span>© 2026 Cashflow. כל הזכויות שמורות.</span>
+    </div>
+    <div class="foot-links"><a href="/privacy.html">מדיניות פרטיות</a><a href="/terms.html">תנאי שימוש</a><a href="mailto:hello@gocashflow.co">יצירת קשר</a></div>
+    <div>בנוי עבור עסקים ישראליים 🇮🇱</div>
+  </div>
+</footer>
+
+<script>
+  const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  // Scroll progress + sticky nav
+  const nav = document.getElementById('nav');
+  const progress = document.getElementById('progress');
+  function onScroll(){
+    nav.classList.toggle('scrolled', window.scrollY > 24);
+    const h = document.documentElement;
+    const max = h.scrollHeight - h.clientHeight;
+    progress.style.width = (max > 0 ? (window.scrollY / max) * 100 : 0) + '%';
+  }
+  onScroll(); window.addEventListener('scroll', onScroll, {passive:true});
+
+  // FAQ accordion
+  document.querySelectorAll('.faq-q').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const item = btn.parentElement, ans = item.querySelector('.faq-a');
+      const isOpen = item.classList.contains('open');
+      document.querySelectorAll('.faq-item.open').forEach(o => { o.classList.remove('open'); o.querySelector('.faq-a').style.maxHeight = null; });
+      if (!isOpen){ item.classList.add('open'); ans.style.maxHeight = ans.scrollHeight + 'px'; }
+    });
+  });
+
+  // Reveal on scroll
+  const io = new IntersectionObserver((entries) => {
+    entries.forEach(e => { if (e.isIntersecting){ e.target.classList.add('in'); io.unobserve(e.target); } });
+  }, {threshold:0.12, rootMargin:'0px 0px -40px 0px'});
+  document.querySelectorAll('.reveal').forEach(el => io.observe(el));
+
+  // Count-up helper
+  function fmt(n){ return n.toLocaleString('en-US'); }
+  function countUp(el){
+    const target = parseFloat(el.dataset.count);
+    const prefix = (el.dataset.prefix || '').replace('&lt;','<');
+    const suffix = el.dataset.suffix || '';
+    const isDecimal = target % 1 !== 0;
+    const dur = reduce ? 0 : 1100; const start = performance.now();
+    function step(now){
+      const t = dur ? Math.min((now - start)/dur, 1) : 1;
+      const eased = 1 - Math.pow(1 - t, 3);
+      const raw = target * eased;
+      const val = isDecimal ? raw.toFixed(1) : Math.round(raw);
+      el.textContent = prefix + (isDecimal ? val : fmt(val)) + suffix;
+      if (t < 1) requestAnimationFrame(step);
+    }
+    requestAnimationFrame(step);
+  }
+  const countObs = new IntersectionObserver((entries)=>{
+    entries.forEach(e=>{ if(e.isIntersecting){ countUp(e.target); countObs.unobserve(e.target); } });
+  }, {threshold:0.5});
+  document.querySelectorAll('[data-count]').forEach(el => countObs.observe(el));
+
+  // Hero metrics entrance animation
+  const metricsEl = document.querySelector('.hero-metrics');
+  if(metricsEl){
+    const mo = new IntersectionObserver(([e])=>{ if(e.isIntersecting){ metricsEl.classList.add('visible'); mo.disconnect(); } },{threshold:.4});
+    mo.observe(metricsEl);
+  }
+
+  // Hero: live sync toasts + fresh invoice rows
+  if (!reduce){
+    const toast = document.getElementById('syncToast');
+    const toastText = document.getElementById('syncText');
+    const invList = document.getElementById('invList');
+    const feed = [
+      {src:'Gmail', sw:'#3DD6A3', who:'AWS Israel', amt:'₪2,140'},
+      {src:'WhatsApp', sw:'#25d366', who:'מוסך הצפון', amt:'₪980'},
+      {src:'Google Drive', sw:'#34a853', who:'Office Depot', amt:'₪1,475'},
+      {src:'Green Invoice', sw:'#3BD68C', who:'יבואן ציוד', amt:'₪5,230'},
+      {src:'Gmail', sw:'#8FE8C9', who:'Wolt Business', amt:'₪640'}
+    ];
+    let fi = 0;
+    function cycle(){
+      const item = feed[fi % feed.length]; fi++;
+      toastText.textContent = 'חשבונית חדשה סונכרנה מ-' + item.src;
+      toast.classList.add('show');
+      const row = document.createElement('div');
+      row.className = 'inv-line fresh';
+      row.innerHTML = '<span class="who"><span class="sw" style="background:'+item.sw+'"></span>'+item.who+'</span><span class="amt">'+item.amt+'</span>';
+      invList.insertBefore(row, invList.firstChild);
+      while (invList.children.length > 3) invList.removeChild(invList.lastChild);
+      setTimeout(()=> toast.classList.remove('show'), 2400);
+      setTimeout(cycle, 4200);
+    }
+    setTimeout(cycle, 3000);
+
+    // Subtle 3D tilt on dashboard
+    const converge = document.getElementById('converge');
+    const inner = document.getElementById('convergeInner');
+    converge.addEventListener('mousemove', (e)=>{
+      const r = converge.getBoundingClientRect();
+      const px = (e.clientX - r.left)/r.width - 0.5;
+      const py = (e.clientY - r.top)/r.height - 0.5;
+      inner.style.transform = 'rotateY('+(px*8)+'deg) rotateX('+(-py*8)+'deg)';
+    });
+    converge.addEventListener('mouseleave', ()=>{ inner.style.transform = ''; });
+
+    // Feature card cursor spotlight
+    document.querySelectorAll('.fcard').forEach(card=>{
+      card.addEventListener('mousemove', e=>{
+        const r = card.getBoundingClientRect();
+        card.style.setProperty('--mx', (e.clientX - r.left)+'px');
+        card.style.setProperty('--my', (e.clientY - r.top)+'px');
+      });
+    });
+  }
+
+
+  // Guided tour
+  (function(){
+    const tr=document.getElementById('tr'); if(!tr) return;
+    const steps=[...tr.querySelectorAll('.tr-step')];
+    const imgs=[...document.querySelectorAll('#trStage img')];
+    let cur=0,timer=null;
+    function setA(i,user){
+      cur=i;
+      steps.forEach((s,n)=>s.classList.toggle('active',n===i));
+      imgs.forEach((im,n)=>im.classList.toggle('active',n===i));
+      steps.forEach(s=>{const r=s.querySelector('.ring-fg');r.classList.remove('run');});
+      if(!reduce){const r=steps[i].querySelector('.ring-fg');void r.offsetWidth;r.classList.add('run');}
+      if(user) restart();
+    }
+    function next(){setA((cur+1)%steps.length);}
+    function restart(){if(reduce)return;clearInterval(timer);timer=setInterval(next,5200);}
+    steps.forEach(s=>s.addEventListener('click',()=>setA(+s.dataset.i,true)));
+    tr.addEventListener('mouseenter',()=>{clearInterval(timer);steps.forEach(s=>{const r=s.querySelector('.ring-fg');r.style.animationPlayState='paused';});});
+    tr.addEventListener('mouseleave',()=>{steps.forEach(s=>{const r=s.querySelector('.ring-fg');r.style.animationPlayState='running';});restart();});
+    setA(0,false);
+    if(!reduce) restart();
+  })();
+
+
+  // Features explorer
+  (function(){
+    const root=document.getElementById('fx'); if(!root) return;
+    const items=[...root.querySelectorAll('.fx-item')];
+    const scenes=[...root.querySelectorAll('.fx-scene')];
+    let cur=0,t=null;
+    function set(i){cur=i;items.forEach((it,n)=>it.classList.toggle('active',n===i));scenes.forEach((s,n)=>s.classList.toggle('active',n===i));}
+    function next(){set((cur+1)%items.length);}
+    function play(){if(reduce)return;clearInterval(t);t=setInterval(next,3200);}
+    items.forEach((it,n)=>{
+      it.addEventListener('mouseenter',()=>{set(n);clearInterval(t);});
+      it.addEventListener('click',()=>{set(n);clearInterval(t);});
+    });
+    root.addEventListener('mouseleave',play);
+    play();
+  })();
+
+  // Integrations hub
+  (function(){
+    const hub=document.getElementById('igHub'); if(!hub) return;
+    const cap=document.getElementById('igCap');
+    const sats=[...hub.querySelectorAll('.ig-sat')];
+    const lines=[...hub.querySelectorAll('.ig-lines .conn')];
+    const texts=[
+      "Gmail \u2014 \u05e1\u05d5\u05e8\u05e7 \u05d0\u05d5\u05d8\u05d5\u05de\u05d8\u05d9\u05ea \u05de\u05d9\u05d9\u05dc\u05d9\u05dd \u05de\u05ea\u05d5\u05d9\u05d2\u05d9\u05dd \u05d1\u05d7\u05d9\u05e4\u05d5\u05e9 \u05d0\u05d7\u05e8 \u05e6\u05e8\u05d5\u05e4\u05d5\u05ea \u05d7\u05e9\u05d1\u05d5\u05e0\u05d9\u05ea.",
+      "Google Drive \u2014 \u05e2\u05d5\u05e7\u05d1 \u05d0\u05d7\u05e8\u05d9 \u05ea\u05d9\u05e7\u05d9\u05d5\u05ea \u05e0\u05d1\u05d7\u05e8\u05d5\u05ea \u05d5\u05de\u05d9\u05d9\u05d1\u05d0 \u05e7\u05d1\u05e6\u05d9\u05dd \u05d7\u05d3\u05e9\u05d9\u05dd.",
+      "WhatsApp Business \u2014 \u05de\u05e7\u05d1\u05dc \u05ea\u05de\u05d5\u05e0\u05d5\u05ea \u05d5\u05e7\u05d1\u05e6\u05d9 PDF \u05e9\u05dc \u05d7\u05e9\u05d1\u05d5\u05e0\u05d9\u05d5\u05ea \u05d3\u05e8\u05da webhook.",
+      "\u05d7\u05e9\u05d1\u05d5\u05e0\u05d9\u05ea \u05d9\u05e8\u05d5\u05e7\u05d4 (Green Invoice) \u2014 \u05de\u05e1\u05ea\u05e0\u05db\u05e8\u05df \u05d9\u05e9\u05d9\u05e8\u05d5\u05ea \u05e2\u05dd \u05e4\u05dc\u05d8\u05e4\u05d5\u05e8\u05de\u05ea \u05d4\u05d7\u05e9\u05d1\u05d5\u05e0\u05d9\u05d5\u05ea \u05d4\u05de\u05d5\u05d1\u05d9\u05dc\u05d4 \u05d1\u05d9\u05e9\u05e8\u05d0\u05dc."
+    ];
+    const base="Cashflow \u05de\u05d5\u05e9\u05db\u05ea \u05d7\u05e9\u05d1\u05d5\u05e0\u05d9\u05d5\u05ea \u05d0\u05d5\u05d8\u05d5\u05de\u05d8\u05d9\u05ea \u05de\u05db\u05dc \u05de\u05e7\u05d5\u05e8 \u2014 \u05e2\u05d1\u05e8\u05d5 \u05e2\u05dd \u05d4\u05e2\u05db\u05d1\u05e8 \u05de\u05e2\u05dc \u05dc\u05d5\u05d2\u05d5 \u05db\u05d3\u05d9 \u05dc\u05e8\u05d0\u05d5\u05ea \u05d0\u05d9\u05da.";
+    sats.forEach((s,n)=>{
+      s.addEventListener('mouseenter',()=>{cap.textContent=texts[n];sats.forEach(x=>x.classList.remove('active'));s.classList.add('active');lines.forEach((l,i)=>l.classList.toggle('hot',i===n));});
+    });
+    hub.addEventListener('mouseleave',()=>{cap.textContent=base;sats.forEach(x=>x.classList.remove('active'));lines.forEach(l=>l.classList.remove('hot'));});
+  })();
+
+  // How stepper
+  (function(){
+    const root=document.getElementById('wk'); if(!root) return;
+    const steps=[...root.querySelectorAll('.wk-step')];
+    const shots=[...root.querySelectorAll('.wk-shot')];
+    let cur=0,t=null;
+    function set(i,user){
+      cur=i;
+      steps.forEach((s,n)=>s.classList.toggle('active',n===i));
+      shots.forEach((s,n)=>s.classList.toggle('active',n===i));
+      steps.forEach(s=>{const r=s.querySelector('.wk-ring');if(r)r.classList.remove('run');});
+      if(!reduce){const ar=steps[i].querySelector('.wk-ring');if(ar){void ar.getBoundingClientRect();ar.classList.add('run');}}
+      if(user){clearInterval(t);play();}
+    }
+    function next(){set((cur+1)%steps.length);}
+    function play(){if(reduce)return;clearInterval(t);t=setInterval(next,5000);}
+    steps.forEach((s,n)=>s.addEventListener('click',()=>set(n,true)));
+    root.addEventListener('mouseenter',()=>clearInterval(t));
+    root.addEventListener('mouseleave',play);
+    play();
+  })();
+
+
+  // Billing checkout redirect — plan: 'basic' | 'pro'
+  async function checkout(plan) {
+    const btn = event?.currentTarget;
+    const origText = btn?.textContent;
+    if (btn) { btn.disabled = true; btn.textContent = '...'; }
+    try {
+      const res = await fetch('/api/billing/checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ plan }),
+      });
+      const data = await res.json();
+      if (data.url) {
+        window.location.href = data.url;
+      } else {
+        alert(data.error || 'משהו השתבש. נסו שוב.');
+        if (btn) { btn.disabled = false; btn.textContent = origText; }
+      }
+    } catch {
+      alert('שגיאת רשת. נסו שוב.');
+      if (btn) { btn.disabled = false; btn.textContent = origText; }
+    }
+  }
+
+  // Mobile nav toggle
+  (function(){
+    const btn = document.getElementById('mobileMenuBtn');
+    const menu = document.getElementById('mobileMenu');
+    if (!btn || !menu) return;
+    btn.addEventListener('click', () => {
+      const open = menu.style.display === 'flex';
+      menu.style.display = open ? 'none' : 'flex';
+    });
+    // Close on link click
+    menu.querySelectorAll('a').forEach(a => a.addEventListener('click', () => { menu.style.display = 'none'; }));
+  })();
+
+
+  // Global mouse spotlight
+  (function(){
+    const spot = document.getElementById('pgSpot');
+    if(!spot) return;
+    let tx = window.innerWidth/2, ty = window.innerHeight/2;
+    let cx = tx, cy = ty;
+    function lerp(a,b,t){return a+(b-a)*t}
+    function tick(){
+      cx = lerp(cx,tx,.06);
+      cy = lerp(cy,ty,.06);
+      spot.style.left = cx+'px';
+      spot.style.top = cy+'px';
+      requestAnimationFrame(tick);
+    }
+    document.addEventListener('mousemove',e=>{tx=e.clientX;ty=e.clientY;});
+    tick();
+  })();
+
+  function fixPriceGrid(){
+    const pg = document.getElementById('priceGrid');
+    if(!pg) return;
+    pg.style.gridTemplateColumns = window.innerWidth < 960 ? '' : 'repeat(4,1fr)';
+  }
+  fixPriceGrid();
+  window.addEventListener('resize', fixPriceGrid);
+
+</script>
+</body>
+</html>
