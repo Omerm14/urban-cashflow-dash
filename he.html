@@ -1,13 +1,13 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="he" dir="rtl">
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Cashflow — Stop Chasing Invoices. Start Managing Cash Flow.</title>
-<meta name="description" content="Cashflow automatically collects, reads, and organizes every invoice you receive — from Gmail, WhatsApp, Google Drive, and Green Invoice — so you always know what you owe and when." />
-<link rel="canonical" href="https://gocashflow.co/" />
-<link rel="alternate" hreflang="en" href="https://gocashflow.co/" />
+<title>Cashflow — תפסיקו לרדוף אחרי חשבוניות. תתחילו לנהל תזרים מזומנים.</title>
+<meta name="description" content="Cashflow אוספת, קוראת ומארגנת אוטומטית כל חשבונית שאתם מקבלים — מ-Gmail, וואטסאפ, Google Drive וחשבונית ירוקה — כך שתמיד תדעו כמה אתם חייבים ומתי." />
+<link rel="canonical" href="https://gocashflow.co/he" />
 <link rel="alternate" hreflang="he" href="https://gocashflow.co/he" />
+<link rel="alternate" hreflang="en" href="https://gocashflow.co/" />
 <link rel="alternate" hreflang="x-default" href="https://gocashflow.co/" />
 <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
 <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
@@ -17,18 +17,18 @@
 <link rel="manifest" href="/site.webmanifest" />
 <meta property="og:type" content="website" />
 <meta property="og:site_name" content="Cashflow" />
-<meta property="og:locale" content="en_US" />
-<meta property="og:locale:alternate" content="he_IL" />
-<meta property="og:url" content="https://gocashflow.co/" />
-<meta property="og:title" content="Cashflow — Stop Chasing Invoices. Start Managing Cash Flow." />
-<meta property="og:description" content="Cashflow automatically collects, reads, and organizes every invoice you receive — from Gmail, WhatsApp, Google Drive, and Green Invoice — so you always know what you owe and when." />
+<meta property="og:locale" content="he_IL" />
+<meta property="og:locale:alternate" content="en_US" />
+<meta property="og:url" content="https://gocashflow.co/he" />
+<meta property="og:title" content="Cashflow — תפסיקו לרדוף אחרי חשבוניות. תתחילו לנהל תזרים מזומנים." />
+<meta property="og:description" content="Cashflow אוספת, קוראת ומארגנת אוטומטית כל חשבונית שאתם מקבלים — מ-Gmail, וואטסאפ, Google Drive וחשבונית ירוקה — כך שתמיד תדעו כמה אתם חייבים ומתי." />
 <meta property="og:image" content="https://gocashflow.co/og-image.png" />
 <meta property="og:image:type" content="image/png" />
 <meta property="og:image:width" content="1200" />
 <meta property="og:image:height" content="630" />
 <meta name="twitter:card" content="summary_large_image" />
-<meta name="twitter:title" content="Cashflow — Stop Chasing Invoices. Start Managing Cash Flow." />
-<meta name="twitter:description" content="Cashflow automatically collects, reads, and organizes every invoice you receive — from Gmail, WhatsApp, Google Drive, and Green Invoice — so you always know what you owe and when." />
+<meta name="twitter:title" content="Cashflow — תפסיקו לרדוף אחרי חשבוניות. תתחילו לנהל תזרים מזומנים." />
+<meta name="twitter:description" content="Cashflow אוספת, קוראת ומארגנת אוטומטית כל חשבונית שאתם מקבלים — מ-Gmail, וואטסאפ, Google Drive וחשבונית ירוקה — כך שתמיד תדעו כמה אתם חייבים ומתי." />
 <meta name="twitter:image" content="https://gocashflow.co/og-image.png" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -134,7 +134,7 @@
   .nav-inner{display:flex;align-items:center;justify-content:space-between;height:72px}
   .nav-links{display:flex;gap:34px;align-items:center}
   .nav-links a{font-size:14px;font-weight:500;color:var(--muted-2);transition:color .2s;position:relative}
-  .nav-links a::after{content:"";position:absolute;left:0;bottom:-6px;width:0;height:2px;background:var(--primary);transition:width .25s var(--ease)}
+  .nav-links a::after{content:"";position:absolute;inset-inline-start:0;bottom:-6px;width:0;height:2px;background:var(--primary);transition:width .25s var(--ease)}
   .nav-links a:hover{color:var(--text)}
   .nav-links a:hover::after{width:100%}
 
@@ -294,7 +294,7 @@
   .stats-card{background:linear-gradient(135deg,var(--surface-2),var(--surface));border:1px solid var(--border);border-radius:22px;
     padding:46px 30px;display:grid;grid-template-columns:repeat(4,1fr);gap:24px;box-shadow:0 30px 60px -40px rgba(0,0,0,.8)}
   .stat{text-align:center;position:relative}
-  .stat:not(:last-child)::after{content:"";position:absolute;right:0;top:14%;height:72%;width:1px;background:var(--border)}
+  .stat:not(:last-child)::after{content:"";position:absolute;inset-inline-end:0;top:14%;height:72%;width:1px;background:var(--border)}
   .stat .num{font-size:clamp(30px,4vw,46px);font-weight:900;letter-spacing:-.03em;line-height:1;
     background:linear-gradient(120deg,var(--primary),var(--secondary));-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
   .stat .lbl{margin-top:12px;font-size:14px;color:var(--muted-2)}
@@ -340,7 +340,7 @@
   .faq-wrap{max-width:780px;margin:0 auto}
   .faq-item{border:1px solid var(--border);border-radius:14px;margin-bottom:14px;background:var(--surface);overflow:hidden;transition:border-color .3s}
   .faq-item.open{border-color:rgba(61,214,163,.4)}
-  .faq-q{width:100%;background:none;border:none;color:var(--text);cursor:pointer;font-size:16px;font-weight:600;text-align:left;
+  .faq-q{width:100%;background:none;border:none;color:var(--text);cursor:pointer;font-size:16px;font-weight:600;text-align:right;
     padding:21px 24px;display:flex;align-items:center;justify-content:space-between;gap:16px}
   .faq-q .chev{flex:0 0 auto;transition:transform .35s var(--ease);color:var(--primary)}
   .faq-item.open .chev{transform:rotate(180deg)}
@@ -648,7 +648,7 @@
   @keyframes scan{0%{top:-30px}55%{top:178px}100%{top:178px}}
   .ai-fields{display:flex;flex-direction:column;gap:11px}
   .ai-chip{display:flex;align-items:center;gap:10px;background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:9px 13px;font-size:13px;color:var(--muted-2);opacity:1;animation:chipIn .6s var(--ease) both}
-  .ai-chip .ck{margin-left:auto;width:17px;height:17px;border-radius:50%;background:var(--success);display:grid;place-items:center;color:#06281d;font-size:10px;font-weight:900}
+  .ai-chip .ck{margin-inline-start:auto;width:17px;height:17px;border-radius:50%;background:var(--success);display:grid;place-items:center;color:#06281d;font-size:10px;font-weight:900}
   @keyframes chipIn{from{opacity:0;transform:translateX(-8px)}to{opacity:1;transform:none}}
   /* Source scene */
   .src-rows{display:flex;flex-direction:column;gap:11px;width:100%;max-width:340px}
@@ -684,7 +684,7 @@
   .seg span.on{background:linear-gradient(135deg,var(--primary),var(--secondary));color:#fff}
   .terms-card .due{font-size:13px;color:var(--muted-2)}
   .terms-card .due b{color:var(--text)}
-  .terms-card .due .auto{font-style:normal;font-size:10px;color:var(--secondary);border:1px solid rgba(143,232,201,.3);border-radius:5px;padding:2px 7px;margin-left:6px}
+  .terms-card .due .auto{font-style:normal;font-size:10px;color:var(--secondary);border:1px solid rgba(143,232,201,.3);border-radius:5px;padding:2px 7px;margin-inline-start:6px}
   /* Bulk scene */
   .bulk{width:100%;max-width:360px;position:relative}
   .brow{display:flex;align-items:center;gap:12px;background:var(--bg);border:1px solid var(--border);border-radius:11px;padding:13px 15px;margin-bottom:10px}
@@ -753,7 +753,7 @@
   .wk-bar{display:flex;align-items:center;gap:8px;padding:11px 15px;background:var(--surface-2);border-bottom:1px solid var(--border)}
   .wk-bar .dots{display:flex;gap:7px}
   .wk-bar .dots i{width:11px;height:11px;border-radius:50%;display:block}
-  .wk-url{margin-left:10px;font-size:12px;color:var(--muted-2);background:var(--bg);border:1px solid var(--border);padding:5px 16px;border-radius:7px;display:flex;align-items:center;gap:7px}
+  .wk-url{margin-inline-start:10px;font-size:12px;color:var(--muted-2);background:var(--bg);border:1px solid var(--border);padding:5px 16px;border-radius:7px;display:flex;align-items:center;gap:7px}
   .wk-url::before{content:"";width:10px;height:10px;border-radius:2px;background:linear-gradient(135deg,var(--primary),var(--secondary))}
   .wk-stage{position:relative;width:100%;padding:28px;background:var(--bg);min-height:220px;display:flex;flex-direction:column;gap:14px}
   .wk-kpi{display:grid;grid-template-columns:1fr 1fr;gap:10px}
@@ -766,7 +766,7 @@
   .wk-mini-spark i{flex:1;border-radius:3px 3px 0 0;background:linear-gradient(180deg,var(--primary),rgba(143,232,201,.25))}
   .wk-invoice-row{display:flex;align-items:center;gap:10px;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:11px 14px;font-size:13px;font-weight:600}
   .wk-invoice-row .wdot{width:8px;height:8px;border-radius:50%}
-  .wk-invoice-row .wamt{margin-right:auto;font-size:11px;color:var(--muted-2)}
+  .wk-invoice-row .wamt{margin-inline-end:auto;font-size:11px;color:var(--muted-2)}
   .wk-invoice-row .wbadge{font-size:10px;padding:3px 8px;border-radius:6px;font-weight:700}
   .wk-invoice-row .wbadge.due{background:rgba(224,169,61,.15);color:#E0A93D}
   .wk-invoice-row .wbadge.paid{background:rgba(217,169,63,.15);color:#3BD68C}
@@ -775,7 +775,7 @@
   .wk-scene-title{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:4px}
   .wk-src-row{display:flex;align-items:center;gap:10px;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:11px 14px;font-size:13px;font-weight:600}
   .wk-src-icon{width:28px;height:28px;border-radius:8px;display:grid;place-items:center;font-size:14px;background:var(--surface-2);flex:0 0 28px}
-  .wk-src-count{margin-left:auto;margin-right:8px;font-size:11px;color:var(--muted-2)}
+  .wk-src-count{margin-inline-start:auto;margin-inline-end:8px;font-size:11px;color:var(--muted-2)}
   .wk-src-total{font-size:12px;color:var(--muted-2);text-align:center;padding:6px 0}
   .wk-group-hdr{display:flex;justify-content:space-between;align-items:center;font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;padding:2px 4px}
   .wk-ghamt{color:var(--text);font-size:14px}
@@ -853,94 +853,97 @@
   "@graph": [
     {
       "@type": "Organization",
-      "@id": "https://gocashflow.co/#organization",
+      "@id": "https://gocashflow.co/he#organization",
       "name": "Cashflow",
       "url": "https://gocashflow.co/",
       "logo": "https://gocashflow.co/icon-512.png",
       "email": "hello@gocashflow.co",
       "areaServed": "IL",
-      "availableLanguage": ["en", "he"]
+      "availableLanguage": ["en", "he"],
+      "inLanguage": "he"
     },
     {
       "@type": "SoftwareApplication",
-      "@id": "https://gocashflow.co/#software",
+      "@id": "https://gocashflow.co/he#software",
       "name": "Cashflow",
-      "url": "https://gocashflow.co/",
+      "url": "https://gocashflow.co/he#pricing",
       "applicationCategory": "BusinessApplication",
       "operatingSystem": "Web",
-      "description": "Cashflow automatically collects, reads, and organizes every invoice you receive — from Gmail, WhatsApp, Google Drive, and Green Invoice — so you always know what you owe and when.",
-      "publisher": { "@id": "https://gocashflow.co/#organization" },
+      "inLanguage": "he",
+      "description": "Cashflow אוספת, קוראת ומארגנת אוטומטית כל חשבונית שאתם מקבלים — מ-Gmail, וואטסאפ, Google Drive וחשבונית ירוקה — כך שתמיד תדעו כמה אתם חייבים ומתי.",
+      "publisher": { "@id": "https://gocashflow.co/he#organization" },
       "offers": [
         {
           "@type": "Offer",
           "name": "Free",
           "price": "0",
           "priceCurrency": "ILS",
-          "url": "https://gocashflow.co/#pricing"
+          "url": "https://gocashflow.co/he#pricing"
         },
         {
           "@type": "Offer",
           "name": "Basic",
           "price": "99",
           "priceCurrency": "ILS",
-          "url": "https://gocashflow.co/#pricing"
+          "url": "https://gocashflow.co/he#pricing"
         },
         {
           "@type": "Offer",
           "name": "Pro",
           "price": "199",
           "priceCurrency": "ILS",
-          "url": "https://gocashflow.co/#pricing"
+          "url": "https://gocashflow.co/he#pricing"
         },
         {
           "@type": "Offer",
           "name": "Enterprise",
-          "url": "https://gocashflow.co/#pricing"
+          "url": "https://gocashflow.co/he#pricing"
         }
       ]
     },
     {
       "@type": "FAQPage",
-      "@id": "https://gocashflow.co/#faq",
+      "@id": "https://gocashflow.co/he#faq",
+      "inLanguage": "he",
       "mainEntity": [
         {
           "@type": "Question",
-          "name": "Does it support Hebrew invoices?",
+          "name": "האם המערכת תומכת בחשבוניות בעברית?",
           "acceptedAnswer": {
             "@type": "Answer",
-            "text": "Yes. Our AI extraction engine is specifically tuned for Israeli invoice formats, including Hebrew text, ח.פ./ע.מ. registration numbers, and DD/MM/YYYY date formats."
+            "text": "כן. מנוע חילוץ הנתונים שלנו מותאם במיוחד לפורמטים של חשבוניות ישראליות, כולל טקסט בעברית, מספרי ח.פ./ע.מ., ותבניות תאריך בפורמט DD/MM/YYYY."
           }
         },
         {
           "@type": "Question",
-          "name": "Is my data secure?",
+          "name": "האם הנתונים שלי מאובטחים?",
           "acceptedAnswer": {
             "@type": "Answer",
-            "text": "All data is stored in isolated, per-user databases with row-level security. File attachments are stored on encrypted cloud storage. We never share your data."
+            "text": "כל הנתונים מאוחסנים במסדי נתונים מבודדים לכל משתמש, עם אבטחה ברמת שורה (Row-Level Security). קבצים מצורפים מאוחסנים באחסון ענן מוצפן. אנחנו לעולם לא משתפים את הנתונים שלכם."
           }
         },
         {
           "@type": "Question",
-          "name": "How does the WhatsApp integration work?",
+          "name": "איך עובדת האינטגרציה עם WhatsApp?",
           "acceptedAnswer": {
             "@type": "Answer",
-            "text": "You forward invoice images or PDFs to a designated WhatsApp Business number. Our system receives them via webhook, extracts the data, and adds them to your dashboard automatically."
+            "text": "אתם מעבירים תמונות או קבצי PDF של חשבוניות למספר WhatsApp Business ייעודי. המערכת שלנו מקבלת אותם דרך webhook, מחלצת את הנתונים, ומוסיפה אותם ללוח הבקרה שלכם אוטומטית."
           }
         },
         {
           "@type": "Question",
-          "name": "Can I import existing invoices?",
+          "name": "האם אפשר לייבא חשבוניות קיימות?",
           "acceptedAnswer": {
             "@type": "Answer",
-            "text": "Yes. You can upload PDFs and images manually, or import a batch via CSV. Duplicate detection ensures clean data."
+            "text": "כן. אפשר להעלות קבצי PDF ותמונות באופן ידני, או לייבא קבוצה שלמה דרך קובץ CSV. זיהוי כפילויות שומר על ניקיון הנתונים."
           }
         },
         {
           "@type": "Question",
-          "name": "Do I need a developer to set it up?",
+          "name": "האם אני צריך מפתח כדי להגדיר את המערכת?",
           "acceptedAnswer": {
             "@type": "Answer",
-            "text": "No. The entire setup — including Google OAuth, WhatsApp webhook, and Green Invoice API key — is done through a guided UI with no code required."
+            "text": "לא. כל תהליך ההגדרה — כולל Google OAuth, webhook של WhatsApp ומפתח API של חשבונית ירוקה — מתבצע דרך ממשק מודרך, ללא צורך בקוד."
           }
         }
       ]
@@ -972,26 +975,27 @@
 <!-- NAV -->
 <nav id="nav">
   <div class="wrap nav-inner">
-    <a href="/" class="logo"><svg class="mark"><use href="#cashflowMark"/></svg> Cashflow</a>
+    <a href="/he" class="logo"><svg class="mark"><use href="#cashflowMark"/></svg> Cashflow</a>
     <div class="nav-links">
-      <a href="#features">Features</a>
-      <a href="#integrations">Integrations</a>
-      <a href="#pricing">Pricing</a>
-      <a href="#contact">Contact</a>
+      <a href="#features">תכונות</a>
+      <a href="#integrations">אינטגרציות</a>
+      <a href="#pricing">תמחור</a>
+      <a href="#contact">יצירת קשר</a>
     </div>
-    <a href="/he" hreflang="he" lang="he" class="nav-lang" style="font-size:14px;font-weight:500;color:var(--muted-2);margin-right:16px;transition:color .2s;" onmouseover="this.style.color='var(--text)'" onmouseout="this.style.color='var(--muted-2)'">עברית</a>
-    <a href="/login" class="nav-signin" style="font-size:14px;font-weight:500;color:var(--muted-2);margin-right:8px;transition:color .2s;" onmouseover="this.style.color='var(--text)'" onmouseout="this.style.color='var(--muted-2)'">Sign In</a>
-    <a class="btn btn-primary" href="/login">Get Started Free</a>
+    <a href="/" hreflang="en" lang="en" class="nav-lang" style="font-size:14px;font-weight:500;color:var(--muted-2);margin-inline-end:16px;transition:color .2s;" onmouseover="this.style.color='var(--text)'" onmouseout="this.style.color='var(--muted-2)'">English</a>
+    <a href="/login" class="nav-signin" style="font-size:14px;font-weight:500;color:var(--muted-2);margin-inline-end:8px;transition:color .2s;" onmouseover="this.style.color='var(--text)'" onmouseout="this.style.color='var(--muted-2)'">התחברות</a>
+    <a class="btn btn-primary" href="/login">התחילו בחינם</a>
     <!-- Mobile hamburger -->
-    <button id="mobileMenuBtn" aria-label="Open menu" style="display:none;background:none;border:1px solid var(--border);border-radius:8px;padding:8px 10px;color:var(--text);cursor:pointer;font-size:18px;line-height:1;">☰</button>
+    <button id="mobileMenuBtn" aria-label="פתיחת תפריט" style="display:none;background:none;border:1px solid var(--border);border-radius:8px;padding:8px 10px;color:var(--text);cursor:pointer;font-size:18px;line-height:1;">☰</button>
   </div>
   <!-- Mobile dropdown menu -->
   <div id="mobileMenu" style="display:none;flex-direction:column;gap:0;background:rgba(6,11,20,.97);backdrop-filter:blur(14px);border-top:1px solid var(--border);padding:12px 0;">
-    <a href="#features" style="padding:14px 24px;color:var(--muted-2);font-size:15px;font-weight:500;border-bottom:1px solid var(--border);">Features</a>
-    <a href="#integrations" style="padding:14px 24px;color:var(--muted-2);font-size:15px;font-weight:500;border-bottom:1px solid var(--border);">Integrations</a>
-    <a href="#pricing" style="padding:14px 24px;color:var(--muted-2);font-size:15px;font-weight:500;border-bottom:1px solid var(--border);">Pricing</a>
-    <a href="#contact" style="padding:14px 24px;color:var(--muted-2);font-size:15px;font-weight:500;border-bottom:1px solid var(--border);">Contact</a>
-    <a href="/login" style="padding:14px 24px;color:var(--primary);font-size:15px;font-weight:600;">Sign In →</a>
+    <a href="#features" style="padding:14px 24px;color:var(--muted-2);font-size:15px;font-weight:500;border-bottom:1px solid var(--border);">תכונות</a>
+    <a href="#integrations" style="padding:14px 24px;color:var(--muted-2);font-size:15px;font-weight:500;border-bottom:1px solid var(--border);">אינטגרציות</a>
+    <a href="#pricing" style="padding:14px 24px;color:var(--muted-2);font-size:15px;font-weight:500;border-bottom:1px solid var(--border);">תמחור</a>
+    <a href="#contact" style="padding:14px 24px;color:var(--muted-2);font-size:15px;font-weight:500;border-bottom:1px solid var(--border);">יצירת קשר</a>
+    <a href="/" hreflang="en" lang="en" style="padding:14px 24px;color:var(--muted-2);font-size:15px;font-weight:500;border-bottom:1px solid var(--border);">English</a>
+    <a href="/login" style="padding:14px 24px;color:var(--primary);font-size:15px;font-weight:600;">התחברות ←</a>
   </div>
 </nav>
 
@@ -1002,18 +1006,18 @@
 
   <div class="wrap hero-grid">
     <div class="hero-copy">
-      <div class="hero-pill"><span class="dot"></span> Now live · Sign up free in minutes</div>
-      <h1>Stop Chasing Invoices. <span class="accent">Start Managing Cash Flow.</span></h1>
-      <p class="hero-tagline-heb">All your invoices. One place. Fully automated.</p>
-      <p class="hero-sub">Cashflow automatically collects, reads, and organizes every invoice you receive — from Gmail, WhatsApp, Google Drive, and Green Invoice — so you always know what you owe and when.</p>
+      <div class="hero-pill"><span class="dot"></span> פעיל עכשיו · הרשמה חינם תוך דקות</div>
+      <h1>תפסיקו לרדוף אחרי חשבוניות. <span class="accent">תתחילו לנהל תזרים מזומנים.</span></h1>
+      <p class="hero-tagline-heb">כל החשבוניות שלכם. במקום אחד. אוטומטי לגמרי.</p>
+      <p class="hero-sub">Cashflow אוספת, קוראת ומארגנת אוטומטית כל חשבונית שאתם מקבלים — מ-Gmail, וואטסאפ, Google Drive וחשבונית ירוקה — כך שתמיד תדעו כמה אתם חייבים ומתי.</p>
       <div class="hero-actions">
-        <a class="btn btn-primary btn-lg" href="/login">Get Started Free</a>
-        <a href="#pricing" class="btn btn-ghost btn-lg">View Pricing</a>
+        <a class="btn btn-primary btn-lg" href="/login">התחילו בחינם</a>
+        <a href="#pricing" class="btn btn-ghost btn-lg">צפייה במחירים</a>
       </div>
       <div class="trust-line">
-        <span>Trusted by Israeli businesses</span><span class="sep"></span>
-        <span>Hebrew &amp; English</span><span class="sep"></span>
-        <span>GDPR-ready</span>
+        <span>מהימן על ידי עסקים ישראליים</span><span class="sep"></span>
+        <span>עברית ואנגלית</span><span class="sep"></span>
+        <span>תואם GDPR</span>
       </div>
 
       <!-- Impact metrics row -->
@@ -1021,24 +1025,24 @@
         <div class="hmet">
           <div class="hmet-val" data-count="3.2" data-suffix="h">0h</div>
           <div class="hmet-info">
-            <span class="hmet-label">Saved per week</span>
-            <span class="hmet-sub">avg. across active users</span>
+            <span class="hmet-label">שעות שנחסכות בשבוע</span>
+            <span class="hmet-sub">בממוצע בקרב משתמשים פעילים</span>
           </div>
         </div>
         <div class="hmet-divider"></div>
         <div class="hmet">
           <div class="hmet-val" data-count="94" data-suffix="%">0%</div>
           <div class="hmet-info">
-            <span class="hmet-label">Fewer late payments</span>
-            <span class="hmet-sub">vs. manual tracking</span>
+            <span class="hmet-label">פחות תשלומים באיחור</span>
+            <span class="hmet-sub">לעומת מעקב ידני</span>
           </div>
         </div>
         <div class="hmet-divider"></div>
         <div class="hmet">
           <div class="hmet-val" data-count="8" data-suffix="s">0s</div>
           <div class="hmet-info">
-            <span class="hmet-label">Invoice processed</span>
-            <span class="hmet-sub">from upload to dashboard</span>
+            <span class="hmet-label">זמן עיבוד חשבונית</span>
+            <span class="hmet-sub">מהעלאה ועד ללוח הבקרה</span>
           </div>
         </div>
       </div>
@@ -1050,7 +1054,7 @@
         <div class="source-chip s1"><span class="ic" style="background:rgba(234,67,53,.16);color:#ea4335">✉️</span> Gmail</div>
         <div class="source-chip s2"><span class="ic" style="background:rgba(52,168,83,.16);color:#34a853">📁</span> Drive</div>
         <div class="source-chip s3"><span class="ic" style="background:rgba(37,211,102,.16);color:#25d366">💬</span> WhatsApp</div>
-        <div class="source-chip s4"><span class="ic" style="background:rgba(217,169,63,.16);color:#3BD68C">🧾</span> Green Invoice</div>
+        <div class="source-chip s4"><span class="ic" style="background:rgba(217,169,63,.16);color:#3BD68C">🧾</span> חשבונית ירוקה</div>
 
         <svg style="position:absolute;inset:0;width:100%;height:100%;z-index:1" viewBox="0 0 400 460" fill="none" preserveAspectRatio="none">
           <defs><linearGradient id="ln" x1="0" y1="0" x2="1" y2="1">
@@ -1063,21 +1067,21 @@
         </svg>
 
         <div class="dash-card" id="dashCard">
-          <div class="sync-toast" id="syncToast"><span class="check">✓</span><span id="syncText">New invoice synced</span></div>
+          <div class="sync-toast" id="syncToast"><span class="check">✓</span><span id="syncText">חשבונית חדשה סונכרנה</span></div>
           <div class="dash-head">
-            <span class="title">Cash Flow Dashboard</span>
-            <span class="live">LIVE</span>
+            <span class="title">לוח בקרת תזרים מזומנים</span>
+            <span class="live">חי</span>
           </div>
           <div class="kpi-row">
-            <div class="kpi"><div class="label">Outstanding</div><div class="val" data-count="84210" data-prefix="₪">₪0</div></div>
-            <div class="kpi"><div class="label">Overdue</div><div class="val warn" data-count="6400" data-prefix="₪">₪0</div></div>
-            <div class="kpi"><div class="label">Next month</div><div class="val" data-count="41780" data-prefix="₪">₪0</div></div>
-            <div class="kpi"><div class="label">Paid (MTD)</div><div class="val ok" data-count="129500" data-prefix="₪">₪0</div></div>
+            <div class="kpi"><div class="label">יתרה לתשלום</div><div class="val" data-count="84210" data-prefix="₪">₪0</div></div>
+            <div class="kpi"><div class="label">באיחור</div><div class="val warn" data-count="6400" data-prefix="₪">₪0</div></div>
+            <div class="kpi"><div class="label">חודש הבא</div><div class="val" data-count="41780" data-prefix="₪">₪0</div></div>
+            <div class="kpi"><div class="label">שולם החודש</div><div class="val ok" data-count="129500" data-prefix="₪">₪0</div></div>
           </div>
           <div class="inv-list" id="invList">
             <div class="inv-line"><span class="who"><span class="sw" style="background:#3DD6A3"></span>Spotify IL</span><span class="amt">₪1,290</span></div>
-            <div class="inv-line"><span class="who"><span class="sw" style="background:#8FE8C9"></span>Cohen Electric</span><span class="amt">₪3,850</span></div>
-            <div class="inv-line"><span class="who"><span class="sw" style="background:#E8604C"></span>Packaging Co.</span><span class="amt">₪6,400</span></div>
+            <div class="inv-line"><span class="who"><span class="sw" style="background:#8FE8C9"></span>כהן חשמל</span><span class="amt">₪3,850</span></div>
+            <div class="inv-line"><span class="who"><span class="sw" style="background:#E8604C"></span>אריזות בע"מ</span><span class="amt">₪6,400</span></div>
           </div>
         </div>
       </div>
@@ -1091,81 +1095,81 @@
     <div class="prob-grid">
       <div class="prob-card reveal">
         <div class="prob-card-inner">
-          <div class="prob-stat">4+</div>
-          <div class="prob-stat-label">places per invoice</div>
+          <div class="prob-stat">+4</div>
+          <div class="prob-stat-label">מקומות לכל חשבונית</div>
           <div class="prob-icon-wrap"><svg viewBox="0 0 24 24" fill="none" stroke="#E8604C" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"/><line x1="12" y1="11" x2="12" y2="17"/><line x1="9" y1="14" x2="15" y2="14"/></svg></div>
-          <h3>Invoices everywhere</h3><p>Emails, WhatsApp messages, Google Drive folders, and accountant portals. Nothing is in one place.</p>
+          <h3>חשבוניות בכל מקום</h3><p>מיילים, הודעות וואטסאפ, תיקיות ב-Google Drive ופורטלים של רואי חשבון. שום דבר לא נמצא במקום אחד.</p>
         </div>
       </div>
       <div class="prob-card reveal d1">
         <div class="prob-card-inner">
           <div class="prob-stat">23%</div>
-          <div class="prob-stat-label">of invoices paid late</div>
+          <div class="prob-stat-label">מהחשבוניות משולמות באיחור</div>
           <div class="prob-icon-wrap"><svg viewBox="0 0 24 24" fill="none" stroke="#E0A93D" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15.5 14"/><path d="M16.5 3.5l1 2M7.5 3.5l-1 2"/></svg></div>
-          <h3>Due dates slip through</h3><p>Without a single view of what's due, overdue invoices damage supplier relationships and your credit.</p>
+          <h3>תאריכי תשלום מתפספסים</h3><p>בלי תמונה מרוכזת של מה שצריך לשלם, חשבוניות באיחור פוגעות ביחסים עם ספקים ובדירוג האשראי שלכם.</p>
         </div>
       </div>
       <div class="prob-card reveal d2">
         <div class="prob-card-inner">
-          <div class="prob-stat">0<span style="font-size:24px;font-weight:700;opacity:.7"> days</span></div>
-          <div class="prob-stat-label">advance notice</div>
+          <div class="prob-stat">0<span style="font-size:24px;font-weight:700;opacity:.7"> ימים</span></div>
+          <div class="prob-stat-label">התראה מראש</div>
           <div class="prob-icon-wrap"><svg viewBox="0 0 24 24" fill="none" stroke="#3DD6A3" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19"/><path d="M1 1l22 22"/></svg></div>
-          <h3>No cash flow visibility</h3><p>You never know next month's total payables until the last minute — and surprises hurt.</p>
+          <h3>אין ראות תזרימית</h3><p>אתם לא יודעים כמה תצטרכו לשלם בחודש הבא עד הרגע האחרון — והפתעות כואבות.</p>
         </div>
       </div>
     </div>
-    <p class="prob-solve reveal">Cashflow solves all three — <b>automatically.</b></p>
+    <p class="prob-solve reveal">Cashflow פותרת את שלוש הבעיות — <b>אוטומטית.</b></p>
   </div>
 </section>
 
 <!-- FEATURES -->
 <section class="features" id="features">
   <div class="wrap">
-    <div class="section-head reveal" style="text-align:center;margin-left:auto;margin-right:auto"><span class="eyebrow">What you get</span><h2 class="section-title">Less Chasing. More Knowing.</h2><p>Eight things Cashflow does for you automatically — hover any one to see it work.</p></div>
+    <div class="section-head reveal" style="text-align:center;margin-left:auto;margin-right:auto"><span class="eyebrow">מה מקבלים</span><h2 class="section-title">פחות רדיפה. יותר ידיעה.</h2><p>שמונה דברים ש-Cashflow עושה בשבילכם אוטומטית — עברו עם העכבר על כל אחד כדי לראות אותו בפעולה.</p></div>
     <svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs><linearGradient id="fGrad" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#3DD6A3"/><stop offset="1" stop-color="#8FE8C9"/></linearGradient></defs></svg>
     <div class="fx reveal" id="fx">
       <div class="fx-list">
-        <div class="fx-item active" data-i="0"><div class="fx-ic"><svg viewBox="0 0 24 24" fill="none" stroke="#3DD6A3" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2h7l5 5v15H6z"/><path d="M13 2v5h5"/><path d="M9.5 12.3l.8 1.7 1.7.8-1.7.8-.8 1.7-.8-1.7-1.7-.8 1.7-.8z"/></svg></div><div class="fx-tx"><h3>AI-Powered Invoice Extraction</h3><p>Reads PDFs and images and pulls out supplier, amount, date and due date — even Hebrew and rotated scans.</p></div></div><div class="fx-item" data-i="1"><div class="fx-ic"><svg viewBox="0 0 24 24" fill="none" stroke="#3DD6A3" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 14l2.5 4.5h11L20 14"/><path d="M4 14V5a1 1 0 011-1h14a1 1 0 011 1v9"/><path d="M12 4.5v7m0 0l-2.5-2.5M12 11.5l2.5-2.5"/></svg></div><div class="fx-tx"><h3>Multi-Source Ingestion</h3><p>Pulls invoices automatically from Gmail, Drive, WhatsApp Business and Green Invoice on your schedule.</p></div></div><div class="fx-item" data-i="2"><div class="fx-ic"><svg viewBox="0 0 24 24" fill="none" stroke="#3DD6A3" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 20h18"/><path d="M6.5 20v-6"/><path d="M12 20V5"/><path d="M17.5 20v-9"/></svg></div><div class="fx-tx"><h3>Live Dashboard KPIs</h3><p>Outstanding, overdue, next-month projection and total paid — updated in real time.</p></div></div><div class="fx-item" data-i="3"><div class="fx-ic"><svg viewBox="0 0 24 24" fill="none" stroke="#3DD6A3" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 9.5h18M8 3v4M16 3v4"/></svg></div><div class="fx-tx"><h3>Cash Flow Calendar</h3><p>Every due payment on a calendar. Know exactly what falls due this week, month and quarter.</p></div></div><div class="fx-item" data-i="4"><div class="fx-ic"><svg viewBox="0 0 24 24" fill="none" stroke="#3DD6A3" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></svg></div><div class="fx-tx"><h3>Supplier Payment Terms</h3><p>Set terms per supplier (immediate, Net 30/45/75 or custom) and due dates calculate themselves.</p></div></div><div class="fx-item" data-i="5"><div class="fx-ic"><svg viewBox="0 0 24 24" fill="none" stroke="#3DD6A3" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 13l3.5 3.5L13 9"/><path d="M11 15.5l1.5 1.5 7-7.5"/></svg></div><div class="fx-tx"><h3>Bulk Payment Actions</h3><p>Select a month, review everything, and mark it all paid in one click. Built for speed.</p></div></div><div class="fx-item" data-i="6"><div class="fx-ic"><svg viewBox="0 0 24 24" fill="none" stroke="#3DD6A3" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="11" height="11" rx="2"/><path d="M8.5 15.5V18a2 2 0 002 2H18a2 2 0 002-2v-7.5a2 2 0 00-2-2h-2.5"/></svg></div><div class="fx-tx"><h3>Duplicate Detection</h3><p>File hashing means the same invoice from two sources is never counted twice.</p></div></div><div class="fx-item" data-i="7"><div class="fx-ic"><svg viewBox="0 0 24 24" fill="none" stroke="#3DD6A3" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6h11M9 12h11M9 18h11"/><path d="M3 6l1.3 1.3L6.5 4.7"/><path d="M3 12l1.3 1.3L6.5 10.7"/><path d="M3 18l1.3 1.3L6.5 16.7"/></svg></div><div class="fx-tx"><h3>Full Audit Trail</h3><p>Every synced invoice logs its origin, timestamp and outcome — a clean trail for your accountant.</p></div></div>
+        <div class="fx-item active" data-i="0"><div class="fx-ic"><svg viewBox="0 0 24 24" fill="none" stroke="#3DD6A3" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2h7l5 5v15H6z"/><path d="M13 2v5h5"/><path d="M9.5 12.3l.8 1.7 1.7.8-1.7.8-.8 1.7-.8-1.7-1.7-.8 1.7-.8z"/></svg></div><div class="fx-tx"><h3>חילוץ נתונים מבוסס AI</h3><p>קורא PDF ותמונות ומחלץ ספק, סכום, תאריך ותאריך תשלום — גם בעברית וגם בסריקות מסובבות.</p></div></div><div class="fx-item" data-i="1"><div class="fx-ic"><svg viewBox="0 0 24 24" fill="none" stroke="#3DD6A3" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 14l2.5 4.5h11L20 14"/><path d="M4 14V5a1 1 0 011-1h14a1 1 0 011 1v9"/><path d="M12 4.5v7m0 0l-2.5-2.5M12 11.5l2.5-2.5"/></svg></div><div class="fx-tx"><h3>קליטה ממקורות מרובים</h3><p>מושכת חשבוניות אוטומטית מ-Gmail, Drive, WhatsApp Business וחשבונית ירוקה לפי לוח הזמנים שתגדירו.</p></div></div><div class="fx-item" data-i="2"><div class="fx-ic"><svg viewBox="0 0 24 24" fill="none" stroke="#3DD6A3" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 20h18"/><path d="M6.5 20v-6"/><path d="M12 20V5"/><path d="M17.5 20v-9"/></svg></div><div class="fx-tx"><h3>מדדי לוח בקרה בזמן אמת</h3><p>יתרה לתשלום, באיחור, תחזית לחודש הבא וסה"כ ששולם — מתעדכן בזמן אמת.</p></div></div><div class="fx-item" data-i="3"><div class="fx-ic"><svg viewBox="0 0 24 24" fill="none" stroke="#3DD6A3" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 9.5h18M8 3v4M16 3v4"/></svg></div><div class="fx-tx"><h3>לוח שנה לתזרים מזומנים</h3><p>כל תשלום עתידי מופיע בלוח שנה. דעו בדיוק מה צריך לשלם השבוע, החודש והרבעון.</p></div></div><div class="fx-item" data-i="4"><div class="fx-ic"><svg viewBox="0 0 24 24" fill="none" stroke="#3DD6A3" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></svg></div><div class="fx-tx"><h3>תנאי תשלום לספקים</h3><p>הגדירו תנאים לכל ספק (מיידי, שוטף+30/45/75 או מותאם אישית) ותאריכי התשלום יחושבו לבד.</p></div></div><div class="fx-item" data-i="5"><div class="fx-ic"><svg viewBox="0 0 24 24" fill="none" stroke="#3DD6A3" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 13l3.5 3.5L13 9"/><path d="M11 15.5l1.5 1.5 7-7.5"/></svg></div><div class="fx-tx"><h3>פעולות תשלום מרוכזות</h3><p>בחרו חודש, סקרו הכל, וסמנו הכל כשולם בלחיצה אחת. בנוי למהירות.</p></div></div><div class="fx-item" data-i="6"><div class="fx-ic"><svg viewBox="0 0 24 24" fill="none" stroke="#3DD6A3" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="11" height="11" rx="2"/><path d="M8.5 15.5V18a2 2 0 002 2H18a2 2 0 002-2v-7.5a2 2 0 00-2-2h-2.5"/></svg></div><div class="fx-tx"><h3>זיהוי כפילויות</h3><p>טביעת אצבע לכל קובץ מבטיחה שאותה חשבונית משני מקורות לעולם לא תיספר פעמיים.</p></div></div><div class="fx-item" data-i="7"><div class="fx-ic"><svg viewBox="0 0 24 24" fill="none" stroke="#3DD6A3" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6h11M9 12h11M9 18h11"/><path d="M3 6l1.3 1.3L6.5 4.7"/><path d="M3 12l1.3 1.3L6.5 10.7"/><path d="M3 18l1.3 1.3L6.5 16.7"/></svg></div><div class="fx-tx"><h3>יומן ביקורת מלא</h3><p>כל חשבונית שמסונכרנת מתועדת עם מקור, זמן ותוצאה — שובל נקי לרואה החשבון שלכם.</p></div></div>
       </div>
       <div class="fx-stage"><div class="fx-stage-inner">
 
         <div class="fx-scene fx-ai active">
           <div class="ai-doc"><div class="ai-scan"></div><div class="dl t"></div><div class="dl"></div><div class="dl s"></div><div class="dl"></div><div class="dl s"></div><div class="dl tot"></div></div>
           <div class="ai-fields">
-            <div class="ai-chip" style="animation-delay:.25s"><span>Supplier</span><i class="ck">&#10003;</i></div>
-            <div class="ai-chip" style="animation-delay:.7s"><span>Amount &nbsp;&#8362;3,850</span><i class="ck">&#10003;</i></div>
-            <div class="ai-chip" style="animation-delay:1.15s"><span>Due &nbsp;15/05/2026</span><i class="ck">&#10003;</i></div>
+            <div class="ai-chip" style="animation-delay:.25s"><span>ספק</span><i class="ck">&#10003;</i></div>
+            <div class="ai-chip" style="animation-delay:.7s"><span>סכום &nbsp;&#8362;3,850</span><i class="ck">&#10003;</i></div>
+            <div class="ai-chip" style="animation-delay:1.15s"><span>לתשלום &nbsp;15/05/2026</span><i class="ck">&#10003;</i></div>
           </div>
         </div>
 
         <div class="fx-scene fx-src">
           <div class="src-rows">
-            <div class="src-row"><span class="d" style="background:#ea4335"></span>Gmail<span class="flex"></span><span class="cnt">3 new</span><i class="ck">&#10003;</i></div>
-            <div class="src-row"><span class="d" style="background:#34a853"></span>Google Drive<span class="flex"></span><span class="cnt">1 new</span><i class="ck">&#10003;</i></div>
-            <div class="src-row"><span class="d" style="background:#25d366"></span>WhatsApp<span class="flex"></span><span class="cnt">2 new</span><i class="ck">&#10003;</i></div>
-            <div class="src-row"><span class="d" style="background:#3BD68C"></span>Green Invoice<span class="flex"></span><span class="cnt">5 new</span><i class="ck">&#10003;</i></div>
+            <div class="src-row"><span class="d" style="background:#ea4335"></span>Gmail<span class="flex"></span><span class="cnt">3 חדשות</span><i class="ck">&#10003;</i></div>
+            <div class="src-row"><span class="d" style="background:#34a853"></span>Google Drive<span class="flex"></span><span class="cnt">חדשה אחת</span><i class="ck">&#10003;</i></div>
+            <div class="src-row"><span class="d" style="background:#25d366"></span>WhatsApp<span class="flex"></span><span class="cnt">2 חדשות</span><i class="ck">&#10003;</i></div>
+            <div class="src-row"><span class="d" style="background:#3BD68C"></span>חשבונית ירוקה<span class="flex"></span><span class="cnt">5 חדשות</span><i class="ck">&#10003;</i></div>
           </div>
         </div>
 
         <div class="fx-scene fx-kpi">
           <div class="kpi-grid">
-            <div class="kt"><div class="k">Outstanding</div><div class="v" style="color:#3DD6A3">&#8362;95,858</div></div>
-            <div class="kt"><div class="k">Overdue</div><div class="v" style="color:#E8604C">&#8362;47,313</div></div>
-            <div class="kt"><div class="k">Next month</div><div class="v" style="color:#E0A93D">&#8362;48,544</div></div>
-            <div class="kt"><div class="k">Total paid</div><div class="v" style="color:#3BD68C">&#8362;18,299</div></div>
+            <div class="kt"><div class="k">יתרה לתשלום</div><div class="v" style="color:#3DD6A3">&#8362;95,858</div></div>
+            <div class="kt"><div class="k">באיחור</div><div class="v" style="color:#E8604C">&#8362;47,313</div></div>
+            <div class="kt"><div class="k">חודש הבא</div><div class="v" style="color:#E0A93D">&#8362;48,544</div></div>
+            <div class="kt"><div class="k">סה"כ שולם</div><div class="v" style="color:#3BD68C">&#8362;18,299</div></div>
           </div>
           <div class="spark"><i style="height:40%"></i><i style="height:70%"></i><i style="height:52%"></i><i style="height:88%"></i><i style="height:64%"></i><i style="height:96%"></i></div>
         </div>
 
         <div class="fx-scene fx-cal">
-          <div class="cal"><div class="cal-h">May 2026</div><div class="cal-w"><span>S</span><span>M</span><span>T</span><span>W</span><span>T</span><span>F</span><span>S</span></div><div class="cal-g"><div class="cell">1</div><div class="cell">2</div><div class="cell">3</div><div class="cell">4</div><div class="cell">5</div><div class="cell">6</div><div class="cell">7</div><div class="cell">8</div><div class="cell due">9</div><div class="cell">10</div><div class="cell">11</div><div class="cell">12</div><div class="cell">13</div><div class="cell">14</div><div class="cell today">15</div><div class="cell">16</div><div class="cell">17</div><div class="cell">18</div><div class="cell">19</div><div class="cell">20</div><div class="cell">21</div><div class="cell due">22</div><div class="cell">23</div><div class="cell">24</div><div class="cell">25</div><div class="cell">26</div><div class="cell">27</div><div class="cell due">28</div><div class="cell">29</div><div class="cell">30</div><div class="cell">31</div><div class="cell off"></div><div class="cell off"></div><div class="cell off"></div><div class="cell off"></div></div></div>
+          <div class="cal"><div class="cal-h">מאי 2026</div><div class="cal-w"><span>א</span><span>ב</span><span>ג</span><span>ד</span><span>ה</span><span>ו</span><span>ש</span></div><div class="cal-g"><div class="cell">1</div><div class="cell">2</div><div class="cell">3</div><div class="cell">4</div><div class="cell">5</div><div class="cell">6</div><div class="cell">7</div><div class="cell">8</div><div class="cell due">9</div><div class="cell">10</div><div class="cell">11</div><div class="cell">12</div><div class="cell">13</div><div class="cell">14</div><div class="cell today">15</div><div class="cell">16</div><div class="cell">17</div><div class="cell">18</div><div class="cell">19</div><div class="cell">20</div><div class="cell">21</div><div class="cell due">22</div><div class="cell">23</div><div class="cell">24</div><div class="cell">25</div><div class="cell">26</div><div class="cell">27</div><div class="cell due">28</div><div class="cell">29</div><div class="cell">30</div><div class="cell">31</div><div class="cell off"></div><div class="cell off"></div><div class="cell off"></div><div class="cell off"></div></div></div>
         </div>
 
         <div class="fx-scene fx-terms">
           <div class="terms-card">
-            <div class="trow"><span class="av"></span><b>Supplier terms</b></div>
-            <div class="seg"><span>Immediate</span><span>+30</span><span class="on">+45</span><span>+75</span></div>
-            <div class="due">Invoice 31/03 &rarr; <b>Due 15/05/2026</b> <i class="auto">auto</i></div>
+            <div class="trow"><span class="av"></span><b>תנאי ספק</b></div>
+            <div class="seg"><span>מיידי</span><span>+30</span><span class="on">+45</span><span>+75</span></div>
+            <div class="due">חשבונית 31/03 &larr; <b>לתשלום 15/05/2026</b> <i class="auto">אוטומטי</i></div>
           </div>
         </div>
 
@@ -1174,7 +1178,7 @@
             <div class="brow"><i class="cb">&#10003;</i><span class="bar"></span><span class="amt">&#8362;7,385</span></div>
             <div class="brow"><i class="cb">&#10003;</i><span class="bar"></span><span class="amt">&#8362;1,005</span></div>
             <div class="brow"><i class="cb">&#10003;</i><span class="bar"></span><span class="amt">&#8362;212</span></div>
-            <div class="bpay">Pay 5 &middot; &#8362;10,655 <span>&rarr;</span></div>
+            <div class="bpay">תשלום 5 &middot; &#8362;10,655 <span>&larr;</span></div>
           </div>
         </div>
 
@@ -1185,25 +1189,25 @@
               <div class="dc-ln w80"></div><div class="dc-ln w55"></div><div class="dc-ln w70"></div>
               <div class="dc-divider"></div>
               <div class="dc-amt">₪3,450</div>
-              <div class="dc-src">from Gmail</div>
+              <div class="dc-src">מ-Gmail</div>
             </div>
             <div class="dcard b">
               <div class="dc-hdr"></div>
               <div class="dc-ln w80"></div><div class="dc-ln w55"></div><div class="dc-ln w70"></div>
               <div class="dc-divider"></div>
               <div class="dc-amt">₪3,450</div>
-              <div class="dc-src">from Drive ✓</div>
+              <div class="dc-src">מ-Drive ✓</div>
             </div>
-            <div class="dbadge"><i>&#10003;</i> Duplicate caught &mdash; counted once</div>
+            <div class="dbadge"><i>&#10003;</i> כפילות זוהתה &mdash; נספרה פעם אחת</div>
           </div>
         </div>
 
         <div class="fx-scene fx-audit">
           <div class="log">
-            <div class="lrow"><span class="d" style="background:#25d366"></span><b>WhatsApp</b> &middot; 09:24 <span class="flex"></span><span class="ok">added</span></div>
-            <div class="lrow"><span class="d" style="background:#ea4335"></span><b>Gmail</b> &middot; 09:25 <span class="flex"></span><span class="ok">added</span></div>
-            <div class="lrow"><span class="d" style="background:#34a853"></span><b>Drive</b> &middot; 09:27 <span class="flex"></span><span class="skip">duplicate skipped</span></div>
-            <div class="lrow"><span class="d" style="background:#3BD68C"></span><b>Green Invoice</b> &middot; 09:31 <span class="flex"></span><span class="ok">added</span></div>
+            <div class="lrow"><span class="d" style="background:#25d366"></span><b>WhatsApp</b> &middot; 09:24 <span class="flex"></span><span class="ok">נוסף</span></div>
+            <div class="lrow"><span class="d" style="background:#ea4335"></span><b>Gmail</b> &middot; 09:25 <span class="flex"></span><span class="ok">נוסף</span></div>
+            <div class="lrow"><span class="d" style="background:#34a853"></span><b>Drive</b> &middot; 09:27 <span class="flex"></span><span class="skip">כפילות דולגה</span></div>
+            <div class="lrow"><span class="d" style="background:#3BD68C"></span><b>חשבונית ירוקה</b> &middot; 09:31 <span class="flex"></span><span class="ok">נוסף</span></div>
           </div>
         </div>
 
@@ -1215,7 +1219,7 @@
 <!-- INTEGRATIONS -->
 <section class="integrations" id="integrations">
   <div class="wrap">
-    <div class="section-head reveal" style="text-align:center;margin-left:auto;margin-right:auto"><span class="eyebrow">Integrations</span><h2 class="section-title">Connects to the Tools You Already Use</h2></div>
+    <div class="section-head reveal" style="text-align:center;margin-left:auto;margin-right:auto"><span class="eyebrow">אינטגרציות</span><h2 class="section-title">מתחברת לכלים שאתם כבר משתמשים בהם</h2></div>
     <div class="ig-hub reveal" id="igHub">
       <svg class="ig-lines" viewBox="0 0 800 440" preserveAspectRatio="none" aria-hidden="true">
         <defs><linearGradient id="igln" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#3DD6A3"/><stop offset="1" stop-color="#8FE8C9"/></linearGradient></defs>
@@ -1223,10 +1227,10 @@
         <circle r="3.5" fill="#8FE8C9" opacity=".9"><animateMotion dur="2.4s" begin="0.0s" repeatCount="indefinite"><mpath href="#igp0"/></animateMotion></circle><circle r="3.5" fill="#8FE8C9" opacity=".9"><animateMotion dur="2.4s" begin="0.6s" repeatCount="indefinite"><mpath href="#igp1"/></animateMotion></circle><circle r="3.5" fill="#8FE8C9" opacity=".9"><animateMotion dur="2.4s" begin="1.2s" repeatCount="indefinite"><mpath href="#igp2"/></animateMotion></circle><circle r="3.5" fill="#8FE8C9" opacity=".9"><animateMotion dur="2.4s" begin="1.8s" repeatCount="indefinite"><mpath href="#igp3"/></animateMotion></circle>
       </svg>
       <div class="ig-core"><svg viewBox="0 0 32 32"><use href="#cashflowMark"/></svg></div>
-      <div class="ig-sat" data-i="0" style="left:22%;top:21.591%"><div class="badge"><svg viewBox="0 0 24 24"><rect x="2.5" y="5" width="19" height="14" rx="2.5" fill="#fff"/><path d="M3 7l9 6 9-6" fill="none" stroke="#ea4335" stroke-width="2.2" stroke-linejoin="round"/></svg></div><div class="lbl">Gmail</div></div><div class="ig-sat" data-i="1" style="left:78%;top:21.591%"><div class="badge"><svg viewBox="0 0 24 24"><polygon points="8,2 16,2 22,13 14,13" fill="#4285f4"/><polygon points="2,13 8,2 12,9 6,20" fill="#34a853"/><polygon points="6,20 22,13 18,20" fill="#fbbc04"/></svg></div><div class="lbl">Drive</div></div><div class="ig-sat" data-i="2" style="left:22%;top:78.409%"><div class="badge"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" fill="#25d366"/><path d="M8.6 7.6c2.6-1.2 6.3-.2 7.2 3 .7 2.6-.9 5.1-3.4 5.6-1.1.2-2.1 0-3-.5l-2.2.6.6-2.1c-1.2-1.8-1-4.2.8-5.6z" fill="none" stroke="#fff" stroke-width="1.4"/><path d="M10 10.2c.3 1.9 1.4 3 3.2 3.4l.7-1-1.4-.7-.6.6c-.7-.3-1.1-.8-1.4-1.5l.6-.6-.6-1.4z" fill="#fff"/></svg></div><div class="lbl">WhatsApp</div></div><div class="ig-sat" data-i="3" style="left:78%;top:78.409%"><div class="badge"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="5" fill="#3BD68C"/><path d="M7.8 12.4l2.6 2.6 5.8-6.2" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></div><div class="lbl">Green Invoice</div></div>
+      <div class="ig-sat" data-i="0" style="left:22%;top:21.591%"><div class="badge"><svg viewBox="0 0 24 24"><rect x="2.5" y="5" width="19" height="14" rx="2.5" fill="#fff"/><path d="M3 7l9 6 9-6" fill="none" stroke="#ea4335" stroke-width="2.2" stroke-linejoin="round"/></svg></div><div class="lbl">Gmail</div></div><div class="ig-sat" data-i="1" style="left:78%;top:21.591%"><div class="badge"><svg viewBox="0 0 24 24"><polygon points="8,2 16,2 22,13 14,13" fill="#4285f4"/><polygon points="2,13 8,2 12,9 6,20" fill="#34a853"/><polygon points="6,20 22,13 18,20" fill="#fbbc04"/></svg></div><div class="lbl">Drive</div></div><div class="ig-sat" data-i="2" style="left:22%;top:78.409%"><div class="badge"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" fill="#25d366"/><path d="M8.6 7.6c2.6-1.2 6.3-.2 7.2 3 .7 2.6-.9 5.1-3.4 5.6-1.1.2-2.1 0-3-.5l-2.2.6.6-2.1c-1.2-1.8-1-4.2.8-5.6z" fill="none" stroke="#fff" stroke-width="1.4"/><path d="M10 10.2c.3 1.9 1.4 3 3.2 3.4l.7-1-1.4-.7-.6.6c-.7-.3-1.1-.8-1.4-1.5l.6-.6-.6-1.4z" fill="#fff"/></svg></div><div class="lbl">WhatsApp</div></div><div class="ig-sat" data-i="3" style="left:78%;top:78.409%"><div class="badge"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="5" fill="#3BD68C"/><path d="M7.8 12.4l2.6 2.6 5.8-6.2" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></div><div class="lbl">חשבונית ירוקה</div></div>
     </div>
-    <p class="ig-caption reveal" id="igCap">Cashflow pulls invoices in automatically from every source &mdash; hover a logo to see how.</p>
-    <p class="integ-more reveal">More integrations coming soon.</p>
+    <p class="ig-caption reveal" id="igCap">Cashflow מושכת חשבוניות אוטומטית מכל מקור &mdash; עברו עם העכבר מעל לוגו כדי לראות איך.</p>
+    <p class="integ-more reveal">אינטגרציות נוספות בקרוב.</p>
   </div>
 </section>
 
@@ -1234,54 +1238,54 @@
 
 <section class="how" id="how">
   <div class="wrap">
-    <div class="section-head reveal"><span class="eyebrow">How it works</span><h2 class="section-title">Up and Running in Minutes</h2></div>
+    <div class="section-head reveal"><span class="eyebrow">איך זה עובד</span><h2 class="section-title">מוכנים לעבודה תוך דקות</h2></div>
     <svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs><linearGradient id="wkg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#3DD6A3"/><stop offset="1" stop-color="#8FE8C9"/></linearGradient></defs></svg>
     <div class="wk reveal" id="wk">
       <div class="wk-steps"><div class="wk-step active" data-i="0">
       <div class="wk-num"><svg viewBox="0 0 44 44"><circle class="track" cx="22" cy="22" r="20"/><circle class="wk-ring run" cx="22" cy="22" r="20"/></svg><span class="n">1</span></div>
-      <div class="wk-tx"><h3>Everything lands in one place</h3><p>Connect Gmail, Drive, WhatsApp and Green Invoice — or drop files in. Cashflow reads each invoice and files it on your dashboard.</p></div></div><div class="wk-step" data-i="1">
+      <div class="wk-tx"><h3>הכל נוחת במקום אחד</h3><p>חברו את Gmail, Drive, WhatsApp וחשבונית ירוקה — או גררו קבצים ישירות. Cashflow קוראת כל חשבונית ומתייקת אותה בלוח הבקרה שלכם.</p></div></div><div class="wk-step" data-i="1">
       <div class="wk-num"><svg viewBox="0 0 44 44"><circle class="track" cx="22" cy="22" r="20"/><circle class="wk-ring" cx="22" cy="22" r="20"/></svg><span class="n">2</span></div>
-      <div class="wk-tx"><h3>Grouped and ready to pay</h3><p>Every payable is sorted by supplier and due month. Select an entire month in one move.</p></div></div><div class="wk-step" data-i="2">
+      <div class="wk-tx"><h3>מקובצות ומוכנות לתשלום</h3><p>כל חוב מסודר לפי ספק וחודש תשלום. בחרו חודש שלם בתנועה אחת.</p></div></div><div class="wk-step" data-i="2">
       <div class="wk-num"><svg viewBox="0 0 44 44"><circle class="track" cx="22" cy="22" r="20"/><circle class="wk-ring" cx="22" cy="22" r="20"/></svg><span class="n">3</span></div>
-      <div class="wk-tx"><h3>Pay the month in one action</h3><p>Review the batch, see the total, and mark them all paid with a single confirm.</p></div></div><div class="wk-step" data-i="3">
+      <div class="wk-tx"><h3>שלמו את כל החודש בפעולה אחת</h3><p>סקרו את הקבוצה, ראו את הסכום הכולל, וסמנו הכל כשולם באישור אחד.</p></div></div><div class="wk-step" data-i="3">
       <div class="wk-num"><svg viewBox="0 0 44 44"><circle class="track" cx="22" cy="22" r="20"/><circle class="wk-ring" cx="22" cy="22" r="20"/></svg><span class="n">4</span></div>
-      <div class="wk-tx"><h3>Caught up, every month</h3><p>Inbox-zero for your payables — then roll straight into next month.</p></div></div></div>
+      <div class="wk-tx"><h3>מסודרים, בכל חודש</h3><p>אינבוקס אפס לחשבונות שלכם — ואז ישר לחודש הבא.</p></div></div></div>
       <div class="wk-preview"><div class="wk-frame">
         <div class="wk-bar"><span class="dots"><i style="background:#E8604C"></i><i style="background:#E0A93D"></i><i style="background:#3BD68C"></i></span><span class="wk-url">gocashflow.co/app</span></div>
         <div class="wk-stage">
   <div class="wk-shot active" data-i="0">
-    <div class="wk-scene-title">Sources syncing now</div>
-    <div class="wk-src-row"><span class="wk-src-icon">✉️</span><span>Gmail</span><span class="wk-src-count">12 invoices</span><span class="wbadge paid">Synced</span></div>
-    <div class="wk-src-row"><span class="wk-src-icon">▲</span><span>Google Drive</span><span class="wk-src-count">7 invoices</span><span class="wbadge paid">Synced</span></div>
-    <div class="wk-src-row"><span class="wk-src-icon">💬</span><span>WhatsApp</span><span class="wk-src-count">3 invoices</span><span class="wbadge due">Pending</span></div>
-    <div class="wk-src-row"><span class="wk-src-icon">🟢</span><span>Green Invoice</span><span class="wk-src-count">5 invoices</span><span class="wbadge paid">Synced</span></div>
-    <div class="wk-src-total">27 invoices imported · OCR complete</div>
+    <div class="wk-scene-title">מקורות מסתנכרנים עכשיו</div>
+    <div class="wk-src-row"><span class="wk-src-icon">✉️</span><span>Gmail</span><span class="wk-src-count">12 חשבוניות</span><span class="wbadge paid">מסונכרן</span></div>
+    <div class="wk-src-row"><span class="wk-src-icon">▲</span><span>Google Drive</span><span class="wk-src-count">7 חשבוניות</span><span class="wbadge paid">מסונכרן</span></div>
+    <div class="wk-src-row"><span class="wk-src-icon">💬</span><span>WhatsApp</span><span class="wk-src-count">3 חשבוניות</span><span class="wbadge due">ממתין</span></div>
+    <div class="wk-src-row"><span class="wk-src-icon">🟢</span><span>חשבונית ירוקה</span><span class="wk-src-count">5 חשבוניות</span><span class="wbadge paid">מסונכרן</span></div>
+    <div class="wk-src-total">27 חשבוניות יובאו · OCR הושלם</div>
   </div>
   <div class="wk-shot" data-i="1">
-    <div class="wk-scene-title">Payables by month</div>
-    <div class="wk-group-hdr"><span>June 2025</span><span class="wk-ghamt">₪47,313</span></div>
-    <div class="wk-invoice-row"><span class="wdot" style="background:#E8604C"></span>Cohen Electric<span class="wamt">₪8,400</span><span class="wbadge due">Overdue</span></div>
-    <div class="wk-invoice-row"><span class="wdot" style="background:#E0A93D"></span>Packaging Co.<span class="wamt">₪12,900</span><span class="wbadge due">Due Jun 30</span></div>
-    <div class="wk-group-hdr" style="margin-top:8px"><span>July 2025</span><span class="wk-ghamt">₪48,544</span></div>
-    <div class="wk-invoice-row"><span class="wdot" style="background:#3987E5"></span>Office Supplies Ltd<span class="wamt">₪6,200</span><span class="wbadge" style="background:rgba(96,165,250,.15);color:#3987E5">Upcoming</span></div>
+    <div class="wk-scene-title">חובות לפי חודש</div>
+    <div class="wk-group-hdr"><span>יוני 2025</span><span class="wk-ghamt">₪47,313</span></div>
+    <div class="wk-invoice-row"><span class="wdot" style="background:#E8604C"></span>כהן חשמל<span class="wamt">₪8,400</span><span class="wbadge due">באיחור</span></div>
+    <div class="wk-invoice-row"><span class="wdot" style="background:#E0A93D"></span>אריזות בע"מ<span class="wamt">₪12,900</span><span class="wbadge due">לתשלום 30 ביוני</span></div>
+    <div class="wk-group-hdr" style="margin-top:8px"><span>יולי 2025</span><span class="wk-ghamt">₪48,544</span></div>
+    <div class="wk-invoice-row"><span class="wdot" style="background:#3987E5"></span>ציוד משרדי בע"מ<span class="wamt">₪6,200</span><span class="wbadge" style="background:rgba(96,165,250,.15);color:#3987E5">בקרוב</span></div>
   </div>
   <div class="wk-shot" data-i="2">
-    <div class="wk-scene-title">June batch — ready to mark paid</div>
-    <div class="wk-invoice-row"><input type="checkbox" checked disabled style="margin-right:4px;accent-color:#3BD68C"><span class="wdot" style="background:#E8604C"></span>Cohen Electric<span class="wamt">₪8,400</span></div>
-    <div class="wk-invoice-row"><input type="checkbox" checked disabled style="margin-right:4px;accent-color:#3BD68C"><span class="wdot" style="background:#E0A93D"></span>Packaging Co.<span class="wamt">₪12,900</span></div>
-    <div class="wk-invoice-row"><input type="checkbox" checked disabled style="margin-right:4px;accent-color:#3BD68C"><span class="wdot" style="background:#3987E5"></span>Supplier A<span class="wamt">₪25,844</span></div>
-    <div class="wk-pay-btn">✓ Mark All Paid · ₪47,313</div>
+    <div class="wk-scene-title">קבוצת יוני — מוכנה לסימון כשולם</div>
+    <div class="wk-invoice-row"><input type="checkbox" checked disabled style="margin-inline-end:4px;accent-color:#3BD68C"><span class="wdot" style="background:#E8604C"></span>כהן חשמל<span class="wamt">₪8,400</span></div>
+    <div class="wk-invoice-row"><input type="checkbox" checked disabled style="margin-inline-end:4px;accent-color:#3BD68C"><span class="wdot" style="background:#E0A93D"></span>אריזות בע"מ<span class="wamt">₪12,900</span></div>
+    <div class="wk-invoice-row"><input type="checkbox" checked disabled style="margin-inline-end:4px;accent-color:#3BD68C"><span class="wdot" style="background:#3987E5"></span>ספק א׳<span class="wamt">₪25,844</span></div>
+    <div class="wk-pay-btn">✓ סמנו הכל כשולם · ₪47,313</div>
   </div>
   <div class="wk-shot" data-i="3">
     <div class="wk-kpi">
-      <div class="wk-kt"><div class="k">Outstanding</div><div class="v blue">₪48,544</div></div>
-      <div class="wk-kt"><div class="k">Overdue</div><div class="v green">₪0</div></div>
-      <div class="wk-kt"><div class="k">Next Month</div><div class="v amber">₪48,544</div></div>
-      <div class="wk-kt"><div class="k">Total Paid</div><div class="v green">₪65,612</div></div>
+      <div class="wk-kt"><div class="k">יתרה לתשלום</div><div class="v blue">₪48,544</div></div>
+      <div class="wk-kt"><div class="k">באיחור</div><div class="v green">₪0</div></div>
+      <div class="wk-kt"><div class="k">חודש הבא</div><div class="v amber">₪48,544</div></div>
+      <div class="wk-kt"><div class="k">סה"כ שולם</div><div class="v green">₪65,612</div></div>
     </div>
     <div class="wk-mini-spark"><i style="height:55%"></i><i style="height:70%"></i><i style="height:45%"></i><i style="height:85%"></i><i style="height:60%"></i><i style="height:90%"></i><i style="height:100%"></i></div>
-    <div class="wk-invoice-row"><span class="wdot" style="background:#3BD68C"></span>Cohen Electric<span class="wamt">₪8,400 · Paid Jun 28</span><span class="wbadge paid">Paid</span></div>
-    <div class="wk-invoice-row"><span class="wdot" style="background:#3BD68C"></span>Packaging Co.<span class="wamt">₪12,900 · Paid Jun 28</span><span class="wbadge paid">Paid</span></div>
+    <div class="wk-invoice-row"><span class="wdot" style="background:#3BD68C"></span>כהן חשמל<span class="wamt">₪8,400 · שולם ב-28 ביוני</span><span class="wbadge paid">שולם</span></div>
+    <div class="wk-invoice-row"><span class="wdot" style="background:#3BD68C"></span>אריזות בע"מ<span class="wamt">₪12,900 · שולם ב-28 ביוני</span><span class="wbadge paid">שולם</span></div>
   </div>
 </div>
       </div></div>
@@ -1295,23 +1299,23 @@
     <div class="stats-card reveal">
       <div class="stat">
         <div class="num" data-count="3.2" data-suffix="h">0h</div>
-        <div class="lbl">Saved per week, per user</div>
-        <div class="sub-lbl">avg. across active accounts</div>
+        <div class="lbl">נחסך בשבוע, למשתמש</div>
+        <div class="sub-lbl">בממוצע בין חשבונות פעילים</div>
       </div>
       <div class="stat">
         <div class="num" data-count="94" data-suffix="%">0%</div>
-        <div class="lbl">Fewer late payments</div>
-        <div class="sub-lbl">vs. manual invoice tracking</div>
+        <div class="lbl">פחות תשלומים באיחור</div>
+        <div class="sub-lbl">לעומת מעקב ידני אחר חשבוניות</div>
       </div>
       <div class="stat">
         <div class="num" data-count="8" data-suffix="s">&lt;0s</div>
-        <div class="lbl">Invoice extraction time</div>
-        <div class="sub-lbl">PDF → dashboard, fully automatic</div>
+        <div class="lbl">זמן חילוץ נתוני חשבונית</div>
+        <div class="sub-lbl">מ-PDF ללוח הבקרה, אוטומטי לחלוטין</div>
       </div>
       <div class="stat">
         <div class="num" data-count="100" data-suffix="%">0%</div>
-        <div class="lbl">Hebrew document support</div>
-        <div class="sub-lbl">RTL, rotated scans, mixed docs</div>
+        <div class="lbl">תמיכה מלאה במסמכים בעברית</div>
+        <div class="sub-lbl">כיוון RTL, סריקות מסובבות, מסמכים מעורבים</div>
       </div>
     </div>
   </div>
@@ -1320,60 +1324,60 @@
 <!-- PRICING -->
 <section class="pricing" id="pricing">
   <div class="wrap">
-    <div class="section-head reveal" style="margin-left:auto;margin-right:auto;text-align:center"><span class="eyebrow">Pricing</span><h2 class="section-title">Simple, Transparent Pricing</h2><p>Start free. Scale as you grow. No hidden fees.</p></div>
+    <div class="section-head reveal" style="margin-left:auto;margin-right:auto;text-align:center"><span class="eyebrow">תמחור</span><h2 class="section-title">תמחור פשוט ושקוף</h2><p>התחילו בחינם. התרחיבו ככל שתגדלו. בלי עמלות נסתרות.</p></div>
     <div class="price-grid" style="grid-template-columns:repeat(4,1fr)" id="priceGrid">
       <!-- Free -->
       <div class="price-card reveal">
-        <div class="plan-name">Free</div>
-        <div class="plan-price">₪0<small>/month</small></div>
+        <div class="plan-name">חינם</div>
+        <div class="plan-price">₪0<small>/חודש</small></div>
         <ul class="plan-list">
-          <li>Up to 20 invoices/month</li>
-          <li>1 sync source</li>
-          <li>Manual upload + OCR</li>
-          <li>Dashboard &amp; calendar</li>
+          <li>עד 20 חשבוניות בחודש</li>
+          <li>מקור סנכרון אחד</li>
+          <li>העלאה ידנית + OCR</li>
+          <li>לוח בקרה ולוח שנה</li>
         </ul>
-        <a class="btn btn-ghost btn-block" href="/login" rel="noopener">Get Started Free</a>
+        <a class="btn btn-ghost btn-block" href="/login" rel="noopener">התחילו בחינם</a>
       </div>
       <!-- Basic -->
       <div class="price-card reveal d1">
-        <div class="plan-name">Basic</div>
-        <div class="plan-price">₪99<small>/month</small></div>
+        <div class="plan-name">בסיסי</div>
+        <div class="plan-price">₪99<small>/חודש</small></div>
         <ul class="plan-list">
-          <li>Up to 50 invoices/month</li>
-          <li>2 sync sources</li>
-          <li>Manual upload + OCR</li>
-          <li>Dashboard, calendar &amp; CSV export</li>
-          <li>Email support</li>
+          <li>עד 50 חשבוניות בחודש</li>
+          <li>2 מקורות סנכרון</li>
+          <li>העלאה ידנית + OCR</li>
+          <li>לוח בקרה, לוח שנה וייצוא CSV</li>
+          <li>תמיכה במייל</li>
         </ul>
-        <button class="btn btn-ghost btn-block" onclick="checkout('basic')">Get Basic</button>
+        <button class="btn btn-ghost btn-block" onclick="checkout('basic')">בחרו בסיסי</button>
       </div>
       <!-- Pro -->
       <div class="price-card popular reveal d2">
-        <div class="badge">Most Popular</div>
+        <div class="badge">הכי פופולרי</div>
         <div class="plan-name">Pro</div>
-        <div class="plan-price">₪199<small>/month</small></div>
+        <div class="plan-price">₪199<small>/חודש</small></div>
         <ul class="plan-list">
-          <li>Up to 150 invoices/month</li>
-          <li>All 4 sync sources</li>
-          <li>Scheduled auto-sync</li>
-          <li>Bulk actions &amp; CSV import</li>
-          <li>Full audit trail</li>
-          <li>Priority support</li>
+          <li>עד 150 חשבוניות בחודש</li>
+          <li>כל 4 מקורות הסנכרון</li>
+          <li>סנכרון אוטומטי מתוזמן</li>
+          <li>פעולות מרוכזות וייבוא CSV</li>
+          <li>יומן ביקורת מלא</li>
+          <li>תמיכה בעדיפות גבוהה</li>
         </ul>
-        <button class="btn btn-primary btn-block" onclick="checkout('pro')">Get Pro</button>
+        <button class="btn btn-primary btn-block" onclick="checkout('pro')">בחרו Pro</button>
       </div>
       <!-- Enterprise -->
       <div class="price-card reveal d3">
         <div class="plan-name">Enterprise</div>
-        <div class="plan-price contact">Contact Us</div>
+        <div class="plan-price contact">צרו קשר</div>
         <ul class="plan-list">
-          <li>Unlimited invoices</li>
-          <li>Custom integrations</li>
-          <li>Dedicated onboarding</li>
-          <li>SLA &amp; compliance support</li>
-          <li>White-label option</li>
+          <li>חשבוניות ללא הגבלה</li>
+          <li>אינטגרציות מותאמות אישית</li>
+          <li>ליווי הטמעה ייעודי</li>
+          <li>תמיכת SLA ותאימות רגולטורית</li>
+          <li>אפשרות White-label</li>
         </ul>
-        <a class="btn btn-ghost btn-block" href="mailto:hello@gocashflow.co">Get in Touch</a>
+        <a class="btn btn-ghost btn-block" href="mailto:hello@gocashflow.co">יצירת קשר</a>
       </div>
     </div>
   </div>
@@ -1382,13 +1386,13 @@
 <!-- FAQ -->
 <section class="faq">
   <div class="wrap">
-    <div class="section-head reveal" style="margin-left:auto;margin-right:auto;text-align:center"><span class="eyebrow">Support</span><h2 class="section-title">Common Questions</h2></div>
+    <div class="section-head reveal" style="margin-left:auto;margin-right:auto;text-align:center"><span class="eyebrow">תמיכה</span><h2 class="section-title">שאלות נפוצות</h2></div>
     <div class="faq-wrap">
-      <div class="faq-item reveal"><button class="faq-q">Does it support Hebrew invoices?<span class="chev">▾</span></button><div class="faq-a"><div class="faq-a-inner">Yes. Our AI extraction engine is specifically tuned for Israeli invoice formats, including Hebrew text, <span class="heb">ח.פ./ע.מ.</span> registration numbers, and DD/MM/YYYY date formats.</div></div></div>
-      <div class="faq-item reveal"><button class="faq-q">Is my data secure?<span class="chev">▾</span></button><div class="faq-a"><div class="faq-a-inner">All data is stored in isolated, per-user databases with row-level security. File attachments are stored on encrypted cloud storage. We never share your data.</div></div></div>
-      <div class="faq-item reveal"><button class="faq-q">How does the WhatsApp integration work?<span class="chev">▾</span></button><div class="faq-a"><div class="faq-a-inner">You forward invoice images or PDFs to a designated WhatsApp Business number. Our system receives them via webhook, extracts the data, and adds them to your dashboard automatically.</div></div></div>
-      <div class="faq-item reveal"><button class="faq-q">Can I import existing invoices?<span class="chev">▾</span></button><div class="faq-a"><div class="faq-a-inner">Yes. You can upload PDFs and images manually, or import a batch via CSV. Duplicate detection ensures clean data.</div></div></div>
-      <div class="faq-item reveal"><button class="faq-q">Do I need a developer to set it up?<span class="chev">▾</span></button><div class="faq-a"><div class="faq-a-inner">No. The entire setup — including Google OAuth, WhatsApp webhook, and Green Invoice API key — is done through a guided UI with no code required.</div></div></div>
+      <div class="faq-item reveal"><button class="faq-q">האם המערכת תומכת בחשבוניות בעברית?<span class="chev">▾</span></button><div class="faq-a"><div class="faq-a-inner">כן. מנוע חילוץ הנתונים שלנו מותאם במיוחד לפורמטים של חשבוניות ישראליות, כולל טקסט בעברית, מספרי ח.פ./ע.מ., ותבניות תאריך בפורמט DD/MM/YYYY.</div></div></div>
+      <div class="faq-item reveal"><button class="faq-q">האם הנתונים שלי מאובטחים?<span class="chev">▾</span></button><div class="faq-a"><div class="faq-a-inner">כל הנתונים מאוחסנים במסדי נתונים מבודדים לכל משתמש, עם אבטחה ברמת שורה (Row-Level Security). קבצים מצורפים מאוחסנים באחסון ענן מוצפן. אנחנו לעולם לא משתפים את הנתונים שלכם.</div></div></div>
+      <div class="faq-item reveal"><button class="faq-q">איך עובדת האינטגרציה עם WhatsApp?<span class="chev">▾</span></button><div class="faq-a"><div class="faq-a-inner">אתם מעבירים תמונות או קבצי PDF של חשבוניות למספר WhatsApp Business ייעודי. המערכת שלנו מקבלת אותם דרך webhook, מחלצת את הנתונים, ומוסיפה אותם ללוח הבקרה שלכם אוטומטית.</div></div></div>
+      <div class="faq-item reveal"><button class="faq-q">האם אפשר לייבא חשבוניות קיימות?<span class="chev">▾</span></button><div class="faq-a"><div class="faq-a-inner">כן. אפשר להעלות קבצי PDF ותמונות באופן ידני, או לייבא קבוצה שלמה דרך קובץ CSV. זיהוי כפילויות שומר על ניקיון הנתונים.</div></div></div>
+      <div class="faq-item reveal"><button class="faq-q">האם אני צריך מפתח כדי להגדיר את המערכת?<span class="chev">▾</span></button><div class="faq-a"><div class="faq-a-inner">לא. כל תהליך ההגדרה — כולל Google OAuth, webhook של WhatsApp ומפתח API של חשבונית ירוקה — מתבצע דרך ממשק מודרך, ללא צורך בקוד.</div></div></div>
     </div>
   </div>
 </section>
@@ -1398,9 +1402,9 @@
   <div class="wrap">
     <div class="cta-card reveal">
       <div class="glowblob" aria-hidden="true"></div>
-      <h2>Ready to take control of your cash flow?</h2>
-      <p>Join businesses already managing invoices on autopilot.</p>
-      <a class="btn btn-primary btn-lg" href="/app">Get Started Free — No credit card required</a>
+      <h2>מוכנים לקחת שליטה על תזרים המזומנים שלכם?</h2>
+      <p>הצטרפו לעסקים שכבר מנהלים חשבוניות באוטומציה מלאה.</p>
+      <a class="btn btn-primary btn-lg" href="/app">התחילו בחינם — לא נדרש כרטיס אשראי</a>
     </div>
   </div>
 </section>
@@ -1409,11 +1413,11 @@
 <footer id="contact">
   <div class="wrap foot-inner">
     <div class="foot-brand">
-      <a href="/" class="logo foot-logo"><svg class="mark"><use href="#cashflowMark"/></svg> Cashflow</a>
-      <span>© 2026 Cashflow. All rights reserved.</span>
+      <a href="/he" class="logo foot-logo"><svg class="mark"><use href="#cashflowMark"/></svg> Cashflow</a>
+      <span>© 2026 Cashflow. כל הזכויות שמורות.</span>
     </div>
-    <div class="foot-links"><a href="/privacy.html">Privacy Policy</a><a href="/terms.html">Terms of Service</a><a href="mailto:hello@gocashflow.co">Contact</a></div>
-    <div>Built for Israeli businesses 🇮🇱</div>
+    <div class="foot-links"><a href="/privacy.html">מדיניות פרטיות</a><a href="/terms.html">תנאי שימוש</a><a href="mailto:hello@gocashflow.co">יצירת קשר</a></div>
+    <div>בנוי עבור עסקים ישראליים 🇮🇱</div>
   </div>
 </footer>
 
@@ -1492,7 +1496,7 @@
     let fi = 0;
     function cycle(){
       const item = feed[fi % feed.length]; fi++;
-      toastText.textContent = 'New invoice synced from ' + item.src;
+      toastText.textContent = 'חשבונית חדשה סונכרנה מ-' + item.src;
       toast.classList.add('show');
       const row = document.createElement('div');
       row.className = 'inv-line fresh';
@@ -1574,12 +1578,12 @@
     const sats=[...hub.querySelectorAll('.ig-sat')];
     const lines=[...hub.querySelectorAll('.ig-lines .conn')];
     const texts=[
-      "Gmail \u2014 auto-scans labeled emails for invoice attachments.",
-      "Google Drive \u2014 monitors selected folders and imports new files.",
-      "WhatsApp Business \u2014 receives invoice images and PDFs via webhook.",
-      "Green Invoice (\u05d7\u05e9\u05d1\u05d5\u05e0\u05d9\u05ea \u05d9\u05e8\u05d5\u05e7\u05d4) \u2014 syncs directly with Israel's leading invoicing platform."
+      "Gmail \u2014 \u05e1\u05d5\u05e8\u05e7 \u05d0\u05d5\u05d8\u05d5\u05de\u05d8\u05d9\u05ea \u05de\u05d9\u05d9\u05dc\u05d9\u05dd \u05de\u05ea\u05d5\u05d9\u05d2\u05d9\u05dd \u05d1\u05d7\u05d9\u05e4\u05d5\u05e9 \u05d0\u05d7\u05e8 \u05e6\u05e8\u05d5\u05e4\u05d5\u05ea \u05d7\u05e9\u05d1\u05d5\u05e0\u05d9\u05ea.",
+      "Google Drive \u2014 \u05e2\u05d5\u05e7\u05d1 \u05d0\u05d7\u05e8\u05d9 \u05ea\u05d9\u05e7\u05d9\u05d5\u05ea \u05e0\u05d1\u05d7\u05e8\u05d5\u05ea \u05d5\u05de\u05d9\u05d9\u05d1\u05d0 \u05e7\u05d1\u05e6\u05d9\u05dd \u05d7\u05d3\u05e9\u05d9\u05dd.",
+      "WhatsApp Business \u2014 \u05de\u05e7\u05d1\u05dc \u05ea\u05de\u05d5\u05e0\u05d5\u05ea \u05d5\u05e7\u05d1\u05e6\u05d9 PDF \u05e9\u05dc \u05d7\u05e9\u05d1\u05d5\u05e0\u05d9\u05d5\u05ea \u05d3\u05e8\u05da webhook.",
+      "\u05d7\u05e9\u05d1\u05d5\u05e0\u05d9\u05ea \u05d9\u05e8\u05d5\u05e7\u05d4 (Green Invoice) \u2014 \u05de\u05e1\u05ea\u05e0\u05db\u05e8\u05df \u05d9\u05e9\u05d9\u05e8\u05d5\u05ea \u05e2\u05dd \u05e4\u05dc\u05d8\u05e4\u05d5\u05e8\u05de\u05ea \u05d4\u05d7\u05e9\u05d1\u05d5\u05e0\u05d9\u05d5\u05ea \u05d4\u05de\u05d5\u05d1\u05d9\u05dc\u05d4 \u05d1\u05d9\u05e9\u05e8\u05d0\u05dc."
     ];
-    const base="Cashflow pulls invoices in automatically from every source \u2014 hover a logo to see how.";
+    const base="Cashflow \u05de\u05d5\u05e9\u05db\u05ea \u05d7\u05e9\u05d1\u05d5\u05e0\u05d9\u05d5\u05ea \u05d0\u05d5\u05d8\u05d5\u05de\u05d8\u05d9\u05ea \u05de\u05db\u05dc \u05de\u05e7\u05d5\u05e8 \u2014 \u05e2\u05d1\u05e8\u05d5 \u05e2\u05dd \u05d4\u05e2\u05db\u05d1\u05e8 \u05de\u05e2\u05dc \u05dc\u05d5\u05d2\u05d5 \u05db\u05d3\u05d9 \u05dc\u05e8\u05d0\u05d5\u05ea \u05d0\u05d9\u05da.";
     sats.forEach((s,n)=>{
       s.addEventListener('mouseenter',()=>{cap.textContent=texts[n];sats.forEach(x=>x.classList.remove('active'));s.classList.add('active');lines.forEach((l,i)=>l.classList.toggle('hot',i===n));});
     });
@@ -1624,11 +1628,11 @@
       if (data.url) {
         window.location.href = data.url;
       } else {
-        alert(data.error || 'Something went wrong. Please try again.');
+        alert(data.error || 'משהו השתבש. נסו שוב.');
         if (btn) { btn.disabled = false; btn.textContent = origText; }
       }
     } catch {
-      alert('Network error. Please try again.');
+      alert('שגיאת רשת. נסו שוב.');
       if (btn) { btn.disabled = false; btn.textContent = origText; }
     }
   }
