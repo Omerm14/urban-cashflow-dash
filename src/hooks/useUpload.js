@@ -1,5 +1,6 @@
 import { useState, useRef, useCallback } from "react";
 import { supabase } from "../lib/supabase";
+import { resolveAttachment } from "../utils/uploadAttachment";
 
 // Manual upload pipeline (extracted from App.jsx):
 // PDF/image → Claude extraction → dedup → R2/Supabase storage → addInvoice.
@@ -75,22 +76,7 @@ export function useUpload({ invoices, user, addInvoice, getSupplier, refreshPlan
         try {
           let attachment = {};
           try {
-            const ext = (file.name.split(".").pop() || "bin").toLowerCase();
-            const presignRes = await fetch("/api/attachments/presign", {
-              method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${session?.access_token}` },
-              body: JSON.stringify({ filename: file.name, contentType: file.type }),
-            });
-            if (presignRes.ok) {
-              const presign = await presignRes.json();
-              if (presign.backend === "r2" && presign.uploadUrl) {
-                await fetch(presign.uploadUrl, { method: "PUT", headers: { "Content-Type": file.type || "application/octet-stream" }, body: file });
-                attachment = { attachment_path: presign.key, attachment_backend: "r2", attachment_status: "present" };
-              } else {
-                const key = `${user.id}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
-                await supabase.storage.from("invoice-attachments").upload(key, file, { contentType: file.type, upsert: true });
-                attachment = { attachment_path: key, attachment_backend: "supabase", attachment_status: "present" };
-              }
-            }
+            attachment = await resolveAttachment({ file, session, userId: user.id, supabaseStorage: supabase.storage });
           } catch { attachment = { attachment_status: "missing" }; attachmentIssues++; }
           await addInvoice({ ...candidate, ...attachment });
           added++;
