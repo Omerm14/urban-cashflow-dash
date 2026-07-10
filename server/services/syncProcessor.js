@@ -112,6 +112,16 @@ const isCancelRequested = async integrationId => {
 
 const md5 = buf => crypto.createHash('md5').update(buf).digest('hex');
 
+// Returns the absolute amount, or null when `raw` (Claude's extracted.amount)
+// can't be parsed as a number — e.g. still containing a currency symbol,
+// thousands separator, or OCR garbling — so the caller can flag/skip the
+// candidate instead of silently coercing NaN into a real ₪0 amount.
+const parseAmount = raw => {
+  const n = Number(raw);
+  return Number.isNaN(n) ? null : Math.abs(n);
+};
+exports.parseAmount = parseAmount;
+
 // Returns an array of saved invoice records (may be empty, may have multiple for multi-page PDFs)
 const processFile = async (buffer, filename, mediaType, userId, suppliers, existingInvoices, integrationId, syncSource, syncMeta = {}) => {
   const fileHash = md5(buffer);
@@ -135,7 +145,13 @@ const processFile = async (buffer, filename, mediaType, userId, suppliers, exist
     const dueDate     = sup ? calcDueDate(invoiceDate, sup.terms) : null;
 
     const isCredit  = extracted.type === 'credit';
-    const rawAmount = Math.abs(Number(extracted.amount)) || 0;
+    const rawAmount = parseAmount(extracted.amount);
+    if (rawAmount === null) {
+      console.log(`[sync] unparseable amount skipped: ${pageLabel} (raw: ${extracted.amount})`);
+      logSyncEvent(integrationId, userId, 'amount_unparseable', { source_file: pageLabel, file_hash: fileHash, raw_value: String(extracted.amount) });
+      skipped++;
+      continue;
+    }
 
     const candidate = {
       user_id:          userId,
