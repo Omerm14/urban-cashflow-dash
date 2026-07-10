@@ -56,34 +56,30 @@ exports.verifyWhatsApp = (req, res) => {
 
 // Register/re-assign msg.from to the matched integration's whitelisted_phones.
 // If the phone was previously on a different integration, remove it from there first.
+// Delegates to the register_whatsapp_phone() Postgres function (CASH-49) so the
+// read-then-write of the whitelist happens atomically in the DB — the Supabase JS
+// client has no way to express a conditional/atomic JSON merge itself.
 async function registerPhone(phone, integration) {
   if (!phone) return;
 
-  const { data: prevInt } = await supabase
-    .from('integrations')
-    .select('id, config')
-    .eq('type', 'whatsapp')
-    .eq('status', 'connected')
-    .contains('config', { whitelisted_phones: [phone] })
-    .neq('id', integration.id)
-    .maybeSingle();
+  const { data: prevIntegrationId, error } = await supabase.rpc('register_whatsapp_phone', {
+    p_integration_id: integration.id,
+    p_phone: phone,
+  });
 
-  if (prevInt) {
-    const filtered = (prevInt.config.whitelisted_phones || []).filter(p => p !== phone);
-    await supabase.from('integrations')
-      .update({ config: { ...prevInt.config, whitelisted_phones: filtered } })
-      .eq('id', prevInt.id);
-    console.log(`[webhook:wa] re-assigned ${phone} from integration ${prevInt.id} to ${integration.id}`);
+  if (error) {
+    console.error(`[webhook:wa] registerPhone rpc failed for ${phone}:`, error.message);
+    return;
   }
 
-  const phones = integration.config.whitelisted_phones || [];
-  if (!phones.includes(phone)) {
-    await supabase.from('integrations')
-      .update({ config: { ...integration.config, whitelisted_phones: [...phones, phone] } })
-      .eq('id', integration.id);
+  if (prevIntegrationId) {
+    console.log(`[webhook:wa] re-assigned ${phone} from integration ${prevIntegrationId} to ${integration.id}`);
+  } else {
     console.log(`[webhook:wa] whitelisted ${phone} on integration ${integration.id}`);
   }
 }
+
+exports.registerPhone = registerPhone;
 
 // POST /api/webhook/whatsapp  — incoming message handler
 exports.handleWhatsApp = async (req, res) => {

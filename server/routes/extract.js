@@ -31,8 +31,7 @@ module.exports = async (req, res) => {
     }
     res.json({ result });
   } catch (err) {
-    console.error('Extract error:', err.message);
-    const friendly = err.error?.error?.message || err.message;
-    res.status(err.status || 500).json({ error: friendly });
+    console.error('Extract error:', err.error?.error?.message || err.message);
+    res.status(err.status || 500).json({ error: 'Internal server error' });
   }
 };

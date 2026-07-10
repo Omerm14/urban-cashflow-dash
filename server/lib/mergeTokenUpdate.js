@@ -5,7 +5,10 @@ const mergeTokenUpdate = (credentials, tokens) => {
   const definedTokens = Object.fromEntries(
     Object.entries(tokens).filter(([, value]) => value !== undefined)
   );
-  return { ...credentials, ...definedTokens };
+  // _userId/_type are request-scoped bookkeeping makeOAuth2() adds to scope the
+  // .eq() update call — they must never be persisted into the credentials JSON.
+  const { _userId, _type, ...storedCredentials } = credentials;
+  return { ...storedCredentials, ...definedTokens };
 };
 
 module.exports = { mergeTokenUpdate };
