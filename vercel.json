@@ -3,7 +3,8 @@
     { "source": "/api/(.*)", "destination": "/api" },
     { "source": "/login",    "destination": "/app.html" },
     { "source": "/app",      "destination": "/app.html" },
-    { "source": "/app/(.*)", "destination": "/app.html" }
+    { "source": "/app/(.*)", "destination": "/app.html" },
+    { "source": "/he",       "destination": "/he.html" }
   ],
   "functions": {
     "api/index.js": {
