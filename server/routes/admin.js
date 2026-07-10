@@ -142,7 +142,7 @@ exports.deleteUser = [auth, isAdmin, async (req, res) => {
     res.json({ ok: true });
   } catch (err) {
     console.error('[admin] deleteUser error:', err.message);
-    res.status(500).json({ error: err.message || 'Failed to delete user' });
+    res.status(500).json({ error: 'Internal server error' });
   }
 }];
 
@@ -157,7 +157,7 @@ exports.banUser = [auth, isAdmin, async (req, res) => {
     res.json({ ok: true });
   } catch (err) {
     console.error('[admin] banUser error:', err.message);
-    res.status(500).json({ error: err.message || 'Failed to ban user' });
+    res.status(500).json({ error: 'Internal server error' });
   }
 }];
 
@@ -172,7 +172,7 @@ exports.unbanUser = [auth, isAdmin, async (req, res) => {
     res.json({ ok: true });
   } catch (err) {
     console.error('[admin] unbanUser error:', err.message);
-    res.status(500).json({ error: err.message || 'Failed to unban user' });
+    res.status(500).json({ error: 'Internal server error' });
   }
 }];
 
