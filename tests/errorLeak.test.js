@@ -115,8 +115,14 @@ describe('migrate.js runMigrate', () => {
 
 describe('account.js deleteAccount', () => {
   it('returns a generic error and logs the real one when account deletion throws', async () => {
+    // CASH-44: deleteUserData() now also selects the user's invoice attachments
+    // (to delete them from storage) before deleting rows, so `from()` must
+    // support that select().eq().not() chain too, not just delete().eq().
     mockSupabase({
-      from: () => ({ delete: () => ({ eq: () => Promise.resolve({ data: null, error: null }) }) }),
+      from: () => ({
+        delete: () => ({ eq: () => Promise.resolve({ data: null, error: null }) }),
+        select: () => ({ eq: () => ({ not: () => Promise.resolve({ data: [], error: null }) }) }),
+      }),
       auth: { admin: { deleteUser: () => Promise.resolve({ error: { message: LEAK } }) } },
     });
     const account = freshRequire('../server/routes/account.js');
