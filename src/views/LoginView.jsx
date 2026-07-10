@@ -107,7 +107,7 @@ export default function LoginView() {
                   { val: `${metricVals[1]}%`, label: "fewer late payments", sub: "vs. manual tracking" },
                   { val: `${metricVals[2]}s`, label: "invoice processed", sub: "upload → dashboard" },
                 ].map((m, i) => (
-                  <div key={i} style={{ flex: 1, padding: "14px 16px", border: `1px solid ${T.bdr}`, borderLeft: i === 0 ? `1px solid ${T.bdr}` : "none", ...(i === 0 ? { borderRadius: "10px 0 0 10px" } : i === 2 ? { borderRadius: "0 10px 10px 0" } : {}), background: T.accentTint.replace("0.10", "0.04") }}>
+                  <div key={i} style={{ flex: 1, padding: "14px 16px", border: `1px solid ${T.bdr}`, borderInlineStart: i === 0 ? `1px solid ${T.bdr}` : "none", ...(i === 0 ? { borderStartStartRadius: 10, borderEndStartRadius: 10 } : i === 2 ? { borderStartEndRadius: 10, borderEndEndRadius: 10 } : {}), background: T.accentTint.replace("0.10", "0.04") }}>
                     <div className="login-metric-val" style={{ fontFamily: DISPLAY, fontWeight: 700, fontSize: 26, letterSpacing: "-0.03em", color: T.accent, lineHeight: 1, marginBottom: 4 }}>{m.val}</div>
                     <div style={{ fontFamily: SANS, fontSize: 11, fontWeight: 600, color: T.t2, lineHeight: 1.3 }}>{m.label}</div>
                     <div style={{ fontFamily: SANS, fontSize: 10, color: T.t3, marginTop: 2 }}>{m.sub}</div>
@@ -184,8 +184,8 @@ export default function LoginView() {
             <div>
               <label htmlFor="login-password" style={{ fontFamily: SANS, fontSize: 13, fontWeight: 500, color: T.t3, display: "block", marginBottom: 5 }}>Password</label>
               <div style={{ position: "relative" }}>
-                <input id="login-password" type={showPw ? "text" : "password"} value={password} onChange={e => setPassword(e.target.value)} placeholder="••••••••" required style={{ ...inp, paddingRight: 40 }} />
-                <button type="button" onClick={() => setShowPw(v => !v)} aria-label={showPw ? "Hide password" : "Show password"} style={{ position: "absolute", right: 12, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", color: T.t3, cursor: "pointer", display: "flex" }}>
+                <input id="login-password" type={showPw ? "text" : "password"} value={password} onChange={e => setPassword(e.target.value)} placeholder="••••••••" required style={{ ...inp, paddingInlineEnd: 40 }} />
+                <button type="button" onClick={() => setShowPw(v => !v)} aria-label={showPw ? "Hide password" : "Show password"} style={{ position: "absolute", insetInlineEnd: 12, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", color: T.t3, cursor: "pointer", display: "flex" }}>
                   {showPw ? <EyeOff size={15} /> : <Eye size={15} />}
                 </button>
               </div>
