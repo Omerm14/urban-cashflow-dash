@@ -26,17 +26,37 @@ async function deleteUserAttachments(userId) {
   }
 }
 
+// FK-safe delete order — do not reorder.
+const TABLES_TO_DELETE = ['invoices', 'suppliers', 'sync_jobs', 'integrations', 'subscriptions'];
+
 // Deletes all app-table rows for a user (FK-safe order) then removes the Supabase Auth user
 // itself. Shared by self-service account deletion and admin-driven user deletion — the only
 // difference between those two call sites is which userId gets passed in and who's allowed to.
+//
+// Unlike deleteUserAttachments()'s best-effort log-and-continue loop above, the table deletes
+// here are NOT tolerated: deleting the Auth user is the irreversible step, and if it happens
+// while some table delete failed, those rows are orphaned forever (no auth user left to
+// own/query them under RLS, no clean way to retry once the login is gone). So every table
+// delete's error is checked, and if any failed we throw instead of proceeding to the Auth
+// user deletion — the caller (account.js / admin.js) already turns a thrown error into a
+// user/admin-facing failure response.
 async function deleteUserData(userId) {
   await deleteUserAttachments(userId);
 
-  await supabase.from('invoices').delete().eq('user_id', userId);
-  await supabase.from('suppliers').delete().eq('user_id', userId);
-  await supabase.from('sync_jobs').delete().eq('user_id', userId);
-  await supabase.from('integrations').delete().eq('user_id', userId);
-  await supabase.from('subscriptions').delete().eq('user_id', userId);
+  const failedTables = [];
+  for (const table of TABLES_TO_DELETE) {
+    const { error } = await supabase.from(table).delete().eq('user_id', userId);
+    if (error) {
+      console.error(`[accountCleanup] failed to delete ${table} rows for user ${userId}:`, error.message);
+      failedTables.push(table);
+    }
+  }
+
+  if (failedTables.length) {
+    throw new Error(
+      `[accountCleanup] aborting Auth user deletion for ${userId}: failed to delete rows from: ${failedTables.join(', ')}`
+    );
+  }
 
   const { error } = await supabase.auth.admin.deleteUser(userId);
   if (error) throw error;
