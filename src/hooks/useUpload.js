@@ -4,7 +4,10 @@ import { resolveAttachment } from "../utils/uploadAttachment";
 
 // Manual upload pipeline (extracted from App.jsx):
 // PDF/image → Claude extraction → dedup → R2/Supabase storage → addInvoice.
-export function useUpload({ invoices, user, addInvoice, getSupplier, refreshPlan, onNotify }) {
+// `t` is passed in from App.jsx rather than read via useLang(), because this hook
+// is called from App() itself — a component that renders LangCtx.Provider but is
+// not a descendant of it, so useContext(LangCtx) here would see the default value.
+export function useUpload({ invoices, user, addInvoice, getSupplier, refreshPlan, onNotify, t }) {
   const [extracting, setExtracting] = useState(false);
   const [extractMsg, setExtractMsg] = useState(null);
   const [uploadProgress, setUploadProgress] = useState({ done: 0, total: 0 });
@@ -15,7 +18,7 @@ export function useUpload({ invoices, user, addInvoice, getSupplier, refreshPlan
     if (!files.length) return;
     setExtracting(true);
     setUploadProgress({ done: 0, total: files.length });
-    setExtractMsg({ text: `Processing ${files.length} file${files.length > 1 ? "s" : ""}…`, ok: null });
+    setExtractMsg({ text: t("upload_processing", { n: files.length }), ok: null });
     try {
       const { processPdf, fileToBase64, extractInvoice, translateSupplierName } = await import("../utils/image");
       const { findDuplicates, isLatinOnly } = await import("../utils/invoice");
@@ -84,23 +87,27 @@ export function useUpload({ invoices, user, addInvoice, getSupplier, refreshPlan
         setUploadProgress(p => ({ ...p, done: p.done + 1 }));
       }));
 
-      if (added > 0) { refreshPlan(); onNotify?.({ type: "upload", icon: "📄", text: `${added} invoice${added !== 1 ? "s" : ""} uploaded from ${files.length === 1 ? files[0].name : `${files.length} files`}`, ts: Date.now() }); }
+      if (added > 0) {
+        refreshPlan();
+        const source = files.length === 1 ? files[0].name : t("upload_files_count", { n: files.length });
+        onNotify?.({ type: "upload", icon: "📄", text: t("upload_notify", { n: added, source }), ts: Date.now() });
+      }
       const parts = [];
-      if (added) parts.push(`${added} added`);
-      if (fileSkipped.length) parts.push(`${fileSkipped.length} already uploaded`);
-      if (contentDupes) parts.push(`${contentDupes} already exist`);
-      if (attachmentIssues) parts.push(`${attachmentIssues} saved without file`);
-      if (errors.length) parts.push(`${errors.length} failed: ${errors[0]}`);
+      if (added) parts.push(t("upload_added", { n: added }));
+      if (fileSkipped.length) parts.push(t("upload_already_uploaded", { n: fileSkipped.length }));
+      if (contentDupes) parts.push(t("upload_already_exist", { n: contentDupes }));
+      if (attachmentIssues) parts.push(t("upload_saved_no_file", { n: attachmentIssues }));
+      if (errors.length) parts.push(t("upload_failed", { n: errors.length, error: errors[0] }));
       const hasIssue = fileSkipped.length || contentDupes || attachmentIssues || errors.length;
-      setExtractMsg({ text: (added && !hasIssue ? "✓ " : "") + (parts.join(" · ") || "nothing to add"), ok: !hasIssue && added > 0 });
+      setExtractMsg({ text: (added && !hasIssue ? "✓ " : "") + (parts.join(" · ") || t("upload_nothing_to_add")), ok: !hasIssue && added > 0 });
     } catch (err) {
-      setExtractMsg({ text: `Error: ${err.message}`, ok: false });
+      setExtractMsg({ text: t("upload_error", { message: err.message }), ok: false });
     } finally {
       setExtracting(false);
       setTimeout(() => setExtractMsg(null), 5000);
       if (fileRef.current) fileRef.current.value = "";
     }
-  }, [invoices, user, addInvoice, getSupplier, refreshPlan, onNotify]);
+  }, [invoices, user, addInvoice, getSupplier, refreshPlan, onNotify, t]);
 
   const showTransientError = useCallback((text) => {
     setExtractMsg({ text, ok: false });

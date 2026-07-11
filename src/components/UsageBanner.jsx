@@ -1,6 +1,8 @@
 import { useState } from 'react';
+import { useLang } from '../contexts/AppContexts';
 
 export default function UsageBanner({ plan, used, limit, remaining, onUpgrade }) {
+  const { t } = useLang();
   const [dismissed, setDismissed] = useState(false);
   if (dismissed) return null;
   if (!plan || plan === 'enterprise') return null;
@@ -22,10 +24,10 @@ export default function UsageBanner({ plan, used, limit, remaining, onUpgrade })
     }}>
       {isWarning && <span>⚠️</span>}
       <span>
-        <strong>{used}</strong> / {limit} invoices used this month
+        <strong>{used}</strong> {t('usage_summary_suffix', { limit })}
         {remaining > 0
-          ? <span style={{ color: isWarning ? '#fcd34d' : 'var(--t3)', marginLeft: 6 }}>· {remaining} remaining</span>
-          : <span style={{ color: '#f87171', marginLeft: 6, fontWeight: 700 }}>· Limit reached</span>
+          ? <span style={{ color: isWarning ? '#fcd34d' : 'var(--t3)', marginLeft: 6 }}>{t('usage_remaining', { remaining })}</span>
+          : <span style={{ color: '#f87171', marginLeft: 6, fontWeight: 700 }}>{t('usage_limit_reached')}</span>
         }
       </span>
       {plan !== 'pro' && (
@@ -38,7 +40,7 @@ export default function UsageBanner({ plan, used, limit, remaining, onUpgrade })
             color: isWarning ? '#1c1917' : 'var(--accent-ink)', cursor: 'pointer',
           }}
         >
-          Upgrade Now
+          {t('usage_upgrade_now')}
         </button>
       )}
       <button
@@ -48,7 +50,7 @@ export default function UsageBanner({ plan, used, limit, remaining, onUpgrade })
           color: isWarning ? '#fbbf24' : 'var(--t3)', cursor: 'pointer',
           fontSize: 16, lineHeight: 1, padding: '0 4px',
         }}
-        aria-label="Dismiss"
+        aria-label={t('usage_dismiss')}
       >×</button>
     </div>
   );

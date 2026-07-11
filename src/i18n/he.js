@@ -476,6 +476,51 @@ const he = {
   admin_override_saved: "המנוי עודכן",
   admin_no_subscriptions: "לא נמצאו מנויים",
   admin_conflict: "חיוב כפול",
+
+  // Upgrade modal (billing paywall)
+  upgrade_dialog_label: "שדרוג תוכנית",
+  upgrade_headline: "אתם צומחים. גם התוכנית שלכם צריכה.",
+  upgrade_processed_pre: "עיבדתם",
+  upgrade_processed_post: "החודש — עבודה מצוינת.",
+  upgrade_invoices_month: "חשבוניות החודש",
+  upgrade_billing_monthly: "חודשי",
+  upgrade_billing_annual: "שנתי",
+  upgrade_save_20: "חיסכון של 20%",
+  upgrade_tier_basic: "בייסיק",
+  upgrade_tier_pro: "פרו",
+  upgrade_popular: "הפופולרי",
+  upgrade_per_month: "/לחודש",
+  upgrade_get_basic: "בחרו בייסיק",
+  upgrade_get_pro: "בחרו פרו",
+  upgrade_feat_upload_ocr: "העלאה ידנית + OCR",
+  upgrade_feat_dashboard_calendar: "לוח בקרה ולוח שנה",
+  upgrade_feat_50_invoices: "50 חשבוניות בחודש",
+  upgrade_feat_150_invoices: "150 חשבוניות בחודש",
+  upgrade_feat_auto_sync: "סנכרון אוטומטי",
+  upgrade_feat_priority_support: "תמיכה מועדפת",
+  upgrade_included: "כלול",
+  upgrade_not_included: "לא כלול",
+  upgrade_subscribe_failed: "המנוי נכשל",
+  upgrade_continue_readonly: "המשך צפייה (לקריאה בלבד)",
+
+  // Usage banner
+  usage_summary_suffix: "/ {limit} חשבוניות נוצלו החודש",
+  usage_remaining: "· {remaining} נותרו",
+  usage_limit_reached: "· המכסה נוצלה",
+  usage_upgrade_now: "שדרגו עכשיו",
+  usage_dismiss: "סגירה",
+
+  // Upload toasts (manual upload pipeline)
+  upload_processing: "מעבד {n} קבצים…",
+  upload_added: "{n} נוספו",
+  upload_already_uploaded: "{n} כבר הועלו",
+  upload_already_exist: "{n} כבר קיימות",
+  upload_saved_no_file: "{n} נשמרו ללא קובץ",
+  upload_failed: "{n} נכשלו: {error}",
+  upload_nothing_to_add: "אין מה להוסיף",
+  upload_error: "שגיאה: {message}",
+  upload_notify: "{n} חשבוניות הועלו מ-{source}",
+  upload_files_count: "{n} קבצים",
 };
 
 export default he;

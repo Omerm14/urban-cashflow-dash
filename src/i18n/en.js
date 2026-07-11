@@ -482,6 +482,51 @@ const en = {
   admin_override_saved: "Subscription updated",
   admin_no_subscriptions: "No subscriptions found",
   admin_conflict: "Dual billing",
+
+  // Upgrade modal (billing paywall)
+  upgrade_dialog_label: "Upgrade plan",
+  upgrade_headline: "You're growing. Your plan should too.",
+  upgrade_processed_pre: "You've processed",
+  upgrade_processed_post: "this month — great work.",
+  upgrade_invoices_month: "Invoices this month",
+  upgrade_billing_monthly: "Monthly",
+  upgrade_billing_annual: "Annual",
+  upgrade_save_20: "Save 20%",
+  upgrade_tier_basic: "Basic",
+  upgrade_tier_pro: "Pro",
+  upgrade_popular: "Popular",
+  upgrade_per_month: "/mo",
+  upgrade_get_basic: "Get Basic",
+  upgrade_get_pro: "Get Pro",
+  upgrade_feat_upload_ocr: "Manual upload + OCR",
+  upgrade_feat_dashboard_calendar: "Dashboard & calendar",
+  upgrade_feat_50_invoices: "50 invoices/month",
+  upgrade_feat_150_invoices: "150 invoices/month",
+  upgrade_feat_auto_sync: "Auto-sync",
+  upgrade_feat_priority_support: "Priority support",
+  upgrade_included: "Included",
+  upgrade_not_included: "Not included",
+  upgrade_subscribe_failed: "Subscription failed",
+  upgrade_continue_readonly: "Continue viewing (read-only)",
+
+  // Usage banner
+  usage_summary_suffix: "/ {limit} invoices used this month",
+  usage_remaining: "· {remaining} remaining",
+  usage_limit_reached: "· Limit reached",
+  usage_upgrade_now: "Upgrade Now",
+  usage_dismiss: "Dismiss",
+
+  // Upload toasts (manual upload pipeline)
+  upload_processing: "Processing {n} file(s)…",
+  upload_added: "{n} added",
+  upload_already_uploaded: "{n} already uploaded",
+  upload_already_exist: "{n} already exist",
+  upload_saved_no_file: "{n} saved without file",
+  upload_failed: "{n} failed: {error}",
+  upload_nothing_to_add: "nothing to add",
+  upload_error: "Error: {message}",
+  upload_notify: "{n} invoice(s) uploaded from {source}",
+  upload_files_count: "{n} files",
 };
 
 export default en;
