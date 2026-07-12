@@ -1,6 +1,6 @@
 import { useState, useRef, useCallback } from "react";
 import { supabase } from "../lib/supabase";
-import { resolveAttachment } from "../utils/uploadAttachment";
+import { resolveAttachmentSafe } from "../utils/uploadAttachment";
 
 // Manual upload pipeline (extracted from App.jsx):
 // PDF/image → Claude extraction → dedup → R2/Supabase storage → addInvoice.
@@ -77,10 +77,8 @@ export function useUpload({ invoices, user, addInvoice, getSupplier, refreshPlan
       let added = 0, attachmentIssues = 0;
       await Promise.allSettled(toAdd.map(async ({ file, candidate }) => {
         try {
-          let attachment = {};
-          try {
-            attachment = await resolveAttachment({ file, session, userId: user.id, supabaseStorage: supabase.storage });
-          } catch { attachment = { attachment_status: "missing" }; attachmentIssues++; }
+          const attachment = await resolveAttachmentSafe({ file, session, userId: user.id, supabaseStorage: supabase.storage });
+          if (attachment.attachment_status === "missing") attachmentIssues++;
           await addInvoice({ ...candidate, ...attachment });
           added++;
         } catch (err) { errors.push(`${file.name}: ${err.message}`); }

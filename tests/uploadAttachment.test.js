@@ -1,5 +1,5 @@
-import { describe, it, expect, vi } from 'vitest';
-import { resolveAttachment } from '../src/utils/uploadAttachment.js';
+import { describe, it, expect, vi, afterEach } from 'vitest';
+import { resolveAttachment, resolveAttachmentSafe } from '../src/utils/uploadAttachment.js';
 
 function makeFile(name = 'invoice.pdf', type = 'application/pdf') {
   return { name, type };
@@ -70,5 +70,38 @@ describe('resolveAttachment (CASH-38: R2 presigned PUT status check)', () => {
     const result = await resolveAttachment({ file: makeFile(), session: { access_token: 't' }, userId: 'u1', fetchImpl });
 
     expect(result).toEqual({});
+  });
+});
+
+describe('resolveAttachmentSafe (CASH-59: log the real error instead of swallowing it)', () => {
+  afterEach(() => vi.restoreAllMocks());
+
+  it('logs the underlying error and reports the attachment as missing when resolveAttachment throws', async () => {
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const fetchImpl = makeFetchImpl({
+      presign: { backend: 'r2', uploadUrl: 'https://r2.example.com/upload', key: 'k1' },
+      putOk: false,
+      putStatus: 500,
+    });
+
+    const result = await resolveAttachmentSafe({ file: makeFile(), session: { access_token: 't' }, userId: 'u1', fetchImpl });
+
+    expect(result).toEqual({ attachment_status: 'missing' });
+    expect(errorSpy).toHaveBeenCalledTimes(1);
+    expect(errorSpy.mock.calls[0][0]).toMatch(/attachment save failed/);
+    expect(errorSpy.mock.calls[0][1]).toBeInstanceOf(Error);
+  });
+
+  it('returns the resolved attachment untouched when resolveAttachment succeeds', async () => {
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const fetchImpl = makeFetchImpl({
+      presign: { backend: 'r2', uploadUrl: 'https://r2.example.com/upload', key: 'k1' },
+      putOk: true,
+    });
+
+    const result = await resolveAttachmentSafe({ file: makeFile(), session: { access_token: 't' }, userId: 'u1', fetchImpl });
+
+    expect(result).toEqual({ attachment_path: 'k1', attachment_backend: 'r2', attachment_status: 'present' });
+    expect(errorSpy).not.toHaveBeenCalled();
   });
 });
