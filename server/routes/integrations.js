@@ -563,7 +563,8 @@ exports.processSyncJob = async (req, res) => {
   const BATCH_SIZE = 3;
   const batch = (job.file_list || []).slice(job.cursor, job.cursor + BATCH_SIZE);
 
-  const { data: integration } = await supabase.from('integrations').select('*').eq('id', job.integration_id).single();
+  const { data: integration } = await supabase.from('integrations').select('*')
+    .eq('id', job.integration_id).eq('user_id', job.user_id).single();
   if (!integration) {
     await supabase.from('sync_jobs').update({ status: 'error', error_message: 'Integration not found' }).eq('id', job.id);
     return res.status(404).json({ error: 'Integration not found' });
