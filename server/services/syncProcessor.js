@@ -103,10 +103,12 @@ const logSyncEvent = (integrationId, userId, eventType, fields = {}) => {
 // Gmail/Green Invoice run as a single request, so a second, concurrent request (which may
 // land on a different server instance) is the only way to signal "stop" — checked via the DB,
 // not in-memory state, since nothing else is shared between those two requests.
-const isCancelRequested = async integrationId => {
-  const { data } = await supabase.from('integrations').select('cancel_requested').eq('id', integrationId).single();
+const isCancelRequested = async (integrationId, userId) => {
+  const { data } = await supabase.from('integrations').select('cancel_requested')
+    .eq('id', integrationId).eq('user_id', userId).single();
   return !!data?.cancel_requested;
 };
+exports.isCancelRequested = isCancelRequested;
 
 // ─── Core pipeline: buffer → extract → save ─────────────────────────────────
 
@@ -511,7 +513,7 @@ exports.syncGmail = async (integration, userId) => {
   let added = 0, skipped = skippedIds.length, errors = 0;
 
   for (const msg of toProcess) {
-    if (await isCancelRequested(integration.id)) {
+    if (await isCancelRequested(integration.id, userId)) {
       return { added, skipped, filesFound: messages.length, errors, cancelled: true };
     }
     try {
@@ -604,7 +606,7 @@ exports.syncGreenInvoice = async (integration, userId) => {
   let added = 0, skipped = 0, errors = 0;
 
   for (const doc of items) {
-    if (await isCancelRequested(integration.id)) {
+    if (await isCancelRequested(integration.id, userId)) {
       return { added, skipped, filesFound: items.length, errors, cancelled: true };
     }
     const supplierName = doc.supplier?.name || '';

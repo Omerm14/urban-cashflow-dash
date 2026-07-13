@@ -82,7 +82,8 @@ exports.runSync = async (req, res) => {
   let jobsResumed = 0;
   await Promise.allSettled((staleJobs || []).map(async job => {
     try {
-      const { data: integration } = await supabase.from('integrations').select('*').eq('id', job.integration_id).single();
+      const { data: integration } = await supabase.from('integrations').select('*')
+        .eq('id', job.integration_id).eq('user_id', job.user_id).single();
       if (!integration) return;
 
       // Mark running
