@@ -26,3 +26,15 @@ export async function resolveAttachment({ file, session, userId, fetchImpl = fet
   await supabaseStorage.from("invoice-attachments").upload(key, file, { contentType: file.type, upsert: true });
   return { attachment_path: key, attachment_backend: "supabase", attachment_status: "present" };
 }
+
+// Same as resolveAttachment, but never throws: logs the real error and
+// reports the attachment as missing instead of leaving callers to swallow
+// it silently (CASH-59).
+export async function resolveAttachmentSafe(params) {
+  try {
+    return await resolveAttachment(params);
+  } catch (err) {
+    console.error("[useUpload] attachment save failed", err);
+    return { attachment_status: "missing" };
+  }
+}
