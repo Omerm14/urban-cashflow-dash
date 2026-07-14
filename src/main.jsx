@@ -4,6 +4,9 @@ import { BrowserRouter } from 'react-router-dom'
 import App from './App.jsx'
 import { AuthProvider } from './contexts/AuthContext.jsx'
 import './index.css'
+import { inject } from '@vercel/analytics'
+
+inject()
 
 class ErrorBoundary extends React.Component {
   state = { error: null }
