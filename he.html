@@ -344,6 +344,14 @@
     background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2310b981' stroke-width='3.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='20 6 9 17 4 12'/%3E%3C/svg%3E");
     background-repeat:no-repeat;background-position:center}
 
+  /* Firm callout */
+  .firm-callout{margin-top:28px;background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:32px 28px;
+    display:flex;flex-wrap:wrap;gap:28px;align-items:center;justify-content:space-between}
+  .firm-callout h3{font-size:22px;font-weight:800;letter-spacing:-.02em;margin:8px 0 8px}
+  .firm-callout p{color:var(--muted-2);font-size:14px;line-height:1.6;margin:0}
+  .firm-callout .firm-copy{flex:1 1 320px}
+  .firm-callout .firm-cta{flex:0 0 auto}
+
   /* FAQ */
   .faq{padding:90px 0}
   .faq-wrap{max-width:780px;margin:0 auto}
@@ -891,21 +899,26 @@
         },
         {
           "@type": "Offer",
-          "name": "Basic",
-          "price": "99",
-          "priceCurrency": "ILS",
-          "url": "https://gocashflow.co/he#pricing"
-        },
-        {
-          "@type": "Offer",
-          "name": "Pro",
+          "name": "Starter",
           "price": "199",
           "priceCurrency": "ILS",
           "url": "https://gocashflow.co/he#pricing"
         },
         {
           "@type": "Offer",
+          "name": "Pro",
+          "price": "399",
+          "priceCurrency": "ILS",
+          "url": "https://gocashflow.co/he#pricing"
+        },
+        {
+          "@type": "Offer",
           "name": "Enterprise",
+          "url": "https://gocashflow.co/he#pricing"
+        },
+        {
+          "@type": "Offer",
+          "name": "Firm",
           "url": "https://gocashflow.co/he#pricing"
         }
       ]
@@ -944,7 +957,7 @@
           "name": "האם אפשר לייבא חשבוניות קיימות?",
           "acceptedAnswer": {
             "@type": "Answer",
-            "text": "כן. אפשר להעלות קבצי PDF ותמונות באופן ידני, או לייבא קבוצה שלמה דרך קובץ CSV. זיהוי כפילויות שומר על ניקיון הנתונים."
+            "text": "כן. אפשר להעלות קבצי PDF ותמונות באופן ידני, או לחבר Gmail, Google Drive, WhatsApp או חשבונית ירוקה לסנכרון אוטומטי. זיהוי כפילויות שומר על ניקיון הנתונים."
           }
         },
         {
@@ -1347,29 +1360,29 @@
         </ul>
         <a class="btn btn-ghost btn-block" href="/login" rel="noopener">התחילו בחינם</a>
       </div>
-      <!-- Basic -->
+      <!-- Starter -->
       <div class="price-card reveal d1">
-        <div class="plan-name">בסיסי</div>
-        <div class="plan-price">₪99<small>/חודש</small></div>
+        <div class="plan-name">Starter</div>
+        <div class="plan-price">₪199<small>/חודש</small></div>
         <ul class="plan-list">
-          <li>עד 50 חשבוניות בחודש</li>
+          <li>עד 75 חשבוניות בחודש</li>
           <li>2 מקורות סנכרון</li>
           <li>העלאה ידנית + OCR</li>
           <li>לוח בקרה, לוח שנה וייצוא CSV</li>
           <li>תמיכה במייל</li>
         </ul>
-        <button class="btn btn-ghost btn-block" onclick="checkout('basic')">בחרו בסיסי</button>
+        <button class="btn btn-ghost btn-block" onclick="checkout('starter')">בחרו Starter</button>
       </div>
       <!-- Pro -->
       <div class="price-card popular reveal d2">
         <div class="badge">הכי פופולרי</div>
         <div class="plan-name">Pro</div>
-        <div class="plan-price">₪199<small>/חודש</small></div>
+        <div class="plan-price">₪399<small>/חודש</small></div>
         <ul class="plan-list">
-          <li>עד 150 חשבוניות בחודש</li>
+          <li>עד 300 חשבוניות בחודש</li>
           <li>כל 4 מקורות הסנכרון</li>
           <li>סנכרון אוטומטי מתוזמן</li>
-          <li>פעולות מרוכזות וייבוא CSV</li>
+          <li>פעולות תשלום מרוכזות</li>
           <li>יומן ביקורת מלא</li>
           <li>תמיכה בעדיפות גבוהה</li>
         </ul>
@@ -1386,7 +1399,19 @@
           <li>תמיכת SLA ותאימות רגולטורית</li>
           <li>אפשרות White-label</li>
         </ul>
-        <a class="btn btn-ghost btn-block" href="mailto:hello@gocashflow.co">יצירת קשר</a>
+        <a class="btn btn-ghost btn-block" href="mailto:hello@gocashflow.co">צרו קשר</a>
+      </div>
+    </div>
+
+    <!-- Firm / For Accountants -->
+    <div class="firm-callout reveal">
+      <div class="firm-copy">
+        <span class="eyebrow">לרואי חשבון ומנהלי חשבונות</span>
+        <h3>Firm — תמחור לפי מספר חברות</h3>
+        <p>נהלו את כל חברות הלקוחות שלכם מקונסולה אחת. כל חברה מקבלת את כל תכונות Pro, בתוספת לוח בקרה מאוחד על פני כל התיק שלכם. התמחור מותאם למספר החברות שאתם מנהלים — צרו קשר להצעת מחיר.</p>
+      </div>
+      <div class="firm-cta">
+        <a class="btn btn-ghost btn-block" href="mailto:hello@gocashflow.co">דברו איתנו</a>
       </div>
     </div>
   </div>
@@ -1400,7 +1425,7 @@
       <div class="faq-item reveal"><button class="faq-q">האם המערכת תומכת בחשבוניות בעברית?<span class="chev">▾</span></button><div class="faq-a"><div class="faq-a-inner">כן. מנוע חילוץ הנתונים שלנו מותאם במיוחד לפורמטים של חשבוניות ישראליות, כולל טקסט בעברית, מספרי ח.פ./ע.מ., ותבניות תאריך בפורמט DD/MM/YYYY.</div></div></div>
       <div class="faq-item reveal"><button class="faq-q">האם הנתונים שלי מאובטחים?<span class="chev">▾</span></button><div class="faq-a"><div class="faq-a-inner">כל הנתונים מאוחסנים במסדי נתונים מבודדים לכל משתמש, עם אבטחה ברמת שורה (Row-Level Security). קבצים מצורפים מאוחסנים באחסון ענן מוצפן. אנחנו לעולם לא משתפים את הנתונים שלכם.</div></div></div>
       <div class="faq-item reveal"><button class="faq-q">איך עובדת האינטגרציה עם WhatsApp?<span class="chev">▾</span></button><div class="faq-a"><div class="faq-a-inner">אתם מעבירים תמונות או קבצי PDF של חשבוניות למספר WhatsApp Business ייעודי. המערכת שלנו מקבלת אותם דרך webhook, מחלצת את הנתונים, ומוסיפה אותם ללוח הבקרה שלכם אוטומטית.</div></div></div>
-      <div class="faq-item reveal"><button class="faq-q">האם אפשר לייבא חשבוניות קיימות?<span class="chev">▾</span></button><div class="faq-a"><div class="faq-a-inner">כן. אפשר להעלות קבצי PDF ותמונות באופן ידני, או לייבא קבוצה שלמה דרך קובץ CSV. זיהוי כפילויות שומר על ניקיון הנתונים.</div></div></div>
+      <div class="faq-item reveal"><button class="faq-q">האם אפשר לייבא חשבוניות קיימות?<span class="chev">▾</span></button><div class="faq-a"><div class="faq-a-inner">כן. אפשר להעלות קבצי PDF ותמונות באופן ידני, או לחבר Gmail, Google Drive, WhatsApp או חשבונית ירוקה לסנכרון אוטומטי. זיהוי כפילויות שומר על ניקיון הנתונים.</div></div></div>
       <div class="faq-item reveal"><button class="faq-q">האם אני צריך מפתח כדי להגדיר את המערכת?<span class="chev">▾</span></button><div class="faq-a"><div class="faq-a-inner">לא. כל תהליך ההגדרה — כולל Google OAuth, webhook של WhatsApp ומפתח API של חשבונית ירוקה — מתבצע דרך ממשק מודרך, ללא צורך בקוד.</div></div></div>
     </div>
   </div>
@@ -1622,7 +1647,7 @@
   })();
 
 
-  // Billing checkout redirect — plan: 'basic' | 'pro'
+  // Billing checkout redirect — plan: 'starter' | 'pro'
   async function checkout(plan) {
     const btn = event?.currentTarget;
     const origText = btn?.textContent;

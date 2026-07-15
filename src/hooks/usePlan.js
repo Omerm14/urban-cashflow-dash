@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
-import { PLAN_LIMITS } from '../constants/plans';
+import { PLAN_LIMITS, PLAN_SOURCES, PLAN_FLAGS } from '../constants/plans';
 
 export const usePlan = () => {
   const { user, session } = useAuth();
@@ -42,8 +42,12 @@ export const usePlan = () => {
   const limit       = PLAN_LIMITS[plan] ?? 20;
   const remaining   = limit === Infinity ? Infinity : Math.max(0, limit - used);
   const pct         = limit === Infinity ? 0 : used / limit;
+  // Invoice caps are soft — these flags drive upgrade nudges only, never a block.
   const isAtLimit   = pct >= 1;
   const isNearLimit = pct >= 0.8 && !isAtLimit;
+  const maxSources   = PLAN_SOURCES[plan] ?? 1;
+  const entitlements = PLAN_FLAGS[plan] ?? PLAN_FLAGS.free;
+  const isPro        = plan === 'pro' || plan === 'enterprise';
 
-  return { plan, limit, used, remaining, pct, isAtLimit, isNearLimit, loading, refresh };
+  return { plan, limit, used, remaining, pct, isAtLimit, isNearLimit, maxSources, entitlements, isPro, loading, refresh };
 };

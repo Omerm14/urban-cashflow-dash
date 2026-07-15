@@ -344,6 +344,14 @@
     background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2310b981' stroke-width='3.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='20 6 9 17 4 12'/%3E%3C/svg%3E");
     background-repeat:no-repeat;background-position:center}
 
+  /* Firm callout */
+  .firm-callout{margin-top:28px;background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:32px 28px;
+    display:flex;flex-wrap:wrap;gap:28px;align-items:center;justify-content:space-between}
+  .firm-callout h3{font-size:22px;font-weight:800;letter-spacing:-.02em;margin:8px 0 8px}
+  .firm-callout p{color:var(--muted-2);font-size:14px;line-height:1.6;margin:0}
+  .firm-callout .firm-copy{flex:1 1 320px}
+  .firm-callout .firm-cta{flex:0 0 auto}
+
   /* FAQ */
   .faq{padding:90px 0}
   .faq-wrap{max-width:780px;margin:0 auto}
@@ -889,21 +897,26 @@
         },
         {
           "@type": "Offer",
-          "name": "Basic",
-          "price": "99",
-          "priceCurrency": "ILS",
-          "url": "https://gocashflow.co/#pricing"
-        },
-        {
-          "@type": "Offer",
-          "name": "Pro",
+          "name": "Starter",
           "price": "199",
           "priceCurrency": "ILS",
           "url": "https://gocashflow.co/#pricing"
         },
         {
           "@type": "Offer",
+          "name": "Pro",
+          "price": "399",
+          "priceCurrency": "ILS",
+          "url": "https://gocashflow.co/#pricing"
+        },
+        {
+          "@type": "Offer",
           "name": "Enterprise",
+          "url": "https://gocashflow.co/#pricing"
+        },
+        {
+          "@type": "Offer",
+          "name": "Firm",
           "url": "https://gocashflow.co/#pricing"
         }
       ]
@@ -941,7 +954,7 @@
           "name": "Can I import existing invoices?",
           "acceptedAnswer": {
             "@type": "Answer",
-            "text": "Yes. You can upload PDFs and images manually, or import a batch via CSV. Duplicate detection ensures clean data."
+            "text": "Yes. Upload PDFs and images manually, or connect Gmail, Google Drive, WhatsApp, or Green Invoice to sync automatically. Duplicate detection ensures clean data."
           }
         },
         {
@@ -1343,29 +1356,29 @@
         </ul>
         <a class="btn btn-ghost btn-block" href="/login" rel="noopener">Get Started Free</a>
       </div>
-      <!-- Basic -->
+      <!-- Starter -->
       <div class="price-card reveal d1">
-        <div class="plan-name">Basic</div>
-        <div class="plan-price">₪99<small>/month</small></div>
+        <div class="plan-name">Starter</div>
+        <div class="plan-price">₪199<small>/month</small></div>
         <ul class="plan-list">
-          <li>Up to 50 invoices/month</li>
+          <li>Up to 75 invoices/month</li>
           <li>2 sync sources</li>
           <li>Manual upload + OCR</li>
           <li>Dashboard, calendar &amp; CSV export</li>
           <li>Email support</li>
         </ul>
-        <button class="btn btn-ghost btn-block" onclick="checkout('basic')">Get Basic</button>
+        <button class="btn btn-ghost btn-block" onclick="checkout('starter')">Get Started</button>
       </div>
       <!-- Pro -->
       <div class="price-card popular reveal d2">
         <div class="badge">Most Popular</div>
         <div class="plan-name">Pro</div>
-        <div class="plan-price">₪199<small>/month</small></div>
+        <div class="plan-price">₪399<small>/month</small></div>
         <ul class="plan-list">
-          <li>Up to 150 invoices/month</li>
+          <li>Up to 300 invoices/month</li>
           <li>All 4 sync sources</li>
           <li>Scheduled auto-sync</li>
-          <li>Bulk actions &amp; CSV import</li>
+          <li>Bulk payment actions</li>
           <li>Full audit trail</li>
           <li>Priority support</li>
         </ul>
@@ -1382,7 +1395,19 @@
           <li>SLA &amp; compliance support</li>
           <li>White-label option</li>
         </ul>
-        <a class="btn btn-ghost btn-block" href="mailto:hello@gocashflow.co">Get in Touch</a>
+        <a class="btn btn-ghost btn-block" href="mailto:hello@gocashflow.co">Contact Us</a>
+      </div>
+    </div>
+
+    <!-- Firm / For Accountants -->
+    <div class="firm-callout reveal">
+      <div class="firm-copy">
+        <span class="eyebrow">For Accountants &amp; Bookkeepers</span>
+        <h3>Firm — Pricing per managed company</h3>
+        <p>Manage every client company from one console. Each company gets the full Pro feature set, plus a consolidated roll-up dashboard across your whole book. Pricing scales with the number of companies you manage — get in touch for a quote.</p>
+      </div>
+      <div class="firm-cta">
+        <a class="btn btn-ghost btn-block" href="mailto:hello@gocashflow.co">Talk to us</a>
       </div>
     </div>
   </div>
@@ -1396,7 +1421,7 @@
       <div class="faq-item reveal"><button class="faq-q">Does it support Hebrew invoices?<span class="chev">▾</span></button><div class="faq-a"><div class="faq-a-inner">Yes. Our AI extraction engine is specifically tuned for Israeli invoice formats, including Hebrew text, <span class="heb">ח.פ./ע.מ.</span> registration numbers, and DD/MM/YYYY date formats.</div></div></div>
       <div class="faq-item reveal"><button class="faq-q">Is my data secure?<span class="chev">▾</span></button><div class="faq-a"><div class="faq-a-inner">All data is stored in isolated, per-user databases with row-level security. File attachments are stored on encrypted cloud storage. We never share your data.</div></div></div>
       <div class="faq-item reveal"><button class="faq-q">How does the WhatsApp integration work?<span class="chev">▾</span></button><div class="faq-a"><div class="faq-a-inner">You forward invoice images or PDFs to a designated WhatsApp Business number. Our system receives them via webhook, extracts the data, and adds them to your dashboard automatically.</div></div></div>
-      <div class="faq-item reveal"><button class="faq-q">Can I import existing invoices?<span class="chev">▾</span></button><div class="faq-a"><div class="faq-a-inner">Yes. You can upload PDFs and images manually, or import a batch via CSV. Duplicate detection ensures clean data.</div></div></div>
+      <div class="faq-item reveal"><button class="faq-q">Can I import existing invoices?<span class="chev">▾</span></button><div class="faq-a"><div class="faq-a-inner">Yes. Upload PDFs and images manually, or connect Gmail, Google Drive, WhatsApp, or Green Invoice to sync automatically. Duplicate detection ensures clean data.</div></div></div>
       <div class="faq-item reveal"><button class="faq-q">Do I need a developer to set it up?<span class="chev">▾</span></button><div class="faq-a"><div class="faq-a-inner">No. The entire setup — including Google OAuth, WhatsApp webhook, and Green Invoice API key — is done through a guided UI with no code required.</div></div></div>
     </div>
   </div>
@@ -1618,7 +1643,7 @@
   })();
 
 
-  // Billing checkout redirect — plan: 'basic' | 'pro'
+  // Billing checkout redirect — plan: 'starter' | 'pro'
   async function checkout(plan) {
     const btn = event?.currentTarget;
     const origText = btn?.textContent;

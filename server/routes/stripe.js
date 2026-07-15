@@ -5,9 +5,12 @@ const { PLANS } = require('../lib/plans');
 
 const stripe = Stripe(process.env.STRIPE_SECRET_KEY || 'sk_test_placeholder');
 
+// `basic` is retired from sale but kept resolvable for existing Stripe
+// subscriptions still on it — never offered by the checkout UI anymore.
 const PRICE_IDS = {
-  basic: process.env.STRIPE_PRICE_BASIC,
-  pro:   process.env.STRIPE_PRICE_PRO,
+  basic:   process.env.STRIPE_PRICE_BASIC,
+  starter: process.env.STRIPE_PRICE_STARTER,
+  pro:     process.env.STRIPE_PRICE_PRO,
 };
 
 // ─── Authenticated router ─────────────────────────────────────────────────────
@@ -141,7 +144,7 @@ async function handleWebhookEvent(event) {
       if (session.mode !== 'subscription') break;
 
       const userId = session.client_reference_id || session.metadata?.user_id;
-      const plan   = session.metadata?.plan || 'basic';
+      const plan   = session.metadata?.plan || 'starter';
       if (!userId) { console.error('[stripe] checkout.session.completed: no user_id in metadata'); break; }
 
       // Fetch full subscription details from Stripe
@@ -219,11 +222,13 @@ async function userIdForCustomer(customerId) {
 }
 
 function planFromStripeSub(stripeSub) {
-  // Map Stripe price IDs back to plan names
+  // Map Stripe price IDs back to plan names. `basic` is only ever matched
+  // here for existing legacy subscriptions — new checkouts never select it.
   const priceId = stripeSub.items?.data?.[0]?.price?.id;
-  if (priceId === process.env.STRIPE_PRICE_PRO)   return 'pro';
-  if (priceId === process.env.STRIPE_PRICE_BASIC) return 'basic';
-  return 'basic';
+  if (priceId === process.env.STRIPE_PRICE_PRO)     return 'pro';
+  if (priceId === process.env.STRIPE_PRICE_STARTER) return 'starter';
+  if (priceId === process.env.STRIPE_PRICE_BASIC)   return 'basic';
+  return 'starter';
 }
 
 function stripeStatusToLocal(stripeStatus) {

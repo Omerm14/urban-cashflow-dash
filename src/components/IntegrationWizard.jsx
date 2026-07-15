@@ -66,6 +66,9 @@ export default function IntegrationWizard({ type, initialStep, integration, onCl
   const Icon = ICONS[type];
   const intro = INTRO_COPY[type];
   const sequence = SEQUENCES[type];
+  // Server errors are raw codes (e.g. SOURCE_LIMIT_REACHED) — translate the ones
+  // a user can actually hit here; anything else falls back to the raw message.
+  const friendlyError = (e) => e.message === "SOURCE_LIMIT_REACHED" ? t("int_source_limit_reached") : e.message;
 
   const [step, setStep] = useState(initialStep || "intro");
   const [liveIntegration, setLiveIntegration] = useState(integration || null);
@@ -154,7 +157,7 @@ export default function IntegrationWizard({ type, initialStep, integration, onCl
         await apiFetch("/api/integrations/whatsapp", { method: "POST" });
         await refreshSelf();
         setStep("share");
-      } catch (e) { showToast(e.message, false); }
+      } catch (e) { showToast(friendlyError(e), false); }
       finally { setConnecting(false); }
       return;
     }
@@ -166,7 +169,7 @@ export default function IntegrationWizard({ type, initialStep, integration, onCl
         `/api/integrations/google/auth-url?type=${type}&returnUrl=${encodeURIComponent(window.location.origin + "/app")}`
       );
       window.location.href = url;
-    } catch (e) { showToast(e.message, false); setConnecting(false); }
+    } catch (e) { showToast(friendlyError(e), false); setConnecting(false); }
   };
 
   const handleGreenInvoiceConnect = async () => {
@@ -176,7 +179,7 @@ export default function IntegrationWizard({ type, initialStep, integration, onCl
       await apiFetch("/api/integrations/green-invoice", { method: "POST", body: { apiKey, apiSecret } });
       const fresh = await refreshSelf();
       await triggerFirstSync(fresh?.id);
-    } catch (e) { setAuthErr(e.message); setConnecting(false); }
+    } catch (e) { setAuthErr(friendlyError(e)); setConnecting(false); }
   };
 
   const handleFinishConfigure = async () => {
