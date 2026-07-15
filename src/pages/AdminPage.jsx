@@ -4,7 +4,8 @@ import { FONT_UI as SANS, FONT_MONO as MONO } from "../theme";
 import { apiFetch } from "../lib/api";
 import { Ban, Trash2, Pencil, Check, X, AlertTriangle } from "lucide-react";
 
-const PLAN_KEYS = ["free", "basic", "pro", "enterprise"];
+// `basic` is retired from sale but kept here so admins can still view/manage legacy accounts.
+const PLAN_KEYS = ["free", "basic", "starter", "pro", "enterprise"];
 const STATUS_KEYS = ["active", "canceled", "past_due", "trialing"];
 const TABS = ["usage", "users", "subscriptions"];
 

@@ -25,24 +25,24 @@ export default function UsageBanner({ plan, used, limit, remaining, onUpgrade })
       {isWarning && <span>⚠️</span>}
       <span>
         <strong>{used}</strong> {t('usage_summary_suffix', { limit })}
-        {remaining > 0
+        {plan === 'pro'
+          ? <span style={{ color: isWarning ? '#fcd34d' : 'var(--t3)', marginLeft: 6 }}>{t('usage_pro_nudge')}</span>
+          : remaining > 0
           ? <span style={{ color: isWarning ? '#fcd34d' : 'var(--t3)', marginLeft: 6 }}>{t('usage_remaining', { remaining })}</span>
           : <span style={{ color: '#f87171', marginLeft: 6, fontWeight: 700 }}>{t('usage_limit_reached')}</span>
         }
       </span>
-      {plan !== 'pro' && (
-        <button
-          onClick={onUpgrade}
-          style={{
-            background: isWarning ? '#f59e0b' : 'var(--primary)',
-            border: 'none', borderRadius: 8,
-            padding: '5px 12px', fontSize: 12, fontWeight: 700,
-            color: isWarning ? '#1c1917' : 'var(--accent-ink)', cursor: 'pointer',
-          }}
-        >
-          {t('usage_upgrade_now')}
-        </button>
-      )}
+      <button
+        onClick={onUpgrade}
+        style={{
+          background: isWarning ? '#f59e0b' : 'var(--primary)',
+          border: 'none', borderRadius: 8,
+          padding: '5px 12px', fontSize: 12, fontWeight: 700,
+          color: isWarning ? '#1c1917' : 'var(--accent-ink)', cursor: 'pointer',
+        }}
+      >
+        {plan === 'pro' ? t('usage_talk_to_enterprise') : t('usage_upgrade_now')}
+      </button>
       <button
         onClick={() => setDismissed(true)}
         style={{

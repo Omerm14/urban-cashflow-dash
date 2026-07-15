@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { getPlanUsage, ensureSubscription } = require('../lib/plans');
+const { PLANS, getPlanUsage, ensureSubscription } = require('../lib/plans');
 const supabase = require('../lib/supabase');
 
 const MESHULAM_USER_ID  = process.env.MESHULAM_USER_ID  || '';
@@ -8,7 +8,9 @@ const MESHULAM_API_KEY  = process.env.MESHULAM_API_KEY  || '';
 const MESHULAM_PAGE_CODE = process.env.MESHULAM_PAGE_CODE || '';
 const APP_URL = process.env.APP_URL || 'http://localhost:5173';
 
-const PLAN_AMOUNTS = { basic: 99, pro: 199 };
+// `basic` (₪99) is retired from sale but kept working for existing subscribers —
+// it is never offered by any new-purchase UI (UpgradeModal, marketing site).
+const PLAN_AMOUNTS = { basic: PLANS.basic.price, starter: PLANS.starter.price, pro: PLANS.pro.price };
 
 // POST /api/billing/checkout — create a Meshulam hosted payment URL
 router.post('/checkout', async (req, res) => {

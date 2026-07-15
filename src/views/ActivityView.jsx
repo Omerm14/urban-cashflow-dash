@@ -9,7 +9,7 @@ export const SOURCE_NAMES = { google_drive: "Google Drive", gmail: "Gmail", what
 
 // The audit trail: every auto-synced file's origin, timestamp, and outcome.
 // Reads sync_events directly under RLS, same pattern as invoices/suppliers.
-export default function ActivityView() {
+export default function ActivityView({ entitlements, onUpgrade }) {
   const T = useT();
   const { t, lang } = useLang();
   const { isMobile } = useLayout();
@@ -52,6 +52,18 @@ export default function ActivityView() {
     filter === "failed" ? (e.event_type === "ocr_failed" || e.event_type === "download_failed") :
     e.event_type === filter
   );
+
+  if (entitlements && !entitlements.auditTrail) {
+    return (
+      <div style={{ textAlign: "center", padding: "60px 20px", color: T.t3 }}>
+        <History size={28} strokeWidth={1} style={{ margin: "0 auto 10px", display: "block" }} aria-hidden="true" />
+        <div style={{ fontFamily: SANS, fontSize: 14, maxWidth: 360, margin: "0 auto 16px", lineHeight: 1.6 }}>
+          {t("act_locked")}
+        </div>
+        <button className="btn btn-accent" onClick={onUpgrade}>{t("act_locked_cta")}</button>
+      </div>
+    );
+  }
 
   if (events === null) {
     return (

@@ -2,7 +2,7 @@ const { google } = require('googleapis');
 const supabase   = require('../lib/supabase');
 const storage    = require('../lib/storage');
 const sync       = require('../services/syncProcessor');
-const { assertInvoiceLimit } = require('../lib/plans');
+const { checkInvoiceLimit, assertSourceLimit } = require('../lib/plans');
 
 const SCOPES = {
   google_drive: ['https://www.googleapis.com/auth/drive.readonly'],
@@ -72,6 +72,15 @@ exports.googleAuthUrl = async (req, res) => {
     });
   }
 
+  try {
+    await assertSourceLimit(req.user.id, type);
+  } catch (limitErr) {
+    if (limitErr.code === 'SOURCE_LIMIT_REACHED') {
+      return res.status(403).json({ error: limitErr.code, used: limitErr.used, limit: limitErr.limit, plan: limitErr.plan });
+    }
+    throw limitErr;
+  }
+
   const url = makeOAuth2().generateAuthUrl({
     access_type: 'offline',
     scope:       SCOPES[type],
@@ -105,6 +114,15 @@ exports.googleCallback = async (req, res) => {
   if (!stateData.userId) return res.redirect(`${frontend}?view=integrations&oauth_error=invalid_state`);
 
   const { userId, type } = stateData;
+  try {
+    await assertSourceLimit(userId, type);
+  } catch (limitErr) {
+    if (limitErr.code === 'SOURCE_LIMIT_REACHED') {
+      return res.redirect(`${frontend}?view=integrations&oauth_error=source_limit_reached`);
+    }
+    throw limitErr;
+  }
+
   try {
     const { tokens } = await makeOAuth2().getToken(code);
     // Fetch existing row to preserve config (labels, folder, etc.) and sync_count
@@ -284,6 +302,15 @@ exports.connectGreenInvoice = async (req, res) => {
   const { apiKey, apiSecret } = req.body;
   if (!apiKey || !apiSecret) return res.status(400).json({ error: 'apiKey and apiSecret are required' });
 
+  try {
+    await assertSourceLimit(req.user.id, 'green_invoice');
+  } catch (limitErr) {
+    if (limitErr.code === 'SOURCE_LIMIT_REACHED') {
+      return res.status(403).json({ error: limitErr.code, used: limitErr.used, limit: limitErr.limit, plan: limitErr.plan });
+    }
+    throw limitErr;
+  }
+
   const { error } = await supabase.from('integrations').upsert({
     user_id:       req.user.id,
     type:          'green_invoice',
@@ -306,6 +333,15 @@ exports.connectWhatsApp = async (req, res) => {
   }
   if (!process.env.WHATSAPP_PHONE_NUMBER_ID) {
     console.warn('[integrations] WHATSAPP_PHONE_NUMBER_ID not set — WhatsApp reply messages will not be sent. Add this env var (the numeric Phone Number ID from Meta Business dashboard).');
+  }
+
+  try {
+    await assertSourceLimit(req.user.id, 'whatsapp');
+  } catch (limitErr) {
+    if (limitErr.code === 'SOURCE_LIMIT_REACHED') {
+      return res.status(403).json({ error: limitErr.code, used: limitErr.used, limit: limitErr.limit, plan: limitErr.plan });
+    }
+    throw limitErr;
   }
 
   // Fetch existing config to preserve whitelisted_phones and reuse existing inbox_code
@@ -448,14 +484,8 @@ const createDriveSyncJob = async (integration, userId) => {
 
 // POST /api/integrations/:id/sync  — returns immediately with a jobId for Drive
 exports.triggerSync = async (req, res) => {
-  try {
-    await assertInvoiceLimit(req.user.id);
-  } catch (limitErr) {
-    if (limitErr.code === 'PLAN_LIMIT_REACHED') {
-      return res.status(402).json({ error: limitErr.code, used: limitErr.used, limit: limitErr.limit, plan: limitErr.plan });
-    }
-    throw limitErr;
-  }
+  // Invoice caps are soft — never block a sync, only used for the in-app usage nudge.
+  await checkInvoiceLimit(req.user.id);
 
   const { data: integration, error } = await supabase
     .from('integrations')
