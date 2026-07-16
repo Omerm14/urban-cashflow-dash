@@ -1371,7 +1371,7 @@
           <li>לוח בקרה, לוח שנה וייצוא CSV</li>
           <li>תמיכה במייל</li>
         </ul>
-        <button class="btn btn-ghost btn-block" onclick="checkout('starter')">בחרו Starter</button>
+        <a class="btn btn-ghost btn-block" href="mailto:hello@gocashflow.co">צרו קשר</a>
       </div>
       <!-- Pro -->
       <div class="price-card popular reveal d2">
@@ -1386,7 +1386,7 @@
           <li>יומן ביקורת מלא</li>
           <li>תמיכה בעדיפות גבוהה</li>
         </ul>
-        <button class="btn btn-primary btn-block" onclick="checkout('pro')">בחרו Pro</button>
+        <a class="btn btn-primary btn-block" href="mailto:hello@gocashflow.co">צרו קשר</a>
       </div>
       <!-- Enterprise -->
       <div class="price-card reveal d3">
@@ -1646,30 +1646,6 @@
     play();
   })();
 
-
-  // Billing checkout redirect — plan: 'starter' | 'pro'
-  async function checkout(plan) {
-    const btn = event?.currentTarget;
-    const origText = btn?.textContent;
-    if (btn) { btn.disabled = true; btn.textContent = '...'; }
-    try {
-      const res = await fetch('/api/billing/checkout', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ plan }),
-      });
-      const data = await res.json();
-      if (data.url) {
-        window.location.href = data.url;
-      } else {
-        alert(data.error || 'משהו השתבש. נסו שוב.');
-        if (btn) { btn.disabled = false; btn.textContent = origText; }
-      }
-    } catch {
-      alert('שגיאת רשת. נסו שוב.');
-      if (btn) { btn.disabled = false; btn.textContent = origText; }
-    }
-  }
 
   // Mobile nav toggle
   (function(){

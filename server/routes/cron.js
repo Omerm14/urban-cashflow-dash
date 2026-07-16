@@ -1,5 +1,7 @@
 const supabase = require('../lib/supabase');
 const sync     = require('../services/syncProcessor');
+const { PLANS } = require('../lib/plans');
+const hyp      = require('../lib/hyp');
 const BATCH_SIZE = 5;  // larger batch for cron (no timeout pressure)
 
 // GET /api/cron/sync
@@ -119,4 +121,75 @@ exports.runSync = async (req, res) => {
 
   console.log(`[cron] ${jobsResumed} stale job(s) resumed`);
   res.json({ ok: true, synced: succeeded.length, failed, results: succeeded, jobsResumed });
+};
+
+// GET /api/cron/billing
+// Recurring monthly charges for subscriptions billed via Hyp. Checkouts are
+// always admin-generated (server/routes/admin.js generateBillingLink) — this
+// job is what keeps renewals unattended after that first, manual step: no
+// redirect or MAC check needed here, since we're calling Hyp ourselves with
+// our own credentials, not relaying something a client's browser sent us.
+// Requires: Authorization: Bearer <CRON_SECRET>
+exports.runBilling = async (req, res) => {
+  const secret = process.env.CRON_SECRET;
+  const auth   = req.headers.authorization || '';
+
+  const expected = `Bearer ${secret || ''}`;
+  const credOk = secret &&
+    auth.length === expected.length &&
+    require('crypto').timingSafeEqual(Buffer.from(auth), Buffer.from(expected));
+  if (!credOk) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+
+  const now = new Date();
+  const { data: due, error } = await supabase
+    .from('subscriptions')
+    .select('*')
+    .eq('status', 'active')
+    .not('hyp_card_token', 'is', null)
+    .lte('current_period_end', now.toISOString());
+
+  if (error) {
+    console.error('[cron:billing] error:', error.message);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+
+  console.log(`[cron:billing] ${(due || []).length} subscription(s) due for renewal`);
+
+  const results = await Promise.allSettled((due || []).map(async (sub) => {
+    const plan = PLANS[sub.plan];
+    if (!plan) throw new Error(`Unknown plan "${sub.plan}" on subscription ${sub.user_id}`);
+
+    const xml = hyp.buildRecurringDebitXml({
+      terminalNumber: sub.hyp_terminal_number || process.env.HYP_TERMINAL_NUMBER,
+      cardId:         sub.hyp_card_token,
+      cardExpiration: sub.hyp_card_exp,
+      total:          plan.price * 100,
+    });
+    const { result, message, tranId } = await hyp.callHyp(xml);
+
+    if (result === '000') {
+      const periodEnd = new Date(now);
+      periodEnd.setDate(periodEnd.getDate() + 30);
+      await supabase.from('subscriptions').update({
+        current_period_start: now.toISOString(),
+        current_period_end:   periodEnd.toISOString(),
+        hyp_last_charge_uid:  String(tranId),
+        updated_at:           now.toISOString(),
+      }).eq('user_id', sub.user_id);
+      return { userId: sub.user_id, charged: true };
+    }
+
+    console.warn(`[cron:billing] recurring charge declined for ${sub.user_id}: ${result} ${message}`);
+    await supabase.from('subscriptions').update({
+      status:     'past_due',
+      updated_at: now.toISOString(),
+    }).eq('user_id', sub.user_id);
+    return { userId: sub.user_id, charged: false, result };
+  }));
+
+  const succeeded = results.filter(r => r.status === 'fulfilled' && r.value.charged).length;
+  const failed    = results.length - succeeded;
+  res.json({ ok: true, processed: results.length, succeeded, failed });
 };

@@ -1367,7 +1367,7 @@
           <li>Dashboard, calendar &amp; CSV export</li>
           <li>Email support</li>
         </ul>
-        <button class="btn btn-ghost btn-block" onclick="checkout('starter')">Get Started</button>
+        <a class="btn btn-ghost btn-block" href="mailto:hello@gocashflow.co">Contact Us</a>
       </div>
       <!-- Pro -->
       <div class="price-card popular reveal d2">
@@ -1382,7 +1382,7 @@
           <li>Full audit trail</li>
           <li>Priority support</li>
         </ul>
-        <button class="btn btn-primary btn-block" onclick="checkout('pro')">Get Pro</button>
+        <a class="btn btn-primary btn-block" href="mailto:hello@gocashflow.co">Contact Us</a>
       </div>
       <!-- Enterprise -->
       <div class="price-card reveal d3">
@@ -1642,30 +1642,6 @@
     play();
   })();
 
-
-  // Billing checkout redirect — plan: 'starter' | 'pro'
-  async function checkout(plan) {
-    const btn = event?.currentTarget;
-    const origText = btn?.textContent;
-    if (btn) { btn.disabled = true; btn.textContent = '...'; }
-    try {
-      const res = await fetch('/api/billing/checkout', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ plan }),
-      });
-      const data = await res.json();
-      if (data.url) {
-        window.location.href = data.url;
-      } else {
-        alert(data.error || 'Something went wrong. Please try again.');
-        if (btn) { btn.disabled = false; btn.textContent = origText; }
-      }
-    } catch {
-      alert('Network error. Please try again.');
-      if (btn) { btn.disabled = false; btn.textContent = origText; }
-    }
-  }
 
   // Mobile nav toggle
   (function(){

@@ -41,7 +41,7 @@ export default function UsageBanner({ plan, used, limit, remaining, onUpgrade })
           color: isWarning ? '#1c1917' : 'var(--accent-ink)', cursor: 'pointer',
         }}
       >
-        {plan === 'pro' ? t('usage_talk_to_enterprise') : t('usage_upgrade_now')}
+        {plan === 'pro' ? t('usage_talk_to_enterprise') : t('usage_contact_us')}
       </button>
       <button
         onClick={() => setDismissed(true)}

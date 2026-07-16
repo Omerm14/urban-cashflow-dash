@@ -475,6 +475,8 @@ const he = {
   admin_override_saved: "המנוי עודכן",
   admin_no_subscriptions: "לא נמצאו מנויים",
   admin_conflict: "חיוב כפול",
+  admin_generate_link: "קישור: {plan}",
+  admin_link_copied: "קישור התשלום הועתק ({plan})",
 
   // Upgrade modal (billing paywall)
   upgrade_dialog_label: "שדרוג תוכנית",
@@ -486,8 +488,9 @@ const he = {
   upgrade_tier_pro: "פרו",
   upgrade_popular: "הפופולרי",
   upgrade_per_month: "/לחודש",
-  upgrade_get_starter: "בחרו Starter",
-  upgrade_get_pro: "בחרו פרו",
+  upgrade_contact_us: "צרו קשר",
+  upgrade_contact_subject_starter: "מעוניין בתוכנית Starter",
+  upgrade_contact_subject_pro: "מעוניין בתוכנית Pro",
   upgrade_feat_upload_ocr: "העלאה ידנית + OCR",
   upgrade_feat_dashboard_calendar: "לוח בקרה ולוח שנה",
   upgrade_feat_invoices_per_month: "חשבוניות בחודש",
@@ -495,14 +498,13 @@ const he = {
   upgrade_feat_priority_support: "תמיכה מועדפת",
   upgrade_included: "כלול",
   upgrade_not_included: "לא כלול",
-  upgrade_subscribe_failed: "המנוי נכשל",
   upgrade_continue_readonly: "המשך צפייה (לקריאה בלבד)",
 
   // Usage banner
   usage_summary_suffix: "/ {limit} חשבוניות נוצלו החודש",
   usage_remaining: "· {remaining} נותרו",
   usage_limit_reached: "· המכסה נוצלה",
-  usage_upgrade_now: "שדרגו עכשיו",
+  usage_contact_us: "צרו קשר",
   usage_pro_nudge: "· מתקרבים למגבלת ה-Pro שלכם",
   usage_talk_to_enterprise: "דברו איתנו על Enterprise",
   usage_dismiss: "סגירה",

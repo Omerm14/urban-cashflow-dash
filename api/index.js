@@ -56,6 +56,7 @@ app.post('/api/admin/users/:userId/ban',            admin.banUser);
 app.post('/api/admin/users/:userId/unban',          admin.unbanUser);
 app.get('/api/admin/subscriptions',                 admin.listSubscriptions);
 app.patch('/api/admin/subscriptions/:userId',       admin.updateSubscription);
+app.post('/api/admin/subscriptions/:userId/billing-link', admin.generateBillingLink);
 
 // Integrations
 const integrations = require('../server/routes/integrations');
@@ -88,9 +89,10 @@ app.post('/api/attachments/presign',      auth, invoices.presignUpload);
 // Profile (logo upload)
 app.post('/api/profile/logo', auth, require('../server/routes/profile').uploadLogo);
 
-// Billing (Meshulam)
+// Billing (Hyp) — the redirect landing page has no auth (plain browser
+// redirect target, trust comes from the responseMac check); rest uses auth
 const billing = require('../server/routes/billing');
-app.post('/api/billing/ipn', billing.ipn);
+app.get('/api/billing/redirect', billing.redirect);
 app.use('/api/billing', auth, billing.router);
 
 // Billing (Stripe — global market; both systems write the subscriptions table)
@@ -103,6 +105,7 @@ app.delete('/api/account', accountLimiter, auth, require('../server/routes/accou
 app.get('/api/cron/sync', require('../server/routes/cron').runSync);
 app.get('/api/cron/gc',   require('../server/routes/gc').runGc);
 app.get('/api/cron/migrate', require('../server/routes/migrate').runMigrate);
+app.get('/api/cron/billing', require('../server/routes/cron').runBilling);
 
 // eslint-disable-next-line no-unused-vars
 app.use((err, req, res, next) => {

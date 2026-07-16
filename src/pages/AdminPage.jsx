@@ -2,10 +2,13 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { useT, useLang } from "../contexts/AppContexts";
 import { FONT_UI as SANS, FONT_MONO as MONO } from "../theme";
 import { apiFetch } from "../lib/api";
-import { Ban, Trash2, Pencil, Check, X, AlertTriangle } from "lucide-react";
+import { Ban, Trash2, Pencil, Check, X, AlertTriangle, Link2 } from "lucide-react";
 
 // `basic` is retired from sale but kept here so admins can still view/manage legacy accounts.
 const PLAN_KEYS = ["free", "basic", "starter", "pro", "enterprise"];
+// Only fixed-price catalog tiers get a self-checkout link — Enterprise pricing
+// is negotiated per-account, matching server/routes/admin.js BILLABLE_PLANS.
+const BILLABLE_PLANS = ["starter", "pro"];
 const STATUS_KEYS = ["active", "canceled", "past_due", "trialing"];
 const TABS = ["usage", "users", "subscriptions"];
 
@@ -255,6 +258,7 @@ function SubscriptionsTab() {
   const [editId, setEditId] = useState(null);
   const [editData, setEditData] = useState({});
   const [saving, setSaving] = useState(false);
+  const [linkLoading, setLinkLoading] = useState(null); // `${userId}:${plan}` while in flight
 
   const showToast = (text, ok) => { setToast({ text, ok }); setTimeout(() => setToast(null), 4000); };
 
@@ -278,6 +282,24 @@ function SubscriptionsTab() {
       load();
     } catch (e) { showToast(e.message, false); }
     finally { setSaving(false); }
+  };
+
+  // No self-serve checkout anywhere — this is the only way a Hyp payment link
+  // gets created. Copies straight to the clipboard so it can be pasted into
+  // WhatsApp/email to the client; falls back to showing the raw URL in the
+  // toast if clipboard access is unavailable.
+  const generateLink = async (userId, plan) => {
+    setLinkLoading(`${userId}:${plan}`);
+    try {
+      const { url } = await apiFetch(`/api/admin/subscriptions/${userId}/billing-link`, { method: "POST", body: { plan } });
+      try {
+        await navigator.clipboard.writeText(url);
+        showToast(t("admin_link_copied", { plan }), true);
+      } catch {
+        showToast(url, true);
+      }
+    } catch (e) { showToast(e.message, false); }
+    finally { setLinkLoading(null); }
   };
 
   if (loading) return <div style={{ padding: 32, textAlign: "center", color: T.t3, fontFamily: SANS, fontSize: 13 }}>{t("loading")}</div>;
@@ -337,13 +359,20 @@ function SubscriptionsTab() {
                           style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: 10, fontWeight: 700, color: T.amber, background: T.amberTint, border: `1px solid ${T.amberBdr}`, borderRadius: 10, padding: "2px 8px" }}>
                           <AlertTriangle size={10} /> {t("admin_conflict")}
                         </span>
-                      ) : (s.stripeSubscriptionId ? "Stripe" : s.meshulamSubscriptionRef ? "Meshulam" : "—")}
+                      ) : (s.stripeSubscriptionId ? "Stripe" : s.meshulamSubscriptionRef ? "Meshulam" : s.hypCardToken ? "Hyp" : "—")}
                     </td>
-                    <td style={td}>
+                    <td style={{ ...td, display: "flex", gap: 6, flexWrap: "wrap" }}>
                       <button onClick={() => startEdit(s)} aria-label={t("admin_override")} title={t("admin_override")}
                         style={{ padding: "4px 8px", background: "transparent", border: `1px solid ${T.bdr}`, borderRadius: 5, color: T.t2, cursor: "pointer", display: "flex", alignItems: "center", gap: 4, fontSize: 11 }}>
                         <Pencil size={11} /> {t("admin_override")}
                       </button>
+                      {BILLABLE_PLANS.map(p => (
+                        <button key={p} onClick={() => generateLink(s.userId, p)} disabled={linkLoading === `${s.userId}:${p}`}
+                          aria-label={t("admin_generate_link", { plan: p })} title={t("admin_generate_link", { plan: p })}
+                          style={{ padding: "4px 8px", background: "transparent", border: `1px solid ${T.bdr}`, borderRadius: 5, color: T.t2, cursor: "pointer", display: "flex", alignItems: "center", gap: 4, fontSize: 11, textTransform: "capitalize" }}>
+                          <Link2 size={11} /> {linkLoading === `${s.userId}:${p}` ? "…" : p}
+                        </button>
+                      ))}
                     </td>
                   </>
                 )}

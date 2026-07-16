@@ -1,34 +1,19 @@
-import { useState } from "react";
-import { supabase } from "../lib/supabase";
 import { useT, useLayout, useLang } from "../contexts/AppContexts";
 import { FONT_UI as SANS, FONT_DISPLAY as DISPLAY } from "../theme";
 import { PLAN_PRICES, PLAN_LIMITS } from "../constants/plans";
 import { X, Check } from "lucide-react";
 
+// No self-serve checkout — every paying client goes through support, who
+// sends them a Hyp payment link by hand after the conversation below.
+const contactHref = (subject) => `mailto:hello@gocashflow.co?subject=${encodeURIComponent(subject)}`;
+
 export default function UpgradeModal({ onClose, planUsed, planLimit, planPct }) {
   const T = useT();
   const { isMobile } = useLayout();
   const { t } = useLang();
-  const [loading, setLoading] = useState(null);
-  const [error, setError] = useState(null);
   const used = planUsed ?? 0, limit = planLimit ?? 20;
   const pct = planPct != null ? Math.round(planPct * 100) : Math.round((used / limit) * 100);
 
-  const handleSubscribe = async (tier) => {
-    setLoading(tier); setError(null);
-    try {
-      const { data: { session } } = await supabase.auth.getSession();
-      const res = await fetch("/api/billing/checkout", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${session?.access_token}` },
-        body: JSON.stringify({ plan: tier }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || t("upgrade_subscribe_failed"));
-      if (data.url) window.location.href = data.url;
-      else onClose();
-    } catch (e) { setError(e.message); } finally { setLoading(null); }
-  };
   const PLANS = { starter: PLAN_PRICES.starter, pro: PLAN_PRICES.pro };
   const FEATURES = [
     { labelKey: "upgrade_feat_upload_ocr",         starter: true,  pro: true },
@@ -58,13 +43,13 @@ export default function UpgradeModal({ onClose, planUsed, planLimit, planPct }) 
           <div style={{ background: T.surf2, border: `1px solid ${T.bdr}`, borderRadius: 10, padding: 14 }}>
             <div style={{ fontFamily: SANS, fontSize: 10, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: T.t3, marginBottom: 5 }}>{t("upgrade_tier_starter")}</div>
             <div style={{ marginBottom: 10 }}><span className="num" style={{ fontSize: 22, fontWeight: 500, color: T.t1 }}>₪{PLANS.starter}</span><span style={{ fontFamily: SANS, fontSize: 11, color: T.t3 }}>{t("upgrade_per_month")}</span></div>
-            <button className="btn btn-ghost" style={{ width: "100%", padding: "9px 0" }} onClick={() => handleSubscribe("starter")} disabled={!!loading}>{loading === "starter" ? "…" : t("upgrade_get_starter")}</button>
+            <a className="btn btn-ghost" style={{ width: "100%", padding: "9px 0", display: "block", textAlign: "center" }} href={contactHref(t("upgrade_contact_subject_starter"))}>{t("upgrade_contact_us")}</a>
           </div>
           <div style={{ background: T.accentTint, border: `2px solid ${T.accent}`, borderRadius: 10, padding: 14, position: "relative" }}>
             <div style={{ position: "absolute", top: -11, left: "50%", transform: "translateX(-50%)", background: T.accent, color: T.accentInk, fontFamily: SANS, fontSize: 10, fontWeight: 700, padding: "3px 10px", borderRadius: 100, whiteSpace: "nowrap" }}>{t("upgrade_popular")}</div>
             <div style={{ fontFamily: SANS, fontSize: 10, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: T.accent, marginBottom: 5 }}>{t("upgrade_tier_pro")}</div>
             <div style={{ marginBottom: 10 }}><span className="num" style={{ fontSize: 22, fontWeight: 500, color: T.t1 }}>₪{PLANS.pro}</span><span style={{ fontFamily: SANS, fontSize: 11, color: T.t3 }}>{t("upgrade_per_month")}</span></div>
-            <button className="btn btn-accent" style={{ width: "100%", padding: "9px 0", fontWeight: 700 }} onClick={() => handleSubscribe("pro")} disabled={!!loading}>{loading === "pro" ? "…" : t("upgrade_get_pro")}</button>
+            <a className="btn btn-accent" style={{ width: "100%", padding: "9px 0", fontWeight: 700, display: "block", textAlign: "center" }} href={contactHref(t("upgrade_contact_subject_pro"))}>{t("upgrade_contact_us")}</a>
           </div>
         </div>
         <div style={{ background: T.surf2, border: `1px solid ${T.bdr}`, borderRadius: 8, overflow: "hidden", marginBottom: 12 }}>
@@ -84,7 +69,6 @@ export default function UpgradeModal({ onClose, planUsed, planLimit, planPct }) 
             </div>
           ))}
         </div>
-        {error && <div role="alert" style={{ fontFamily: SANS, fontSize: 12, color: T.red, background: T.redTint, border: `1px solid ${T.redBdr}`, borderRadius: 6, padding: "8px 12px", marginBottom: 8 }}>{error}</div>}
         <button onClick={onClose} style={{ display: "block", width: "100%", background: "none", border: "none", color: T.t3, fontFamily: SANS, fontSize: 13, cursor: "pointer", padding: "6px 0", textDecoration: "underline", textDecorationStyle: "dotted" }}>{t("upgrade_continue_readonly")}</button>
       </div>
     </div>

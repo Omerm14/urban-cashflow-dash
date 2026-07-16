@@ -1,9 +1,15 @@
+const crypto   = require('crypto');
 const auth     = require('../middleware/auth');
 const isAdmin  = require('../middleware/isAdmin');
 const supabase = require('../lib/supabase');
 const { PLANS } = require('../lib/plans');
 const { deleteUserData } = require('../lib/accountCleanup');
 const { isUUID } = require('../lib/validate');
+const hyp = require('../lib/hyp');
+
+// Only paid, fixed-price catalog tiers can get a self-checkout link this way —
+// Enterprise pricing is negotiated per-account and isn't a fixed `total`.
+const BILLABLE_PLANS = ['starter', 'pro'];
 
 const STATUSES = ['active', 'canceled', 'past_due', 'trialing'];
 
@@ -200,6 +206,7 @@ exports.listSubscriptions = [auth, isAdmin, async (req, res) => {
         stripeSubscriptionId: s.stripe_subscription_id,
         meshulamUserToken: s.meshulam_user_token,
         meshulamSubscriptionRef: s.meshulam_subscription_ref,
+        hypCardToken: s.hyp_card_token,
         providerConflict: Boolean(
           (s.stripe_customer_id || s.stripe_subscription_id) &&
           (s.meshulam_user_token || s.meshulam_subscription_ref)
@@ -230,6 +237,50 @@ exports.updateSubscription = [auth, isAdmin, async (req, res) => {
     res.json({ ok: true });
   } catch (err) {
     console.error('[admin] updateSubscription error:', err.message);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+}];
+
+// POST /api/admin/subscriptions/:userId/billing-link  { plan } — the ONLY place
+// in the app that can create a Hyp checkout. There is no self-serve checkout;
+// every paying client goes through support, and an admin sends them this link
+// by hand (WhatsApp, email, etc.) after agreeing terms. Once the client pays,
+// GET /api/billing/redirect (server/routes/billing.js) activates their
+// subscription automatically via the responseMac check — no further admin
+// action needed, and monthly renewal after that runs unattended via the
+// GET /api/cron/billing job.
+exports.generateBillingLink = [auth, isAdmin, async (req, res) => {
+  const { userId } = req.params;
+  const { plan } = req.body;
+  if (!isUUID(userId)) return res.status(400).json({ error: 'Invalid user id' });
+  if (!BILLABLE_PLANS.includes(plan)) return res.status(400).json({ error: 'Invalid plan' });
+
+  try {
+    // userId + plan travel inside uniqueid (MAC-covered) rather than as
+    // separate query params, so the redirect handler never has to trust an
+    // unsigned userId/plan pair — see billing.js `redirect`.
+    const uniqueid = `${userId}:${plan}:${crypto.randomUUID().slice(0, 8)}`;
+    const redirectUrl = `${process.env.APP_URL || 'http://localhost:3001'}/api/billing/redirect`;
+
+    const xml = hyp.buildTxnSetupXml({
+      terminalNumber: process.env.HYP_TERMINAL_NUMBER,
+      mid: process.env.HYP_MID,
+      uniqueid,
+      total: PLANS[plan].price * 100,
+      successUrl: redirectUrl,
+      errorUrl: redirectUrl,
+      cancelUrl: redirectUrl,
+    });
+    const { result, message, doDeal } = await hyp.callHyp(xml);
+    if (result !== '000' || !doDeal.mpiHostedPageUrl) {
+      console.error('[admin] Hyp TxnSetup failed:', result, message);
+      return res.status(502).json({ error: 'Hyp request failed', message });
+    }
+
+    logAdminAction(req.user.email, 'billing.link_generated', userId, { plan });
+    res.json({ url: doDeal.mpiHostedPageUrl });
+  } catch (err) {
+    console.error('[admin] generateBillingLink error:', err.message);
     res.status(500).json({ error: 'Internal server error' });
   }
 }];

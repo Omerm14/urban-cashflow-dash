@@ -17,6 +17,7 @@
     "dotenv": "^16.4.0",
     "express": "^4.19.0",
     "express-rate-limit": "^8.5.2",
+    "fast-xml-parser": "^5.10.1",
     "googleapis": "^171.4.0",
     "jsonrepair": "^3.14.0",
     "lucide-react": "^0.383.0",

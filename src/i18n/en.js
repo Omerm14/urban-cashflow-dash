@@ -481,6 +481,8 @@ const en = {
   admin_override_saved: "Subscription updated",
   admin_no_subscriptions: "No subscriptions found",
   admin_conflict: "Dual billing",
+  admin_generate_link: "Link: {plan}",
+  admin_link_copied: "Payment link copied ({plan})",
 
   // Upgrade modal (billing paywall)
   upgrade_dialog_label: "Upgrade plan",
@@ -492,8 +494,9 @@ const en = {
   upgrade_tier_pro: "Pro",
   upgrade_popular: "Popular",
   upgrade_per_month: "/mo",
-  upgrade_get_starter: "Get Starter",
-  upgrade_get_pro: "Get Pro",
+  upgrade_contact_us: "Contact Us",
+  upgrade_contact_subject_starter: "Interested in the Starter plan",
+  upgrade_contact_subject_pro: "Interested in the Pro plan",
   upgrade_feat_upload_ocr: "Manual upload + OCR",
   upgrade_feat_dashboard_calendar: "Dashboard & calendar",
   upgrade_feat_invoices_per_month: "Invoices/month",
@@ -501,14 +504,13 @@ const en = {
   upgrade_feat_priority_support: "Priority support",
   upgrade_included: "Included",
   upgrade_not_included: "Not included",
-  upgrade_subscribe_failed: "Subscription failed",
   upgrade_continue_readonly: "Continue viewing (read-only)",
 
   // Usage banner
   usage_summary_suffix: "/ {limit} invoices used this month",
   usage_remaining: "· {remaining} remaining",
   usage_limit_reached: "· Limit reached",
-  usage_upgrade_now: "Upgrade Now",
+  usage_contact_us: "Contact Us",
   usage_pro_nudge: "· Approaching your Pro limit",
   usage_talk_to_enterprise: "Talk to Enterprise",
   usage_dismiss: "Dismiss",

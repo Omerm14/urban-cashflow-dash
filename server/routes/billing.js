@@ -1,56 +1,11 @@
 const express = require('express');
 const router = express.Router();
-const { PLANS, getPlanUsage, ensureSubscription } = require('../lib/plans');
+const { getPlanUsage, ensureSubscription } = require('../lib/plans');
+const { verifyResponseMac } = require('../lib/hyp');
+const { isUUID } = require('../lib/validate');
 const supabase = require('../lib/supabase');
 
-const MESHULAM_USER_ID  = process.env.MESHULAM_USER_ID  || '';
-const MESHULAM_API_KEY  = process.env.MESHULAM_API_KEY  || '';
-const MESHULAM_PAGE_CODE = process.env.MESHULAM_PAGE_CODE || '';
-const APP_URL = process.env.APP_URL || 'http://localhost:5173';
-
-// `basic` (₪99) is retired from sale but kept working for existing subscribers —
-// it is never offered by any new-purchase UI (UpgradeModal, marketing site).
-const PLAN_AMOUNTS = { basic: PLANS.basic.price, starter: PLANS.starter.price, pro: PLANS.pro.price };
-
-// POST /api/billing/checkout — create a Meshulam hosted payment URL
-router.post('/checkout', async (req, res) => {
-  try {
-    const { plan } = req.body;
-    if (!PLAN_AMOUNTS[plan]) return res.status(400).json({ error: 'Invalid plan' });
-
-    await ensureSubscription(req.user.id);
-
-    const sum = PLAN_AMOUNTS[plan];
-    const ipnUrl = `${APP_URL}/api/billing/ipn`;
-
-    // If Meshulam credentials not yet configured, return a placeholder
-    if (!MESHULAM_USER_ID || !MESHULAM_PAGE_CODE) {
-      return res.json({ url: `${APP_URL}/app?checkout=pending&plan=${plan}` });
-    }
-
-    const params = new URLSearchParams({
-      pageCode:    MESHULAM_PAGE_CODE,
-      userId:      MESHULAM_USER_ID,
-      apiKey:      MESHULAM_API_KEY,
-      sum:         String(sum),
-      description: `Cashflow ${plan.charAt(0).toUpperCase() + plan.slice(1)} Plan`,
-      email:       req.user.email,
-      successUrl:  `${APP_URL}/app?checkout=success`,
-      cancelUrl:   `${APP_URL}/?checkout=cancel`,
-      ipnUrl,
-      maxPayments: '1',
-      // Pass plan through a custom field so IPN can identify it
-      'custom[plan]': plan,
-      'custom[userId]': req.user.id,
-    });
-
-    const url = `https://secure.meshulam.co.il/paying/index.php?${params.toString()}`;
-    res.json({ url });
-  } catch (err) {
-    console.error('billing/checkout error', err);
-    res.status(500).json({ error: 'Failed to create checkout session' });
-  }
-});
+const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:5173';
 
 // GET /api/billing/usage — return current plan and invoice usage
 router.get('/usage', async (req, res) => {
@@ -64,62 +19,62 @@ router.get('/usage', async (req, res) => {
   }
 });
 
-// POST /api/billing/ipn — Meshulam calls this after payment (no auth middleware)
-async function ipn(req, res) {
-  try {
-    const data = req.body;
+// GET /api/billing/redirect — Hyp sends the client's browser here after a
+// payment-page checkout (success, error, or cancel all land here — see
+// server/routes/admin.js generateBillingLink, which sets successUrl/errorUrl/
+// cancelUrl to this same route). No auth middleware: this is a plain browser
+// redirect target, not an API call the client makes directly.
+//
+// There is no public route that *creates* a checkout — only an admin can do
+// that (see generateBillingLink). This route only *confirms* one, and it
+// only trusts the responseMac, which is keyed by the merchant password the
+// client's browser cannot know. Everything else in the query string
+// (including userId/plan, both embedded in uniqueID) is treated as untrusted
+// input until the MAC check passes.
+async function redirect(req, res) {
+  const { uniqueID, txId, errorCode, cardToken, cardExp, personalId, responseMac } = req.query;
 
-    // Require Meshulam merchant userId field — reject if missing or mismatched.
-    // Without this check an attacker could omit the field and bypass merchant validation.
-    if (!data.userId || data.userId !== MESHULAM_USER_ID) {
-      console.warn('IPN userId missing or mismatch', data.userId);
-      return res.status(400).send('invalid');
-    }
+  const [userId, plan] = String(uniqueID || '').split(':');
 
-    const success = data.transactionStatus === '1' || data.status === 'success' || data.transactionStatus === 'success';
-    const planRaw = data['custom[plan]'] || data.customFields?.plan || null;
-    const userId  = data['custom[userId]'] || data.customFields?.userId || null;
-    const cardToken = data.cardToken || data.token || null;
-
-    // Validate plan against allowlist — never trust an arbitrary string from the payload
-    const plan = Object.keys(PLAN_AMOUNTS).includes(planRaw) ? planRaw : null;
-
-    if (!userId || !plan) {
-      console.warn('IPN missing or invalid userId/plan', { userId: !!userId, plan: planRaw });
-      return res.status(200).send('ok'); // Always 200 to prevent Meshulam retries
-    }
-
-    if (success) {
-      const now = new Date();
-      const periodEnd = new Date(now);
-      periodEnd.setDate(periodEnd.getDate() + 30);
-
-      const { error: upsertErr } = await supabase.from('subscriptions').upsert({
-        user_id: userId,
-        plan,
-        status: 'active',
-        meshulam_card_token: cardToken,
-        meshulam_subscription_ref: data.transactionId || data.transaction_id || null,
-        current_period_start: now.toISOString(),
-        current_period_end: periodEnd.toISOString(),
-        updated_at: now.toISOString(),
-      }, { onConflict: 'user_id' });
-      if (upsertErr) {
-        console.error('IPN upsert failed:', upsertErr.message);
-        return res.status(500).send('error'); // Non-200 so Meshulam retries
-      }
-    } else {
-      const { error: updateErr } = await supabase.from('subscriptions')
-        .update({ status: 'past_due', updated_at: new Date().toISOString() })
-        .eq('user_id', userId);
-      if (updateErr) console.error('IPN past_due update failed:', updateErr.message);
-    }
-
-    res.status(200).send('ok');
-  } catch (err) {
-    console.error('billing/ipn error', err);
-    res.status(200).send('ok'); // Always 200 — Meshulam retries on non-200
+  if (!txId || !uniqueID || !isUUID(userId) || !plan) {
+    console.warn('[hyp] redirect missing required fields');
+    return res.redirect(`${FRONTEND_URL}/?checkout=error`);
   }
+
+  const macValid = verifyResponseMac(
+    { password: process.env.HYP_API_PASSWORD, txId, errorCode, cardToken, cardExp, personalId, uniqueId: uniqueID },
+    responseMac,
+  );
+  const transactionOk = !errorCode || errorCode === '000';
+
+  if (!macValid || !transactionOk) {
+    console.warn('[hyp] redirect rejected', { userId, plan, macValid, errorCode: errorCode || null });
+    return res.redirect(`${FRONTEND_URL}/?checkout=error`);
+  }
+
+  const now = new Date();
+  const periodEnd = new Date(now);
+  periodEnd.setDate(periodEnd.getDate() + 30);
+
+  const { error } = await supabase.from('subscriptions').upsert({
+    user_id: userId,
+    plan,
+    status: 'active',
+    hyp_card_token: cardToken || null,
+    hyp_card_exp: cardExp || null,
+    hyp_terminal_number: process.env.HYP_TERMINAL_NUMBER || null,
+    hyp_last_charge_uid: txId,
+    current_period_start: now.toISOString(),
+    current_period_end: periodEnd.toISOString(),
+    updated_at: now.toISOString(),
+  }, { onConflict: 'user_id' });
+
+  if (error) {
+    console.error('[hyp] subscription activation failed:', error.message);
+    return res.redirect(`${FRONTEND_URL}/?checkout=error`);
+  }
+
+  res.redirect(`${FRONTEND_URL}/app?checkout=success`);
 }
 
-module.exports = { router, ipn };
+module.exports = { router, redirect };

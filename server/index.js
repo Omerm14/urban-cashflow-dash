@@ -70,6 +70,7 @@ app.post('/api/admin/users/:userId/ban',            admin.banUser);
 app.post('/api/admin/users/:userId/unban',          admin.unbanUser);
 app.get('/api/admin/subscriptions',                 admin.listSubscriptions);
 app.patch('/api/admin/subscriptions/:userId',       admin.updateSubscription);
+app.post('/api/admin/subscriptions/:userId/billing-link', admin.generateBillingLink);
 
 // Integrations
 const integrations = require('./routes/integrations');
@@ -101,9 +102,10 @@ app.post('/api/attachments/presign',      auth, invoices.presignUpload);
 // Profile (logo upload)
 app.post('/api/profile/logo', auth, require('./routes/profile').uploadLogo);
 
-// Billing — Meshulam IPN has no auth; rest uses auth middleware
+// Billing — the Hyp redirect landing page has no auth (it's a plain browser
+// redirect target, trust comes from the responseMac check); rest uses auth middleware
 const billingRoutes = require('./routes/billing');
-app.post('/api/billing/ipn', billingRoutes.ipn);
+app.get('/api/billing/redirect', billingRoutes.redirect);
 app.use('/api/billing', auth, billingRoutes.router);
 
 // Stripe — authenticated API routes (checkout, portal, usage)
@@ -117,6 +119,7 @@ app.delete('/api/account', accountLimiter, auth, require('./routes/account').del
 app.get('/api/cron/sync', require('./routes/cron').runSync);
 app.get('/api/cron/gc',   require('./routes/gc').runGc);
 app.get('/api/cron/migrate', require('./routes/migrate').runMigrate);
+app.get('/api/cron/billing', require('./routes/cron').runBilling);
 
 // eslint-disable-next-line no-unused-vars
 app.use((err, req, res, next) => {
