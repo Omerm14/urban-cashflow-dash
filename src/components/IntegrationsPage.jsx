@@ -344,7 +344,7 @@ function EventTimeline({ integrationId, refreshTrigger }) {
 
 // ─── Integration card ─────────────────────────────────────────────────────────
 
-function IntegrationCard({ type, integration, onRefresh, onInvoicesRefresh, onNotificationsRefresh, onSyncResult, showToast, onStartWizard, onStartSync, onCancelSync, activeSyncJob, isAtLimit, onUpgrade }) {
+function IntegrationCard({ type, integration, onRefresh, onInvoicesRefresh, onNotificationsRefresh, onSyncResult, showToast, onStartWizard, onStartSync, onCancelSync, activeSyncJob, sourcesAtLimit, onUpgrade }) {
   const T = useT();
   const { t, lang } = useLang();
   const locale = lang === "he" ? "he-IL" : "en-GB";
@@ -621,22 +621,23 @@ function IntegrationCard({ type, integration, onRefresh, onInvoicesRefresh, onNo
         {/* Actions */}
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap", paddingBottom: connected ? 16 : 22 }}>
           {!connected ? (
-            <Btn onClick={() => onStartWizard(type)} style={{ background: `linear-gradient(135deg,${cfg.color},${cfg.color}cc)`, color: "#fff", boxShadow: `0 4px 16px ${cfg.color}30` }}>
-              {t("int_connect")}
+            <Btn
+              onClick={sourcesAtLimit ? onUpgrade : () => onStartWizard(type)}
+              title={sourcesAtLimit ? t("int_source_limit_reached") : undefined}
+              style={sourcesAtLimit ? { opacity: .6 } : { background: `linear-gradient(135deg,${cfg.color},${cfg.color}cc)`, color: "#fff", boxShadow: `0 4px 16px ${cfg.color}30` }}>
+              {sourcesAtLimit ? `🔒 ${t("int_connect")}` : t("int_connect")}
             </Btn>
           ) : (
             <>
               {cfg.authType !== "webhook" && (
               <Btn
-                onClick={isAtLimit ? onUpgrade : () => handleSync(false)}
+                onClick={() => handleSync(false)}
                 disabled={isActive}
-                title={isAtLimit ? t("int_limit_reached") : undefined}
-                style={syncDone ? { background: T.greenTint, color: T.green, border: `1px solid ${T.greenBdr}` } : isAtLimit ? { opacity: .6 } : {}}>
+                style={syncDone ? { background: T.greenTint, color: T.green, border: `1px solid ${T.greenBdr}` } : {}}>
                 {discovering ? t("int_finding_files")
                   : isJobSyncing ? t("int_file_progress", { cursor: Math.min(activeSyncJob.cursor, activeSyncJob.totalFiles), total: activeSyncJob.totalFiles })
                   : resyncing ? t("int_resyncing")
                   : syncDone ? `✓ ${t("int_done")}`
-                  : isAtLimit ? `🔒 ${t("int_sync")}`
                   : t("int_sync")}
               </Btn>
               )}
@@ -866,11 +867,10 @@ function IntegrationCard({ type, integration, onRefresh, onInvoicesRefresh, onNo
             {type !== "whatsapp" && (
               <Btn
                 variant="secondary"
-                onClick={isAtLimit ? onUpgrade : () => handleSync(true)}
+                onClick={() => handleSync(true)}
                 disabled={isActive}
-                title={isAtLimit ? t("int_limit_reached") : undefined}
-                style={{ fontSize: 12, ...(isAtLimit ? { opacity: .6 } : {}) }}>
-                {resyncing ? t("int_resyncing") : isAtLimit ? `🔒 ${t("int_resync_all")}` : `↺ ${t("int_resync_all")}`}
+                style={{ fontSize: 12 }}>
+                {resyncing ? t("int_resyncing") : `↺ ${t("int_resync_all")}`}
               </Btn>
             )}
           </div>
@@ -898,7 +898,7 @@ function IntegrationCard({ type, integration, onRefresh, onInvoicesRefresh, onNo
 
 // ─── Main page ────────────────────────────────────────────────────────────────
 
-export default function IntegrationsPage({ oauthResult, onClearOAuthResult, onInvoicesRefresh, onNotificationsRefresh, onSyncResult, onStartSync, onCancelSync, syncJobs, isAtLimit, onUpgrade }) {
+export default function IntegrationsPage({ oauthResult, onClearOAuthResult, onInvoicesRefresh, onNotificationsRefresh, onSyncResult, onStartSync, onCancelSync, syncJobs, maxSources, onUpgrade }) {
   const T = useT();
   const { t } = useLang();
   const [integrations,   setIntegrations]   = useState([]);
@@ -938,6 +938,8 @@ export default function IntegrationsPage({ oauthResult, onClearOAuthResult, onIn
 
   const getIntegration = type => integrations.find(i => i.type === type);
   const hasAnyError    = integrations.some(i => i.status === "error");
+  const connectedTypes = new Set(integrations.filter(i => i.status === "connected").map(i => i.type));
+  const isSourceAtLimit = type => !connectedTypes.has(type) && connectedTypes.size >= (maxSources ?? Infinity);
 
   if (loading) return (
     <div style={{ color: T.t3, padding: "60px 0", textAlign: "center", fontFamily: SANS, fontSize: 14 }}>
@@ -988,7 +990,7 @@ export default function IntegrationsPage({ oauthResult, onClearOAuthResult, onIn
               onStartSync={onStartSync}
               onCancelSync={onCancelSync}
               activeSyncJob={activeSyncJob}
-              isAtLimit={isAtLimit}
+              sourcesAtLimit={isSourceAtLimit(type)}
               onUpgrade={onUpgrade}
             />
           );

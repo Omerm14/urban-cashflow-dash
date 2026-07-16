@@ -94,7 +94,12 @@ export default function App() {
     refreshInvoices,
   } = useInvoiceData();
 
-  const { plan, used: planUsed, limit: planLimit, pct: planPct, isAtLimit, refresh: refreshPlan } = usePlan();
+  const { plan, used: planUsed, limit: planLimit, pct: planPct, isAtLimit, isNearLimit, maxSources, entitlements, isPro, refresh: refreshPlan } = usePlan();
+  // Pro/Enterprise have no self-serve upgrade — route straight to Enterprise contact.
+  const handleUpgradeClick = useCallback(() => {
+    if (isPro) window.location.href = 'mailto:hello@gocashflow.co?subject=' + encodeURIComponent('Cashflow Enterprise');
+    else setShowUpgrade(true);
+  }, [isPro]);
   const { jobs: syncJobs, startSync, cancelSync, activeJob } = useSyncJob({ onBatchDone: refreshInvoices });
   const { notifications: persistedNotifs, unreadCount, markAllRead, refresh: refreshNotifications } = useNotifications();
   const { hasError: hasIntegrationError, refresh: refreshIntegrationErrors } = useIntegrationErrors();
@@ -294,15 +299,15 @@ export default function App() {
             )}
 
             <Sidebar view={view} setView={setView} suppliersCount={suppliers.length}
-              onUpgrade={() => setShowUpgrade(true)} onUpload={() => fileRef.current?.click()}
+              onUpgrade={handleUpgradeClick} onUpload={() => fileRef.current?.click()}
               mobileOpen={mobileMenuOpen} setMobileOpen={setMobileMenuOpen}
               plan={plan} planUsed={planUsed} planLimit={planLimit} planPct={planPct} user={user} onSignOut={signOut}
               integrationError={hasIntegrationError} isAdmin={isAdmin} />
 
             <div style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0 }}>
               <GlobalHeader view={view} isDark={isDark} onToggleTheme={() => setIsDark(v => !v)} onToggleLang={() => setLang(l => l === "he" ? "en" : "he")} lang={lang} onMenuOpen={() => setMobileMenuOpen(true)} onMissingAlert={() => setShowMissingModal(true)} onAnomalyAlert={() => setShowAnomalyModal(true)} missingCount={missingSuppliers?.length || 0} anomalyCount={anomalyMap?.size || 0} appNotifs={appNotifs} onClearAppNotifs={() => setAppNotifs([])} onSearchOpen={() => setShowSearch(true)} notifications={persistedNotifs} unreadCount={unreadCount} onOpenNotifications={refreshNotifications} onMarkAllRead={markAllRead} onViewActivity={() => setView("activity")} />
-              {isAtLimit && (
-                <UsageBanner plan={plan} used={planUsed} limit={planLimit} remaining={planLimit - planUsed} onUpgrade={() => setShowUpgrade(true)} />
+              {(isAtLimit || isNearLimit) && (
+                <UsageBanner plan={plan} used={planUsed} limit={planLimit} remaining={planLimit - planUsed} onUpgrade={handleUpgradeClick} />
               )}
               {loadError && (
                 <div role="alert" style={{ display: "flex", alignItems: "center", gap: 12, margin: "16px clamp(20px,3vw,36px) 0", padding: "12px 16px", background: T.redTint, border: `1px solid ${T.redBdr}`, borderRadius: 10, fontFamily: SANS, fontSize: 13, color: T.t1 }}>
@@ -317,18 +322,18 @@ export default function App() {
                         extracting={extracting} uploadProgress={uploadProgress}
                         invoices={invoices} onContinue={() => setOnboardingDismissed(true)} />
                     : <DashboardView invoices={invoices} suppliers={suppliers} loading={invoicesLoading} onPayAll={handlePayAll} chartData={chartData} supplierNames={allNames} supplierColor={getSupplierColor} user={user} onMissingAlert={() => setShowMissingModal(true)} onAnomalyAlert={() => setShowAnomalyModal(true)} missingSuppliers={missingSuppliers} anomalyMap={anomalyMap} onViewMonth={handleViewMonth} onNavigateFiltered={(status) => { setView("invoices"); setInitialFilterStatus(status); }} />)}
-                  {view === "invoices" && <InvoicesView invoices={invoices} loading={invoicesLoading} selectedMonth={selectedMonth} onMonthChange={setSelectedMonth} onMarkPaid={handleMarkPaid} onAddSupplier={addSupplier} onDeleteInvoice={deleteInvoice} onBulkPaid={handleBulkPaid} onBulkUnpaid={handleBulkUnpaid} onBulkDelete={bulkDelete} preSelectAll={preSelectAll} onEditInvoice={setEditInvoice} anomalyMap={anomalyMap} missingSuppliers={missingSuppliers} onMissingAlert={() => setShowMissingModal(true)} initialFilterStatus={initialFilterStatus} initialSelectedId={deepLinkInvoiceId} onViewAttachment={handleViewAttachment} supplierColor={getSupplierColor} />}
+                  {view === "invoices" && <InvoicesView invoices={invoices} loading={invoicesLoading} selectedMonth={selectedMonth} onMonthChange={setSelectedMonth} onMarkPaid={handleMarkPaid} onAddSupplier={addSupplier} onDeleteInvoice={deleteInvoice} onBulkPaid={handleBulkPaid} onBulkUnpaid={handleBulkUnpaid} onBulkDelete={bulkDelete} preSelectAll={preSelectAll} onEditInvoice={setEditInvoice} anomalyMap={anomalyMap} missingSuppliers={missingSuppliers} onMissingAlert={() => setShowMissingModal(true)} initialFilterStatus={initialFilterStatus} initialSelectedId={deepLinkInvoiceId} onViewAttachment={handleViewAttachment} supplierColor={getSupplierColor} entitlements={entitlements} onUpgrade={handleUpgradeClick} />}
                   {view === "calendar" && <CalendarView computed={invoices} calMonth={calMonth} setCalMonth={setCalMonth} color={getSupplierColor} />}
                   {view === "integrations" && <IntegrationsPage
                     syncJobs={syncJobs} onStartSync={startSync} onCancelSync={cancelSync}
-                    onInvoicesRefresh={refreshInvoices} isAtLimit={isAtLimit} onUpgrade={() => setShowUpgrade(true)}
+                    onInvoicesRefresh={refreshInvoices} maxSources={maxSources} onUpgrade={handleUpgradeClick}
                     oauthResult={oauthResult} onClearOAuthResult={() => setOauthResult(null)}
                     onNotificationsRefresh={refreshNotifications}
                     onSyncResult={refreshNotifications}
                   />}
-                  {view === "activity" && <ActivityView />}
+                  {view === "activity" && <ActivityView entitlements={entitlements} onUpgrade={handleUpgradeClick} />}
                   {view === "suppliers" && <SuppliersView suppliers={suppliers} loading={invoicesLoading} onAdd={addSupplier} onUpdate={updateSupplier} onDelete={deleteSupplier} />}
-                  {view === "settings" && <SettingsView onUpgrade={() => setShowUpgrade(true)} onSignOut={signOut} user={user} invoices={invoices} suppliers={suppliers} onNavigateToIntegrations={() => setView("integrations")} />}
+                  {view === "settings" && <SettingsView onUpgrade={handleUpgradeClick} onSignOut={signOut} user={user} invoices={invoices} suppliers={suppliers} onNavigateToIntegrations={() => setView("integrations")} />}
                   {view === "admin" && isAdmin && <AdminPage />}
                 </div>
               </main>

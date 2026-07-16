@@ -241,7 +241,9 @@ function GroupedView({ invoices, selectedMonth, onMonthChange, selectedIds, onTo
   );
 }
 
-export default function InvoicesView({ invoices, loading, selectedMonth, onMonthChange, onMarkPaid, onAddSupplier, onDeleteInvoice, onBulkPaid, onBulkUnpaid, onBulkDelete, preSelectAll, onEditInvoice, onViewAttachment, anomalyMap, missingSuppliers, onMissingAlert, initialFilterStatus, initialSelectedId, supplierColor: supplierColorProp }) {
+export default function InvoicesView({ invoices, loading, selectedMonth, onMonthChange, onMarkPaid, onAddSupplier, onDeleteInvoice, onBulkPaid, onBulkUnpaid, onBulkDelete, preSelectAll, onEditInvoice, onViewAttachment, anomalyMap, missingSuppliers, onMissingAlert, initialFilterStatus, initialSelectedId, supplierColor: supplierColorProp, entitlements, onUpgrade }) {
+  const canExportCsv  = entitlements?.csvExport ?? true;
+  const canBulkAct    = entitlements?.bulkActions ?? true;
   const T = useT();
   const { isMobile, isTablet } = useLayout();
   const { t } = useLang();
@@ -481,11 +483,11 @@ export default function InvoicesView({ invoices, loading, selectedMonth, onMonth
             <span style={{ fontFamily: SANS, fontWeight: 500, color: T.t2, fontSize: 13, flex: 1 }}>
               {t("inv_selected", { n: selectedIds.size })} · <span className="num" style={{ color: T.t1 }}>{fmt(selTotal)}</span>
             </span>
-            <button className="btn btn-ghost btn-pill" style={{ padding: "7px 14px" }} onClick={handleExportSelected}><Download size={12} aria-hidden="true" />{t("inv_export")}</button>
-            <button className="btn btn-ghost btn-pill" style={{ padding: "7px 14px" }} onClick={() => { onBulkUnpaid?.([...selectedIds]); setSelectedIds(new Set()); }}><X size={12} aria-hidden="true" />{t("inv_unpaid")}</button>
-            <button className="btn btn-accent btn-pill" style={{ padding: "7px 18px" }} onClick={() => setShowPayConfirm(true)}>{t("inv_pay_selected")} →</button>
-            <button className="btn btn-danger btn-pill" style={{ padding: "7px 14px" }} onClick={() => { if (window.confirm(t("inv_bulk_delete_confirm", { n: selectedIds.size }))) { onBulkDelete?.([...selectedIds]); setSelectedIds(new Set()); } }}>
-              <TrashIcon />{t("delete")}
+            <button className="btn btn-ghost btn-pill" style={{ padding: "7px 14px", opacity: canExportCsv ? 1 : .6 }} title={canExportCsv ? undefined : t("entitlement_locked")} onClick={canExportCsv ? handleExportSelected : onUpgrade}><Download size={12} aria-hidden="true" />{canExportCsv ? t("inv_export") : `🔒 ${t("inv_export")}`}</button>
+            <button className="btn btn-ghost btn-pill" style={{ padding: "7px 14px", opacity: canBulkAct ? 1 : .6 }} title={canBulkAct ? undefined : t("entitlement_locked")} onClick={canBulkAct ? () => { onBulkUnpaid?.([...selectedIds]); setSelectedIds(new Set()); } : onUpgrade}><X size={12} aria-hidden="true" />{canBulkAct ? t("inv_unpaid") : `🔒 ${t("inv_unpaid")}`}</button>
+            <button className="btn btn-accent btn-pill" style={{ padding: "7px 18px", opacity: canBulkAct ? 1 : .6 }} title={canBulkAct ? undefined : t("entitlement_locked")} onClick={canBulkAct ? () => setShowPayConfirm(true) : onUpgrade}>{canBulkAct ? t("inv_pay_selected") : `🔒 ${t("inv_pay_selected")}`} →</button>
+            <button className="btn btn-danger btn-pill" style={{ padding: "7px 14px", opacity: canBulkAct ? 1 : .6 }} title={canBulkAct ? undefined : t("entitlement_locked")} onClick={canBulkAct ? () => { if (window.confirm(t("inv_bulk_delete_confirm", { n: selectedIds.size }))) { onBulkDelete?.([...selectedIds]); setSelectedIds(new Set()); } } : onUpgrade}>
+              <TrashIcon />{canBulkAct ? t("delete") : `🔒 ${t("delete")}`}
             </button>
             <button onClick={() => setSelectedIds(new Set())} aria-label={t("close")} style={{ background: "none", border: "none", color: T.t3, cursor: "pointer", display: "flex" }}><X size={15} /></button>
           </div>

@@ -1,10 +1,17 @@
 const supabase = require('./supabase');
 
+// Canonical plan config (server). Mirrors src/constants/plans.js — cross-
+// checked by tests/plan-parity.test.js so the two can't silently drift.
+//
+// `basic` (₪99) is retired from sale but kept fully intact for existing
+// subscribers — it is never offered in any new-purchase UI, only used to
+// resolve legacy accounts correctly.
 const PLANS = {
-  free:       { invoicesPerMonth: 20,  sources: 1, autoSync: false, auditTrail: false, name: 'Free' },
-  basic:      { invoicesPerMonth: 50,  sources: 2, autoSync: false, auditTrail: false, name: 'Basic' },
-  pro:        { invoicesPerMonth: 150, sources: 4, autoSync: true,  auditTrail: true,  name: 'Pro' },
-  enterprise: { invoicesPerMonth: Infinity, sources: 4, autoSync: true, auditTrail: true, name: 'Enterprise' },
+  free:       { invoicesPerMonth: 20,  sources: 1, autoSync: false, bulkActions: false, csvExport: false, auditTrail: false, price: 0,   name: 'Free' },
+  basic:      { invoicesPerMonth: 50,  sources: 2, autoSync: false, bulkActions: false, csvExport: true,  auditTrail: false, price: 99,  name: 'Basic' },
+  starter:    { invoicesPerMonth: 75,  sources: 2, autoSync: false, bulkActions: false, csvExport: true,  auditTrail: false, price: 199, name: 'Starter' },
+  pro:        { invoicesPerMonth: 300, sources: 4, autoSync: true,  bulkActions: true,  csvExport: true,  auditTrail: true,  price: 399, name: 'Pro' },
+  enterprise: { invoicesPerMonth: Infinity, sources: 4, autoSync: true, bulkActions: true, csvExport: true, auditTrail: true, price: 799, name: 'Enterprise' },
 };
 
 // Ensure a subscription row exists for the user (idempotent). Called on first
@@ -37,20 +44,38 @@ async function getPlanUsage(userId) {
   return { plan, limit, used, remaining, pct };
 }
 
-// Throws a structured 402 error object if the user is at or over their limit.
-// Callers should catch and respond with res.status(402).json(err).
-async function assertInvoiceLimit(userId) {
-  const usage = await getPlanUsage(userId);
-  if (usage.pct >= 1) {
-    const err = new Error('Plan invoice limit reached');
-    err.statusCode = 402;
-    err.code = 'PLAN_LIMIT_REACHED';
-    err.used  = usage.used;
-    err.limit = usage.limit;
-    err.plan  = usage.plan;
-    throw err;
-  }
-  return usage;
+// Invoice caps are soft: this never blocks ingestion. Callers use the
+// returned usage to decide whether to show an upgrade nudge.
+async function checkInvoiceLimit(userId) {
+  return getPlanUsage(userId);
 }
 
-module.exports = { PLANS, getPlanUsage, assertInvoiceLimit, ensureSubscription };
+// Throws a structured 403 error if connecting `type` would exceed the plan's
+// sync-source cap. Reconnecting an already-owned source type never counts
+// against the cap — only counts distinct *connected* types.
+async function assertSourceLimit(userId, type) {
+  const [subResult, sourcesResult] = await Promise.all([
+    supabase.from('subscriptions').select('plan').eq('user_id', userId).single(),
+    supabase.from('integrations').select('type').eq('user_id', userId).eq('status', 'connected'),
+  ]);
+
+  const plan  = subResult.data?.plan || 'free';
+  const limit = PLANS[plan]?.sources ?? 1;
+  const connectedTypes = new Set((sourcesResult.data || []).map(r => r.type));
+
+  if (connectedTypes.has(type)) return { plan, limit, used: connectedTypes.size };
+
+  if (connectedTypes.size >= limit) {
+    const err = new Error('Plan sync-source limit reached');
+    err.statusCode = 403;
+    err.code = 'SOURCE_LIMIT_REACHED';
+    err.used  = connectedTypes.size;
+    err.limit = limit;
+    err.plan  = plan;
+    throw err;
+  }
+
+  return { plan, limit, used: connectedTypes.size };
+}
+
+module.exports = { PLANS, getPlanUsage, checkInvoiceLimit, assertSourceLimit, ensureSubscription };
