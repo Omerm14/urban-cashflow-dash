@@ -3,6 +3,7 @@ import { apiFetch } from "../lib/api";
 import { useT, useLang } from "../contexts/AppContexts";
 import { FONT_UI as SANS, FONT_DISPLAY as DISPLAY, FONT_MONO as MONO } from "../theme";
 import { PROVIDERS, ICONS, DriveNavigator } from "./IntegrationsPage";
+import { friendlyErrorCode as sharedFriendlyErrorCode } from "../utils/integrationErrors";
 import { X, Check, ArrowRight, Eye, SlidersHorizontal, Unlink } from "lucide-react";
 
 // Per-provider intro copy — what happens and what permissions are requested,
@@ -66,12 +67,7 @@ export default function IntegrationWizard({ type, initialStep, integration, onCl
   const Icon = ICONS[type];
   const intro = INTRO_COPY[type];
   const sequence = SEQUENCES[type];
-  // Server errors are raw codes (e.g. SOURCE_LIMIT_REACHED, PLAN_LIMIT_REACHED) —
-  // translate the ones a user can actually hit here; anything else falls back to
-  // the raw message.
-  const friendlyErrorCode = (msg) => msg === "SOURCE_LIMIT_REACHED" ? t("int_source_limit_reached")
-    : msg === "PLAN_LIMIT_REACHED" ? t("plan_limit_reached")
-    : msg;
+  const friendlyErrorCode = (msg) => sharedFriendlyErrorCode(msg, t);
   const friendlyError = (e) => friendlyErrorCode(e.message);
 
   const [step, setStep] = useState(initialStep || "intro");

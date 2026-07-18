@@ -3,6 +3,7 @@ import { apiFetch } from "../lib/api";
 import { useT, useLang } from "../contexts/AppContexts";
 import { FONT_UI as SANS, FONT_MONO as MONO } from "../theme";
 import IntegrationWizard from "./IntegrationWizard";
+import { friendlyError } from "../utils/integrationErrors";
 
 // ─── Brand SVG icons ─────────────────────────────────────────────────────────
 // Third-party brand marks — colors are the providers' own, not app theme.
@@ -515,7 +516,7 @@ function IntegrationCard({ type, integration, onRefresh, onInvoicesRefresh, onNo
         `/api/integrations/google/auth-url?type=${type}&returnUrl=${encodeURIComponent(window.location.origin + '/app')}`
       );
       window.location.href = url;
-    } catch (e) { showToast(e.message, false); }
+    } catch (e) { showToast(friendlyError(e, t), false); }
   };
 
   const handleDisconnect = async () => {
