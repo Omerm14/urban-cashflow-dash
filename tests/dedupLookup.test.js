@@ -25,6 +25,7 @@ const buildInvoicesMock = ({ onEq = () => {}, byInvoiceNo = {}, byAmountDate = {
   const builder = {
     select: () => builder,
     eq: (col, val) => { state.filters[col] = val; onEq(col, val); return builder; },
+    order: () => builder,
     range: (from, to) => Promise.resolve({ data: allRows.slice(from, to + 1), error: null }),
     then: resolve => {
       if (state.filters.invoice_no !== undefined) {
@@ -73,7 +74,7 @@ describe('findDuplicateCandidates (CASH-8: targeted Postgres queries, not full-t
     expect(matches[0].supplier).toBe('Beta Corp');
   });
 
-  it('makes zero DB calls (returns []) when the candidate has neither invoice_no nor amount+date', async () => {
+  it('makes zero DB calls (returns []) when the candidate has neither invoice_no nor an amount', async () => {
     let calls = 0;
     const { findDuplicateCandidates } = freshSyncProcessor({
       from: () => { calls++; return buildInvoicesMock(); },
@@ -83,6 +84,52 @@ describe('findDuplicateCandidates (CASH-8: targeted Postgres queries, not full-t
 
     expect(matches).toEqual([]);
     expect(calls).toBe(0);
+  });
+
+  // Pre-merge review fix: OCR can extract invoice_no with stray whitespace
+  // ("INV-100 ") that classifyDuplicateMatch()'s trim-tolerant comparison
+  // would recognize as the same invoice — but the DB query itself was
+  // untrimmed, an exact match, so it returned zero rows and the trim-aware
+  // comparison never got a chance to run against the real duplicate.
+  it('trims invoice_no before querying, so OCR whitespace variance does not defeat the exact-match dedup path', async () => {
+    const eqCalls = [];
+    const { findDuplicateCandidates } = freshSyncProcessor({
+      from: () => buildInvoicesMock({
+        onEq: (col, val) => eqCalls.push([col, val]),
+        byInvoiceNo: { 'INV-100': [{ supplier: 'Acme', invoice_no: 'INV-100', amount: 100, invoice_date: '2026-01-01' }] },
+      }),
+    });
+
+    const matches = await findDuplicateCandidates('user-1', {
+      invoice_no: '  INV-100 ', amount: 100, invoice_date: '2026-01-01',
+    });
+
+    expect(eqCalls).toContainEqual(['invoice_no', 'INV-100']);
+    expect(matches).toHaveLength(1);
+  });
+
+  // Pre-merge review fix: extraction always produces a string invoice_date
+  // ('' when OCR found none — never null/undefined, see the candidate
+  // construction in processFile()/syncGreenInvoice()), so the old
+  // `&& candidate.invoice_date` truthy guard skipped the fuzzy amount+date
+  // lookup entirely whenever both invoice_no and invoice_date were blank —
+  // the exact case a low-quality scan produces. A true duplicate arriving in
+  // a later, separate sync run got zero cross-run dedup checking.
+  it('still runs the fuzzy amount+date lookup when invoice_date is blank (not skipped as falsy)', async () => {
+    const eqCalls = [];
+    const { findDuplicateCandidates } = freshSyncProcessor({
+      from: () => buildInvoicesMock({
+        onEq: (col, val) => eqCalls.push([col, val]),
+        byAmountDate: { '150|': [{ supplier: 'Acme', invoice_no: '', amount: 150, invoice_date: '' }] },
+      }),
+    });
+
+    const matches = await findDuplicateCandidates('user-1', {
+      invoice_no: '', amount: 150, invoice_date: '',
+    });
+
+    expect(eqCalls).toContainEqual(['invoice_date', '']);
+    expect(matches).toHaveLength(1);
   });
 });
 

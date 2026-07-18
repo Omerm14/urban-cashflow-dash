@@ -176,7 +176,7 @@ const processFile = async (buffer, filename, mediaType, userId, suppliers, integ
     const candidate = {
       user_id:          userId,
       supplier:         sup?.name || extracted.supplier || '',
-      invoice_no:       extracted.invoiceNo  || '',
+      invoice_no:       (extracted.invoiceNo  || '').trim(),
       invoice_date:     invoiceDate,
       amount:           isCredit ? -rawAmount : rawAmount,
       due_date:         isCredit ? '' : (dueDate || ''),
@@ -266,18 +266,33 @@ const getSuppliers = async userId => {
 // getExistingInvoices() approach silently missed rows past PostgREST's 1000-row
 // cap and OOM'd at scale. isDuplicate() itself is unchanged; this only narrows
 // what it's run against.
+//
+// Pre-merge review fix: two gaps found in the initial version of this
+// function —
+//  1. invoice_no was queried untrimmed while classifyDuplicateMatch() (which
+//     runs against the result) compares trimmed — OCR whitespace variance on
+//     an otherwise-identical invoice_no meant the DB query returned zero
+//     candidates, so the trim-tolerant match never got a chance to fire and
+//     a real duplicate was silently re-imported. Trimmed here to match.
+//  2. the amount+date lookup only ran `if (... && candidate.invoice_date)`,
+//     so invoices with a blank invoice_date (extraction.js/syncProcessor
+//     both default to '' — see candidate construction above/below — never
+//     null) got ZERO cross-run dedup checking at all, unlike the old
+//     in-memory approach which still matched on '' === ''. Now always runs
+//     when amount is present, comparing invoice_date as-is (including '').
 const findDuplicateCandidates = async (userId, candidate) => {
+  const invoiceNo = (candidate.invoice_no || '').trim();
   const lookups = [];
-  if (candidate.invoice_no) {
+  if (invoiceNo) {
     lookups.push(
       supabase.from('invoices').select('supplier,invoice_no,amount,invoice_date,source_file')
-        .eq('user_id', userId).eq('invoice_no', candidate.invoice_no)
+        .eq('user_id', userId).eq('invoice_no', invoiceNo)
     );
   }
-  if (candidate.amount != null && candidate.invoice_date) {
+  if (candidate.amount != null) {
     lookups.push(
       supabase.from('invoices').select('supplier,invoice_no,amount,invoice_date,source_file')
-        .eq('user_id', userId).eq('amount', candidate.amount).eq('invoice_date', candidate.invoice_date)
+        .eq('user_id', userId).eq('amount', candidate.amount).eq('invoice_date', candidate.invoice_date ?? '')
     );
   }
   if (!lookups.length) return [];
@@ -297,10 +312,15 @@ const getSeenFilenames = async userId => {
   const seen = new Set();
   let from = 0;
   while (true) {
+    // .order('id') keeps page boundaries stable across separate .range() calls —
+    // without it Postgres/PostgREST gives no ordering guarantee, and a
+    // concurrent insert for this user (e.g. a WhatsApp webhook landing while
+    // this Drive/Gmail sync runs) could shift a row across a page boundary.
     const { data, error } = await supabase
       .from('invoices')
       .select('source_file')
       .eq('user_id', userId)
+      .order('id')
       .range(from, from + SEEN_FILES_PAGE_SIZE - 1);
     if (error) { console.error('[sync] seen-filenames fetch failed:', error.message); break; }
     (data || []).forEach(row => { const b = baseFilename(row.source_file); if (b) seen.add(b); });
@@ -698,7 +718,7 @@ exports.syncGreenInvoice = async (integration, userId) => {
     const candidate = {
       user_id:          userId,
       supplier:         sup?.name || supplierName || 'Unknown supplier',
-      invoice_no:       doc.number?.toString() || '',
+      invoice_no:       (doc.number?.toString() || '').trim(),
       invoice_date:     invoiceDate,
       amount:           doc.amount ?? 0,
       due_date:         dueDate || '',
