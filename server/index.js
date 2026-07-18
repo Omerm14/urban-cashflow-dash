@@ -1,7 +1,8 @@
 require('dotenv').config({ path: '.env.local' });
 const express = require('express');
 
-['ANTHROPIC_API_KEY', 'SUPABASE_URL', 'SUPABASE_SERVICE_ROLE_KEY', 'FRONTEND_URL'].forEach(k => {
+const { REQUIRED_ENV_VARS } = require('./lib/requiredEnv');
+REQUIRED_ENV_VARS.forEach(k => {
   if (!process.env[k]) { console.error(`ERROR: ${k} not set in .env.local`); process.exit(1); }
 });
 
@@ -96,7 +97,12 @@ app.get('/api/invoices/:id/attachment-url',          auth, integrations.getAttac
 const invoices = require('./routes/invoices');
 app.delete('/api/invoices/:id',           auth, invoices.remove);
 app.post('/api/invoices/bulk-delete',     auth, invoices.bulkRemove);
+app.post('/api/invoices/bulk-status',     auth, invoices.bulkUpdateStatus);
+app.get('/api/invoices/export-entitlement', auth, invoices.checkExportEntitlement);
 app.post('/api/attachments/presign',      auth, invoices.presignUpload);
+
+// Audit trail (plan-gated read)
+app.get('/api/activity', auth, require('./routes/activity').listActivity);
 
 // Profile (logo upload)
 app.post('/api/profile/logo', auth, require('./routes/profile').uploadLogo);

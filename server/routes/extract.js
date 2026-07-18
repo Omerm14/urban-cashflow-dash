@@ -2,16 +2,25 @@
 // All prompts / JSON parsing live in lib/extraction.js so this path stays in
 // lockstep with the integration sync path (same supplier/date/credit rules).
 const extraction = require('../lib/extraction');
-const { checkInvoiceLimit } = require('../lib/plans');
+const { assertInvoiceLimit } = require('../lib/plans');
+const { handlePlanCheckError } = require('../lib/planErrors');
 
 module.exports = async (req, res) => {
   const { b64, mediaType = 'image/jpeg', text, mode } = req.body;
   if (!b64 && !text) return res.status(400).json({ error: 'Missing image or text data' });
 
-  // Invoice caps are soft — never refuse extraction, just track usage.
-  // Translations don't create invoices — skip the check for that mode.
-  if (mode !== 'translate') {
-    await checkInvoiceLimit(req.user.id);
+  // Hard-blocks Claude API spend once a user is at/over their plan's monthly
+  // invoice quota. Translate mode doesn't create an invoice row itself, but it
+  // still costs a real Claude call, so it's gated by the same quota rather than
+  // left to only the generic per-IP rate limit.
+  try {
+    await assertInvoiceLimit(req.user.id);
+  } catch (limitErr) {
+    if (limitErr.code === 'PLAN_LIMIT_REACHED') {
+      return res.status(402).json({ error: limitErr.code, used: limitErr.used, limit: limitErr.limit, plan: limitErr.plan });
+    }
+    if (handlePlanCheckError(limitErr, res, 'extract')) return;
+    throw limitErr;
   }
 
   try {

@@ -2,7 +2,7 @@ const crypto   = require('crypto');
 const https    = require('https');
 const supabase  = require('../lib/supabase');
 const sync      = require('../services/syncProcessor');
-const { checkInvoiceLimit } = require('../lib/plans');
+const { assertInvoiceLimit } = require('../lib/plans');
 
 // Send a text reply to a WhatsApp phone number via the Cloud API
 async function sendWhatsAppReply(to, text) {
@@ -38,7 +38,9 @@ async function sendWhatsAppReply(to, text) {
 const verifySignature = (rawBody, signature, secret) => {
   if (!signature || !secret) return false;
   const expected = 'sha256=' + crypto.createHmac('sha256', secret).update(rawBody).digest('hex');
-  return crypto.timingSafeEqual(Buffer.from(signature), Buffer.from(expected));
+  const a = Buffer.from(signature);
+  const b = Buffer.from(expected);
+  return a.length === b.length && crypto.timingSafeEqual(a, b);
 };
 
 // GET /api/webhook/whatsapp  — webhook verification challenge (Meta requirement)
@@ -196,14 +198,19 @@ exports.handleWhatsApp = async (req, res) => {
   for (const { integration, media, mediaType, mimeType, msgId, msgFrom } of jobs) {
     const filename = media.filename || `${mediaType}_${media.id}`;
     try {
-      // Invoice caps are soft — never refuse ingestion, just track usage.
-      await checkInvoiceLimit(integration.user_id);
+      // Hard-blocks ingestion once the user is at/over their plan's monthly
+      // invoice quota — this is an unattended path, so the only way to notify
+      // the user is the WhatsApp reply itself, not an HTTP response.
+      await assertInvoiceLimit(integration.user_id);
       await sync.processWhatsAppMedia(integration, integration.user_id, media.id, filename, mimeType, msgId);
       console.log(`[webhook:wa] processed ${msgId}`);
       await sendWhatsAppReply(msgFrom, '✅ החשבונית התקבלה בהצלחה!');
     } catch (err) {
       console.error(`[webhook:wa] failed ${msgId}:`, err.message);
-      await sendWhatsAppReply(msgFrom, '❌ שגיאה בעיבוד החשבונית. אנא נסה שוב או פנה לתמיכה.');
+      const reply = err.code === 'PLAN_LIMIT_REACHED'
+        ? '⚠️ הגעת למכסת החשבוניות החודשית שלך. שדרג את התוכנית כדי להמשיך לקבל חשבוניות.'
+        : '❌ שגיאה בעיבוד החשבונית. אנא נסה שוב או פנה לתמיכה.';
+      await sendWhatsAppReply(msgFrom, reply);
     }
   }
 

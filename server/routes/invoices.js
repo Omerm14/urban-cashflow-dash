@@ -4,7 +4,10 @@
 // browser has no delete credentials.
 const supabase = require('../lib/supabase');
 const storage  = require('../lib/storage');
-const { checkInvoiceLimit } = require('../lib/plans');
+const { assertInvoiceLimit, assertEntitlement } = require('../lib/plans');
+const { handlePlanCheckError } = require('../lib/planErrors');
+
+const ALLOWED_BULK_STATUSES = new Set(['Paid', 'Unpaid']);
 
 // Best-effort removal of an invoice's stored original. Never throws — a missing
 // or already-deleted object must not block the row delete.
@@ -38,6 +41,16 @@ exports.remove = async (req, res) => {
 
 // POST /api/invoices/bulk-delete  { ids: [...] }
 exports.bulkRemove = async (req, res) => {
+  try {
+    await assertEntitlement(req.user.id, 'bulkActions');
+  } catch (entErr) {
+    if (entErr.code === 'ENTITLEMENT_REQUIRED') {
+      return res.status(403).json({ error: entErr.code, entitlement: entErr.entitlement, plan: entErr.plan });
+    }
+    if (handlePlanCheckError(entErr, res, 'invoices:bulkRemove')) return;
+    throw entErr;
+  }
+
   const ids = Array.isArray(req.body?.ids) ? req.body.ids : [];
   if (!ids.length) return res.status(400).json({ error: 'ids array is required' });
   if (ids.length > 500) return res.status(400).json({ error: 'Cannot delete more than 500 invoices at once' });
@@ -60,6 +73,57 @@ exports.bulkRemove = async (req, res) => {
   res.json({ ok: true, deleted: ownedIds.length });
 };
 
+// POST /api/invoices/bulk-status  { ids: [...], status: 'Paid' | 'Unpaid' }
+// CASH-95: bulkMarkPaid/bulkMarkUnpaid previously wrote straight from the
+// frontend to Supabase with the user's own JWT — RLS scopes by user_id but
+// not by plan tier, so a Free/Starter user could call it directly and bypass
+// the UI-only bulkActions gate. The write now goes through here instead.
+exports.bulkUpdateStatus = async (req, res) => {
+  try {
+    await assertEntitlement(req.user.id, 'bulkActions');
+  } catch (entErr) {
+    if (entErr.code === 'ENTITLEMENT_REQUIRED') {
+      return res.status(403).json({ error: entErr.code, entitlement: entErr.entitlement, plan: entErr.plan });
+    }
+    if (handlePlanCheckError(entErr, res, 'invoices:bulkUpdateStatus')) return;
+    throw entErr;
+  }
+
+  const ids = Array.isArray(req.body?.ids) ? req.body.ids : [];
+  const status = req.body?.status;
+  if (!ids.length) return res.status(400).json({ error: 'ids array is required' });
+  if (ids.length > 500) return res.status(400).json({ error: 'Cannot update more than 500 invoices at once' });
+  if (!ALLOWED_BULK_STATUSES.has(status)) return res.status(400).json({ error: 'Invalid status' });
+
+  const { data, error } = await supabase
+    .from('invoices')
+    .update({ status })
+    .in('id', ids)
+    .eq('user_id', req.user.id)
+    .select('id');
+  if (error) { console.error('[invoices] bulkUpdateStatus error:', error.message); return res.status(500).json({ error: 'Internal server error' }); }
+  res.json({ ok: true, updated: (data || []).length });
+};
+
+// GET /api/invoices/export-entitlement
+// CASH-95: the CSV itself is still built client-side from data already
+// fetched under RLS (no new data is exposed here) — this is a thin
+// server-side gate so a disallowed-tier user triggering the export action
+// via devtools/API directly (bypassing the UI-only canExportCsv gate) is
+// rejected the same way a real mutation/read endpoint would reject them.
+exports.checkExportEntitlement = async (req, res) => {
+  try {
+    const { plan } = await assertEntitlement(req.user.id, 'csvExport');
+    res.json({ ok: true, plan });
+  } catch (entErr) {
+    if (entErr.code === 'ENTITLEMENT_REQUIRED') {
+      return res.status(403).json({ error: entErr.code, entitlement: entErr.entitlement, plan: entErr.plan });
+    }
+    if (handlePlanCheckError(entErr, res, 'invoices:checkExportEntitlement')) return;
+    throw entErr;
+  }
+};
+
 // POST /api/attachments/presign  { filename, contentType, fileHash }
 // Returns an upload descriptor for the active storage backend.
 //   r2:       { backend, key, uploadUrl }  → browser PUTs the file to uploadUrl
@@ -68,8 +132,15 @@ exports.presignUpload = async (req, res) => {
   const { filename, contentType, fileHash } = req.body || {};
   if (!filename) return res.status(400).json({ error: 'filename is required' });
 
-  // Invoice caps are soft — never refuse an upload, just track usage.
-  await checkInvoiceLimit(req.user.id);
+  try {
+    await assertInvoiceLimit(req.user.id);
+  } catch (limitErr) {
+    if (limitErr.code === 'PLAN_LIMIT_REACHED') {
+      return res.status(402).json({ error: limitErr.code, used: limitErr.used, limit: limitErr.limit, plan: limitErr.plan });
+    }
+    if (handlePlanCheckError(limitErr, res, 'invoices:presignUpload')) return;
+    throw limitErr;
+  }
 
   const backend = storage.activeBackend();
   if (backend !== 'r2') return res.json({ backend });

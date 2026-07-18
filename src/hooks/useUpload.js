@@ -46,7 +46,11 @@ export function useUpload({ invoices, user, addInvoice, getSupplier, refreshPlan
       );
       const candidates = [], errors = [];
       await Promise.allSettled(extractResults.map(async (r, i) => {
-        if (r.status === "rejected") { errors.push(r.reason?.message || `${pageUnits[i].file.name}: failed`); return; }
+        if (r.status === "rejected") {
+          const msg = r.reason?.message === "PLAN_LIMIT_REACHED" ? t("plan_limit_reached") : r.reason?.message;
+          errors.push(msg || `${pageUnits[i].file.name}: failed`);
+          return;
+        }
         const { file, ex } = r.value;
         const invoiceDate = correctSwappedDate(ex.invoiceDate) || ex.invoiceDate || "";
         let sup = getSupplier(ex.supplier);
