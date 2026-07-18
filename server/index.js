@@ -97,7 +97,12 @@ app.get('/api/invoices/:id/attachment-url',          auth, integrations.getAttac
 const invoices = require('./routes/invoices');
 app.delete('/api/invoices/:id',           auth, invoices.remove);
 app.post('/api/invoices/bulk-delete',     auth, invoices.bulkRemove);
+app.post('/api/invoices/bulk-status',     auth, invoices.bulkUpdateStatus);
+app.get('/api/invoices/export-entitlement', auth, invoices.checkExportEntitlement);
 app.post('/api/attachments/presign',      auth, invoices.presignUpload);
+
+// Audit trail (plan-gated read)
+app.get('/api/activity', auth, require('./routes/activity').listActivity);
 
 // Profile (logo upload)
 app.post('/api/profile/logo', auth, require('./routes/profile').uploadLogo);

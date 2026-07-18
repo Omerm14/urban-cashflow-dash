@@ -114,4 +114,24 @@ async function assertAutoSyncAllowed(userId) {
   return { plan };
 }
 
-module.exports = { PLANS, getPlanUsage, checkInvoiceLimit, assertInvoiceLimit, assertSourceLimit, assertAutoSyncAllowed, ensureSubscription };
+// Throws a structured 403 error if the user's plan doesn't have `entitlement`
+// (one of PLANS[plan]'s boolean feature flags — csvExport, bulkActions,
+// auditTrail). These flags were previously enforced client-side only (UI
+// hides the button), which a valid-session user could bypass entirely by
+// calling the Supabase client or this API directly — RLS scopes by user_id,
+// not by plan tier.
+async function assertEntitlement(userId, entitlement) {
+  const { data: sub } = await supabase.from('subscriptions').select('plan').eq('user_id', userId).single();
+  const plan = sub?.plan || 'free';
+  if (!PLANS[plan]?.[entitlement]) {
+    const err = new Error(`Plan does not include ${entitlement}`);
+    err.statusCode = 403;
+    err.code = 'ENTITLEMENT_REQUIRED';
+    err.entitlement = entitlement;
+    err.plan = plan;
+    throw err;
+  }
+  return { plan };
+}
+
+module.exports = { PLANS, getPlanUsage, checkInvoiceLimit, assertInvoiceLimit, assertSourceLimit, assertAutoSyncAllowed, assertEntitlement, ensureSubscription };

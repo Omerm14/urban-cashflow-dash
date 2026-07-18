@@ -43,7 +43,7 @@ require.cache[supabasePath] = {
   exports: { from: (table) => queryBuilder(table) },
 };
 
-const { PLANS, checkInvoiceLimit, assertInvoiceLimit, assertSourceLimit, assertAutoSyncAllowed, getPlanUsage } = await import('../server/lib/plans.js');
+const { PLANS, checkInvoiceLimit, assertInvoiceLimit, assertSourceLimit, assertAutoSyncAllowed, assertEntitlement, getPlanUsage } = await import('../server/lib/plans.js');
 
 describe('PLANS config (real module)', () => {
   it('is backed by the real server/lib/plans.js export, not a shadow copy', () => {
@@ -187,6 +187,40 @@ describe('assertAutoSyncAllowed (CASH-43: real module, mocked Supabase)', () => 
   it('allows an enterprise-plan user (autoSync: true)', async () => {
     mockState.subscription = { plan: 'enterprise', status: 'active' };
     await expect(assertAutoSyncAllowed('user-1')).resolves.toMatchObject({ plan: 'enterprise' });
+  });
+});
+
+describe('assertEntitlement (CASH-95: real module, mocked Supabase)', () => {
+  it('rejects a free-plan user for bulkActions', async () => {
+    mockState.subscription = { plan: 'free', status: 'active' };
+    await expect(assertEntitlement('user-1', 'bulkActions')).rejects.toMatchObject({
+      statusCode: 403, code: 'ENTITLEMENT_REQUIRED', entitlement: 'bulkActions', plan: 'free',
+    });
+  });
+
+  it('rejects a starter-plan user for bulkActions and auditTrail (csvExport-only tier)', async () => {
+    mockState.subscription = { plan: 'starter', status: 'active' };
+    await expect(assertEntitlement('user-1', 'bulkActions')).rejects.toMatchObject({ code: 'ENTITLEMENT_REQUIRED', plan: 'starter' });
+    await expect(assertEntitlement('user-1', 'auditTrail')).rejects.toMatchObject({ code: 'ENTITLEMENT_REQUIRED', plan: 'starter' });
+  });
+
+  it('allows a starter-plan user for csvExport', async () => {
+    mockState.subscription = { plan: 'starter', status: 'active' };
+    await expect(assertEntitlement('user-1', 'csvExport')).resolves.toMatchObject({ plan: 'starter' });
+  });
+
+  it('allows a pro-plan user for all three entitlements', async () => {
+    mockState.subscription = { plan: 'pro', status: 'active' };
+    await expect(assertEntitlement('user-1', 'bulkActions')).resolves.toMatchObject({ plan: 'pro' });
+    await expect(assertEntitlement('user-1', 'csvExport')).resolves.toMatchObject({ plan: 'pro' });
+    await expect(assertEntitlement('user-1', 'auditTrail')).resolves.toMatchObject({ plan: 'pro' });
+  });
+
+  it('allows an enterprise-plan user for all three entitlements', async () => {
+    mockState.subscription = { plan: 'enterprise', status: 'active' };
+    await expect(assertEntitlement('user-1', 'bulkActions')).resolves.toMatchObject({ plan: 'enterprise' });
+    await expect(assertEntitlement('user-1', 'csvExport')).resolves.toMatchObject({ plan: 'enterprise' });
+    await expect(assertEntitlement('user-1', 'auditTrail')).resolves.toMatchObject({ plan: 'enterprise' });
   });
 });
 

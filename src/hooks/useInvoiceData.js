@@ -65,17 +65,39 @@ export const useInvoiceData = () => {
     setInvoices(p => p.filter(i => i.id !== id));
   }, []);
 
-  const bulkMarkPaid = useCallback(async ids => {
-    const { error } = await supabase.from('invoices').update({ status: STATUS.PAID }).in('id', ids).eq('user_id', user.id);
-    if (error) { console.error('bulkMarkPaid:', error.message); throw error; }
-    setInvoices(p => p.map(i => ids.includes(i.id) ? { ...i, status: STATUS.PAID } : i));
-  }, [user]);
+  // Routed through the server (CASH-95) so the plan's bulkActions entitlement
+  // is actually enforced — writing straight to Supabase with the user's own
+  // JWT only respects RLS's user_id scoping, not plan tier.
+  const bulkUpdateStatus = useCallback(async (ids, status) => {
+    const { data: { session } } = await supabase.auth.getSession();
+    const res = await fetch('/api/invoices/bulk-status', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session?.access_token}` },
+      body: JSON.stringify({ ids, status }),
+    });
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      console.error('bulkUpdateStatus:', body.error);
+      throw new Error(body.error || 'Bulk update failed');
+    }
+    setInvoices(p => p.map(i => ids.includes(i.id) ? { ...i, status } : i));
+  }, []);
 
-  const bulkMarkUnpaid = useCallback(async ids => {
-    const { error } = await supabase.from('invoices').update({ status: STATUS.UNPAID }).in('id', ids).eq('user_id', user.id);
-    if (error) { console.error('bulkMarkUnpaid:', error.message); throw error; }
-    setInvoices(p => p.map(i => ids.includes(i.id) ? { ...i, status: STATUS.UNPAID } : i));
-  }, [user]);
+  const bulkMarkPaid   = useCallback(ids => bulkUpdateStatus(ids, STATUS.PAID),   [bulkUpdateStatus]);
+  const bulkMarkUnpaid = useCallback(ids => bulkUpdateStatus(ids, STATUS.UNPAID), [bulkUpdateStatus]);
+
+  // Server-side gate for the CSV export button (CASH-95). The CSV itself is
+  // still built client-side from data already fetched under RLS — this call
+  // exists only so a disallowed-tier user triggering the export action via
+  // devtools/API directly (bypassing the UI-only canExportCsv gate) is
+  // rejected. Returns true if entitled, false otherwise (never throws).
+  const checkCsvExportEntitlement = useCallback(async () => {
+    const { data: { session } } = await supabase.auth.getSession();
+    const res = await fetch('/api/invoices/export-entitlement', {
+      headers: { Authorization: `Bearer ${session?.access_token}` },
+    });
+    return res.ok;
+  }, []);
 
   const bulkDelete = useCallback(async ids => {
     const { data: { session } } = await supabase.auth.getSession();
@@ -201,6 +223,6 @@ export const useInvoiceData = () => {
     missingSuppliers, anomalyMap,
     addInvoice, updateInvoice, deleteInvoice, bulkMarkPaid, bulkMarkUnpaid, bulkDelete,
     addSupplier, updateSupplier, deleteSupplier,
-    getSupplier, refreshInvoices, appendInvoices,
+    getSupplier, refreshInvoices, appendInvoices, checkCsvExportEntitlement,
   };
 };
