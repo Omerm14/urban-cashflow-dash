@@ -17,11 +17,12 @@ const mockState = {
   subscription: { plan: 'free', status: 'active' },
   invoiceCount: 0,
   connectedTypes: [],
+  integrationsEqFields: [], // tracks .eq() field names applied to the 'integrations' query (CASH-97)
 };
 
 const queryBuilder = (table) => ({
   select: () => queryBuilder(table),
-  eq: () => queryBuilder(table),
+  eq: (field) => { if (table === 'integrations') mockState.integrationsEqFields.push(field); return queryBuilder(table); },
   gte: () => queryBuilder(table),
   upsert: () => Promise.resolve({ data: null, error: null }),
   single: () => Promise.resolve({ data: mockState.subscription, error: null }),
@@ -256,5 +257,36 @@ describe('assertSourceLimit (real module, mocked Supabase)', () => {
     mockState.connectedTypes = ['gmail', 'google_drive', 'whatsapp'];
     const result = await assertSourceLimit('user-1', 'green_invoice');
     expect(result).toMatchObject({ plan: 'enterprise', limit: 4, used: 3 });
+  });
+
+  // CASH-97: "already owned" must include rows in any status (error,
+  // disconnected), not just 'connected' — otherwise a source that broke
+  // (e.g. after a plan downgrade left the user over their new cap) can never
+  // be re-authorized: assertSourceLimit would treat it as a brand-new add
+  // and 403 the user on their own already-paid-for integration.
+  it('allows re-authorizing an owned type even at the cap, regardless of that row\'s status', async () => {
+    mockState.subscription = { plan: 'free', status: 'active' };
+    // The mock doesn't model per-row status (it only tracks types), which is
+    // exactly the point: the query must no longer filter by status at all.
+    mockState.connectedTypes = ['gmail'];
+    const result = await assertSourceLimit('user-1', 'gmail');
+    expect(result).toMatchObject({ plan: 'free', limit: 1, used: 1 });
+  });
+
+  it('does not filter the integrations query by status (fetches all rows for the user, any status)', async () => {
+    mockState.subscription = { plan: 'free', status: 'active' };
+    mockState.connectedTypes = ['gmail'];
+    mockState.integrationsEqFields = [];
+    await assertSourceLimit('user-1', 'gmail');
+    expect(mockState.integrationsEqFields).toEqual(['user_id']);
+    expect(mockState.integrationsEqFields).not.toContain('status');
+  });
+
+  it('still blocks a genuinely new type for a user already at the cap', async () => {
+    mockState.subscription = { plan: 'free', status: 'active' };
+    mockState.connectedTypes = ['gmail'];
+    await expect(assertSourceLimit('user-1', 'whatsapp')).rejects.toMatchObject({
+      statusCode: 403, code: 'SOURCE_LIMIT_REACHED', plan: 'free', limit: 1, used: 1,
+    });
   });
 });

@@ -70,31 +70,35 @@ async function assertInvoiceLimit(userId) {
 }
 
 // Throws a structured 403 error if connecting `type` would exceed the plan's
-// sync-source cap. Reconnecting an already-owned source type never counts
-// against the cap — only counts distinct *connected* types.
+// sync-source cap. Reconnecting/re-authorizing an already-owned source type
+// never counts against the cap — this checks any existing row for that
+// user+type regardless of status (not just 'connected'), so a source that
+// fell into 'error'/'disconnected' (e.g. after a plan downgrade left the
+// user over their new cap) can still be re-authorized instead of being
+// treated as a brand-new source add and 403ing on itself (CASH-97).
 async function assertSourceLimit(userId, type) {
   const [subResult, sourcesResult] = await Promise.all([
     supabase.from('subscriptions').select('plan').eq('user_id', userId).single(),
-    supabase.from('integrations').select('type').eq('user_id', userId).eq('status', 'connected'),
+    supabase.from('integrations').select('type').eq('user_id', userId),
   ]);
 
   const plan  = subResult.data?.plan || 'free';
   const limit = PLANS[plan]?.sources ?? 1;
-  const connectedTypes = new Set((sourcesResult.data || []).map(r => r.type));
+  const ownedTypes = new Set((sourcesResult.data || []).map(r => r.type));
 
-  if (connectedTypes.has(type)) return { plan, limit, used: connectedTypes.size };
+  if (ownedTypes.has(type)) return { plan, limit, used: ownedTypes.size };
 
-  if (connectedTypes.size >= limit) {
+  if (ownedTypes.size >= limit) {
     const err = new Error('Plan sync-source limit reached');
     err.statusCode = 403;
     err.code = 'SOURCE_LIMIT_REACHED';
-    err.used  = connectedTypes.size;
+    err.used  = ownedTypes.size;
     err.limit = limit;
     err.plan  = plan;
     throw err;
   }
 
-  return { plan, limit, used: connectedTypes.size };
+  return { plan, limit, used: ownedTypes.size };
 }
 
 // Throws a structured 403 error if the user's plan doesn't include auto-sync
