@@ -4,8 +4,11 @@ const { assertInvoiceLimit } = require('../lib/plans');
 const BATCH_SIZE = 5;  // larger batch for cron (no timeout pressure)
 
 // GET /api/cron/sync
-// Called by Vercel Cron (vercel.json) or an external cron service (cron-job.org etc.)
-// Requires: Authorization: Bearer <CRON_SECRET>
+// Not scheduled via vercel.json's `crons` (Vercel's Hobby plan caps cron
+// frequency at once/day, which is too infrequent for auto-sync) — trigger
+// this externally instead, e.g. an external cron service (cron-job.org,
+// EasyCron, etc.) hitting this URL on whatever schedule is wanted, with the
+// header below. Requires: Authorization: Bearer <CRON_SECRET>
 exports.runSync = async (req, res) => {
   const secret = process.env.CRON_SECRET;
   const auth   = req.headers.authorization || '';
