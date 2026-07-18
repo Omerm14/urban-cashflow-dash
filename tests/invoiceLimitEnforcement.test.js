@@ -193,6 +193,62 @@ describe('runSync cron auto-sync (CASH-19: skips, does not error, an over-limit 
     expect(res.body.results.find(r => r.id === 'int-under')).toMatchObject({ added: 2 });
     expect(errorUpdates).toEqual([]); // the over-limit integration is never marked 'error'
   });
+
+  // Pre-merge review fix: a transient Supabase error on the plan-lookup query
+  // must not be treated the same as a real sync failure — the integration
+  // used to get marked 'error' (and the user notified of a "broken"
+  // integration) purely from an infra hiccup unrelated to that integration.
+  it('skips (does not mark "error") an integration whose plan-lookup query itself fails', async () => {
+    process.env.CRON_SECRET = 'test-secret';
+    const integration = { id: 'int-1', user_id: 'user-1', type: 'gmail', status: 'connected', auto_sync_enabled: true, sync_count: 0 };
+    const errorUpdates = [];
+
+    require.cache[supabasePath] = {
+      id: supabasePath, filename: supabasePath, loaded: true,
+      exports: {
+        from(table) {
+          if (table === 'integrations') {
+            const chain = {
+              select: () => chain, eq: () => chain,
+              then: (resolve) => resolve({ data: [integration], error: null }),
+              update: (patch) => { if (patch.status === 'error') errorUpdates.push(patch); return { eq: () => Promise.resolve({ data: null, error: null }) }; },
+            };
+            return chain;
+          }
+          if (table === 'subscriptions') {
+            const chain = {
+              select: () => chain, eq: () => chain,
+              single: () => Promise.resolve({ data: null, error: { message: 'connection reset', code: '08006' } }),
+              upsert: () => Promise.resolve({ data: null, error: null }),
+            };
+            return chain;
+          }
+          if (table === 'invoices') {
+            const chain = { select: () => chain, eq: () => chain, gte: () => Promise.resolve({ data: null, error: null, count: 0 }) };
+            return chain;
+          }
+          if (table === 'sync_jobs') {
+            const chain = { select: () => chain, in: () => chain, lt: () => chain, limit: () => Promise.resolve({ data: [], error: null }) };
+            return chain;
+          }
+          throw new Error(`unexpected table ${table}`);
+        },
+      },
+    };
+    require.cache[syncProcessorPath] = {
+      id: syncProcessorPath, filename: syncProcessorPath, loaded: true,
+      exports: { syncGmail: async () => ({ added: 999, filesFound: 0, errors: 0 }) }, // must never be called
+    };
+
+    const cron = freshRequire('../server/routes/cron.js', [supabasePath, syncProcessorPath]);
+    const res = makeRes();
+    await cron.runSync({ headers: { authorization: 'Bearer test-secret' } }, res);
+
+    expect(res.body.synced).toBe(1); // resolves (fulfilled), not rejected
+    expect(res.body.failed).toBe(0);
+    expect(res.body.results.find(r => r.id === 'int-1')).toMatchObject({ added: 0, skipped: 'plan_lookup_failed' });
+    expect(errorUpdates).toEqual([]); // never marked 'error' from the transient lookup failure
+  });
 });
 
 describe('updateAutoSync (CASH-43: hard-blocks enabling auto-sync on a plan without it)', () => {
