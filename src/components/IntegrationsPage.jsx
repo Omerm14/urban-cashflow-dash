@@ -939,8 +939,14 @@ export default function IntegrationsPage({ oauthResult, onClearOAuthResult, onIn
 
   const getIntegration = type => integrations.find(i => i.type === type);
   const hasAnyError    = integrations.some(i => i.status === "error");
-  const connectedTypes = new Set(integrations.filter(i => i.status === "connected").map(i => i.type));
-  const isSourceAtLimit = type => !connectedTypes.has(type) && connectedTypes.size >= (maxSources ?? Infinity);
+  // Mirrors server/lib/plans.js's assertSourceLimit (CASH-97): a source
+  // counts against the cap regardless of status, not just 'connected' —
+  // otherwise this client-side gate disagrees with the server's, and a user
+  // with one errored integration sees "Connect" enabled for a new source,
+  // completes the entire OAuth consent flow, and only then gets rejected
+  // server-side.
+  const ownedTypes = new Set(integrations.map(i => i.type));
+  const isSourceAtLimit = type => !ownedTypes.has(type) && ownedTypes.size >= (maxSources ?? Infinity);
 
   if (loading) return (
     <div style={{ color: T.t3, padding: "60px 0", textAlign: "center", fontFamily: SANS, fontSize: 14 }}>
