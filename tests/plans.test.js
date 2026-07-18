@@ -43,7 +43,7 @@ require.cache[supabasePath] = {
   exports: { from: (table) => queryBuilder(table) },
 };
 
-const { PLANS, checkInvoiceLimit, assertSourceLimit, getPlanUsage } = await import('../server/lib/plans.js');
+const { PLANS, checkInvoiceLimit, assertInvoiceLimit, assertSourceLimit, getPlanUsage } = await import('../server/lib/plans.js');
 
 describe('PLANS config (real module)', () => {
   it('is backed by the real server/lib/plans.js export, not a shadow copy', () => {
@@ -121,6 +121,46 @@ describe('checkInvoiceLimit (real module, mocked Supabase) — caps are soft', (
     mockState.invoiceCount = 10;
     const usage = await getPlanUsage('user-1');
     expect(usage).toMatchObject({ plan: 'starter', limit: 75, used: 10, remaining: 65 });
+  });
+});
+
+describe('assertInvoiceLimit (real module, mocked Supabase) — hard-blocks over quota', () => {
+  it('allows a free user under the cap', async () => {
+    mockState.subscription = { plan: 'free', status: 'active' };
+    mockState.invoiceCount = 19;
+    const usage = await assertInvoiceLimit('user-1');
+    expect(usage).toMatchObject({ plan: 'free', limit: 20, used: 19 });
+  });
+
+  it('blocks a free user exactly at the cap', async () => {
+    mockState.subscription = { plan: 'free', status: 'active' };
+    mockState.invoiceCount = 20;
+    await expect(assertInvoiceLimit('user-1')).rejects.toMatchObject({
+      statusCode: 402,
+      code: 'PLAN_LIMIT_REACHED',
+      plan: 'free',
+      limit: 20,
+      used: 20,
+    });
+  });
+
+  it('blocks a pro user over the cap', async () => {
+    mockState.subscription = { plan: 'pro', status: 'active' };
+    mockState.invoiceCount = 301;
+    await expect(assertInvoiceLimit('user-1')).rejects.toMatchObject({
+      statusCode: 402,
+      code: 'PLAN_LIMIT_REACHED',
+      plan: 'pro',
+      limit: 300,
+      used: 301,
+    });
+  });
+
+  it('never blocks enterprise (unlimited)', async () => {
+    mockState.subscription = { plan: 'enterprise', status: 'active' };
+    mockState.invoiceCount = 1_000_000;
+    const usage = await assertInvoiceLimit('user-1');
+    expect(usage.remaining).toBe(Infinity);
   });
 });
 

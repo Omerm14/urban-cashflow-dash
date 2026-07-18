@@ -50,7 +50,22 @@ afterEach(() => {
 describe('extract.js error handler', () => {
   it('returns a generic error and logs the real one on an unexpected extraction failure', async () => {
     mockModule(extractionPath, { translate: () => Promise.reject(new Error(LEAK)) });
-    mockModule(supabasePath, {});
+    // assertInvoiceLimit (CASH-41: translate mode is no longer exempt from the
+    // quota check) needs a supabase mock that resolves an under-limit usage so
+    // these tests can reach extraction.translate() and exercise its own error
+    // handling, which is what they're actually testing.
+    mockModule(supabasePath, {
+      from: () => {
+        const chain = {
+          select: () => chain,
+          eq:     () => chain,
+          gte:    () => Promise.resolve({ data: null, error: null, count: 0 }),
+          single: () => Promise.resolve({ data: { plan: 'free' }, error: null }),
+          upsert: () => Promise.resolve({ data: null, error: null }),
+        };
+        return chain;
+      },
+    });
     const extract = freshRequire('../server/routes/extract.js');
 
     const res = makeRes();
@@ -65,7 +80,22 @@ describe('extract.js error handler', () => {
   it('does not forward a raw Claude API error body (err.error.error.message) to the client', async () => {
     const claudeErr = { status: 429, error: { error: { message: LEAK } }, message: 'Request failed' };
     mockModule(extractionPath, { translate: () => Promise.reject(claudeErr) });
-    mockModule(supabasePath, {});
+    // assertInvoiceLimit (CASH-41: translate mode is no longer exempt from the
+    // quota check) needs a supabase mock that resolves an under-limit usage so
+    // these tests can reach extraction.translate() and exercise its own error
+    // handling, which is what they're actually testing.
+    mockModule(supabasePath, {
+      from: () => {
+        const chain = {
+          select: () => chain,
+          eq:     () => chain,
+          gte:    () => Promise.resolve({ data: null, error: null, count: 0 }),
+          single: () => Promise.resolve({ data: { plan: 'free' }, error: null }),
+          upsert: () => Promise.resolve({ data: null, error: null }),
+        };
+        return chain;
+      },
+    });
     const extract = freshRequire('../server/routes/extract.js');
 
     const res = makeRes();

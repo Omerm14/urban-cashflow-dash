@@ -50,6 +50,25 @@ async function checkInvoiceLimit(userId) {
   return getPlanUsage(userId);
 }
 
+// Throws a structured 402 error if the user has reached their plan's monthly
+// invoice quota — hard-blocks ingestion (unlike checkInvoiceLimit's soft
+// nudge), so a client can't exceed their plan's invoicesPerMonth by any
+// ingestion path (manual upload, sync trigger, resync, translate, cron
+// auto-sync, WhatsApp webhook).
+async function assertInvoiceLimit(userId) {
+  const usage = await getPlanUsage(userId);
+  if (usage.limit !== Infinity && usage.used >= usage.limit) {
+    const err = new Error('Plan invoice limit reached');
+    err.statusCode = 402;
+    err.code = 'PLAN_LIMIT_REACHED';
+    err.used  = usage.used;
+    err.limit = usage.limit;
+    err.plan  = usage.plan;
+    throw err;
+  }
+  return usage;
+}
+
 // Throws a structured 403 error if connecting `type` would exceed the plan's
 // sync-source cap. Reconnecting an already-owned source type never counts
 // against the cap — only counts distinct *connected* types.
@@ -78,4 +97,4 @@ async function assertSourceLimit(userId, type) {
   return { plan, limit, used: connectedTypes.size };
 }
 
-module.exports = { PLANS, getPlanUsage, checkInvoiceLimit, assertSourceLimit, ensureSubscription };
+module.exports = { PLANS, getPlanUsage, checkInvoiceLimit, assertInvoiceLimit, assertSourceLimit, ensureSubscription };

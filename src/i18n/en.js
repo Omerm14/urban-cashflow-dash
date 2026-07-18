@@ -516,6 +516,7 @@ const en = {
   // Entitlement gating (sync sources, CSV export, bulk actions, audit trail)
   entitlement_locked: "Upgrade your plan to unlock this feature",
   int_source_limit_reached: "You've reached your plan's sync-source limit — upgrade to connect more.",
+  plan_limit_reached: "You've reached your plan's monthly invoice limit — upgrade to add more.",
   act_locked: "The full audit trail is a Pro feature. Upgrade to see every synced file's origin, timestamp, and outcome.",
   act_locked_cta: "Upgrade to Pro",
 

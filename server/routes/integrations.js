@@ -2,7 +2,7 @@ const { google } = require('googleapis');
 const supabase   = require('../lib/supabase');
 const storage    = require('../lib/storage');
 const sync       = require('../services/syncProcessor');
-const { checkInvoiceLimit, assertSourceLimit } = require('../lib/plans');
+const { assertInvoiceLimit, assertSourceLimit } = require('../lib/plans');
 
 const SCOPES = {
   google_drive: ['https://www.googleapis.com/auth/drive.readonly'],
@@ -248,6 +248,15 @@ exports.resync = async (req, res) => {
     .single();
   if (error || !integration) return res.status(404).json({ error: 'Integration not found' });
 
+  try {
+    await assertInvoiceLimit(req.user.id);
+  } catch (limitErr) {
+    if (limitErr.code === 'PLAN_LIMIT_REACHED') {
+      return res.status(402).json({ error: limitErr.code, used: limitErr.used, limit: limitErr.limit, plan: limitErr.plan });
+    }
+    throw limitErr;
+  }
+
   // Clear last_sync so the adapter pulls all historical files
   await supabase.from('integrations').update({ last_sync: null }).eq('id', integration.id);
   const resetIntegration = { ...integration, last_sync: null };
@@ -484,8 +493,14 @@ const createDriveSyncJob = async (integration, userId) => {
 
 // POST /api/integrations/:id/sync  — returns immediately with a jobId for Drive
 exports.triggerSync = async (req, res) => {
-  // Invoice caps are soft — never block a sync, only used for the in-app usage nudge.
-  await checkInvoiceLimit(req.user.id);
+  try {
+    await assertInvoiceLimit(req.user.id);
+  } catch (limitErr) {
+    if (limitErr.code === 'PLAN_LIMIT_REACHED') {
+      return res.status(402).json({ error: limitErr.code, used: limitErr.used, limit: limitErr.limit, plan: limitErr.plan });
+    }
+    throw limitErr;
+  }
 
   const { data: integration, error } = await supabase
     .from('integrations')
