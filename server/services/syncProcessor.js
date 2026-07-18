@@ -132,7 +132,7 @@ const parseAmount = raw => {
 exports.parseAmount = parseAmount;
 
 // Returns an array of saved invoice records (may be empty, may have multiple for multi-page PDFs)
-const processFile = async (buffer, filename, mediaType, userId, suppliers, existingInvoices, integrationId, syncSource, syncMeta = {}) => {
+const processFile = async (buffer, filename, mediaType, userId, suppliers, integrationId, syncSource, syncMeta = {}) => {
   const fileHash = md5(buffer);
   let extractedList;
   try {
@@ -182,7 +182,8 @@ const processFile = async (buffer, filename, mediaType, userId, suppliers, exist
     // invoice_no is present so recurring invoices with same supplier/amount aren't skipped.
     // When invoice_no is absent, fall back to fuzzy for same-batch to catch duplicate pages.
     const inBatchStrict = Boolean(candidate.invoice_no);
-    if (isDuplicate(candidate, existingInvoices) || isDuplicate(candidate, results, inBatchStrict)) {
+    const dbMatches = await findDuplicateCandidates(userId, candidate);
+    if (isDuplicate(candidate, dbMatches) || isDuplicate(candidate, results, inBatchStrict)) {
       console.log(`[sync] duplicate skipped: ${pageLabel}`);
       logSyncEvent(integrationId, userId, 'dedup_skipped', { source_file: pageLabel, file_hash: fileHash });
       skipped++;
@@ -236,13 +237,56 @@ const getSuppliers = async userId => {
   return data || [];
 };
 
-const getExistingInvoices = async userId => {
-  const { data } = await supabase
-    .from('invoices')
-    .select('supplier,invoice_no,amount,invoice_date,source_file')
-    .eq('user_id', userId);
-  return data || [];
+// Queries Postgres directly for the small set of rows that could match `candidate`
+// under isDuplicate()'s rules (exact invoice_no, or fuzzy amount+invoice_date)
+// instead of loading a user's entire invoice history into memory — the previous
+// getExistingInvoices() approach silently missed rows past PostgREST's 1000-row
+// cap and OOM'd at scale. isDuplicate() itself is unchanged; this only narrows
+// what it's run against.
+const findDuplicateCandidates = async (userId, candidate) => {
+  const lookups = [];
+  if (candidate.invoice_no) {
+    lookups.push(
+      supabase.from('invoices').select('supplier,invoice_no,amount,invoice_date,source_file')
+        .eq('user_id', userId).eq('invoice_no', candidate.invoice_no)
+    );
+  }
+  if (candidate.amount != null && candidate.invoice_date) {
+    lookups.push(
+      supabase.from('invoices').select('supplier,invoice_no,amount,invoice_date,source_file')
+        .eq('user_id', userId).eq('amount', candidate.amount).eq('invoice_date', candidate.invoice_date)
+    );
+  }
+  if (!lookups.length) return [];
+  const results = await Promise.all(lookups);
+  return results.flatMap(r => r.data || []);
 };
+exports.findDuplicateCandidates = findDuplicateCandidates;
+
+// Fetches every already-imported base filename for a user, paginating past
+// PostgREST's 1000-row default cap so large accounts are still fully covered.
+// Used only as a cheap pre-filter to skip re-downloading/re-OCRing files that
+// were already imported — findDuplicateCandidates() above is the real dedup
+// gate and is unaffected by anything this pre-filter misses.
+const SEEN_FILES_PAGE_SIZE = 1000;
+const getSeenFilenames = async userId => {
+  const baseFilename = s => s?.replace(/\s*\(page \d+\)$/i, '').trim().toLowerCase() || '';
+  const seen = new Set();
+  let from = 0;
+  while (true) {
+    const { data, error } = await supabase
+      .from('invoices')
+      .select('source_file')
+      .eq('user_id', userId)
+      .range(from, from + SEEN_FILES_PAGE_SIZE - 1);
+    if (error) { console.error('[sync] seen-filenames fetch failed:', error.message); break; }
+    (data || []).forEach(row => { const b = baseFilename(row.source_file); if (b) seen.add(b); });
+    if (!data || data.length < SEEN_FILES_PAGE_SIZE) break;
+    from += SEEN_FILES_PAGE_SIZE;
+  }
+  return seen;
+};
+exports.getSeenFilenames = getSeenFilenames;
 
 // ─── Google OAuth2 client ────────────────────────────────────────────────────
 
@@ -402,12 +446,8 @@ exports.syncGoogleDrive = async (integration, userId) => {
 
   console.log(`[sync:drive] ${files.length} file(s) found for user ${userId}`);
 
-  const suppliers        = await getSuppliers(userId);
-  const existingInvoices = await getExistingInvoices(userId);
-  // Strip "(page N)" suffix so multi-page PDFs are recognised as already-imported
-  // whether they were saved with old code ("file.pdf") or new ("file.pdf (page 1)")
-  const baseFilename = s => s?.replace(/\s*\(page \d+\)$/i, '').trim().toLowerCase() || '';
-  const seenFiles = new Set(existingInvoices.map(i => baseFilename(i.source_file)).filter(Boolean));
+  const suppliers = await getSuppliers(userId);
+  const seenFiles = await getSeenFilenames(userId);
   let added = 0, skipped = 0, errors = 0;
 
   // Process files in parallel batches to avoid sequential Claude API bottleneck
@@ -435,7 +475,7 @@ exports.syncGoogleDrive = async (integration, userId) => {
         const resp   = await drive.files.get({ fileId: file.id, alt: 'media' }, { responseType: 'arraybuffer' });
         const buffer = Buffer.from(resp.data);
         const { saved, skipped: contentSkipped } = await processFile(
-          buffer, file.name, file.mimeType, userId, suppliers, existingInvoices,
+          buffer, file.name, file.mimeType, userId, suppliers,
           integration.id, 'google_drive', { folder_id: folderId, drive_file_id: file.id },
         );
         return { file, saved, contentSkipped };
@@ -448,7 +488,7 @@ exports.syncGoogleDrive = async (integration, userId) => {
     }));
 
     for (const { file, saved, contentSkipped } of batchResults) {
-      for (const inv of saved) { added++; existingInvoices.push(inv); }
+      added += saved.length;
       skipped += contentSkipped;
       if (saved.length) seenFiles.add(file.name.toLowerCase());
     }
@@ -500,8 +540,7 @@ exports.syncGmail = async (integration, userId) => {
 
   console.log(`[sync:gmail] ${messages.length} message(s) for user ${userId}`);
 
-  const suppliers        = await getSuppliers(userId);
-  const existingInvoices = await getExistingInvoices(userId);
+  const suppliers = await getSuppliers(userId);
 
   // Pre-filter: skip messages already represented by an invoice from a prior sync
   // (e.g. a "resync" that clears last_sync) — mirrors syncGoogleDrive's seenFiles
@@ -546,10 +585,10 @@ exports.syncGmail = async (integration, userId) => {
         });
         const buffer = Buffer.from(att.data, 'base64url');
         const { saved, skipped: contentSkipped } = await processFile(
-          buffer, part.filename, part.mimeType, userId, suppliers, existingInvoices,
+          buffer, part.filename, part.mimeType, userId, suppliers,
           integration.id, 'gmail', { message_id: msg.id, thread_id: message.threadId },
         );
-        for (const inv of saved) { added++; existingInvoices.push(inv); }
+        added += saved.length;
         skipped += contentSkipped;
       }
     } catch (err) {
@@ -608,8 +647,7 @@ exports.syncGreenInvoice = async (integration, userId) => {
   if (!docsRes.ok) throw new Error(`Green Invoice expenses fetch failed: ${await greenInvoiceErrorDetail(docsRes)}`);
   const { items = [] } = await docsRes.json();
 
-  const suppliers        = await getSuppliers(userId);
-  const existingInvoices = await getExistingInvoices(userId);
+  const suppliers = await getSuppliers(userId);
   let added = 0, skipped = 0, errors = 0;
 
   for (const doc of items) {
@@ -637,7 +675,8 @@ exports.syncGreenInvoice = async (integration, userId) => {
       sync_timestamp:   new Date().toISOString(),
     };
 
-    if (isDuplicate(candidate, existingInvoices)) {
+    const dbMatches = await findDuplicateCandidates(userId, candidate);
+    if (isDuplicate(candidate, dbMatches)) {
       logSyncEvent(integration.id, userId, 'dedup_skipped', { source_file: candidate.source_file });
       skipped++;
       continue;
@@ -646,7 +685,6 @@ exports.syncGreenInvoice = async (integration, userId) => {
     if (!error && data) {
       logSyncEvent(integration.id, userId, 'saved', { source_file: candidate.source_file, invoice_id: data.id });
       added++;
-      existingInvoices.push(data);
     } else if (error) {
       console.error(`[sync] green_invoice save failed for ${candidate.source_file}:`, error.message);
       logSyncEvent(integration.id, userId, 'ocr_failed', { source_file: candidate.source_file, error_message: error.message });
@@ -688,9 +726,7 @@ exports.discoverGoogleDriveFiles = async (integration, userId) => {
     pageSize: 50,
   });
 
-  const existingInvoices = await getExistingInvoices(userId);
-  const baseFilename = s => s?.replace(/\s*\(page \d+\)$/i, '').trim().toLowerCase() || '';
-  const seenFiles = new Set(existingInvoices.map(i => baseFilename(i.source_file)).filter(Boolean));
+  const seenFiles = await getSeenFilenames(userId);
 
   const filesToProcess = files.filter(file => {
     if (seenFiles.has(file.name.toLowerCase())) {
@@ -707,9 +743,8 @@ exports.discoverGoogleDriveFiles = async (integration, userId) => {
 exports.processGoogleDriveFileBatch = async (integration, userId, files) => {
   const auth  = makeOAuth2({ ...integration.credentials, _userId: userId, _type: 'google_drive' });
   const drive = google.drive({ version: 'v3', auth });
-  const suppliers        = await getSuppliers(userId);
-  const existingInvoices = await getExistingInvoices(userId);
-  const folderId         = integration.config?.folder_id;
+  const suppliers = await getSuppliers(userId);
+  const folderId  = integration.config?.folder_id;
 
   const results = [];
   let errors = 0, skipped = 0;
@@ -725,10 +760,10 @@ exports.processGoogleDriveFileBatch = async (integration, userId, files) => {
         const resp   = await drive.files.get({ fileId: file.id, alt: 'media' }, { responseType: 'arraybuffer' });
         const buffer = Buffer.from(resp.data);
         const { saved, skipped: contentSkipped } = await processFile(
-          buffer, file.name, file.mimeType, userId, suppliers, existingInvoices,
+          buffer, file.name, file.mimeType, userId, suppliers,
           integration.id, 'google_drive', { folder_id: folderId, drive_file_id: file.id },
         );
-        for (const inv of saved) { results.push(inv); existingInvoices.push(inv); }
+        results.push(...saved);
         skipped += contentSkipped;
       } catch (err) {
         errors++;
@@ -773,11 +808,10 @@ exports.processWhatsAppMedia = async (integration, userId, mediaId, filename, mi
   if (!mediaRes.ok) throw new Error(`WhatsApp media download failed: ${mediaRes.status}`);
   const buffer = Buffer.from(await mediaRes.arrayBuffer());
 
-  const suppliers        = await getSuppliers(userId);
-  const existingInvoices = await getExistingInvoices(userId);
+  const suppliers = await getSuppliers(userId);
 
   const { saved: results } = await processFile(
-    buffer, filename || `whatsapp_${mediaId}`, mimeType, userId, suppliers, existingInvoices,
+    buffer, filename || `whatsapp_${mediaId}`, mimeType, userId, suppliers,
     integration.id, 'whatsapp', { wa_message_id: waMessageId, media_id: mediaId },
   );
 
