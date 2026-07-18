@@ -1,6 +1,9 @@
 {
   "name": "cashflow-app",
   "version": "1.0.0",
+  "engines": {
+    "node": "20.x"
+  },
   "scripts": {
     "dev": "concurrently \"vite\" \"node server/index.js\"",
     "build": "vite build",
