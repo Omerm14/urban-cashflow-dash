@@ -66,9 +66,13 @@ export default function IntegrationWizard({ type, initialStep, integration, onCl
   const Icon = ICONS[type];
   const intro = INTRO_COPY[type];
   const sequence = SEQUENCES[type];
-  // Server errors are raw codes (e.g. SOURCE_LIMIT_REACHED) — translate the ones
-  // a user can actually hit here; anything else falls back to the raw message.
-  const friendlyError = (e) => e.message === "SOURCE_LIMIT_REACHED" ? t("int_source_limit_reached") : e.message;
+  // Server errors are raw codes (e.g. SOURCE_LIMIT_REACHED, PLAN_LIMIT_REACHED) —
+  // translate the ones a user can actually hit here; anything else falls back to
+  // the raw message.
+  const friendlyErrorCode = (msg) => msg === "SOURCE_LIMIT_REACHED" ? t("int_source_limit_reached")
+    : msg === "PLAN_LIMIT_REACHED" ? t("plan_limit_reached")
+    : msg;
+  const friendlyError = (e) => friendlyErrorCode(e.message);
 
   const [step, setStep] = useState(initialStep || "intro");
   const [liveIntegration, setLiveIntegration] = useState(integration || null);
@@ -126,7 +130,7 @@ export default function IntegrationWizard({ type, initialStep, integration, onCl
       if (activeJob.added > 0) onInvoicesRefresh?.();
       setStep("done");
     } else if (activeJob.error) {
-      setSyncResult({ error: activeJob.error });
+      setSyncResult({ error: friendlyErrorCode(activeJob.error) });
       setStep("done");
     }
   }, [activeJob, step, type, onInvoicesRefresh]);

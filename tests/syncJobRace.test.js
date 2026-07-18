@@ -89,6 +89,16 @@ describe('processSyncJob atomic claim (CASH-23)', () => {
             const c = { select: () => c, eq: () => c, single: () => Promise.resolve({ data: integration, error: null }) };
             return c;
           }
+          // assertInvoiceLimit (CASH-42: re-checked on every batch) — resolve a
+          // comfortably-under-limit usage so it doesn't interfere with this test.
+          if (table === 'subscriptions') {
+            const c = { select: () => c, eq: () => c, single: () => Promise.resolve({ data: { plan: 'pro' }, error: null }), upsert: () => Promise.resolve({ data: null, error: null }) };
+            return c;
+          }
+          if (table === 'invoices') {
+            const c = { select: () => c, eq: () => c, gte: () => Promise.resolve({ data: null, error: null, count: 1 }) };
+            return c;
+          }
           throw new Error(`unexpected table ${table}`);
         },
       },

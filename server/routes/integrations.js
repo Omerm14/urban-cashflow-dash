@@ -614,11 +614,30 @@ exports.processSyncJob = async (req, res) => {
       .from('sync_jobs').select('*').eq('id', req.params.jobId).eq('user_id', req.user.id).single();
     if (error || !current) return res.status(404).json({ error: 'Sync job not found' });
 
-    if (current.status === 'done' || current.status === 'error' || current.status === 'cancelled') {
-      return res.json({ done: true, cancelled: current.status === 'cancelled', cursor: current.cursor, totalFiles: current.total_files, added: current.added, dupes: current.dupes || 0, errors: current.errors, filesAdded: [] });
+    if (current.status === 'done' || current.status === 'error' || current.status === 'cancelled' || current.status === 'limit_reached') {
+      return res.json({ done: true, cancelled: current.status === 'cancelled', limitReached: current.status === 'limit_reached', cursor: current.cursor, totalFiles: current.total_files, added: current.added, dupes: current.dupes || 0, errors: current.errors, filesAdded: [] });
     }
     // status === 'running' and not stale — another call is actively processing it.
     return res.json({ done: false, cursor: current.cursor, totalFiles: current.total_files, added: current.added, dupes: current.dupes || 0, errors: current.errors, filesAdded: [] });
+  }
+
+  // Re-check the plan quota on every batch, not just once at job creation — a
+  // Drive/Gmail listing can span hundreds/thousands of files (CASH-37), so a
+  // single upfront check at triggerSync would let a long-running job blow far
+  // past the user's plan limit. Halt at the boundary instead, preserving
+  // progress made so far — mirrors the existing cursor-preserving pattern
+  // already used for user-requested cancellation above.
+  try {
+    await assertInvoiceLimit(job.user_id);
+  } catch (limitErr) {
+    if (limitErr.code === 'PLAN_LIMIT_REACHED') {
+      await supabase.from('sync_jobs').update({ status: 'limit_reached', updated_at: new Date().toISOString() }).eq('id', job.id);
+      return res.status(402).json({
+        error: limitErr.code, used: limitErr.used, limit: limitErr.limit, plan: limitErr.plan,
+        done: true, cursor: job.cursor, totalFiles: job.total_files, added: job.added, dupes: job.dupes || 0, errors: job.errors, filesAdded: [],
+      });
+    }
+    throw limitErr;
   }
 
   const BATCH_SIZE = 3;

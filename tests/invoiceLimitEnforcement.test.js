@@ -268,6 +268,110 @@ describe('WhatsApp webhook (CASH-19-adjacent: unattended ingestion also hard-blo
   });
 });
 
+describe('processSyncJob (CASH-42: re-checks the plan quota on every batch, not just once at trigger)', () => {
+  it('halts a job at the quota boundary, marks it limit_reached, and preserves progress made so far', async () => {
+    const job = {
+      id: 'job1', integration_id: 'int1', user_id: 'user-over', status: 'pending',
+      cursor: 5, file_list: Array.from({ length: 20 }, (_, i) => ({ id: `f${i}`, name: `f${i}.pdf` })),
+      total_files: 20, added: 5, dupes: 0, errors: 0, updated_at: new Date(0).toISOString(),
+    };
+    let batchProcessed = false;
+    let updatedStatus  = null;
+
+    require.cache[supabasePath] = {
+      id: supabasePath, filename: supabasePath, loaded: true,
+      exports: {
+        from(table) {
+          if (table === 'sync_jobs') {
+            const chain = {
+              select: () => chain, eq: () => chain, or: () => chain,
+              update: (patch) => { if (patch.status) updatedStatus = patch.status; return chain; },
+              maybeSingle: () => Promise.resolve({ data: job, error: null }), // claim succeeds
+              then: (resolve) => resolve({ data: null, error: null }),
+            };
+            return chain;
+          }
+          if (table === 'subscriptions') {
+            const chain = { select: () => chain, eq: () => chain, single: () => Promise.resolve({ data: { plan: 'free' }, error: null }), upsert: () => Promise.resolve({ data: null, error: null }) };
+            return chain;
+          }
+          if (table === 'invoices') {
+            const chain = { select: () => chain, eq: () => chain, gte: () => Promise.resolve({ data: null, error: null, count: 20 }) }; // at free-plan cap (20)
+            return chain;
+          }
+          throw new Error(`unexpected table ${table}`);
+        },
+      },
+    };
+    require.cache[syncProcessorPath] = {
+      id: syncProcessorPath, filename: syncProcessorPath, loaded: true,
+      exports: { processGoogleDriveFileBatch: async () => { batchProcessed = true; return { results: [], skipped: 0, errors: 0 }; } },
+    };
+
+    const integrations = freshRequire('../server/routes/integrations.js', [supabasePath, syncProcessorPath]);
+    const res = makeRes();
+    await integrations.processSyncJob({ params: { jobId: 'job1' }, user: { id: 'user-over' } }, res);
+
+    expect(batchProcessed).toBe(false); // no further files processed once over quota
+    expect(updatedStatus).toBe('limit_reached');
+    expect(res.statusCode).toBe(402);
+    expect(res.body).toMatchObject({
+      error: 'PLAN_LIMIT_REACHED', used: 20, limit: 20, plan: 'free',
+      done: true, cursor: 5, added: 5, totalFiles: 20, // progress made so far is preserved, not reset
+    });
+  });
+
+  it('processes the batch normally when under limit', async () => {
+    const job = {
+      id: 'job1', integration_id: 'int1', user_id: 'user-under', status: 'pending',
+      cursor: 0, file_list: [{ id: 'f0', name: 'f0.pdf' }], total_files: 1, added: 0, dupes: 0, errors: 0,
+      updated_at: new Date(0).toISOString(),
+    };
+    const integration = { id: 'int1', user_id: 'user-under', sync_count: 0 };
+    let batchProcessed = false;
+
+    require.cache[supabasePath] = {
+      id: supabasePath, filename: supabasePath, loaded: true,
+      exports: {
+        from(table) {
+          if (table === 'sync_jobs') {
+            const chain = {
+              select: () => chain, eq: () => chain, or: () => chain, update: () => chain,
+              maybeSingle: () => Promise.resolve({ data: job, error: null }),
+              then: (resolve) => resolve({ data: null, error: null }),
+            };
+            return chain;
+          }
+          if (table === 'subscriptions') {
+            const chain = { select: () => chain, eq: () => chain, single: () => Promise.resolve({ data: { plan: 'pro' }, error: null }), upsert: () => Promise.resolve({ data: null, error: null }) };
+            return chain;
+          }
+          if (table === 'invoices') {
+            const chain = { select: () => chain, eq: () => chain, gte: () => Promise.resolve({ data: null, error: null, count: 5 }) };
+            return chain;
+          }
+          if (table === 'integrations') {
+            const chain = { select: () => chain, eq: () => chain, update: () => chain, single: () => Promise.resolve({ data: integration, error: null }), then: (resolve) => resolve({ data: null, error: null }) };
+            return chain;
+          }
+          throw new Error(`unexpected table ${table}`);
+        },
+      },
+    };
+    require.cache[syncProcessorPath] = {
+      id: syncProcessorPath, filename: syncProcessorPath, loaded: true,
+      exports: { processGoogleDriveFileBatch: async () => { batchProcessed = true; return { results: [{ id: 'inv1' }], skipped: 0, errors: 0 }; } },
+    };
+
+    const integrations = freshRequire('../server/routes/integrations.js', [supabasePath, syncProcessorPath]);
+    const res = makeRes();
+    await integrations.processSyncJob({ params: { jobId: 'job1' }, user: { id: 'user-under' } }, res);
+
+    expect(batchProcessed).toBe(true);
+    expect(res.body.added).toBe(1);
+  });
+});
+
 describe('extract.js translate mode (CASH-41: no longer exempt from the quota check)', () => {
   let consoleErrorSpy;
   beforeEach(() => { consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {}); });
