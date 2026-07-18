@@ -42,6 +42,19 @@ const fetchAllReferencedPaths = async () => {
 };
 exports.fetchAllReferencedPaths = fetchAllReferencedPaths;
 
+// Company logos (server/routes/profile.js `uploadLogo`) live in the same bucket
+// as invoice attachments but have no `invoices` row to reference — without this,
+// every uploaded logo looks indistinguishable from an abandoned upload and gets
+// deleted the next time GC runs without dryRun. Blanket-exempting the `logos/`
+// prefix is the simplest safe fix (chosen over tracking each user's current logo
+// key in the referenced set): it trades a small amount of storage for a
+// superseded/re-uploaded logo — never re-referenced, never deleted — against
+// zero risk of deleting a live one. Revisit only if that storage cost matters.
+const LOGO_KEY_PREFIX = 'logos/';
+const computeOrphans = (allKeys, referenced) =>
+  allKeys.filter(k => !k.startsWith(LOGO_KEY_PREFIX) && !referenced.has(k));
+exports.computeOrphans = computeOrphans;
+
 exports.runGc = async (req, res) => {
   if (!secretOk(req)) return res.status(401).json({ error: 'Unauthorized' });
   const dryRun = req.query.dryRun === '1' || req.query.dryRun === 'true';
@@ -58,7 +71,7 @@ exports.runGc = async (req, res) => {
     const referenced = new Set(referencedPaths);
 
     const allKeys = await storage.listAllKeys();
-    const orphans = allKeys.filter(k => !referenced.has(k));
+    const orphans = computeOrphans(allKeys, referenced);
 
     if (!dryRun) {
       // Delete sequentially-ish in small concurrent groups; failures are logged,
