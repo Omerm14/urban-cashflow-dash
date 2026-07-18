@@ -83,16 +83,27 @@ const matchSupplier = (name, suppliers) => {
 
 // strict=true disables fuzzyMatch — used for same-PDF batch dedup so multiple
 // invoices with identical supplier/amount/date (e.g. recurring) aren't wrongly skipped
-const isDuplicate = (candidate, existing, strict = false) => existing.some(inv => {
-  const sameSup    = normSup(inv.supplier)  === normSup(candidate.supplier);
-  const exactMatch = sameSup && inv.invoice_no && candidate.invoice_no &&
-                     inv.invoice_no.trim() === candidate.invoice_no.trim();
-  const fuzzyMatch = !strict && sameSup &&
-                     Number(inv.amount) === Number(candidate.amount) &&
-                     inv.invoice_date   === candidate.invoice_date;
-  return exactMatch || fuzzyMatch;
-});
+//
+// Returns 'exact' (same supplier + invoice_no — unambiguous, always a true
+// duplicate), 'fuzzy' (same supplier + amount + date, but no invoice_no to
+// confirm — e.g. two legitimate same-day deliveries from one supplier can
+// collide here), or null (no match). isDuplicate() below collapses this to a
+// boolean for existing callers/tests; processFile uses the distinction so a
+// fuzzy-only match is flagged for review instead of silently dropped (CASH-13).
+const classifyDuplicateMatch = (candidate, existing, strict = false) => {
+  const sameSupplier = inv => normSup(inv.supplier) === normSup(candidate.supplier);
+  const hasExactMatch = existing.some(inv => sameSupplier(inv) &&
+    inv.invoice_no && candidate.invoice_no && inv.invoice_no.trim() === candidate.invoice_no.trim());
+  if (hasExactMatch) return 'exact';
+  if (strict) return null;
+  const hasFuzzyMatch = existing.some(inv => sameSupplier(inv) &&
+    Number(inv.amount) === Number(candidate.amount) && inv.invoice_date === candidate.invoice_date);
+  return hasFuzzyMatch ? 'fuzzy' : null;
+};
+
+const isDuplicate = (candidate, existing, strict = false) => classifyDuplicateMatch(candidate, existing, strict) !== null;
 exports.isDuplicate = isDuplicate;
+exports.classifyDuplicateMatch = classifyDuplicateMatch;
 exports.calcDueDate = calcDueDate;
 
 // ─── Audit logging ───────────────────────────────────────────────────────────
@@ -183,11 +194,23 @@ const processFile = async (buffer, filename, mediaType, userId, suppliers, integ
     // When invoice_no is absent, fall back to fuzzy for same-batch to catch duplicate pages.
     const inBatchStrict = Boolean(candidate.invoice_no);
     const dbMatches = await findDuplicateCandidates(userId, candidate);
-    if (isDuplicate(candidate, dbMatches) || isDuplicate(candidate, results, inBatchStrict)) {
+    const dbMatch    = classifyDuplicateMatch(candidate, dbMatches);
+    const batchMatch = classifyDuplicateMatch(candidate, results, inBatchStrict);
+
+    if (dbMatch === 'exact' || batchMatch === 'exact') {
       console.log(`[sync] duplicate skipped: ${pageLabel}`);
       logSyncEvent(integrationId, userId, 'dedup_skipped', { source_file: pageLabel, file_hash: fileHash });
       skipped++;
       continue;
+    }
+
+    // Fuzzy-only match (same supplier/amount/date, no invoice_no to confirm) — e.g. two
+    // legitimate same-day deliveries from one supplier. Import rather than silently drop
+    // it (CASH-13); flag for staff review instead.
+    if (dbMatch === 'fuzzy' || batchMatch === 'fuzzy') {
+      candidate.notes = 'Possible duplicate — same supplier, amount, and date as an existing invoice, but no invoice number to confirm. Please review.';
+      console.log(`[sync] possible duplicate imported (flagged for review): ${pageLabel}`);
+      logSyncEvent(integrationId, userId, 'possible_duplicate_imported', { source_file: pageLabel, file_hash: fileHash });
     }
 
     // Insert the row first (status 'pending' until the file is confirmed stored),
@@ -688,10 +711,16 @@ exports.syncGreenInvoice = async (integration, userId) => {
     };
 
     const dbMatches = await findDuplicateCandidates(userId, candidate);
-    if (isDuplicate(candidate, dbMatches)) {
+    const dbMatch = classifyDuplicateMatch(candidate, dbMatches);
+    if (dbMatch === 'exact') {
       logSyncEvent(integration.id, userId, 'dedup_skipped', { source_file: candidate.source_file });
       skipped++;
       continue;
+    }
+    // Fuzzy-only match — import rather than silently drop it (CASH-13); flag for review.
+    if (dbMatch === 'fuzzy') {
+      candidate.notes += ' — Possible duplicate: same supplier, amount, and date as an existing invoice, but no invoice number to confirm. Please review.';
+      logSyncEvent(integration.id, userId, 'possible_duplicate_imported', { source_file: candidate.source_file });
     }
     const { data, error } = await supabase.from('invoices').insert(candidate).select().single();
     if (!error && data) {
