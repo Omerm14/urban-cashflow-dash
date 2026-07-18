@@ -2,7 +2,8 @@
 // them: abandoned uploads, rows deleted out-of-band). A backstop for the
 // delete-on-delete path; never touches a file a live invoice references.
 //
-// Guarded by CRON_SECRET (timing-safe). Pass ?dryRun=1 to report without deleting.
+// Guarded by CRON_SECRET (header `Authorization: Bearer <secret>`, timing-safe).
+// Pass ?dryRun=1 to report without deleting.
 const crypto   = require('crypto');
 const supabase = require('../lib/supabase');
 const storage  = require('../lib/storage');
@@ -10,9 +11,10 @@ const storage  = require('../lib/storage');
 const secretOk = (req) => {
   const secret = process.env.CRON_SECRET;
   if (!secret) return false;
-  // Accept the secret from the Authorization header (cron services) OR a `key`
-  // query param (so the endpoint can be triggered by simply opening a URL in a
-  // browser — no terminal / header-setting tool required).
+  // Header only — a ?key= query-param path was previously documented here but
+  // never implemented (CASH-40). Deliberately not adding it: query-string
+  // secrets leak into server access logs, browser history, and Referer
+  // headers, which the header-only path avoids.
   const provided = (req.headers.authorization || '').replace(/^Bearer\s+/, '');
   const a = Buffer.from(`${provided}`);
   const b = Buffer.from(`${secret}`);
