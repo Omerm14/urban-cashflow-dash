@@ -31,6 +31,12 @@ const calcDueDate = (invoiceDate, terms) => {
     end.setDate(end.getDate() + parseInt(m[1]));
     return end.toISOString().split('T')[0];
   }
+  const netM = terms.match(/^net(\d+)$/);
+  if (netM) {
+    const end = new Date(date);
+    end.setDate(end.getDate() + parseInt(netM[1]));
+    return end.toISOString().split('T')[0];
+  }
   return null;
 };
 
@@ -87,6 +93,7 @@ const isDuplicate = (candidate, existing, strict = false) => existing.some(inv =
   return exactMatch || fuzzyMatch;
 });
 exports.isDuplicate = isDuplicate;
+exports.calcDueDate = calcDueDate;
 
 // ─── Audit logging ───────────────────────────────────────────────────────────
 
