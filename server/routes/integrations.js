@@ -2,7 +2,7 @@ const { google } = require('googleapis');
 const supabase   = require('../lib/supabase');
 const storage    = require('../lib/storage');
 const sync       = require('../services/syncProcessor');
-const { assertInvoiceLimit, assertSourceLimit } = require('../lib/plans');
+const { assertInvoiceLimit, assertSourceLimit, assertAutoSyncAllowed } = require('../lib/plans');
 
 const SCOPES = {
   google_drive: ['https://www.googleapis.com/auth/drive.readonly'],
@@ -407,6 +407,16 @@ exports.updateAutoSync = async (req, res) => {
     const freq = Number(sync_frequency_min);
     if (!Number.isInteger(freq) || freq < 5 || freq > 10080) {
       return res.status(400).json({ error: 'sync_frequency_min must be an integer between 5 and 10080' });
+    }
+  }
+  if (auto_sync_enabled) {
+    try {
+      await assertAutoSyncAllowed(req.user.id);
+    } catch (limitErr) {
+      if (limitErr.code === 'AUTO_SYNC_NOT_AVAILABLE') {
+        return res.status(403).json({ error: limitErr.code, plan: limitErr.plan });
+      }
+      throw limitErr;
     }
   }
   const { error } = await supabase

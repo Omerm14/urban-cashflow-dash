@@ -43,7 +43,7 @@ require.cache[supabasePath] = {
   exports: { from: (table) => queryBuilder(table) },
 };
 
-const { PLANS, checkInvoiceLimit, assertInvoiceLimit, assertSourceLimit, getPlanUsage } = await import('../server/lib/plans.js');
+const { PLANS, checkInvoiceLimit, assertInvoiceLimit, assertSourceLimit, assertAutoSyncAllowed, getPlanUsage } = await import('../server/lib/plans.js');
 
 describe('PLANS config (real module)', () => {
   it('is backed by the real server/lib/plans.js export, not a shadow copy', () => {
@@ -161,6 +161,32 @@ describe('assertInvoiceLimit (real module, mocked Supabase) — hard-blocks over
     mockState.invoiceCount = 1_000_000;
     const usage = await assertInvoiceLimit('user-1');
     expect(usage.remaining).toBe(Infinity);
+  });
+});
+
+describe('assertAutoSyncAllowed (CASH-43: real module, mocked Supabase)', () => {
+  it('rejects a free-plan user (autoSync: false)', async () => {
+    mockState.subscription = { plan: 'free', status: 'active' };
+    await expect(assertAutoSyncAllowed('user-1')).rejects.toMatchObject({
+      statusCode: 403, code: 'AUTO_SYNC_NOT_AVAILABLE', plan: 'free',
+    });
+  });
+
+  it('rejects a starter-plan user (autoSync: false)', async () => {
+    mockState.subscription = { plan: 'starter', status: 'active' };
+    await expect(assertAutoSyncAllowed('user-1')).rejects.toMatchObject({
+      statusCode: 403, code: 'AUTO_SYNC_NOT_AVAILABLE', plan: 'starter',
+    });
+  });
+
+  it('allows a pro-plan user (autoSync: true)', async () => {
+    mockState.subscription = { plan: 'pro', status: 'active' };
+    await expect(assertAutoSyncAllowed('user-1')).resolves.toMatchObject({ plan: 'pro' });
+  });
+
+  it('allows an enterprise-plan user (autoSync: true)', async () => {
+    mockState.subscription = { plan: 'enterprise', status: 'active' };
+    await expect(assertAutoSyncAllowed('user-1')).resolves.toMatchObject({ plan: 'enterprise' });
   });
 });
 

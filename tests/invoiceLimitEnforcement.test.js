@@ -195,6 +195,70 @@ describe('runSync cron auto-sync (CASH-19: skips, does not error, an over-limit 
   });
 });
 
+describe('updateAutoSync (CASH-43: hard-blocks enabling auto-sync on a plan without it)', () => {
+  it('returns 403 AUTO_SYNC_NOT_AVAILABLE and never updates the row for a free-plan user', async () => {
+    let updated = false;
+    require.cache[supabasePath] = {
+      id: supabasePath, filename: supabasePath, loaded: true,
+      exports: {
+        from: (table) => {
+          if (table === 'subscriptions') return { select: () => ({ eq: () => ({ single: () => Promise.resolve({ data: { plan: 'free' }, error: null }) }) }) };
+          if (table === 'integrations') return { update: () => { updated = true; return { eq: () => ({ eq: () => Promise.resolve({ data: null, error: null }) }) }; } };
+          throw new Error(`unexpected table ${table}`);
+        },
+      },
+    };
+
+    const integrations = freshRequire('../server/routes/integrations.js', [supabasePath]);
+    const res = makeRes();
+    await integrations.updateAutoSync({ params: { id: 'int1' }, user: { id: 'user1' }, body: { auto_sync_enabled: true } }, res);
+
+    expect(res.statusCode).toBe(403);
+    expect(res.body).toEqual({ error: 'AUTO_SYNC_NOT_AVAILABLE', plan: 'free' });
+    expect(updated).toBe(false);
+  });
+
+  it('allows a pro-plan user to enable auto-sync', async () => {
+    require.cache[supabasePath] = {
+      id: supabasePath, filename: supabasePath, loaded: true,
+      exports: {
+        from: (table) => {
+          if (table === 'subscriptions') return { select: () => ({ eq: () => ({ single: () => Promise.resolve({ data: { plan: 'pro' }, error: null }) }) }) };
+          if (table === 'integrations') return { update: () => ({ eq: () => ({ eq: () => Promise.resolve({ data: null, error: null }) }) }) };
+          throw new Error(`unexpected table ${table}`);
+        },
+      },
+    };
+
+    const integrations = freshRequire('../server/routes/integrations.js', [supabasePath]);
+    const res = makeRes();
+    await integrations.updateAutoSync({ params: { id: 'int1' }, user: { id: 'user1' }, body: { auto_sync_enabled: true } }, res);
+
+    expect(res.body).toEqual({ ok: true });
+  });
+
+  it('allows disabling auto-sync on any plan without a plan check', async () => {
+    let checkedSubscription = false;
+    require.cache[supabasePath] = {
+      id: supabasePath, filename: supabasePath, loaded: true,
+      exports: {
+        from: (table) => {
+          if (table === 'subscriptions') { checkedSubscription = true; return { select: () => ({ eq: () => ({ single: () => Promise.resolve({ data: { plan: 'free' }, error: null }) }) }) }; }
+          if (table === 'integrations') return { update: () => ({ eq: () => ({ eq: () => Promise.resolve({ data: null, error: null }) }) }) };
+          throw new Error(`unexpected table ${table}`);
+        },
+      },
+    };
+
+    const integrations = freshRequire('../server/routes/integrations.js', [supabasePath]);
+    const res = makeRes();
+    await integrations.updateAutoSync({ params: { id: 'int1' }, user: { id: 'user1' }, body: { auto_sync_enabled: false } }, res);
+
+    expect(checkedSubscription).toBe(false);
+    expect(res.body).toEqual({ ok: true });
+  });
+});
+
 describe('presignUpload (invoices.js: manual browser upload also hard-blocks over quota)', () => {
   it('returns 402 and never presigns an upload URL when over limit', async () => {
     require.cache[supabasePath] = {

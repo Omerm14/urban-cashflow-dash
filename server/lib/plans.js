@@ -97,4 +97,21 @@ async function assertSourceLimit(userId, type) {
   return { plan, limit, used: connectedTypes.size };
 }
 
-module.exports = { PLANS, getPlanUsage, checkInvoiceLimit, assertInvoiceLimit, assertSourceLimit, ensureSubscription };
+// Throws a structured 403 error if the user's plan doesn't include auto-sync
+// (only pro/enterprise do — see PLANS above). Enforces the same cap client-side
+// UI already advertises, so a direct API call can't enable it on a plan that
+// shouldn't have it.
+async function assertAutoSyncAllowed(userId) {
+  const { data: sub } = await supabase.from('subscriptions').select('plan').eq('user_id', userId).single();
+  const plan = sub?.plan || 'free';
+  if (!PLANS[plan]?.autoSync) {
+    const err = new Error('Plan does not include auto-sync');
+    err.statusCode = 403;
+    err.code = 'AUTO_SYNC_NOT_AVAILABLE';
+    err.plan = plan;
+    throw err;
+  }
+  return { plan };
+}
+
+module.exports = { PLANS, getPlanUsage, checkInvoiceLimit, assertInvoiceLimit, assertSourceLimit, assertAutoSyncAllowed, ensureSubscription };
