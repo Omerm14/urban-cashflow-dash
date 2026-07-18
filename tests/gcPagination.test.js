@@ -23,6 +23,7 @@ const paginatedInvoicesMock = allRows => ({
     const builder = {
       select: () => builder,
       not: () => builder,
+      order: () => builder,
       range: (from, to) => Promise.resolve({ data: allRows.slice(from, to + 1), error: null }),
     };
     return builder;
@@ -56,6 +57,7 @@ describe('fetchAllReferencedPaths (CASH-22: paginate past the 1000-row PostgREST
         const builder = {
           select: () => builder,
           not: () => builder,
+          order: () => builder,
           range: () => Promise.resolve({ data: null, error: { message: 'connection reset' } }),
         };
         return builder;

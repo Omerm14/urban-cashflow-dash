@@ -62,6 +62,7 @@ describe('runGc end-to-end (CASH-47: logos survive a live, non-dry-run pass)', (
         const builder = {
           select: () => builder,
           not: () => builder,
+          order: () => builder,
           range: () => Promise.resolve({ data: [{ attachment_path: 'user1/inv-1.pdf' }], error: null }),
         };
         return builder;

@@ -30,10 +30,17 @@ const fetchAllReferencedPaths = async () => {
   const paths = [];
   let from = 0;
   while (true) {
+    // .order('id') makes page boundaries stable — without it, Postgres/PostgREST
+    // gives no ordering guarantee across separate .range() requests, and a
+    // concurrent insert/update on this table between pages could shift a row
+    // across the boundary, causing a live invoice's attachment_path to be
+    // skipped from this page and never appear in `paths` — exactly the
+    // false-orphan data-loss class this pagination was added to prevent.
     const { data, error } = await supabase
       .from('invoices')
       .select('attachment_path')
       .not('attachment_path', 'is', null)
+      .order('id')
       .range(from, from + GC_PAGE_SIZE - 1);
     if (error) throw error;
     paths.push(...(data || []).map(r => r.attachment_path));
