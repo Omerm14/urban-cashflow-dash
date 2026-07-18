@@ -3,6 +3,12 @@ const supabaseAdmin = require('../lib/supabase');
 
 const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
 const MAX_BYTES = 2 * 1024 * 1024; // 2MB
+// AWS SigV4 presigned URLs (used when STORAGE_BACKEND=r2) hard-cap at 7 days —
+// the SDK throws for anything longer. Supabase's createSignedUrl has no such
+// cap, but capping here keeps the expiry backend-agnostic. A durable (>7 day)
+// logo URL needs a re-sign-at-read-time flow, which is a separate, larger
+// design question — out of scope here (see CASH-58).
+const LOGO_URL_EXPIRY_SECONDS = 60 * 60 * 24 * 7;
 
 exports.uploadLogo = async (req, res) => {
   try {
@@ -32,18 +38,29 @@ exports.uploadLogo = async (req, res) => {
     });
 
     bb.on('finish', async () => {
-      if (sizeExceeded) return res.status(413).json({ error: 'Logo must be under 2MB' });
-      if (!fileBuffer || !contentType) return res.status(400).json({ error: 'No valid image provided' });
+      try {
+        if (sizeExceeded) return res.status(413).json({ error: 'Logo must be under 2MB' });
+        if (!fileBuffer || !contentType) return res.status(400).json({ error: 'No valid image provided' });
 
-      const key = `logos/${userId}/${Date.now()}.${ext}`;
-      await storage.putAttachment({ key, body: fileBuffer, contentType });
-      const logo_url = await storage.getSignedReadUrl(key, storage.activeBackend ? storage.activeBackend() : 'supabase', 60 * 60 * 24 * 365);
+        const key = `logos/${userId}/${Date.now()}.${ext}`;
+        await storage.putAttachment({ key, body: fileBuffer, contentType });
+        const logo_url = await storage.getSignedReadUrl(
+          key, storage.activeBackend ? storage.activeBackend() : 'supabase', LOGO_URL_EXPIRY_SECONDS,
+        );
 
-      await supabaseAdmin.auth.admin.updateUserById(userId, {
-        user_metadata: { logo_url },
-      });
+        await supabaseAdmin.auth.admin.updateUserById(userId, {
+          user_metadata: { logo_url },
+        });
 
-      return res.json({ logo_url });
+        return res.json({ logo_url });
+      } catch (err) {
+        // A `throw` inside an async busboy event-listener callback isn't caught by
+        // the outer try/catch below (control already returned to the event loop by
+        // the time 'finish' fires) — without this, it becomes an unhandled promise
+        // rejection and the client hangs until timeout instead of getting an error.
+        console.error('[profile/uploadLogo]', err.message);
+        return res.status(500).json({ error: 'Internal server error' });
+      }
     });
 
     req.pipe(bb);
