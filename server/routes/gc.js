@@ -19,6 +19,29 @@ const secretOk = (req) => {
   return a.length === b.length && crypto.timingSafeEqual(a, b);
 };
 
+// Fetches every non-null attachment_path across all invoices, paginating past
+// PostgREST's 1000-row default cap. Below that cap this is a single request,
+// identical to the old behavior; above it, previous runs would have silently
+// treated genuinely-referenced files past row 1000 as orphans and deleted them.
+const GC_PAGE_SIZE = 1000;
+const fetchAllReferencedPaths = async () => {
+  const paths = [];
+  let from = 0;
+  while (true) {
+    const { data, error } = await supabase
+      .from('invoices')
+      .select('attachment_path')
+      .not('attachment_path', 'is', null)
+      .range(from, from + GC_PAGE_SIZE - 1);
+    if (error) throw error;
+    paths.push(...(data || []).map(r => r.attachment_path));
+    if (!data || data.length < GC_PAGE_SIZE) break;
+    from += GC_PAGE_SIZE;
+  }
+  return paths;
+};
+exports.fetchAllReferencedPaths = fetchAllReferencedPaths;
+
 exports.runGc = async (req, res) => {
   if (!secretOk(req)) return res.status(401).json({ error: 'Unauthorized' });
   const dryRun = req.query.dryRun === '1' || req.query.dryRun === 'true';
@@ -31,15 +54,8 @@ exports.runGc = async (req, res) => {
     // points to. It also means this endpoint works before migration 007 adds the
     // attachment_backend column.
     const backend = storage.activeBackend();
-    const { data: rows, error } = await supabase
-      .from('invoices')
-      .select('attachment_path')
-      .not('attachment_path', 'is', null);
-    if (error) {
-      console.error('[gc] error:', error.message);
-      return res.status(500).json({ error: 'Internal server error' });
-    }
-    const referenced = new Set((rows || []).map(r => r.attachment_path));
+    const referencedPaths = await fetchAllReferencedPaths();
+    const referenced = new Set(referencedPaths);
 
     const allKeys = await storage.listAllKeys();
     const orphans = allKeys.filter(k => !referenced.has(k));
