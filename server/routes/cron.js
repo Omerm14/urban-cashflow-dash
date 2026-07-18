@@ -70,6 +70,14 @@ exports.runSync = async (req, res) => {
         console.log(`[cron] skipping ${integration.id} — user ${integration.user_id} at plan limit (${err.used}/${err.limit})`);
         return { id: integration.id, type: integration.type, added: 0, skipped: 'plan_limit_reached' };
       }
+      // A transient plan-lookup failure (Supabase blip) isn't the integration's
+      // fault — skip this tick without marking it 'error' so a real, healthy
+      // integration doesn't get falsely flagged from an infra hiccup; it's
+      // simply retried on the next cron tick.
+      if (err.code === 'PLAN_LOOKUP_FAILED') {
+        console.error(`[cron] plan lookup failed for ${integration.id}, will retry next tick:`, err.message);
+        return { id: integration.id, type: integration.type, added: 0, skipped: 'plan_lookup_failed' };
+      }
       console.error(`[cron] sync failed for ${integration.id}:`, err.message);
       await supabase.from('integrations').update({
         status:        'error',

@@ -7,6 +7,7 @@
 // server-side gate: it 403s before the read for a non-entitled plan.
 const supabase = require('../lib/supabase');
 const { assertEntitlement } = require('../lib/plans');
+const { handlePlanCheckError } = require('../lib/planErrors');
 
 exports.listActivity = async (req, res) => {
   try {
@@ -15,6 +16,7 @@ exports.listActivity = async (req, res) => {
     if (entErr.code === 'ENTITLEMENT_REQUIRED') {
       return res.status(403).json({ error: entErr.code, entitlement: entErr.entitlement, plan: entErr.plan });
     }
+    if (handlePlanCheckError(entErr, res, 'activity:listActivity')) return;
     throw entErr;
   }
 

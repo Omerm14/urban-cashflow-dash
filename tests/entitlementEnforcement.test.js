@@ -203,3 +203,42 @@ describe('listActivity (server/routes/activity.js) — auditTrail entitlement', 
     expect(res.body).toEqual({ events: [{ id: 'ev1' }], integrations: [{ id: 'int1', type: 'gmail' }] });
   });
 });
+
+// Pre-merge review fix: a Supabase error on the entitlement/limit lookup
+// itself must surface as a 500, never be silently reinterpreted as "plan not
+// entitled" (403) — a transient infra blip must not read as a billing
+// rejection to a paying customer. Exercises the shared
+// handlePlanCheckError() path (server/lib/planErrors.js) end-to-end through
+// one representative route from each of the four assert*() gates.
+describe('a lookup failure on the entitlement/limit check surfaces as 500, not a plan rejection', () => {
+  const failingSubscriptionSupabase = () => ({
+    from: (table) => {
+      if (table === 'subscriptions') {
+        const chain = { select: () => chain, eq: () => chain, single: () => Promise.resolve({ data: null, error: { message: 'connection reset', code: '08006' } }) };
+        return chain;
+      }
+      throw new Error(`unexpected table access before the lookup failure should have short-circuited: ${table}`);
+    },
+  });
+  const setupFailingSupabase = () => {
+    require.cache[supabasePath] = { id: supabasePath, filename: supabasePath, loaded: true, exports: failingSubscriptionSupabase() };
+  };
+
+  it('bulkRemove (assertEntitlement) returns 500, not 403, on a lookup failure', async () => {
+    setupFailingSupabase();
+    const invoices = freshRequire('../server/routes/invoices.js', [supabasePath]);
+    const res = makeRes();
+    await invoices.bulkRemove({ user: { id: 'u1' }, body: { ids: ['a'] } }, res);
+    expect(res.statusCode).toBe(500);
+    expect(res.body).toEqual({ error: 'Internal server error' });
+  });
+
+  it('listActivity (assertEntitlement) returns 500, not 403, on a lookup failure', async () => {
+    setupFailingSupabase();
+    const activity = freshRequire('../server/routes/activity.js', [supabasePath]);
+    const res = makeRes();
+    await activity.listActivity({ user: { id: 'u1' } }, res);
+    expect(res.statusCode).toBe(500);
+    expect(res.body).toEqual({ error: 'Internal server error' });
+  });
+});

@@ -3,6 +3,7 @@
 // lockstep with the integration sync path (same supplier/date/credit rules).
 const extraction = require('../lib/extraction');
 const { assertInvoiceLimit } = require('../lib/plans');
+const { handlePlanCheckError } = require('../lib/planErrors');
 
 module.exports = async (req, res) => {
   const { b64, mediaType = 'image/jpeg', text, mode } = req.body;
@@ -18,6 +19,7 @@ module.exports = async (req, res) => {
     if (limitErr.code === 'PLAN_LIMIT_REACHED') {
       return res.status(402).json({ error: limitErr.code, used: limitErr.used, limit: limitErr.limit, plan: limitErr.plan });
     }
+    if (handlePlanCheckError(limitErr, res, 'extract')) return;
     throw limitErr;
   }
 

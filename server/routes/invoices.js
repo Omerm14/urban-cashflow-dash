@@ -5,6 +5,7 @@
 const supabase = require('../lib/supabase');
 const storage  = require('../lib/storage');
 const { assertInvoiceLimit, assertEntitlement } = require('../lib/plans');
+const { handlePlanCheckError } = require('../lib/planErrors');
 
 const ALLOWED_BULK_STATUSES = new Set(['Paid', 'Unpaid']);
 
@@ -46,6 +47,7 @@ exports.bulkRemove = async (req, res) => {
     if (entErr.code === 'ENTITLEMENT_REQUIRED') {
       return res.status(403).json({ error: entErr.code, entitlement: entErr.entitlement, plan: entErr.plan });
     }
+    if (handlePlanCheckError(entErr, res, 'invoices:bulkRemove')) return;
     throw entErr;
   }
 
@@ -83,6 +85,7 @@ exports.bulkUpdateStatus = async (req, res) => {
     if (entErr.code === 'ENTITLEMENT_REQUIRED') {
       return res.status(403).json({ error: entErr.code, entitlement: entErr.entitlement, plan: entErr.plan });
     }
+    if (handlePlanCheckError(entErr, res, 'invoices:bulkUpdateStatus')) return;
     throw entErr;
   }
 
@@ -116,6 +119,7 @@ exports.checkExportEntitlement = async (req, res) => {
     if (entErr.code === 'ENTITLEMENT_REQUIRED') {
       return res.status(403).json({ error: entErr.code, entitlement: entErr.entitlement, plan: entErr.plan });
     }
+    if (handlePlanCheckError(entErr, res, 'invoices:checkExportEntitlement')) return;
     throw entErr;
   }
 };
@@ -134,6 +138,7 @@ exports.presignUpload = async (req, res) => {
     if (limitErr.code === 'PLAN_LIMIT_REACHED') {
       return res.status(402).json({ error: limitErr.code, used: limitErr.used, limit: limitErr.limit, plan: limitErr.plan });
     }
+    if (handlePlanCheckError(limitErr, res, 'invoices:presignUpload')) return;
     throw limitErr;
   }
 
