@@ -66,8 +66,9 @@ describe('processSyncJob (integrations.js, real module, mocked Supabase + sync)'
         from(table) {
           if (table === 'sync_jobs') {
             const c = {
-              select: () => c, update: () => c, eq: () => c,
+              select: () => c, update: () => c, eq: () => c, or: () => c,
               single: () => Promise.resolve({ data: job, error: null }),
+              maybeSingle: () => Promise.resolve({ data: job, error: null }), // atomic claim succeeds
               then: (resolve) => resolve({ data: null, error: null }),
             };
             return c;
@@ -129,6 +130,7 @@ describe('runSync stale-job resume (cron.js, real module, mocked Supabase + sync
             const c = {
               select: () => c, update: () => c, in: () => c, lt: () => c, eq: () => c,
               limit: () => Promise.resolve({ data: [job], error: null }),
+              maybeSingle: () => Promise.resolve({ data: job, error: null }), // atomic claim succeeds
               then: (resolve) => resolve({ data: null, error: null }),
             };
             return c;
