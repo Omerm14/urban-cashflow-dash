@@ -354,6 +354,10 @@ const DRIVE_PROCESS_PER_RUN = 50;   // matches the previous default cap; overflo
 const GMAIL_LIST_PAGE_SIZE = 200;
 const GMAIL_LIST_MAX_PAGES = 10;    // up to 2000 messages listed per run
 
+// `truncated: true` means MAX_PAGES was exhausted while the API still had a
+// nextPageToken — a genuine ceiling hit (real backlog beyond what one run
+// lists), not just "ran out of results". `false` covers both a normal
+// early-break and a last page that happens to end exactly at the cap.
 const listAllDriveFiles = async (drive, conditions) => {
   const files = [];
   let pageToken;
@@ -368,7 +372,7 @@ const listAllDriveFiles = async (drive, conditions) => {
     pageToken = data.nextPageToken;
     if (!pageToken) break;
   }
-  return files;
+  return { files, truncated: Boolean(pageToken) };
 };
 
 const listAllGmailMessages = async (gmail, q) => {
@@ -382,7 +386,7 @@ const listAllGmailMessages = async (gmail, q) => {
     pageToken = data.nextPageToken;
     if (!pageToken) break;
   }
-  return messages;
+  return { messages, truncated: Boolean(pageToken) };
 };
 
 // Splits Gmail messages into ones still needing download/OCR vs. ones already
@@ -442,7 +446,11 @@ exports.syncGoogleDrive = async (integration, userId) => {
     'trashed = false',
   ].filter(Boolean).join(' and ');
 
-  const files = await listAllDriveFiles(drive, conditions);
+  const { files, truncated } = await listAllDriveFiles(drive, conditions);
+  if (truncated) {
+    console.error(`[sync:drive] listing truncated at ${DRIVE_LIST_MAX_PAGES * DRIVE_LIST_PAGE_SIZE} files for user ${userId} — more files remain unlisted this run`);
+    logSyncEvent(integration.id, userId, 'listing_truncated', { source_file: `cap:${DRIVE_LIST_MAX_PAGES * DRIVE_LIST_PAGE_SIZE}` });
+  }
 
   console.log(`[sync:drive] ${files.length} file(s) found for user ${userId}`);
 
@@ -536,7 +544,11 @@ exports.syncGmail = async (integration, userId) => {
   const q = parts.join(' ');
 
   console.log(`[sync:gmail] query: ${q}`);
-  const messages = await listAllGmailMessages(gmail, q);
+  const { messages, truncated } = await listAllGmailMessages(gmail, q);
+  if (truncated) {
+    console.error(`[sync:gmail] listing truncated at ${GMAIL_LIST_MAX_PAGES * GMAIL_LIST_PAGE_SIZE} messages for user ${userId} — more messages remain unlisted this run`);
+    logSyncEvent(integration.id, userId, 'listing_truncated', { source_file: `cap:${GMAIL_LIST_MAX_PAGES * GMAIL_LIST_PAGE_SIZE}` });
+  }
 
   console.log(`[sync:gmail] ${messages.length} message(s) for user ${userId}`);
 
