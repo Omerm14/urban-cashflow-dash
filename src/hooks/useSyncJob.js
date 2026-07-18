@@ -21,7 +21,7 @@ export const useSyncJob = ({ onBatchDone, onJobDone } = {}) => {
         try {
           const res = await apiFetch(`/api/sync-jobs/${job.jobId}/process`);
           updates[integrationId] = { ...job, cursor: res.cursor, added: res.added, errors: res.errors, done: res.done };
-          if (res.filesAdded?.length) onBatchDone?.(res.filesAdded);
+          if (res.filesAdded?.length) await onBatchDone?.(res.filesAdded);
           if (res.done) onJobDone?.(integrationId, res);
         } catch (err) {
           updates[integrationId] = { ...job, done: true, error: err.message };
