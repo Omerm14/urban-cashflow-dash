@@ -17,8 +17,12 @@ describe('required env vars (CASH-35)', () => {
   it('is a non-empty list shared by both entrypoints', () => {
     expect(REQUIRED_ENV_VARS.length).toBeGreaterThan(0);
     expect(REQUIRED_ENV_VARS).toEqual(
-      expect.arrayContaining(['ANTHROPIC_API_KEY', 'SUPABASE_URL', 'SUPABASE_SERVICE_ROLE_KEY', 'FRONTEND_URL'])
+      expect.arrayContaining(['ANTHROPIC_API_KEY', 'SUPABASE_URL', 'SUPABASE_SERVICE_ROLE_KEY'])
     );
+  });
+
+  it('does not require FRONTEND_URL — every call site already falls back when it is unset (prod incident regression test)', () => {
+    expect(REQUIRED_ENV_VARS).not.toContain('FRONTEND_URL');
   });
 
   describe('api/index.js fails fast when a required var is missing', () => {
