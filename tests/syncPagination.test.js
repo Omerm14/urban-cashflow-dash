@@ -16,7 +16,7 @@ const listAllDriveFiles = async (drive, conditions) => {
     pageToken = data.nextPageToken;
     if (!pageToken) break;
   }
-  return { files, truncated: Boolean(pageToken) };
+  return files;
 };
 
 const listAllGmailMessages = async (gmail, q) => {
@@ -28,7 +28,7 @@ const listAllGmailMessages = async (gmail, q) => {
     pageToken = data.nextPageToken;
     if (!pageToken) break;
   }
-  return { messages, truncated: Boolean(pageToken) };
+  return messages;
 };
 
 describe('listAllDriveFiles (CASH-9: paginate past the 50-file cap)', () => {
@@ -49,11 +49,10 @@ describe('listAllDriveFiles (CASH-9: paginate past the 50-file cap)', () => {
       },
     };
 
-    const { files, truncated } = await listAllDriveFiles(drive, 'some query');
+    const files = await listAllDriveFiles(drive, 'some query');
 
     expect(files.map(f => f.id)).toEqual(['1', '2', '3', '4', '5']);
     expect(calls).toBe(3);
-    expect(truncated).toBe(false);
   });
 
   it('stops after a single page when there is no nextPageToken (small accounts unaffected)', async () => {
@@ -63,10 +62,9 @@ describe('listAllDriveFiles (CASH-9: paginate past the 50-file cap)', () => {
       },
     };
 
-    const { files, truncated } = await listAllDriveFiles(drive, 'q');
+    const files = await listAllDriveFiles(drive, 'q');
 
     expect(files.map(f => f.id)).toEqual(['a', 'b']);
-    expect(truncated).toBe(false);
   });
 
   it('passes the query condition through on every page', async () => {
@@ -98,40 +96,10 @@ describe('listAllDriveFiles (CASH-9: paginate past the 50-file cap)', () => {
       },
     };
 
-    const { files, truncated } = await listAllDriveFiles(drive, 'q');
+    const files = await listAllDriveFiles(drive, 'q');
 
     expect(calls).toBe(DRIVE_LIST_MAX_PAGES);
     expect(files.length).toBe(DRIVE_LIST_MAX_PAGES);
-    expect(truncated).toBe(true); // CASH-37: pathological case also correctly signals truncation
-  });
-
-  it('(CASH-37) signals truncated=true when MAX_PAGES is exhausted while a real backlog remains', async () => {
-    // A folder with genuinely more than DRIVE_LIST_MAX_PAGES * pageSize files —
-    // every page is full and nextPageToken is still present after the last one.
-    const drive = {
-      files: {
-        list: async () => ({ data: { files: [{ id: 'x' }], nextPageToken: 'still-more-after-cap' } }),
-      },
-    };
-
-    const { truncated } = await listAllDriveFiles(drive, 'q');
-
-    expect(truncated).toBe(true);
-  });
-
-  it('(CASH-37) signals truncated=false when listing completes normally under the cap', async () => {
-    const drive = {
-      files: {
-        list: async ({ pageToken }) => {
-          if (!pageToken) return { data: { files: [{ id: '1' }], nextPageToken: 't1' } };
-          return { data: { files: [{ id: '2' }] } }; // no nextPageToken — genuinely done
-        },
-      },
-    };
-
-    const { truncated } = await listAllDriveFiles(drive, 'q');
-
-    expect(truncated).toBe(false);
   });
 });
 
@@ -152,20 +120,18 @@ describe('listAllGmailMessages (CASH-9: paginate past the 100-message cap)', () 
       },
     };
 
-    const { messages, truncated } = await listAllGmailMessages(gmail, 'has:attachment');
+    const messages = await listAllGmailMessages(gmail, 'has:attachment');
 
     expect(messages.map(m => m.id)).toEqual(['m1', 'm2', 'm3', 'm4']);
     expect(calls).toBe(3);
-    expect(truncated).toBe(false);
   });
 
   it('returns an empty list without error when there are no matching messages', async () => {
     const gmail = { users: { messages: { list: async () => ({ data: {} }) } } };
 
-    const { messages, truncated } = await listAllGmailMessages(gmail, 'has:attachment');
+    const messages = await listAllGmailMessages(gmail, 'has:attachment');
 
     expect(messages).toEqual([]);
-    expect(truncated).toBe(false);
   });
 
   it('bounds the loop at GMAIL_LIST_MAX_PAGES so a runaway nextPageToken cannot loop forever', async () => {
@@ -181,27 +147,9 @@ describe('listAllGmailMessages (CASH-9: paginate past the 100-message cap)', () 
       },
     };
 
-    const { messages, truncated } = await listAllGmailMessages(gmail, 'q');
+    const messages = await listAllGmailMessages(gmail, 'q');
 
     expect(calls).toBe(GMAIL_LIST_MAX_PAGES);
     expect(messages.length).toBe(GMAIL_LIST_MAX_PAGES);
-    expect(truncated).toBe(true); // CASH-37: pathological case also correctly signals truncation
-  });
-
-  it('(CASH-37) signals truncated=false when listing completes normally under the cap', async () => {
-    const gmail = {
-      users: {
-        messages: {
-          list: async ({ pageToken }) => {
-            if (!pageToken) return { data: { messages: [{ id: 'm1' }], nextPageToken: 't1' } };
-            return { data: { messages: [{ id: 'm2' }] } }; // no nextPageToken — genuinely done
-          },
-        },
-      },
-    };
-
-    const { truncated } = await listAllGmailMessages(gmail, 'q');
-
-    expect(truncated).toBe(false);
   });
 });

@@ -510,7 +510,6 @@ const he = {
   // Entitlement gating (sync sources, CSV export, bulk actions, audit trail)
   entitlement_locked: "שדרגו את התוכנית כדי לפתוח את התכונה הזו",
   int_source_limit_reached: "הגעתם למגבלת מקורות הסנכרון בתוכנית שלכם — שדרגו כדי לחבר עוד.",
-  plan_limit_reached: "הגעתם למגבלת החשבוניות החודשית בתוכנית שלכם — שדרגו כדי להוסיף עוד.",
   act_locked: "יומן הביקורת המלא הוא תכונת Pro. שדרגו כדי לראות את המקור, התזמון והתוצאה של כל קובץ מסונכרן.",
   act_locked_cta: "שדרגו ל-Pro",
 

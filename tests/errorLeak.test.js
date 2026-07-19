@@ -53,7 +53,7 @@ afterEach(() => {
 
 describe('gc.js runGc', () => {
   it('returns a generic error and logs the real one when the referenced-set query fails', async () => {
-    mockSupabase({ from: () => ({ select: () => ({ not: () => ({ order: () => ({ range: () => Promise.resolve({ data: null, error: { message: LEAK } }) }) }) }) }) });
+    mockSupabase({ from: () => ({ select: () => ({ not: () => Promise.resolve({ data: null, error: { message: LEAK } }) }) }) });
     const gc = freshRequire('../server/routes/gc.js');
 
     const res = makeRes();

@@ -89,9 +89,9 @@ export default function App() {
   const {
     suppliers, computed: invoices, allNames, loading: invoicesLoading, loadError, retryLoad,
     missingSuppliers, anomalyMap,
-    addInvoice, updateInvoice, deleteInvoice, bulkMarkPaid, bulkMarkUnpaid, bulkDelete,
+    addInvoice, updateInvoice, deleteInvoice, bulkDelete,
     addSupplier, updateSupplier, deleteSupplier, getSupplier,
-    refreshInvoices, checkCsvExportEntitlement,
+    refreshInvoices,
   } = useInvoiceData();
 
   const { plan, used: planUsed, limit: planLimit, pct: planPct, isAtLimit, isNearLimit, maxSources, entitlements, isPro, refresh: refreshPlan } = usePlan();
@@ -218,12 +218,8 @@ export default function App() {
     const isPaid = inv?.status === "Paid" || inv?.status === "paid";
     updateInvoice(id, { status: isPaid ? "Unpaid" : "Paid" });
   }, [updateInvoice, invoices]);
-  // Routed through the server (bulkMarkPaid/bulkMarkUnpaid, CASH-95) rather than
-  // looping updateInvoice per id: a per-id loop writes straight to Supabase
-  // under RLS, which scopes by user_id but not by the bulkActions plan
-  // entitlement — the bulk-status endpoint enforces that server-side.
-  const handleBulkPaid = bulkMarkPaid;
-  const handleBulkUnpaid = bulkMarkUnpaid;
+  const handleBulkPaid = useCallback((ids) => { ids.forEach(id => updateInvoice(id, { status: "Paid" })); }, [updateInvoice]);
+  const handleBulkUnpaid = useCallback((ids) => { ids.forEach(id => updateInvoice(id, { status: "Unpaid" })); }, [updateInvoice]);
   useEffect(() => { if (preSelectAll) { const timer = setTimeout(() => setPreSelectAll(false), 100); return () => clearTimeout(timer); } }, [preSelectAll]);
   useEffect(() => { if (view !== "invoices") { setInitialFilterStatus(null); setDeepLinkInvoiceId(null); } }, [view]);
 
@@ -326,7 +322,7 @@ export default function App() {
                         extracting={extracting} uploadProgress={uploadProgress}
                         invoices={invoices} onContinue={() => setOnboardingDismissed(true)} />
                     : <DashboardView invoices={invoices} suppliers={suppliers} loading={invoicesLoading} onPayAll={handlePayAll} chartData={chartData} supplierNames={allNames} supplierColor={getSupplierColor} user={user} onMissingAlert={() => setShowMissingModal(true)} onAnomalyAlert={() => setShowAnomalyModal(true)} missingSuppliers={missingSuppliers} anomalyMap={anomalyMap} onViewMonth={handleViewMonth} onNavigateFiltered={(status) => { setView("invoices"); setInitialFilterStatus(status); }} />)}
-                  {view === "invoices" && <InvoicesView invoices={invoices} loading={invoicesLoading} selectedMonth={selectedMonth} onMonthChange={setSelectedMonth} onMarkPaid={handleMarkPaid} onAddSupplier={addSupplier} onDeleteInvoice={deleteInvoice} onBulkPaid={handleBulkPaid} onBulkUnpaid={handleBulkUnpaid} onBulkDelete={bulkDelete} preSelectAll={preSelectAll} onEditInvoice={setEditInvoice} anomalyMap={anomalyMap} missingSuppliers={missingSuppliers} onMissingAlert={() => setShowMissingModal(true)} initialFilterStatus={initialFilterStatus} initialSelectedId={deepLinkInvoiceId} onViewAttachment={handleViewAttachment} supplierColor={getSupplierColor} entitlements={entitlements} onUpgrade={handleUpgradeClick} onCheckExportEntitlement={checkCsvExportEntitlement} />}
+                  {view === "invoices" && <InvoicesView invoices={invoices} loading={invoicesLoading} selectedMonth={selectedMonth} onMonthChange={setSelectedMonth} onMarkPaid={handleMarkPaid} onAddSupplier={addSupplier} onDeleteInvoice={deleteInvoice} onBulkPaid={handleBulkPaid} onBulkUnpaid={handleBulkUnpaid} onBulkDelete={bulkDelete} preSelectAll={preSelectAll} onEditInvoice={setEditInvoice} anomalyMap={anomalyMap} missingSuppliers={missingSuppliers} onMissingAlert={() => setShowMissingModal(true)} initialFilterStatus={initialFilterStatus} initialSelectedId={deepLinkInvoiceId} onViewAttachment={handleViewAttachment} supplierColor={getSupplierColor} entitlements={entitlements} onUpgrade={handleUpgradeClick} />}
                   {view === "calendar" && <CalendarView computed={invoices} calMonth={calMonth} setCalMonth={setCalMonth} color={getSupplierColor} />}
                   {view === "integrations" && <IntegrationsPage
                     syncJobs={syncJobs} onStartSync={startSync} onCancelSync={cancelSync}

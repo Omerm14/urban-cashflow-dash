@@ -2,7 +2,6 @@ import { useState, useEffect, useMemo, useCallback } from "react";
 import { STATUS, PALETTE } from "../constants";
 import { calcDueDate, toYM } from "../utils/dates";
 import { findDuplicates, matchSupplier, getMissingSuppliers, getSupplierMonthlyAnomalies } from "../utils/invoice";
-import { fetchAllRows } from "../utils/fetchAllRows";
 import { supabase } from "../lib/supabase";
 import { useAuth } from "../contexts/AuthContext";
 
@@ -20,7 +19,7 @@ export const useInvoiceData = () => {
     setLoading(true);
     setLoadError(null);
     Promise.all([
-      fetchAllRows(supabase, 'invoices', { user_id: user.id }),
+      supabase.from('invoices').select('*').eq('user_id', user.id).order('created_at'),
       supabase.from('suppliers').select('*').eq('user_id', user.id),
     ]).then(([{ data: invs, error: ie }, { data: sups, error: se }]) => {
       if (!mounted) return;
@@ -65,39 +64,17 @@ export const useInvoiceData = () => {
     setInvoices(p => p.filter(i => i.id !== id));
   }, []);
 
-  // Routed through the server (CASH-95) so the plan's bulkActions entitlement
-  // is actually enforced — writing straight to Supabase with the user's own
-  // JWT only respects RLS's user_id scoping, not plan tier.
-  const bulkUpdateStatus = useCallback(async (ids, status) => {
-    const { data: { session } } = await supabase.auth.getSession();
-    const res = await fetch('/api/invoices/bulk-status', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session?.access_token}` },
-      body: JSON.stringify({ ids, status }),
-    });
-    if (!res.ok) {
-      const body = await res.json().catch(() => ({}));
-      console.error('bulkUpdateStatus:', body.error);
-      throw new Error(body.error || 'Bulk update failed');
-    }
-    setInvoices(p => p.map(i => ids.includes(i.id) ? { ...i, status } : i));
-  }, []);
+  const bulkMarkPaid = useCallback(async ids => {
+    const { error } = await supabase.from('invoices').update({ status: STATUS.PAID }).in('id', ids).eq('user_id', user.id);
+    if (error) { console.error('bulkMarkPaid:', error.message); throw error; }
+    setInvoices(p => p.map(i => ids.includes(i.id) ? { ...i, status: STATUS.PAID } : i));
+  }, [user]);
 
-  const bulkMarkPaid   = useCallback(ids => bulkUpdateStatus(ids, STATUS.PAID),   [bulkUpdateStatus]);
-  const bulkMarkUnpaid = useCallback(ids => bulkUpdateStatus(ids, STATUS.UNPAID), [bulkUpdateStatus]);
-
-  // Server-side gate for the CSV export button (CASH-95). The CSV itself is
-  // still built client-side from data already fetched under RLS — this call
-  // exists only so a disallowed-tier user triggering the export action via
-  // devtools/API directly (bypassing the UI-only canExportCsv gate) is
-  // rejected. Returns true if entitled, false otherwise (never throws).
-  const checkCsvExportEntitlement = useCallback(async () => {
-    const { data: { session } } = await supabase.auth.getSession();
-    const res = await fetch('/api/invoices/export-entitlement', {
-      headers: { Authorization: `Bearer ${session?.access_token}` },
-    });
-    return res.ok;
-  }, []);
+  const bulkMarkUnpaid = useCallback(async ids => {
+    const { error } = await supabase.from('invoices').update({ status: STATUS.UNPAID }).in('id', ids).eq('user_id', user.id);
+    if (error) { console.error('bulkMarkUnpaid:', error.message); throw error; }
+    setInvoices(p => p.map(i => ids.includes(i.id) ? { ...i, status: STATUS.UNPAID } : i));
+  }, [user]);
 
   const bulkDelete = useCallback(async ids => {
     const { data: { session } } = await supabase.auth.getSession();
@@ -135,9 +112,8 @@ export const useInvoiceData = () => {
 
   const refreshInvoices = useCallback(async () => {
     if (!user) return;
-    const { data, error } = await fetchAllRows(supabase, 'invoices', { user_id: user.id });
-    if (error) { console.error('refreshInvoices:', error.message); throw error; }
-    setInvoices(data ?? []);
+    const { data, error } = await supabase.from('invoices').select('*').eq('user_id', user.id).order('created_at');
+    if (!error) setInvoices(data ?? []);
   }, [user]);
 
   // Append new invoices from a sync batch without re-fetching everything
@@ -223,6 +199,6 @@ export const useInvoiceData = () => {
     missingSuppliers, anomalyMap,
     addInvoice, updateInvoice, deleteInvoice, bulkMarkPaid, bulkMarkUnpaid, bulkDelete,
     addSupplier, updateSupplier, deleteSupplier,
-    getSupplier, refreshInvoices, appendInvoices, checkCsvExportEntitlement,
+    getSupplier, refreshInvoices, appendInvoices,
   };
 };

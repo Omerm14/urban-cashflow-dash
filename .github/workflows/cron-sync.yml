@@ -8,10 +8,16 @@ name: Auto-sync cron
 #
 # Requires a repository secret CRON_SECRET matching the server's
 # CRON_SECRET env var (Settings -> Secrets and variables -> Actions).
+#
+# SCHEDULE PAUSED (2026-07-19 incident): every /api/* route started timing
+# out at Vercel's 60s limit — cron.js processing the auto-sync backlog built
+# up while the app was down is the leading suspect. Re-enable the `schedule:`
+# trigger below once the app is confirmed stable again; `workflow_dispatch`
+# stays available for a controlled manual test.
 
 on:
-  schedule:
-    - cron: '0 * * * *'
+  # schedule:
+  #   - cron: '0 * * * *'
   workflow_dispatch: {} # allows a manual run from the Actions tab, for testing
 
 jobs:

@@ -1,14 +1,10 @@
 const supabase = require('../lib/supabase');
 const sync     = require('../services/syncProcessor');
-const { assertInvoiceLimit } = require('../lib/plans');
 const BATCH_SIZE = 5;  // larger batch for cron (no timeout pressure)
 
 // GET /api/cron/sync
-// Not scheduled via vercel.json's `crons` (Vercel's Hobby plan caps cron
-// frequency at once/day, which is too infrequent for auto-sync) — trigger
-// this externally instead, e.g. an external cron service (cron-job.org,
-// EasyCron, etc.) hitting this URL on whatever schedule is wanted, with the
-// header below. Requires: Authorization: Bearer <CRON_SECRET>
+// Called by Vercel Cron (vercel.json) or an external cron service (cron-job.org etc.)
+// Requires: Authorization: Bearer <CRON_SECRET>
 exports.runSync = async (req, res) => {
   const secret = process.env.CRON_SECRET;
   const auth   = req.headers.authorization || '';
@@ -44,15 +40,6 @@ exports.runSync = async (req, res) => {
 
   const results = await Promise.allSettled(due.map(async integration => {
     try {
-      // Skip (not error) an integration whose owner is at/over their plan's
-      // monthly invoice quota — auto_sync_enabled is never reset on plan
-      // downgrade, so this is the only thing stopping a downgraded-but-still-
-      // auto-syncing user from importing unmetered forever. Left as a silent
-      // per-run skip rather than disabling auto_sync_enabled or erroring the
-      // integration: it's an expected, recoverable state (resolves next month
-      // or on upgrade), not a broken integration.
-      await assertInvoiceLimit(integration.user_id);
-
       // All sync fns return { added, filesFound, errors }; destructure `added`.
       let added = 0;
       if (integration.type === 'google_drive')      ({ added } = await sync.syncGoogleDrive(integration, integration.user_id));
@@ -69,18 +56,6 @@ exports.runSync = async (req, res) => {
 
       return { id: integration.id, type: integration.type, added };
     } catch (err) {
-      if (err.code === 'PLAN_LIMIT_REACHED') {
-        console.log(`[cron] skipping ${integration.id} — user ${integration.user_id} at plan limit (${err.used}/${err.limit})`);
-        return { id: integration.id, type: integration.type, added: 0, skipped: 'plan_limit_reached' };
-      }
-      // A transient plan-lookup failure (Supabase blip) isn't the integration's
-      // fault — skip this tick without marking it 'error' so a real, healthy
-      // integration doesn't get falsely flagged from an infra hiccup; it's
-      // simply retried on the next cron tick.
-      if (err.code === 'PLAN_LOOKUP_FAILED') {
-        console.error(`[cron] plan lookup failed for ${integration.id}, will retry next tick:`, err.message);
-        return { id: integration.id, type: integration.type, added: 0, skipped: 'plan_lookup_failed' };
-      }
       console.error(`[cron] sync failed for ${integration.id}:`, err.message);
       await supabase.from('integrations').update({
         status:        'error',
@@ -111,35 +86,22 @@ exports.runSync = async (req, res) => {
         .eq('id', job.integration_id).eq('user_id', job.user_id).single();
       if (!integration) return;
 
-      // Atomically claim: the UPDATE only matches if the row is still in the same
-      // pending/running-and-stale state it was in when selected above — otherwise
-      // another caller (e.g. a browser poll via processSyncJob) claimed it first
-      // in the meantime. Closes a TOCTOU race that could double-process a batch
-      // (duplicate paid Claude OCR spend, racing cursor writes).
-      const { data: claimed, error: claimErr } = await supabase
-        .from('sync_jobs')
-        .update({ status: 'running', updated_at: new Date().toISOString() })
-        .eq('id', job.id)
-        .in('status', ['pending', 'running'])
-        .lt('updated_at', staleThreshold)
-        .select()
-        .maybeSingle();
-      if (claimErr) throw claimErr;
-      if (!claimed) return; // lost the race — another caller already has it
+      // Mark running
+      await supabase.from('sync_jobs').update({ status: 'running', updated_at: new Date().toISOString() }).eq('id', job.id);
 
-      const batch = (claimed.file_list || []).slice(claimed.cursor, claimed.cursor + BATCH_SIZE);
-      const { results: invs, errors: batchErrors } = await sync.processGoogleDriveFileBatch(integration, claimed.user_id, batch);
+      const batch = (job.file_list || []).slice(job.cursor, job.cursor + BATCH_SIZE);
+      const { results: invs, errors: batchErrors } = await sync.processGoogleDriveFileBatch(integration, job.user_id, batch);
 
-      const newCursor = claimed.cursor + batch.length;
-      const newAdded  = claimed.added  + invs.length;
-      const newErrors = claimed.errors + batchErrors;
-      const done      = newCursor >= claimed.total_files;
+      const newCursor = job.cursor + batch.length;
+      const newAdded  = job.added  + invs.length;
+      const newErrors = job.errors + batchErrors;
+      const done      = newCursor >= job.total_files;
 
       await supabase.from('sync_jobs').update({
         cursor: newCursor, added: newAdded, errors: newErrors,
         status: done ? 'done' : 'pending',  // pending so next cron tick picks up remainder
         updated_at: new Date().toISOString(),
-      }).eq('id', claimed.id);
+      }).eq('id', job.id);
 
       if (done) {
         await supabase.from('integrations').update({

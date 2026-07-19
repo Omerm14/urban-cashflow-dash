@@ -4,8 +4,7 @@
 // byte-size verified; the Supabase copy is deleted last. Safe to call repeatedly
 // — keep calling until `remaining` reaches 0.
 //
-// Guarded by CRON_SECRET (header `Authorization: Bearer <secret>` only — see
-// secretOk() below for why a ?key= query-param path is deliberately not offered).
+// Guarded by CRON_SECRET (header `Authorization: Bearer <secret>` or `?key=`).
 //   ?dryRun=1        report how many remain, change nothing
 //   ?limit=N         max rows to fetch as candidates (default 100, max 200)
 //
@@ -19,10 +18,6 @@ const storage  = require('../lib/storage');
 const secretOk = (req) => {
   const secret = process.env.CRON_SECRET;
   if (!secret) return false;
-  // Header only (CASH-40) — a ?key= query-param path was previously documented
-  // but never implemented. Deliberately not adding it: query-string secrets
-  // leak into server access logs, browser history, and Referer headers, which
-  // the header-only path avoids.
   const provided = (req.headers.authorization || '').replace(/^Bearer\s+/, '');
   const a = Buffer.from(`${provided}`);
   const b = Buffer.from(`${secret}`);
