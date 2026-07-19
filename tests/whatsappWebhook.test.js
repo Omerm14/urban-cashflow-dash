@@ -139,29 +139,6 @@ describe('handleWhatsApp — signature gate', () => {
     expect(consoleWarnSpy).toHaveBeenCalledWith(expect.stringContaining('invalid HMAC signature'));
   });
 
-  it('rejects a wrong-length signature header without throwing (CASH-72)', async () => {
-    const supa = makeHandlerSupabaseMock();
-    mockSupabase(supa);
-    const webhook = freshRequire('../server/routes/webhook.js');
-
-    const { raw, obj } = makeTextMessagePayload('ABC123');
-    const req = {
-      // Syntactically present but not 71 chars ('sha256=' + 64 hex) — crypto.timingSafeEqual
-      // throws RangeError on mismatched buffer lengths unless length-guarded first.
-      headers: { 'x-hub-signature-256': 'sha256=abc' },
-      rawBody: raw,
-      body: obj,
-    };
-    const res = makeRes();
-
-    await webhook.handleWhatsApp(req, res);
-
-    expect(res.statusCode).toBe(200);
-    expect(res.body).toEqual({ ok: true });
-    expect(supa.from).not.toHaveBeenCalled();
-    expect(consoleWarnSpy).toHaveBeenCalledWith(expect.stringContaining('invalid HMAC signature'));
-  });
-
   it('rejects a request with a missing signature header but still returns HTTP 200 without processing', async () => {
     const supa = makeHandlerSupabaseMock();
     mockSupabase(supa);

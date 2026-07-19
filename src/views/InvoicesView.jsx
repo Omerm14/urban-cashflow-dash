@@ -241,7 +241,7 @@ function GroupedView({ invoices, selectedMonth, onMonthChange, selectedIds, onTo
   );
 }
 
-export default function InvoicesView({ invoices, loading, selectedMonth, onMonthChange, onMarkPaid, onAddSupplier, onDeleteInvoice, onBulkPaid, onBulkUnpaid, onBulkDelete, preSelectAll, onEditInvoice, onViewAttachment, anomalyMap, missingSuppliers, onMissingAlert, initialFilterStatus, initialSelectedId, supplierColor: supplierColorProp, entitlements, onUpgrade, onCheckExportEntitlement }) {
+export default function InvoicesView({ invoices, loading, selectedMonth, onMonthChange, onMarkPaid, onAddSupplier, onDeleteInvoice, onBulkPaid, onBulkUnpaid, onBulkDelete, preSelectAll, onEditInvoice, onViewAttachment, anomalyMap, missingSuppliers, onMissingAlert, initialFilterStatus, initialSelectedId, supplierColor: supplierColorProp, entitlements, onUpgrade }) {
   const canExportCsv  = entitlements?.csvExport ?? true;
   const canBulkAct    = entitlements?.bulkActions ?? true;
   const T = useT();
@@ -297,17 +297,10 @@ export default function InvoicesView({ invoices, loading, selectedMonth, onMonth
 
   const selInvs = invoices.filter(i => selectedIds.has(i.id));
   const selTotal = selInvs.reduce((s, i) => s + i.amount, 0);
-  // Server-side entitlement check (CASH-95) before generating the CSV client-side
-  // — a disallowed-tier user calling this button (or the underlying endpoint
-  // directly) gets rejected the same way a real mutation endpoint would.
-  const handleExportSelected = async () => {
-    const entitled = await onCheckExportEntitlement?.();
-    if (entitled === false) { onUpgrade?.(); return; }
-    downloadCSV(
-      `invoices-${selectedMonth}.csv`, selInvs,
-      ["supplier", "invoiceNo", "invoiceDate", "dueDate", "amount", "status"]
-    );
-  };
+  const handleExportSelected = () => downloadCSV(
+    `invoices-${selectedMonth}.csv`, selInvs,
+    ["supplier", "invoiceNo", "invoiceDate", "dueDate", "amount", "status"]
+  );
 
   const handleConfirmPay = () => {
     const ids = [...selectedIds], count = ids.length, total = selTotal, nm = nextMonthYM(selectedMonth);

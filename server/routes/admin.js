@@ -21,22 +21,9 @@ exports.whoami = [auth, (req, res) => {
   res.json({ isAdmin: !!email && isAdmin.adminEmails().includes(email) });
 }];
 
-// Per-model $/1M token pricing (source: Anthropic pricing page, checked 2026-06-24).
-// Keyed off api_calls.model so the table doesn't silently go stale again if a
-// second model is ever introduced — update PRICING, not a single flat rate.
-// Fallback (used for any model not listed here) is claude-haiku-4-5's rate,
-// the cheapest tier, so an unrecognized/legacy model underestimates rather
-// than overestimates spend.
-const PRICING = {
-  'claude-sonnet-4-6': { input: 3.00 / 1_000_000, output: 15.00 / 1_000_000 },
-  'claude-haiku-4-5':  { input: 0.80 / 1_000_000, output: 4.00 / 1_000_000 },
-};
-const FALLBACK_PRICING = PRICING['claude-haiku-4-5'];
-const priceFor = (model) => PRICING[model] || FALLBACK_PRICING;
-const callCostUSD = (c) => {
-  const { input, output } = priceFor(c.model);
-  return (c.input_tokens || 0) * input + (c.output_tokens || 0) * output;
-};
+// Cost per 1M tokens (claude-haiku-4-5): $0.80 input, $4.00 output
+const INPUT_COST  = 0.80 / 1_000_000;
+const OUTPUT_COST = 4.00 / 1_000_000;
 
 // GET /api/admin/usage — existing Claude-API cost dashboard, unchanged logic.
 exports.usage = [auth, isAdmin, async (req, res) => {
@@ -55,22 +42,22 @@ exports.usage = [auth, isAdmin, async (req, res) => {
     }
 
     const byUserMap = {};
-    let totalCalls = 0, totalInput = 0, totalOutput = 0, totalCostUSD = 0;
+    let totalCalls = 0, totalInput = 0, totalOutput = 0;
     calls.forEach(c => {
       const email = emailMap[c.user_id] || c.user_id || 'unknown';
-      if (!byUserMap[email]) byUserMap[email] = { email, calls: 0, inputTokens: 0, outputTokens: 0, estimatedCostUSD: 0 };
-      const cost = callCostUSD(c);
+      if (!byUserMap[email]) byUserMap[email] = { email, calls: 0, inputTokens: 0, outputTokens: 0 };
       byUserMap[email].calls++;
       byUserMap[email].inputTokens  += c.input_tokens  || 0;
       byUserMap[email].outputTokens += c.output_tokens || 0;
-      byUserMap[email].estimatedCostUSD += cost;
       totalCalls++;
       totalInput  += c.input_tokens  || 0;
       totalOutput += c.output_tokens || 0;
-      totalCostUSD += cost;
     });
 
-    const byUser = Object.values(byUserMap).sort((a, b) => b.calls - a.calls);
+    const byUser = Object.values(byUserMap).map(u => ({
+      ...u,
+      estimatedCostUSD: u.inputTokens * INPUT_COST + u.outputTokens * OUTPUT_COST,
+    })).sort((a, b) => b.calls - a.calls);
 
     const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
     const dayMap = {};
@@ -87,7 +74,7 @@ exports.usage = [auth, isAdmin, async (req, res) => {
         calls: totalCalls,
         inputTokens: totalInput,
         outputTokens: totalOutput,
-        estimatedCostUSD: totalCostUSD,
+        estimatedCostUSD: totalInput * INPUT_COST + totalOutput * OUTPUT_COST,
       },
       byUser,
       timeline,

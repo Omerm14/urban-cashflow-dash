@@ -1,15 +1,6 @@
 require('dotenv').config({ path: '.env.local' });
 const express = require('express');
 
-// Vercel can reuse a container across concurrent invocations, so
-// process.exit(1) (server/index.js's dev-only mechanism) is unsafe here — it
-// would kill in-flight requests sharing the container. Throwing synchronously
-// at module scope instead fails just this cold-start/invocation, with a
-// clear error, without touching the container.
-const { REQUIRED_ENV_VARS } = require('../server/lib/requiredEnv');
-const missingEnvVar = REQUIRED_ENV_VARS.find(k => !process.env[k]);
-if (missingEnvVar) throw new Error(`${missingEnvVar} not set`);
-
 const app  = express();
 const auth = require('../server/middleware/auth');
 
@@ -91,12 +82,7 @@ app.get('/api/invoices/:id/attachment-url',          auth, integrations.getAttac
 const invoices = require('../server/routes/invoices');
 app.delete('/api/invoices/:id',           auth, invoices.remove);
 app.post('/api/invoices/bulk-delete',     auth, invoices.bulkRemove);
-app.post('/api/invoices/bulk-status',     auth, invoices.bulkUpdateStatus);
-app.get('/api/invoices/export-entitlement', auth, invoices.checkExportEntitlement);
 app.post('/api/attachments/presign',      auth, invoices.presignUpload);
-
-// Audit trail (plan-gated read)
-app.get('/api/activity', auth, require('../server/routes/activity').listActivity);
 
 
 // Profile (logo upload)
