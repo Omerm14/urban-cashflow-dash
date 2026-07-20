@@ -1,5 +1,6 @@
 const supabase = require('../lib/supabase');
 const sync     = require('../services/syncProcessor');
+const { assertInvoiceLimit } = require('../lib/plans');
 const BATCH_SIZE = 5;  // larger batch for cron (no timeout pressure)
 
 // GET /api/cron/sync
@@ -41,6 +42,15 @@ exports.runSync = async (req, res) => {
 
   const results = await Promise.allSettled(due.map(async integration => {
     try {
+      // Skip (not error) an integration whose owner is at/over their plan's
+      // monthly invoice quota — auto_sync_enabled is never reset on plan
+      // downgrade, so this is the only thing stopping a downgraded-but-still-
+      // auto-syncing user from importing unmetered forever. Left as a silent
+      // per-run skip rather than disabling auto_sync_enabled or erroring the
+      // integration: it's an expected, recoverable state (resolves next month
+      // or on upgrade), not a broken integration.
+      await assertInvoiceLimit(integration.user_id);
+
       // All sync fns return { added, filesFound, errors }; destructure `added`.
       let added = 0;
       if (integration.type === 'google_drive')      ({ added } = await sync.syncGoogleDrive(integration, integration.user_id));
@@ -57,6 +67,18 @@ exports.runSync = async (req, res) => {
 
       return { id: integration.id, type: integration.type, added };
     } catch (err) {
+      if (err.code === 'PLAN_LIMIT_REACHED') {
+        console.log(`[cron] skipping ${integration.id} — user ${integration.user_id} at plan limit (${err.used}/${err.limit})`);
+        return { id: integration.id, type: integration.type, added: 0, skipped: 'plan_limit_reached' };
+      }
+      // A transient plan-lookup failure (Supabase blip) isn't the integration's
+      // fault — skip this tick without marking it 'error' so a real, healthy
+      // integration doesn't get falsely flagged from an infra hiccup; it's
+      // simply retried on the next cron tick.
+      if (err.code === 'PLAN_LOOKUP_FAILED') {
+        console.error(`[cron] plan lookup failed for ${integration.id}, will retry next tick:`, err.message);
+        return { id: integration.id, type: integration.type, added: 0, skipped: 'plan_lookup_failed' };
+      }
       console.error(`[cron] sync failed for ${integration.id}:`, err.message);
       await supabase.from('integrations').update({
         status:        'error',

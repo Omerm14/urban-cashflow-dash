@@ -8,7 +8,11 @@ import { History, FileText, Copy, AlertTriangle, Download } from "lucide-react";
 export const SOURCE_NAMES = { google_drive: "Google Drive", gmail: "Gmail", whatsapp: "WhatsApp", green_invoice: "Green Invoice" };
 
 // The audit trail: every auto-synced file's origin, timestamp, and outcome.
-// Reads sync_events directly under RLS, same pattern as invoices/suppliers.
+// Reads via GET /api/activity (CASH-95) rather than sync_events directly —
+// RLS scopes that table by user_id but not by the auditTrail plan
+// entitlement, so a direct-under-RLS read (bypassing the UI-only gate below)
+// would have exposed it to any tier. The server route asserts the
+// entitlement before reading.
 export default function ActivityView({ entitlements, onUpgrade }) {
   const T = useT();
   const { t, lang } = useLang();
@@ -23,15 +27,20 @@ export default function ActivityView({ entitlements, onUpgrade }) {
   useEffect(() => {
     if (!user) return;
     let mounted = true;
-    Promise.all([
-      supabase.from("sync_events").select("*").eq("user_id", user.id).order("created_at", { ascending: false }).limit(200),
-      supabase.from("integrations").select("id,type").eq("user_id", user.id),
-    ]).then(([ev, ints]) => {
+    (async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      const res = await fetch('/api/activity', { headers: { Authorization: `Bearer ${session?.access_token}` } });
       if (!mounted) return;
-      if (ev.error) { setLoadError(ev.error.message); setEvents([]); return; }
-      setEvents(ev.data ?? []);
-      setIntegrations(Object.fromEntries((ints.data ?? []).map(i => [i.id, i.type])));
-    });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        setLoadError(body.error === 'ENTITLEMENT_REQUIRED' ? null : (body.error || 'Failed to load activity'));
+        setEvents([]);
+        return;
+      }
+      const { events: evs, integrations: ints } = await res.json();
+      setEvents(evs ?? []);
+      setIntegrations(Object.fromEntries((ints ?? []).map(i => [i.id, i.type])));
+    })();
     return () => { mounted = false; };
   }, [user]);
 
