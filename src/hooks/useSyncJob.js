@@ -20,8 +20,21 @@ export const useSyncJob = ({ onBatchDone, onJobDone } = {}) => {
       await Promise.allSettled(active.map(async ([integrationId, job]) => {
         try {
           const res = await apiFetch(`/api/sync-jobs/${job.jobId}/process`);
+          // Commit the successful batch result first — a failure below (the
+          // follow-up invoices refresh) must not retroactively discard it.
           updates[integrationId] = { ...job, cursor: res.cursor, added: res.added, errors: res.errors, done: res.done };
-          if (res.filesAdded?.length) onBatchDone?.(res.filesAdded);
+          if (res.filesAdded?.length) {
+            try {
+              await onBatchDone?.(res.filesAdded);
+            } catch (refreshErr) {
+              // The batch itself succeeded — only the secondary UI refresh
+              // failed (e.g. refreshInvoices, CASH-56, now throws on error).
+              // Don't mark an otherwise-healthy, still-in-progress job done
+              // and errored over this; the next batch/onJobDone call gets
+              // another chance to refresh.
+              console.error('[useSyncJob] onBatchDone failed (job continues):', refreshErr.message);
+            }
+          }
           if (res.done) onJobDone?.(integrationId, res);
         } catch (err) {
           updates[integrationId] = { ...job, done: true, error: err.message };

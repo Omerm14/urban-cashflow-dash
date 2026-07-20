@@ -7,6 +7,9 @@ import request from 'supertest';
 // under test here ever reaches a real Supabase call: express-rate-limit runs
 // before the `auth` middleware, so unauthenticated requests either short-circuit
 // at auth (401, no network call) or get rate-limited (429) first.
+// api/index.js also fails fast (CASH-35) if any required env var is unset —
+// all three need a placeholder here, not just the Supabase ones.
+process.env.ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY || 'test-anthropic-key';
 process.env.SUPABASE_URL = process.env.SUPABASE_URL || 'https://test.supabase.co';
 process.env.SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || 'test-service-role-key';
 

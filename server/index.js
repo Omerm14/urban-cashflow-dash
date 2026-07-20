@@ -1,7 +1,8 @@
 require('dotenv').config({ path: '.env.local' });
 const express = require('express');
 
-['ANTHROPIC_API_KEY', 'SUPABASE_URL', 'SUPABASE_SERVICE_ROLE_KEY', 'FRONTEND_URL'].forEach(k => {
+const { REQUIRED_ENV_VARS } = require('./lib/requiredEnv');
+REQUIRED_ENV_VARS.forEach(k => {
   if (!process.env[k]) { console.error(`ERROR: ${k} not set in .env.local`); process.exit(1); }
 });
 
