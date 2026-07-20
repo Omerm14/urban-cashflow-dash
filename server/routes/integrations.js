@@ -2,7 +2,8 @@ const { google } = require('googleapis');
 const supabase   = require('../lib/supabase');
 const storage    = require('../lib/storage');
 const sync       = require('../services/syncProcessor');
-const { checkInvoiceLimit, assertSourceLimit } = require('../lib/plans');
+const { assertInvoiceLimit, assertSourceLimit, assertAutoSyncAllowed } = require('../lib/plans');
+const { handlePlanCheckError } = require('../lib/planErrors');
 
 const SCOPES = {
   google_drive: ['https://www.googleapis.com/auth/drive.readonly'],
@@ -78,6 +79,7 @@ exports.googleAuthUrl = async (req, res) => {
     if (limitErr.code === 'SOURCE_LIMIT_REACHED') {
       return res.status(403).json({ error: limitErr.code, used: limitErr.used, limit: limitErr.limit, plan: limitErr.plan });
     }
+    if (handlePlanCheckError(limitErr, res, 'integrations:googleAuthUrl')) return;
     throw limitErr;
   }
 
@@ -119,6 +121,10 @@ exports.googleCallback = async (req, res) => {
   } catch (limitErr) {
     if (limitErr.code === 'SOURCE_LIMIT_REACHED') {
       return res.redirect(`${frontend}?view=integrations&oauth_error=source_limit_reached`);
+    }
+    if (limitErr.statusCode >= 500) {
+      console.error('[integrations] googleCallback plan check failed:', limitErr.message);
+      return res.redirect(`${frontend}?view=integrations&oauth_error=internal_error`);
     }
     throw limitErr;
   }
@@ -248,6 +254,16 @@ exports.resync = async (req, res) => {
     .single();
   if (error || !integration) return res.status(404).json({ error: 'Integration not found' });
 
+  try {
+    await assertInvoiceLimit(req.user.id);
+  } catch (limitErr) {
+    if (limitErr.code === 'PLAN_LIMIT_REACHED') {
+      return res.status(402).json({ error: limitErr.code, used: limitErr.used, limit: limitErr.limit, plan: limitErr.plan });
+    }
+    if (handlePlanCheckError(limitErr, res, 'integrations:resync')) return;
+    throw limitErr;
+  }
+
   // Clear last_sync so the adapter pulls all historical files
   await supabase.from('integrations').update({ last_sync: null }).eq('id', integration.id);
   const resetIntegration = { ...integration, last_sync: null };
@@ -308,6 +324,7 @@ exports.connectGreenInvoice = async (req, res) => {
     if (limitErr.code === 'SOURCE_LIMIT_REACHED') {
       return res.status(403).json({ error: limitErr.code, used: limitErr.used, limit: limitErr.limit, plan: limitErr.plan });
     }
+    if (handlePlanCheckError(limitErr, res, 'integrations:connectGreenInvoice')) return;
     throw limitErr;
   }
 
@@ -341,6 +358,7 @@ exports.connectWhatsApp = async (req, res) => {
     if (limitErr.code === 'SOURCE_LIMIT_REACHED') {
       return res.status(403).json({ error: limitErr.code, used: limitErr.used, limit: limitErr.limit, plan: limitErr.plan });
     }
+    if (handlePlanCheckError(limitErr, res, 'integrations:connectWhatsApp')) return;
     throw limitErr;
   }
 
@@ -398,6 +416,17 @@ exports.updateAutoSync = async (req, res) => {
     const freq = Number(sync_frequency_min);
     if (!Number.isInteger(freq) || freq < 5 || freq > 10080) {
       return res.status(400).json({ error: 'sync_frequency_min must be an integer between 5 and 10080' });
+    }
+  }
+  if (auto_sync_enabled) {
+    try {
+      await assertAutoSyncAllowed(req.user.id);
+    } catch (limitErr) {
+      if (limitErr.code === 'AUTO_SYNC_NOT_AVAILABLE') {
+        return res.status(403).json({ error: limitErr.code, plan: limitErr.plan });
+      }
+      if (handlePlanCheckError(limitErr, res, 'integrations:updateAutoSync')) return;
+      throw limitErr;
     }
   }
   const { error } = await supabase
@@ -484,8 +513,15 @@ const createDriveSyncJob = async (integration, userId) => {
 
 // POST /api/integrations/:id/sync  — returns immediately with a jobId for Drive
 exports.triggerSync = async (req, res) => {
-  // Invoice caps are soft — never block a sync, only used for the in-app usage nudge.
-  await checkInvoiceLimit(req.user.id);
+  try {
+    await assertInvoiceLimit(req.user.id);
+  } catch (limitErr) {
+    if (limitErr.code === 'PLAN_LIMIT_REACHED') {
+      return res.status(402).json({ error: limitErr.code, used: limitErr.used, limit: limitErr.limit, plan: limitErr.plan });
+    }
+    if (handlePlanCheckError(limitErr, res, 'integrations:triggerSync')) return;
+    throw limitErr;
+  }
 
   const { data: integration, error } = await supabase
     .from('integrations')
@@ -599,11 +635,35 @@ exports.processSyncJob = async (req, res) => {
       .from('sync_jobs').select('*').eq('id', req.params.jobId).eq('user_id', req.user.id).single();
     if (error || !current) return res.status(404).json({ error: 'Sync job not found' });
 
-    if (current.status === 'done' || current.status === 'error' || current.status === 'cancelled') {
-      return res.json({ done: true, cancelled: current.status === 'cancelled', cursor: current.cursor, totalFiles: current.total_files, added: current.added, dupes: current.dupes || 0, errors: current.errors, filesAdded: [] });
+    if (current.status === 'done' || current.status === 'error' || current.status === 'cancelled' || current.status === 'limit_reached') {
+      return res.json({ done: true, cancelled: current.status === 'cancelled', limitReached: current.status === 'limit_reached', cursor: current.cursor, totalFiles: current.total_files, added: current.added, dupes: current.dupes || 0, errors: current.errors, filesAdded: [] });
     }
     // status === 'running' and not stale — another call is actively processing it.
     return res.json({ done: false, cursor: current.cursor, totalFiles: current.total_files, added: current.added, dupes: current.dupes || 0, errors: current.errors, filesAdded: [] });
+  }
+
+  // Re-check the plan quota on every batch, not just once at job creation — a
+  // Drive/Gmail listing can span hundreds/thousands of files (CASH-37), so a
+  // single upfront check at triggerSync would let a long-running job blow far
+  // past the user's plan limit. Halt at the boundary instead, preserving
+  // progress made so far — mirrors the existing cursor-preserving pattern
+  // already used for user-requested cancellation above.
+  try {
+    await assertInvoiceLimit(job.user_id);
+  } catch (limitErr) {
+    if (limitErr.code === 'PLAN_LIMIT_REACHED') {
+      await supabase.from('sync_jobs').update({ status: 'limit_reached', updated_at: new Date().toISOString() }).eq('id', job.id);
+      return res.status(402).json({
+        error: limitErr.code, used: limitErr.used, limit: limitErr.limit, plan: limitErr.plan,
+        done: true, cursor: job.cursor, totalFiles: job.total_files, added: job.added, dupes: job.dupes || 0, errors: job.errors, filesAdded: [],
+      });
+    }
+    // A lookup failure (transient Supabase error) leaves the job's status as
+    // 'running' rather than marking it 'limit_reached' — it's still claimable
+    // and will be retried on the next poll tick once the 30s staleness window
+    // passes, instead of being permanently mislabeled from a temporary blip.
+    if (handlePlanCheckError(limitErr, res, 'integrations:processSyncJob')) return;
+    throw limitErr;
   }
 
   const BATCH_SIZE = 3;
