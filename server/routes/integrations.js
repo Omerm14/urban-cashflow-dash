@@ -571,24 +571,40 @@ exports.cancelSyncJob = async (req, res) => {
 
 // POST /api/sync-jobs/:jobId/process — process next batch; called by frontend polling
 exports.processSyncJob = async (req, res) => {
-  const { data: job, error } = await supabase
+  const RUNNING_STALE_MS = 30000;
+  const staleThreshold = new Date(Date.now() - RUNNING_STALE_MS).toISOString();
+
+  // Atomically claim the job: the UPDATE only matches (and only then do we act on
+  // its result) if the row is still pending, or running but abandoned (stale) —
+  // closing a TOCTOU race where this polling endpoint and cron's stale-job resume
+  // could both read a claimable status before either had written 'running', and
+  // both proceed to process the same batch (duplicate paid Claude OCR spend, and
+  // cursor corruption from two racing cursor writes).
+  const { data: claimed, error: claimErr } = await supabase
     .from('sync_jobs')
-    .select('*')
+    .update({ status: 'running', updated_at: new Date().toISOString() })
     .eq('id', req.params.jobId)
     .eq('user_id', req.user.id)
-    .single();
-  if (error || !job) return res.status(404).json({ error: 'Sync job not found' });
+    .or(`status.eq.pending,and(status.eq.running,updated_at.lt.${staleThreshold})`)
+    .select()
+    .maybeSingle();
+  if (claimErr) { console.error('[sync-jobs] claim error:', claimErr.message); return res.status(500).json({ error: 'Internal server error' }); }
 
-  if (job.status === 'done' || job.status === 'error' || job.status === 'cancelled') {
-    return res.json({ done: true, cancelled: job.status === 'cancelled', cursor: job.cursor, totalFiles: job.total_files, added: job.added, dupes: job.dupes || 0, errors: job.errors, filesAdded: [] });
+  let job = claimed;
+  if (!job) {
+    // Claim missed: either the job doesn't exist, is already in a terminal state,
+    // or another caller currently holds an active (non-stale) claim on it. Fetch
+    // its current state to answer correctly instead of assuming which case it is.
+    const { data: current, error } = await supabase
+      .from('sync_jobs').select('*').eq('id', req.params.jobId).eq('user_id', req.user.id).single();
+    if (error || !current) return res.status(404).json({ error: 'Sync job not found' });
+
+    if (current.status === 'done' || current.status === 'error' || current.status === 'cancelled') {
+      return res.json({ done: true, cancelled: current.status === 'cancelled', cursor: current.cursor, totalFiles: current.total_files, added: current.added, dupes: current.dupes || 0, errors: current.errors, filesAdded: [] });
+    }
+    // status === 'running' and not stale — another call is actively processing it.
+    return res.json({ done: false, cursor: current.cursor, totalFiles: current.total_files, added: current.added, dupes: current.dupes || 0, errors: current.errors, filesAdded: [] });
   }
-
-  // Prevent double-processing: skip if another call is actively running this job
-  if (job.status === 'running' && (Date.now() - new Date(job.updated_at).getTime()) < 30000) {
-    return res.json({ done: false, cursor: job.cursor, totalFiles: job.total_files, added: job.added, dupes: job.dupes || 0, errors: job.errors, filesAdded: [] });
-  }
-
-  await supabase.from('sync_jobs').update({ status: 'running', updated_at: new Date().toISOString() }).eq('id', job.id);
 
   const BATCH_SIZE = 3;
   const batch = (job.file_list || []).slice(job.cursor, job.cursor + BATCH_SIZE);

@@ -31,6 +31,12 @@ const calcDueDate = (invoiceDate, terms) => {
     end.setDate(end.getDate() + parseInt(m[1]));
     return end.toISOString().split('T')[0];
   }
+  const netM = terms.match(/^net(\d+)$/);
+  if (netM) {
+    const end = new Date(date);
+    end.setDate(end.getDate() + parseInt(netM[1]));
+    return end.toISOString().split('T')[0];
+  }
   return null;
 };
 
@@ -77,16 +83,28 @@ const matchSupplier = (name, suppliers) => {
 
 // strict=true disables fuzzyMatch — used for same-PDF batch dedup so multiple
 // invoices with identical supplier/amount/date (e.g. recurring) aren't wrongly skipped
-const isDuplicate = (candidate, existing, strict = false) => existing.some(inv => {
-  const sameSup    = normSup(inv.supplier)  === normSup(candidate.supplier);
-  const exactMatch = sameSup && inv.invoice_no && candidate.invoice_no &&
-                     inv.invoice_no.trim() === candidate.invoice_no.trim();
-  const fuzzyMatch = !strict && sameSup &&
-                     Number(inv.amount) === Number(candidate.amount) &&
-                     inv.invoice_date   === candidate.invoice_date;
-  return exactMatch || fuzzyMatch;
-});
+//
+// Returns 'exact' (same supplier + invoice_no — unambiguous, always a true
+// duplicate), 'fuzzy' (same supplier + amount + date, but no invoice_no to
+// confirm — e.g. two legitimate same-day deliveries from one supplier can
+// collide here), or null (no match). isDuplicate() below collapses this to a
+// boolean for existing callers/tests; processFile uses the distinction so a
+// fuzzy-only match is flagged for review instead of silently dropped (CASH-13).
+const classifyDuplicateMatch = (candidate, existing, strict = false) => {
+  const sameSupplier = inv => normSup(inv.supplier) === normSup(candidate.supplier);
+  const hasExactMatch = existing.some(inv => sameSupplier(inv) &&
+    inv.invoice_no && candidate.invoice_no && inv.invoice_no.trim() === candidate.invoice_no.trim());
+  if (hasExactMatch) return 'exact';
+  if (strict) return null;
+  const hasFuzzyMatch = existing.some(inv => sameSupplier(inv) &&
+    Number(inv.amount) === Number(candidate.amount) && inv.invoice_date === candidate.invoice_date);
+  return hasFuzzyMatch ? 'fuzzy' : null;
+};
+
+const isDuplicate = (candidate, existing, strict = false) => classifyDuplicateMatch(candidate, existing, strict) !== null;
 exports.isDuplicate = isDuplicate;
+exports.classifyDuplicateMatch = classifyDuplicateMatch;
+exports.calcDueDate = calcDueDate;
 
 // ─── Audit logging ───────────────────────────────────────────────────────────
 
@@ -125,7 +143,7 @@ const parseAmount = raw => {
 exports.parseAmount = parseAmount;
 
 // Returns an array of saved invoice records (may be empty, may have multiple for multi-page PDFs)
-const processFile = async (buffer, filename, mediaType, userId, suppliers, existingInvoices, integrationId, syncSource, syncMeta = {}) => {
+const processFile = async (buffer, filename, mediaType, userId, suppliers, integrationId, syncSource, syncMeta = {}) => {
   const fileHash = md5(buffer);
   let extractedList;
   try {
@@ -158,7 +176,7 @@ const processFile = async (buffer, filename, mediaType, userId, suppliers, exist
     const candidate = {
       user_id:          userId,
       supplier:         sup?.name || extracted.supplier || '',
-      invoice_no:       extracted.invoiceNo  || '',
+      invoice_no:       (extracted.invoiceNo  || '').trim(),
       invoice_date:     invoiceDate,
       amount:           isCredit ? -rawAmount : rawAmount,
       due_date:         isCredit ? '' : (dueDate || ''),
@@ -175,11 +193,24 @@ const processFile = async (buffer, filename, mediaType, userId, suppliers, exist
     // invoice_no is present so recurring invoices with same supplier/amount aren't skipped.
     // When invoice_no is absent, fall back to fuzzy for same-batch to catch duplicate pages.
     const inBatchStrict = Boolean(candidate.invoice_no);
-    if (isDuplicate(candidate, existingInvoices) || isDuplicate(candidate, results, inBatchStrict)) {
+    const dbMatches = await findDuplicateCandidates(userId, candidate);
+    const dbMatch    = classifyDuplicateMatch(candidate, dbMatches);
+    const batchMatch = classifyDuplicateMatch(candidate, results, inBatchStrict);
+
+    if (dbMatch === 'exact' || batchMatch === 'exact') {
       console.log(`[sync] duplicate skipped: ${pageLabel}`);
       logSyncEvent(integrationId, userId, 'dedup_skipped', { source_file: pageLabel, file_hash: fileHash });
       skipped++;
       continue;
+    }
+
+    // Fuzzy-only match (same supplier/amount/date, no invoice_no to confirm) — e.g. two
+    // legitimate same-day deliveries from one supplier. Import rather than silently drop
+    // it (CASH-13); flag for staff review instead.
+    if (dbMatch === 'fuzzy' || batchMatch === 'fuzzy') {
+      candidate.notes = 'Possible duplicate — same supplier, amount, and date as an existing invoice, but no invoice number to confirm. Please review.';
+      console.log(`[sync] possible duplicate imported (flagged for review): ${pageLabel}`);
+      logSyncEvent(integrationId, userId, 'possible_duplicate_imported', { source_file: pageLabel, file_hash: fileHash });
     }
 
     // Insert the row first (status 'pending' until the file is confirmed stored),
@@ -229,13 +260,76 @@ const getSuppliers = async userId => {
   return data || [];
 };
 
-const getExistingInvoices = async userId => {
-  const { data } = await supabase
-    .from('invoices')
-    .select('supplier,invoice_no,amount,invoice_date,source_file')
-    .eq('user_id', userId);
-  return data || [];
+// Queries Postgres directly for the small set of rows that could match `candidate`
+// under isDuplicate()'s rules (exact invoice_no, or fuzzy amount+invoice_date)
+// instead of loading a user's entire invoice history into memory — the previous
+// getExistingInvoices() approach silently missed rows past PostgREST's 1000-row
+// cap and OOM'd at scale. isDuplicate() itself is unchanged; this only narrows
+// what it's run against.
+//
+// Pre-merge review fix: two gaps found in the initial version of this
+// function —
+//  1. invoice_no was queried untrimmed while classifyDuplicateMatch() (which
+//     runs against the result) compares trimmed — OCR whitespace variance on
+//     an otherwise-identical invoice_no meant the DB query returned zero
+//     candidates, so the trim-tolerant match never got a chance to fire and
+//     a real duplicate was silently re-imported. Trimmed here to match.
+//  2. the amount+date lookup only ran `if (... && candidate.invoice_date)`,
+//     so invoices with a blank invoice_date (extraction.js/syncProcessor
+//     both default to '' — see candidate construction above/below — never
+//     null) got ZERO cross-run dedup checking at all, unlike the old
+//     in-memory approach which still matched on '' === ''. Now always runs
+//     when amount is present, comparing invoice_date as-is (including '').
+const findDuplicateCandidates = async (userId, candidate) => {
+  const invoiceNo = (candidate.invoice_no || '').trim();
+  const lookups = [];
+  if (invoiceNo) {
+    lookups.push(
+      supabase.from('invoices').select('supplier,invoice_no,amount,invoice_date,source_file')
+        .eq('user_id', userId).eq('invoice_no', invoiceNo)
+    );
+  }
+  if (candidate.amount != null) {
+    lookups.push(
+      supabase.from('invoices').select('supplier,invoice_no,amount,invoice_date,source_file')
+        .eq('user_id', userId).eq('amount', candidate.amount).eq('invoice_date', candidate.invoice_date ?? '')
+    );
+  }
+  if (!lookups.length) return [];
+  const results = await Promise.all(lookups);
+  return results.flatMap(r => r.data || []);
 };
+exports.findDuplicateCandidates = findDuplicateCandidates;
+
+// Fetches every already-imported base filename for a user, paginating past
+// PostgREST's 1000-row default cap so large accounts are still fully covered.
+// Used only as a cheap pre-filter to skip re-downloading/re-OCRing files that
+// were already imported — findDuplicateCandidates() above is the real dedup
+// gate and is unaffected by anything this pre-filter misses.
+const SEEN_FILES_PAGE_SIZE = 1000;
+const getSeenFilenames = async userId => {
+  const baseFilename = s => s?.replace(/\s*\(page \d+\)$/i, '').trim().toLowerCase() || '';
+  const seen = new Set();
+  let from = 0;
+  while (true) {
+    // .order('id') keeps page boundaries stable across separate .range() calls —
+    // without it Postgres/PostgREST gives no ordering guarantee, and a
+    // concurrent insert for this user (e.g. a WhatsApp webhook landing while
+    // this Drive/Gmail sync runs) could shift a row across a page boundary.
+    const { data, error } = await supabase
+      .from('invoices')
+      .select('source_file')
+      .eq('user_id', userId)
+      .order('id')
+      .range(from, from + SEEN_FILES_PAGE_SIZE - 1);
+    if (error) { console.error('[sync] seen-filenames fetch failed:', error.message); break; }
+    (data || []).forEach(row => { const b = baseFilename(row.source_file); if (b) seen.add(b); });
+    if (!data || data.length < SEEN_FILES_PAGE_SIZE) break;
+    from += SEEN_FILES_PAGE_SIZE;
+  }
+  return seen;
+};
+exports.getSeenFilenames = getSeenFilenames;
 
 // ─── Google OAuth2 client ────────────────────────────────────────────────────
 
@@ -303,6 +397,10 @@ const DRIVE_PROCESS_PER_RUN = 50;   // matches the previous default cap; overflo
 const GMAIL_LIST_PAGE_SIZE = 200;
 const GMAIL_LIST_MAX_PAGES = 10;    // up to 2000 messages listed per run
 
+// `truncated: true` means MAX_PAGES was exhausted while the API still had a
+// nextPageToken — a genuine ceiling hit (real backlog beyond what one run
+// lists), not just "ran out of results". `false` covers both a normal
+// early-break and a last page that happens to end exactly at the cap.
 const listAllDriveFiles = async (drive, conditions) => {
   const files = [];
   let pageToken;
@@ -317,7 +415,7 @@ const listAllDriveFiles = async (drive, conditions) => {
     pageToken = data.nextPageToken;
     if (!pageToken) break;
   }
-  return files;
+  return { files, truncated: Boolean(pageToken) };
 };
 
 const listAllGmailMessages = async (gmail, q) => {
@@ -331,7 +429,7 @@ const listAllGmailMessages = async (gmail, q) => {
     pageToken = data.nextPageToken;
     if (!pageToken) break;
   }
-  return messages;
+  return { messages, truncated: Boolean(pageToken) };
 };
 
 // Splits Gmail messages into ones still needing download/OCR vs. ones already
@@ -391,16 +489,16 @@ exports.syncGoogleDrive = async (integration, userId) => {
     'trashed = false',
   ].filter(Boolean).join(' and ');
 
-  const files = await listAllDriveFiles(drive, conditions);
+  const { files, truncated } = await listAllDriveFiles(drive, conditions);
+  if (truncated) {
+    console.error(`[sync:drive] listing truncated at ${DRIVE_LIST_MAX_PAGES * DRIVE_LIST_PAGE_SIZE} files for user ${userId} — more files remain unlisted this run`);
+    logSyncEvent(integration.id, userId, 'listing_truncated', { source_file: `cap:${DRIVE_LIST_MAX_PAGES * DRIVE_LIST_PAGE_SIZE}` });
+  }
 
   console.log(`[sync:drive] ${files.length} file(s) found for user ${userId}`);
 
-  const suppliers        = await getSuppliers(userId);
-  const existingInvoices = await getExistingInvoices(userId);
-  // Strip "(page N)" suffix so multi-page PDFs are recognised as already-imported
-  // whether they were saved with old code ("file.pdf") or new ("file.pdf (page 1)")
-  const baseFilename = s => s?.replace(/\s*\(page \d+\)$/i, '').trim().toLowerCase() || '';
-  const seenFiles = new Set(existingInvoices.map(i => baseFilename(i.source_file)).filter(Boolean));
+  const suppliers = await getSuppliers(userId);
+  const seenFiles = await getSeenFilenames(userId);
   let added = 0, skipped = 0, errors = 0;
 
   // Process files in parallel batches to avoid sequential Claude API bottleneck
@@ -428,7 +526,7 @@ exports.syncGoogleDrive = async (integration, userId) => {
         const resp   = await drive.files.get({ fileId: file.id, alt: 'media' }, { responseType: 'arraybuffer' });
         const buffer = Buffer.from(resp.data);
         const { saved, skipped: contentSkipped } = await processFile(
-          buffer, file.name, file.mimeType, userId, suppliers, existingInvoices,
+          buffer, file.name, file.mimeType, userId, suppliers,
           integration.id, 'google_drive', { folder_id: folderId, drive_file_id: file.id },
         );
         return { file, saved, contentSkipped };
@@ -441,7 +539,7 @@ exports.syncGoogleDrive = async (integration, userId) => {
     }));
 
     for (const { file, saved, contentSkipped } of batchResults) {
-      for (const inv of saved) { added++; existingInvoices.push(inv); }
+      added += saved.length;
       skipped += contentSkipped;
       if (saved.length) seenFiles.add(file.name.toLowerCase());
     }
@@ -489,12 +587,15 @@ exports.syncGmail = async (integration, userId) => {
   const q = parts.join(' ');
 
   console.log(`[sync:gmail] query: ${q}`);
-  const messages = await listAllGmailMessages(gmail, q);
+  const { messages, truncated } = await listAllGmailMessages(gmail, q);
+  if (truncated) {
+    console.error(`[sync:gmail] listing truncated at ${GMAIL_LIST_MAX_PAGES * GMAIL_LIST_PAGE_SIZE} messages for user ${userId} — more messages remain unlisted this run`);
+    logSyncEvent(integration.id, userId, 'listing_truncated', { source_file: `cap:${GMAIL_LIST_MAX_PAGES * GMAIL_LIST_PAGE_SIZE}` });
+  }
 
   console.log(`[sync:gmail] ${messages.length} message(s) for user ${userId}`);
 
-  const suppliers        = await getSuppliers(userId);
-  const existingInvoices = await getExistingInvoices(userId);
+  const suppliers = await getSuppliers(userId);
 
   // Pre-filter: skip messages already represented by an invoice from a prior sync
   // (e.g. a "resync" that clears last_sync) — mirrors syncGoogleDrive's seenFiles
@@ -539,10 +640,10 @@ exports.syncGmail = async (integration, userId) => {
         });
         const buffer = Buffer.from(att.data, 'base64url');
         const { saved, skipped: contentSkipped } = await processFile(
-          buffer, part.filename, part.mimeType, userId, suppliers, existingInvoices,
+          buffer, part.filename, part.mimeType, userId, suppliers,
           integration.id, 'gmail', { message_id: msg.id, thread_id: message.threadId },
         );
-        for (const inv of saved) { added++; existingInvoices.push(inv); }
+        added += saved.length;
         skipped += contentSkipped;
       }
     } catch (err) {
@@ -601,8 +702,7 @@ exports.syncGreenInvoice = async (integration, userId) => {
   if (!docsRes.ok) throw new Error(`Green Invoice expenses fetch failed: ${await greenInvoiceErrorDetail(docsRes)}`);
   const { items = [] } = await docsRes.json();
 
-  const suppliers        = await getSuppliers(userId);
-  const existingInvoices = await getExistingInvoices(userId);
+  const suppliers = await getSuppliers(userId);
   let added = 0, skipped = 0, errors = 0;
 
   for (const doc of items) {
@@ -618,7 +718,7 @@ exports.syncGreenInvoice = async (integration, userId) => {
     const candidate = {
       user_id:          userId,
       supplier:         sup?.name || supplierName || 'Unknown supplier',
-      invoice_no:       doc.number?.toString() || '',
+      invoice_no:       (doc.number?.toString() || '').trim(),
       invoice_date:     invoiceDate,
       amount:           doc.amount ?? 0,
       due_date:         dueDate || '',
@@ -630,16 +730,22 @@ exports.syncGreenInvoice = async (integration, userId) => {
       sync_timestamp:   new Date().toISOString(),
     };
 
-    if (isDuplicate(candidate, existingInvoices)) {
+    const dbMatches = await findDuplicateCandidates(userId, candidate);
+    const dbMatch = classifyDuplicateMatch(candidate, dbMatches);
+    if (dbMatch === 'exact') {
       logSyncEvent(integration.id, userId, 'dedup_skipped', { source_file: candidate.source_file });
       skipped++;
       continue;
+    }
+    // Fuzzy-only match — import rather than silently drop it (CASH-13); flag for review.
+    if (dbMatch === 'fuzzy') {
+      candidate.notes += ' — Possible duplicate: same supplier, amount, and date as an existing invoice, but no invoice number to confirm. Please review.';
+      logSyncEvent(integration.id, userId, 'possible_duplicate_imported', { source_file: candidate.source_file });
     }
     const { data, error } = await supabase.from('invoices').insert(candidate).select().single();
     if (!error && data) {
       logSyncEvent(integration.id, userId, 'saved', { source_file: candidate.source_file, invoice_id: data.id });
       added++;
-      existingInvoices.push(data);
     } else if (error) {
       console.error(`[sync] green_invoice save failed for ${candidate.source_file}:`, error.message);
       logSyncEvent(integration.id, userId, 'ocr_failed', { source_file: candidate.source_file, error_message: error.message });
@@ -681,9 +787,7 @@ exports.discoverGoogleDriveFiles = async (integration, userId) => {
     pageSize: 50,
   });
 
-  const existingInvoices = await getExistingInvoices(userId);
-  const baseFilename = s => s?.replace(/\s*\(page \d+\)$/i, '').trim().toLowerCase() || '';
-  const seenFiles = new Set(existingInvoices.map(i => baseFilename(i.source_file)).filter(Boolean));
+  const seenFiles = await getSeenFilenames(userId);
 
   const filesToProcess = files.filter(file => {
     if (seenFiles.has(file.name.toLowerCase())) {
@@ -700,9 +804,8 @@ exports.discoverGoogleDriveFiles = async (integration, userId) => {
 exports.processGoogleDriveFileBatch = async (integration, userId, files) => {
   const auth  = makeOAuth2({ ...integration.credentials, _userId: userId, _type: 'google_drive' });
   const drive = google.drive({ version: 'v3', auth });
-  const suppliers        = await getSuppliers(userId);
-  const existingInvoices = await getExistingInvoices(userId);
-  const folderId         = integration.config?.folder_id;
+  const suppliers = await getSuppliers(userId);
+  const folderId  = integration.config?.folder_id;
 
   const results = [];
   let errors = 0, skipped = 0;
@@ -718,10 +821,10 @@ exports.processGoogleDriveFileBatch = async (integration, userId, files) => {
         const resp   = await drive.files.get({ fileId: file.id, alt: 'media' }, { responseType: 'arraybuffer' });
         const buffer = Buffer.from(resp.data);
         const { saved, skipped: contentSkipped } = await processFile(
-          buffer, file.name, file.mimeType, userId, suppliers, existingInvoices,
+          buffer, file.name, file.mimeType, userId, suppliers,
           integration.id, 'google_drive', { folder_id: folderId, drive_file_id: file.id },
         );
-        for (const inv of saved) { results.push(inv); existingInvoices.push(inv); }
+        results.push(...saved);
         skipped += contentSkipped;
       } catch (err) {
         errors++;
@@ -766,11 +869,10 @@ exports.processWhatsAppMedia = async (integration, userId, mediaId, filename, mi
   if (!mediaRes.ok) throw new Error(`WhatsApp media download failed: ${mediaRes.status}`);
   const buffer = Buffer.from(await mediaRes.arrayBuffer());
 
-  const suppliers        = await getSuppliers(userId);
-  const existingInvoices = await getExistingInvoices(userId);
+  const suppliers = await getSuppliers(userId);
 
   const { saved: results } = await processFile(
-    buffer, filename || `whatsapp_${mediaId}`, mimeType, userId, suppliers, existingInvoices,
+    buffer, filename || `whatsapp_${mediaId}`, mimeType, userId, suppliers,
     integration.id, 'whatsapp', { wa_message_id: waMessageId, media_id: mediaId },
   );
 

@@ -38,7 +38,9 @@ async function sendWhatsAppReply(to, text) {
 const verifySignature = (rawBody, signature, secret) => {
   if (!signature || !secret) return false;
   const expected = 'sha256=' + crypto.createHmac('sha256', secret).update(rawBody).digest('hex');
-  return crypto.timingSafeEqual(Buffer.from(signature), Buffer.from(expected));
+  const a = Buffer.from(signature);
+  const b = Buffer.from(expected);
+  return a.length === b.length && crypto.timingSafeEqual(a, b);
 };
 
 // GET /api/webhook/whatsapp  — webhook verification challenge (Meta requirement)
