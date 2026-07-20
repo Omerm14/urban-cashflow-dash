@@ -96,7 +96,7 @@ app.get('/api/invoices/:id/attachment-url',          auth, integrations.getAttac
 const invoices = require('./routes/invoices');
 app.delete('/api/invoices/:id',           auth, invoices.remove);
 app.post('/api/invoices/bulk-delete',     auth, invoices.bulkRemove);
-app.post('/api/attachments/presign',      auth, invoices.presignUpload);
+app.post('/api/attachments/upload',       auth, invoices.uploadAttachment);
 
 // Profile (logo upload)
 app.post('/api/profile/logo', auth, require('./routes/profile').uploadLogo);

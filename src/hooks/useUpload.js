@@ -7,7 +7,7 @@ import { resolveAttachmentSafe } from "../utils/uploadAttachment";
 // `t` is passed in from App.jsx rather than read via useLang(), because this hook
 // is called from App() itself — a component that renders LangCtx.Provider but is
 // not a descendant of it, so useContext(LangCtx) here would see the default value.
-export function useUpload({ invoices, user, addInvoice, getSupplier, refreshPlan, onNotify, t }) {
+export function useUpload({ invoices, addInvoice, getSupplier, refreshPlan, onNotify, t }) {
   const [extracting, setExtracting] = useState(false);
   const [extractMsg, setExtractMsg] = useState(null);
   const [uploadProgress, setUploadProgress] = useState({ done: 0, total: 0 });
@@ -77,7 +77,7 @@ export function useUpload({ invoices, user, addInvoice, getSupplier, refreshPlan
       let added = 0, attachmentIssues = 0;
       await Promise.allSettled(toAdd.map(async ({ file, candidate }) => {
         try {
-          const attachment = await resolveAttachmentSafe({ file, session, userId: user.id, supabaseStorage: supabase.storage });
+          const attachment = await resolveAttachmentSafe({ file, session });
           if (attachment.attachment_status === "missing") attachmentIssues++;
           await addInvoice({ ...candidate, ...attachment });
           added++;
@@ -105,7 +105,7 @@ export function useUpload({ invoices, user, addInvoice, getSupplier, refreshPlan
       setTimeout(() => setExtractMsg(null), 5000);
       if (fileRef.current) fileRef.current.value = "";
     }
-  }, [invoices, user, addInvoice, getSupplier, refreshPlan, onNotify, t]);
+  }, [invoices, addInvoice, getSupplier, refreshPlan, onNotify, t]);
 
   const showTransientError = useCallback((text) => {
     setExtractMsg({ text, ok: false });

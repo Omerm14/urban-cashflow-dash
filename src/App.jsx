@@ -110,7 +110,7 @@ export default function App() {
   }, []);
 
   const { extracting, extractMsg, uploadProgress, fileRef, handleUpload, showTransientError } = useUpload({
-    invoices, user, addInvoice, getSupplier, refreshPlan, onNotify: addAppNotif, t,
+    invoices, addInvoice, getSupplier, refreshPlan, onNotify: addAppNotif, t,
   });
 
   useEffect(() => {

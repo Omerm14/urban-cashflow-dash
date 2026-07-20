@@ -5,7 +5,6 @@
 //   activeBackend()                         → the backend new uploads go to
 //   putAttachment({ key, body, contentType })       → store bytes
 //   getSignedReadUrl(key, backend, expires)          → short-lived GET url
-//   presignPutUrl({ key, contentType, expires })     → short-lived PUT url (R2)
 //   deleteAttachment(key, backend)                   → remove bytes (idempotent)
 //
 // Backend selection is env-driven and defaults to 'supabase', so deploying this
@@ -75,14 +74,6 @@ exports.getSignedReadUrl = async (key, backend, expires = 3600) => {
   const { data, error } = await supabase.storage.from(BUCKET).createSignedUrl(key, expires);
   if (error) throw new Error(error.message);
   return data.signedUrl;
-};
-
-// Short-lived presigned PUT url so the browser can upload an original directly to
-// the store, keeping large files off our serverless function. R2 only.
-exports.presignPutUrl = async ({ key, contentType, expires = 600 }) => {
-  const { PutObjectCommand } = require('@aws-sdk/client-s3');
-  const { getSignedUrl }     = require('@aws-sdk/s3-request-presigner');
-  return getSignedUrl(r2Client(), new PutObjectCommand({ Bucket: r2Bucket(), Key: key, ContentType: contentType }), { expiresIn: expires });
 };
 
 // Remove bytes. Idempotent — a missing object is treated as success so callers
