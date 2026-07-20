@@ -3,8 +3,9 @@ const sync     = require('../services/syncProcessor');
 const BATCH_SIZE = 5;  // larger batch for cron (no timeout pressure)
 
 // GET /api/cron/sync
-// Called by Vercel Cron (vercel.json) or an external cron service (cron-job.org etc.)
-// Requires: Authorization: Bearer <CRON_SECRET>
+// Not scheduled via vercel.json's `crons` (Vercel's Hobby plan caps cron
+// frequency at once/day, too infrequent for auto-sync) — triggered hourly by
+// .github/workflows/cron-sync.yml instead. Requires: Authorization: Bearer <CRON_SECRET>
 exports.runSync = async (req, res) => {
   const secret = process.env.CRON_SECRET;
   const auth   = req.headers.authorization || '';
@@ -86,22 +87,35 @@ exports.runSync = async (req, res) => {
         .eq('id', job.integration_id).eq('user_id', job.user_id).single();
       if (!integration) return;
 
-      // Mark running
-      await supabase.from('sync_jobs').update({ status: 'running', updated_at: new Date().toISOString() }).eq('id', job.id);
+      // Atomically claim: the UPDATE only matches if the row is still in the same
+      // pending/running-and-stale state it was in when selected above — otherwise
+      // another caller (e.g. a browser poll via processSyncJob) claimed it first
+      // in the meantime. Closes a TOCTOU race that could double-process a batch
+      // (duplicate paid Claude OCR spend, racing cursor writes).
+      const { data: claimed, error: claimErr } = await supabase
+        .from('sync_jobs')
+        .update({ status: 'running', updated_at: new Date().toISOString() })
+        .eq('id', job.id)
+        .in('status', ['pending', 'running'])
+        .lt('updated_at', staleThreshold)
+        .select()
+        .maybeSingle();
+      if (claimErr) throw claimErr;
+      if (!claimed) return; // lost the race — another caller already has it
 
-      const batch = (job.file_list || []).slice(job.cursor, job.cursor + BATCH_SIZE);
-      const { results: invs, errors: batchErrors } = await sync.processGoogleDriveFileBatch(integration, job.user_id, batch);
+      const batch = (claimed.file_list || []).slice(claimed.cursor, claimed.cursor + BATCH_SIZE);
+      const { results: invs, errors: batchErrors } = await sync.processGoogleDriveFileBatch(integration, claimed.user_id, batch);
 
-      const newCursor = job.cursor + batch.length;
-      const newAdded  = job.added  + invs.length;
-      const newErrors = job.errors + batchErrors;
-      const done      = newCursor >= job.total_files;
+      const newCursor = claimed.cursor + batch.length;
+      const newAdded  = claimed.added  + invs.length;
+      const newErrors = claimed.errors + batchErrors;
+      const done      = newCursor >= claimed.total_files;
 
       await supabase.from('sync_jobs').update({
         cursor: newCursor, added: newAdded, errors: newErrors,
         status: done ? 'done' : 'pending',  // pending so next cron tick picks up remainder
         updated_at: new Date().toISOString(),
-      }).eq('id', job.id);
+      }).eq('id', claimed.id);
 
       if (done) {
         await supabase.from('integrations').update({

@@ -66,8 +66,9 @@ describe('processSyncJob (integrations.js, real module, mocked Supabase + sync)'
         from(table) {
           if (table === 'sync_jobs') {
             const c = {
-              select: () => c, update: () => c, eq: () => c,
+              select: () => c, update: () => c, eq: () => c, or: () => c,
               single: () => Promise.resolve({ data: job, error: null }),
+              maybeSingle: () => Promise.resolve({ data: job, error: null }), // atomic claim succeeds
               then: (resolve) => resolve({ data: null, error: null }),
             };
             return c;
@@ -78,6 +79,16 @@ describe('processSyncJob (integrations.js, real module, mocked Supabase + sync)'
               eq: (col, val) => { integrationEqCalls.push([col, val]); return c; },
               single: () => Promise.resolve({ data: integration, error: null }),
             };
+            return c;
+          }
+          // assertInvoiceLimit (CASH-42: re-checked on every batch) — resolve a
+          // comfortably-under-limit usage so it doesn't interfere with this test.
+          if (table === 'subscriptions') {
+            const c = { select: () => c, eq: () => c, single: () => Promise.resolve({ data: { plan: 'pro' }, error: null }), upsert: () => Promise.resolve({ data: null, error: null }) };
+            return c;
+          }
+          if (table === 'invoices') {
+            const c = { select: () => c, eq: () => c, gte: () => Promise.resolve({ data: null, error: null, count: 1 }) };
             return c;
           }
           throw new Error(`unexpected table ${table}`);
@@ -129,6 +140,7 @@ describe('runSync stale-job resume (cron.js, real module, mocked Supabase + sync
             const c = {
               select: () => c, update: () => c, in: () => c, lt: () => c, eq: () => c,
               limit: () => Promise.resolve({ data: [job], error: null }),
+              maybeSingle: () => Promise.resolve({ data: job, error: null }), // atomic claim succeeds
               then: (resolve) => resolve({ data: null, error: null }),
             };
             return c;

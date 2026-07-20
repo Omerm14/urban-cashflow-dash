@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo, useCallback } from "react";
 import { STATUS, PALETTE } from "../constants";
 import { calcDueDate, toYM } from "../utils/dates";
 import { findDuplicates, matchSupplier, getMissingSuppliers, getSupplierMonthlyAnomalies } from "../utils/invoice";
+import { fetchAllRows } from "../utils/fetchAllRows";
 import { supabase } from "../lib/supabase";
 import { useAuth } from "../contexts/AuthContext";
 
@@ -19,7 +20,7 @@ export const useInvoiceData = () => {
     setLoading(true);
     setLoadError(null);
     Promise.all([
-      supabase.from('invoices').select('*').eq('user_id', user.id).order('created_at'),
+      fetchAllRows(supabase, 'invoices', { user_id: user.id }),
       supabase.from('suppliers').select('*').eq('user_id', user.id),
     ]).then(([{ data: invs, error: ie }, { data: sups, error: se }]) => {
       if (!mounted) return;
@@ -112,7 +113,7 @@ export const useInvoiceData = () => {
 
   const refreshInvoices = useCallback(async () => {
     if (!user) return;
-    const { data, error } = await supabase.from('invoices').select('*').eq('user_id', user.id).order('created_at');
+    const { data, error } = await fetchAllRows(supabase, 'invoices', { user_id: user.id });
     if (!error) setInvoices(data ?? []);
   }, [user]);
 
