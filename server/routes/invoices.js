@@ -60,31 +60,67 @@ exports.bulkRemove = async (req, res) => {
   res.json({ ok: true, deleted: ownedIds.length });
 };
 
-// POST /api/attachments/presign  { filename, contentType, fileHash }
-// Returns an upload descriptor for the active storage backend.
-//   r2:       { backend, key, uploadUrl }  → browser PUTs the file to uploadUrl
-//   supabase: { backend }                  → browser uploads via the SDK as before
-exports.presignUpload = async (req, res) => {
-  const { filename, contentType, fileHash } = req.body || {};
-  if (!filename) return res.status(400).json({ error: 'filename is required' });
+// POST /api/attachments/upload  — multipart form, file field name 'file'
+// Uploads the original through our own server instead of a presigned direct-
+// to-R2 PUT from the browser. The presigned-PUT flow required the R2 bucket's
+// CORS policy to explicitly allow PUT from our origin — a config that lives
+// entirely outside this repo (Cloudflare dashboard), silently broke uploads
+// whenever it drifted or was never set, and was easy to miss because
+// presigned GET (attachment preview) kept working the whole time: <img>/
+// <iframe> loads aren't CORS-gated the way a JS fetch() PUT is, so a CORS gap
+// only ever showed up on the write path. Proxying through the server removes
+// that external dependency for the upload path entirely (mirrors
+// profile.js's uploadLogo, which already does this for logo uploads).
+const ATTACHMENT_ALLOWED_EXTS = new Set(['pdf', 'jpg', 'jpeg', 'png', 'webp', 'heic']);
+const MAX_ATTACHMENT_BYTES = 20 * 1024 * 1024; // matches express.json()'s existing 20mb limit (extract.js's base64 path)
 
-  // Invoice caps are soft — never refuse an upload, just track usage.
-  await checkInvoiceLimit(req.user.id);
-
-  const backend = storage.activeBackend();
-  if (backend !== 'r2') return res.json({ backend });
-
+exports.uploadAttachment = async (req, res) => {
   try {
-    const ALLOWED_EXTS = new Set(['pdf', 'jpg', 'jpeg', 'png', 'webp', 'heic']);
-    const ext = (filename.split('.').pop() || 'bin').toLowerCase();
-    if (!ALLOWED_EXTS.has(ext)) return res.status(400).json({ error: `File type .${ext} is not supported` });
-    // Hash-named key dedups repeat uploads (incl. each page of one PDF) to one object.
-    const base = fileHash || `${Date.now()}-${Math.random().toString(36).slice(2)}`;
-    const key  = `${req.user.id}/${base}.${ext}`;
-    const uploadUrl = await storage.presignPutUrl({ key, contentType: contentType || 'application/octet-stream' });
-    res.json({ backend, key, uploadUrl });
+    // Invoice caps are soft — never refuse an upload, just track usage.
+    await checkInvoiceLimit(req.user.id);
+
+    const busboy = require('busboy');
+    const bb = busboy({ headers: req.headers, limits: { fileSize: MAX_ATTACHMENT_BYTES + 1 } });
+
+    let fileBuffer = null, contentType = null, filename = null, sizeExceeded = false;
+
+    bb.on('file', (fieldname, file, info) => {
+      if (fieldname !== 'file') { file.resume(); return; }
+      filename = info.filename;
+      contentType = info.mimeType;
+      const chunks = [];
+      file.on('data', chunk => {
+        chunks.push(chunk);
+        if (Buffer.concat(chunks).length > MAX_ATTACHMENT_BYTES) { sizeExceeded = true; file.resume(); }
+      });
+      file.on('end', () => { if (!sizeExceeded) fileBuffer = Buffer.concat(chunks); });
+    });
+
+    bb.on('finish', async () => {
+      try {
+        if (sizeExceeded) return res.status(413).json({ error: 'File must be under 20MB' });
+        if (!fileBuffer || !filename) return res.status(400).json({ error: 'No valid file provided' });
+
+        const ext = (filename.split('.').pop() || 'bin').toLowerCase();
+        if (!ATTACHMENT_ALLOWED_EXTS.has(ext)) return res.status(400).json({ error: `File type .${ext} is not supported` });
+
+        const key = `${req.user.id}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+        const { backend } = await storage.putAttachment({ key, body: fileBuffer, contentType: contentType || 'application/octet-stream' });
+
+        res.json({ attachment_path: key, attachment_backend: backend, attachment_status: 'present' });
+      } catch (err) {
+        // A `throw` inside an async busboy event-listener callback isn't caught by
+        // the outer try/catch below (control already returned to the event loop by
+        // the time 'finish' fires) — without this, it becomes an unhandled promise
+        // rejection and the client hangs until timeout instead of getting an error.
+        console.error('[invoices] uploadAttachment error:', err.message);
+        return res.status(500).json({ error: 'Internal server error' });
+      }
+    });
+
+    req.pipe(bb);
   } catch (err) {
-    console.error('[invoices] presign error:', err.message);
-    res.status(500).json({ error: 'Internal server error' });
+    console.error('[invoices] uploadAttachment error:', err.message);
+    return res.status(500).json({ error: 'Internal server error' });
   }
 };

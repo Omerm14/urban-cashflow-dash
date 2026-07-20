@@ -82,7 +82,7 @@ app.get('/api/invoices/:id/attachment-url',          auth, integrations.getAttac
 const invoices = require('../server/routes/invoices');
 app.delete('/api/invoices/:id',           auth, invoices.remove);
 app.post('/api/invoices/bulk-delete',     auth, invoices.bulkRemove);
-app.post('/api/attachments/presign',      auth, invoices.presignUpload);
+app.post('/api/attachments/upload',       auth, invoices.uploadAttachment);
 
 
 // Profile (logo upload)
