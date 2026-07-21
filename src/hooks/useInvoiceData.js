@@ -136,7 +136,8 @@ export const useInvoiceData = () => {
   const refreshInvoices = useCallback(async () => {
     if (!user) return;
     const { data, error } = await fetchAllRows(supabase, 'invoices', { user_id: user.id });
-    if (!error) setInvoices(data ?? []);
+    if (error) { console.error('refreshInvoices:', error.message); throw error; }
+    setInvoices(data ?? []);
   }, [user]);
 
   // Append new invoices from a sync batch without re-fetching everything

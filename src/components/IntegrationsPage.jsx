@@ -3,6 +3,7 @@ import { apiFetch } from "../lib/api";
 import { useT, useLang } from "../contexts/AppContexts";
 import { FONT_UI as SANS, FONT_MONO as MONO } from "../theme";
 import IntegrationWizard from "./IntegrationWizard";
+import { friendlyError } from "../utils/integrationErrors";
 
 // ─── Brand SVG icons ─────────────────────────────────────────────────────────
 // Third-party brand marks — colors are the providers' own, not app theme.
@@ -375,7 +376,10 @@ function IntegrationCard({ type, integration, onRefresh, onInvoicesRefresh, onNo
       onRefresh();
       setEventsRefreshKey(k => k + 1);
       setHistoryOpen(true);
-      if (activeSyncJob.added > 0) onInvoicesRefresh?.();
+      // refreshInvoices (CASH-56) throws on a fetch error — catch it here since
+      // this call isn't awaited; otherwise it's an unhandled promise rejection
+      // that silently defeats the point of that fix (final pre-merge review fix).
+      if (activeSyncJob.added > 0) onInvoicesRefresh?.()?.catch(err => console.error('[integrations] invoices refresh failed:', err.message));
       onNotificationsRefresh?.();
       onSyncResult?.({ source: integration?.config?.label || type, added: activeSyncJob.added || 0, dupes: activeSyncJob.dupes || 0, filesFound: activeSyncJob.totalFiles || 0 });
     }
@@ -481,7 +485,11 @@ function IntegrationCard({ type, integration, onRefresh, onInvoicesRefresh, onNo
         showToast(msg, added > 0);
         if (added > 0) { setSyncDone(true); setTimeout(() => setSyncDone(false), 3000); }
         onSyncResult?.({ source: cfg.label || type, added, dupes: skipped, filesFound });
-        onInvoicesRefresh?.();
+        // Not awaited (fire-and-forget, matches onRefresh/onNotificationsRefresh
+        // below) — but refreshInvoices (CASH-56) throws on error, and an
+        // unawaited call here sits outside this function's own try/catch, so
+        // the rejection must be caught here directly (final pre-merge review fix).
+        onInvoicesRefresh?.()?.catch(err => console.error('[integrations] invoices refresh failed:', err.message));
         onRefresh();
         setEventsRefreshKey(k => k + 1);
         setHistoryOpen(true);
@@ -515,7 +523,7 @@ function IntegrationCard({ type, integration, onRefresh, onInvoicesRefresh, onNo
         `/api/integrations/google/auth-url?type=${type}&returnUrl=${encodeURIComponent(window.location.origin + '/app')}`
       );
       window.location.href = url;
-    } catch (e) { showToast(e.message, false); }
+    } catch (e) { showToast(friendlyError(e, t), false); }
   };
 
   const handleDisconnect = async () => {
