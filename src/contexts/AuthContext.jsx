@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
+import { stableSession, stableUser } from './authSessionStability'
 
 const AuthContext = createContext(null)
 
@@ -15,9 +16,9 @@ export function AuthProvider({ children }) {
       setLoading(false)
     })
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session)
-      setUser(session?.user ?? null)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, newSession) => {
+      setSession(prev => stableSession(prev, newSession))
+      setUser(prev => stableUser(prev, newSession))
       setLoading(false)
     })
 
