@@ -25,27 +25,42 @@ const secretOk = (req) => {
 // PostgREST's 1000-row default cap. Below that cap this is a single request,
 // identical to the old behavior; above it, previous runs would have silently
 // treated genuinely-referenced files past row 1000 as orphans and deleted them.
+//
+// The first page also requests an exact count, so any further pages are
+// fetched concurrently instead of one round-trip at a time — this runs
+// against the whole table, so it can span many pages on a large instance,
+// and this cron has only Vercel's 60s serverless function budget to work with.
 const GC_PAGE_SIZE = 1000;
 const fetchAllReferencedPaths = async () => {
-  const paths = [];
-  let from = 0;
-  while (true) {
-    // .order('id') makes page boundaries stable — without it, Postgres/PostgREST
-    // gives no ordering guarantee across separate .range() requests, and a
-    // concurrent insert/update on this table between pages could shift a row
-    // across the boundary, causing a live invoice's attachment_path to be
-    // skipped from this page and never appear in `paths` — exactly the
-    // false-orphan data-loss class this pagination was added to prevent.
-    const { data, error } = await supabase
-      .from('invoices')
-      .select('attachment_path')
-      .not('attachment_path', 'is', null)
-      .order('id')
-      .range(from, from + GC_PAGE_SIZE - 1);
-    if (error) throw error;
-    paths.push(...(data || []).map(r => r.attachment_path));
-    if (!data || data.length < GC_PAGE_SIZE) break;
-    from += GC_PAGE_SIZE;
+  // .order('id') makes page boundaries stable — without it, Postgres/PostgREST
+  // gives no ordering guarantee across separate .range() requests, and a
+  // concurrent insert/update on this table between pages could shift a row
+  // across the boundary, causing a live invoice's attachment_path to be
+  // skipped from this page and never appear in `paths` — exactly the
+  // false-orphan data-loss class this pagination was added to prevent.
+  const query = () => supabase
+    .from('invoices')
+    .select('attachment_path', { count: 'exact' })
+    .not('attachment_path', 'is', null)
+    .order('id');
+
+  const first = await query().range(0, GC_PAGE_SIZE - 1);
+  if (first.error) throw first.error;
+  const paths = (first.data || []).map(r => r.attachment_path);
+
+  const total = first.count ?? paths.length;
+  const remainingPages = Math.max(0, Math.ceil(total / GC_PAGE_SIZE) - 1);
+  if (remainingPages > 0) {
+    const pages = await Promise.all(
+      Array.from({ length: remainingPages }, (_, i) => {
+        const from = (i + 1) * GC_PAGE_SIZE;
+        return query().range(from, from + GC_PAGE_SIZE - 1);
+      })
+    );
+    for (const page of pages) {
+      if (page.error) throw page.error;
+      paths.push(...(page.data || []).map(r => r.attachment_path));
+    }
   }
   return paths;
 };

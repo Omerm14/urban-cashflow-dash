@@ -24,7 +24,7 @@ const paginatedInvoicesMock = allRows => ({
       select: () => builder,
       not: () => builder,
       order: () => builder,
-      range: (from, to) => Promise.resolve({ data: allRows.slice(from, to + 1), error: null }),
+      range: (from, to) => Promise.resolve({ data: allRows.slice(from, to + 1), error: null, count: allRows.length }),
     };
     return builder;
   },
@@ -66,6 +66,39 @@ describe('fetchAllReferencedPaths (CASH-22: paginate past the 1000-row PostgREST
     const { fetchAllReferencedPaths } = freshGc(failingSupabase, { activeBackend: () => 'supabase' });
 
     await expect(fetchAllReferencedPaths()).rejects.toThrow('connection reset');
+  });
+
+  it('fetches pages beyond the first concurrently instead of one at a time', async () => {
+    const totalRows = 2500; // 3 pages: [0,999] [1000,1999] [2000,2499]
+    const events = [];
+    const client = {
+      from: () => {
+        const builder = {
+          select: () => builder,
+          not: () => builder,
+          order: () => builder,
+          range: (from, to) => {
+            events.push(`issue:${from}`);
+            return new Promise(resolve => {
+              setTimeout(() => {
+                events.push(`resolve:${from}`);
+                const end = Math.min(to, totalRows - 1);
+                const data = Array.from({ length: Math.max(0, end - from + 1) }, (_, i) => ({ attachment_path: `user/${from + i}.pdf` }));
+                resolve({ data, error: null, count: totalRows });
+              }, 5);
+            });
+          },
+        };
+        return builder;
+      },
+    };
+    const { fetchAllReferencedPaths } = freshGc(client, { activeBackend: () => 'supabase' });
+
+    const paths = await fetchAllReferencedPaths();
+
+    expect(paths).toHaveLength(totalRows);
+    expect(events.indexOf('issue:2000')).toBeLessThan(events.indexOf('resolve:1000'));
+    expect(events.indexOf('issue:1000')).toBeLessThan(events.indexOf('resolve:2000'));
   });
 });
 
