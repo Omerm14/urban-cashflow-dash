@@ -165,15 +165,27 @@ export const getAmountAnomaly = (invoice, allInvoices) => {
 const normSup = s => s?.toLowerCase().replace(/[.,\s]+$/, '').trim() || '';
 const norm    = s => s?.normalize('NFC').toLowerCase().trim().replace(/[״"""]/g, '"') ?? '';
 
+// Groups by normalized supplier first so only invoices that could possibly
+// match each other are ever compared — a duplicate always requires the same
+// supplier, so this is the same result as comparing every pair, just without
+// the O(n²) cost of cross-supplier comparisons that can never match.
 export const findDuplicates = invoices => {
   const dupeIds = new Set();
-  for (let i = 0; i < invoices.length; i++) {
-    for (let j = i + 1; j < invoices.length; j++) {
-      const a = invoices[i], b = invoices[j];
-      const sameSup    = normSup(a.supplier) === normSup(b.supplier);
-      const exactMatch = sameSup && a.invoiceNo && b.invoiceNo && a.invoiceNo.trim() === b.invoiceNo.trim();
-      const fuzzyMatch = sameSup && Number(a.amount) === Number(b.amount) && a.invoiceDate === b.invoiceDate;
-      if (exactMatch || fuzzyMatch) { dupeIds.add(a.id); dupeIds.add(b.id); }
+  const bySupplier = new Map();
+  for (const inv of invoices) {
+    const key = normSup(inv.supplier);
+    if (!bySupplier.has(key)) bySupplier.set(key, []);
+    bySupplier.get(key).push(inv);
+  }
+
+  for (const group of bySupplier.values()) {
+    for (let i = 0; i < group.length; i++) {
+      for (let j = i + 1; j < group.length; j++) {
+        const a = group[i], b = group[j];
+        const exactMatch = a.invoiceNo && b.invoiceNo && a.invoiceNo.trim() === b.invoiceNo.trim();
+        const fuzzyMatch = Number(a.amount) === Number(b.amount) && a.invoiceDate === b.invoiceDate;
+        if (exactMatch || fuzzyMatch) { dupeIds.add(a.id); dupeIds.add(b.id); }
+      }
     }
   }
   return dupeIds;
