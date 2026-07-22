@@ -6,9 +6,11 @@ import { fetchAllRows } from '../src/utils/fetchAllRows.js';
 // results at 1000 rows — an account past that had its oldest invoices vanish
 // from the entire dashboard (KPIs, payment schedule, projections, Invoices
 // list). fetchAllRows() paginates via .range() so every row is returned
-// regardless of table size.
+// regardless of table size. Pages beyond the first are fetched concurrently
+// (using the first page's exact count) rather than one at a time, so large
+// accounts don't pay N serial round-trips of latency.
 
-const mockClient = allRows => ({
+const mockClient = (allRows, { onRange } = {}) => ({
   from: () => {
     const state = { filters: {} };
     const builder = {
@@ -16,10 +18,11 @@ const mockClient = allRows => ({
       eq: (col, val) => { state.filters[col] = val; return builder; },
       order: () => builder,
       range: (from, to) => {
+        onRange?.(from, to);
         const matched = allRows.filter(r =>
           Object.entries(state.filters).every(([k, v]) => r[k] === v)
         );
-        return Promise.resolve({ data: matched.slice(from, to + 1), error: null });
+        return Promise.resolve({ data: matched.slice(from, to + 1), error: null, count: matched.length });
       },
     };
     return builder;
@@ -68,5 +71,41 @@ describe('fetchAllRows (CASH-48: paginate past the 1000-row PostgREST cap)', () 
 
     expect(data).toBeNull();
     expect(error.message).toBe('connection reset');
+  });
+
+  it('fetches pages beyond the first concurrently instead of one at a time', async () => {
+    const totalRows = 2500; // 3 pages: [0,999] [1000,1999] [2000,2499]
+    const events = [];
+    const client = {
+      from: () => {
+        const builder = {
+          select: () => builder,
+          eq: () => builder,
+          order: () => builder,
+          range: (from, to) => {
+            events.push(`issue:${from}`);
+            return new Promise(resolve => {
+              setTimeout(() => {
+                events.push(`resolve:${from}`);
+                const end = Math.min(to, totalRows - 1);
+                const data = Array.from({ length: Math.max(0, end - from + 1) }, (_, i) => ({ id: from + i }));
+                resolve({ data, error: null, count: totalRows });
+              }, 5);
+            });
+          },
+        };
+        return builder;
+      },
+    };
+
+    const { data, error } = await fetchAllRows(client, 'invoices', {});
+
+    expect(error).toBeNull();
+    expect(data).toHaveLength(totalRows);
+    // Pages 2 (from=1000) and 3 (from=2000) must both be in flight before
+    // either resolves — proves they were fired together (Promise.all), not
+    // awaited one after another.
+    expect(events.indexOf('issue:2000')).toBeLessThan(events.indexOf('resolve:1000'));
+    expect(events.indexOf('issue:1000')).toBeLessThan(events.indexOf('resolve:2000'));
   });
 });

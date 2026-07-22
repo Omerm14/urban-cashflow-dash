@@ -26,7 +26,7 @@ const buildInvoicesMock = ({ onEq = () => {}, byInvoiceNo = {}, byAmountDate = {
     select: () => builder,
     eq: (col, val) => { state.filters[col] = val; onEq(col, val); return builder; },
     order: () => builder,
-    range: (from, to) => Promise.resolve({ data: allRows.slice(from, to + 1), error: null }),
+    range: (from, to) => Promise.resolve({ data: allRows.slice(from, to + 1), error: null, count: allRows.length }),
     then: resolve => {
       if (state.filters.invoice_no !== undefined) {
         return resolve({ data: byInvoiceNo[state.filters.invoice_no] || [], error: null });
@@ -152,5 +152,38 @@ describe('getSeenFilenames (CASH-8: paginates past the 1000-row PostgREST cap)',
     const seen = await getSeenFilenames('user-1');
 
     expect(seen.has('invoice.pdf')).toBe(true);
+  });
+
+  it('fetches pages beyond the first concurrently instead of one at a time', async () => {
+    const totalRows = 2500; // 3 pages: [0,999] [1000,1999] [2000,2499]
+    const events = [];
+    const client = {
+      from: () => {
+        const builder = {
+          select: () => builder,
+          eq: () => builder,
+          order: () => builder,
+          range: (from, to) => {
+            events.push(`issue:${from}`);
+            return new Promise(resolve => {
+              setTimeout(() => {
+                events.push(`resolve:${from}`);
+                const end = Math.min(to, totalRows - 1);
+                const data = Array.from({ length: Math.max(0, end - from + 1) }, (_, i) => ({ source_file: `file-${from + i}.pdf` }));
+                resolve({ data, error: null, count: totalRows });
+              }, 5);
+            });
+          },
+        };
+        return builder;
+      },
+    };
+    const { getSeenFilenames } = freshSyncProcessor(client);
+
+    const seen = await getSeenFilenames('user-1');
+
+    expect(seen.size).toBe(totalRows);
+    expect(events.indexOf('issue:2000')).toBeLessThan(events.indexOf('resolve:1000'));
+    expect(events.indexOf('issue:1000')).toBeLessThan(events.indexOf('resolve:2000'));
   });
 });

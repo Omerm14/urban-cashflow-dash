@@ -306,26 +306,43 @@ exports.findDuplicateCandidates = findDuplicateCandidates;
 // Used only as a cheap pre-filter to skip re-downloading/re-OCRing files that
 // were already imported — findDuplicateCandidates() above is the real dedup
 // gate and is unaffected by anything this pre-filter misses.
+//
+// The first page also requests an exact count, so any further pages are
+// fetched concurrently instead of one round-trip at a time — this runs on
+// every Drive/Gmail sync, so serial pagination was real added latency on a
+// hot path for any user with more than 1000 invoices.
 const SEEN_FILES_PAGE_SIZE = 1000;
 const getSeenFilenames = async userId => {
   const baseFilename = s => s?.replace(/\s*\(page \d+\)$/i, '').trim().toLowerCase() || '';
   const seen = new Set();
-  let from = 0;
-  while (true) {
-    // .order('id') keeps page boundaries stable across separate .range() calls —
-    // without it Postgres/PostgREST gives no ordering guarantee, and a
-    // concurrent insert for this user (e.g. a WhatsApp webhook landing while
-    // this Drive/Gmail sync runs) could shift a row across a page boundary.
-    const { data, error } = await supabase
-      .from('invoices')
-      .select('source_file')
-      .eq('user_id', userId)
-      .order('id')
-      .range(from, from + SEEN_FILES_PAGE_SIZE - 1);
-    if (error) { console.error('[sync] seen-filenames fetch failed:', error.message); break; }
-    (data || []).forEach(row => { const b = baseFilename(row.source_file); if (b) seen.add(b); });
-    if (!data || data.length < SEEN_FILES_PAGE_SIZE) break;
-    from += SEEN_FILES_PAGE_SIZE;
+
+  // .order('id') keeps page boundaries stable across separate .range() calls —
+  // without it Postgres/PostgREST gives no ordering guarantee, and a
+  // concurrent insert for this user (e.g. a WhatsApp webhook landing while
+  // this Drive/Gmail sync runs) could shift a row across a page boundary.
+  const query = () => supabase
+    .from('invoices')
+    .select('source_file', { count: 'exact' })
+    .eq('user_id', userId)
+    .order('id');
+
+  const first = await query().range(0, SEEN_FILES_PAGE_SIZE - 1);
+  if (first.error) { console.error('[sync] seen-filenames fetch failed:', first.error.message); return seen; }
+  (first.data || []).forEach(row => { const b = baseFilename(row.source_file); if (b) seen.add(b); });
+
+  const total = first.count ?? (first.data || []).length;
+  const remainingPages = Math.max(0, Math.ceil(total / SEEN_FILES_PAGE_SIZE) - 1);
+  if (remainingPages > 0) {
+    const pages = await Promise.all(
+      Array.from({ length: remainingPages }, (_, i) => {
+        const from = (i + 1) * SEEN_FILES_PAGE_SIZE;
+        return query().range(from, from + SEEN_FILES_PAGE_SIZE - 1);
+      })
+    );
+    for (const page of pages) {
+      if (page.error) { console.error('[sync] seen-filenames fetch failed:', page.error.message); continue; }
+      (page.data || []).forEach(row => { const b = baseFilename(row.source_file); if (b) seen.add(b); });
+    }
   }
   return seen;
 };
