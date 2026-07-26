@@ -167,6 +167,17 @@ exports.uploadAttachment = async (req, res) => {
       file.on('end', () => { if (!sizeExceeded) fileBuffer = Buffer.concat(chunks); });
     });
 
+    // busboy is an EventEmitter — a malformed multipart body emits 'error',
+    // and a Node EventEmitter 'error' with zero listeners throws
+    // synchronously and crashes the whole process (not caught by the outer
+    // try/catch, since that only wraps synchronous setup, not async event
+    // emission). Guard against double-responding in case 'error' fires after
+    // 'finish' already sent a response.
+    bb.on('error', (err) => {
+      console.error('[invoices] uploadAttachment error:', err.message);
+      if (!res.headersSent) res.status(400).json({ error: 'Malformed upload' });
+    });
+
     bb.on('finish', async () => {
       try {
         if (sizeExceeded) return res.status(413).json({ error: 'File must be under 20MB' });
