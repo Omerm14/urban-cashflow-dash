@@ -170,13 +170,16 @@ async function handleWebhookEvent(event) {
       if (!userId) break;
 
       const plan = planFromStripeSub(sub);
-      await upsertSubscription(userId, {
-        plan,
+      const fields = {
         status:                 stripeStatusToLocal(sub.status),
         stripe_subscription_id: sub.id,
         current_period_start:   new Date(sub.current_period_start * 1000).toISOString(),
         current_period_end:     new Date(sub.current_period_end   * 1000).toISOString(),
-      });
+      };
+      // Omitting `plan` when unrecognized leaves the existing column value in
+      // place — upsert only overwrites the columns present in the payload.
+      if (plan) fields.plan = plan;
+      await upsertSubscription(userId, fields);
       break;
     }
 
@@ -228,7 +231,12 @@ function planFromStripeSub(stripeSub) {
   if (priceId === process.env.STRIPE_PRICE_PRO)     return 'pro';
   if (priceId === process.env.STRIPE_PRICE_STARTER) return 'starter';
   if (priceId === process.env.STRIPE_PRICE_BASIC)   return 'basic';
-  return 'starter';
+  // Unset/mistyped env var, or a price archived/replaced in the Stripe
+  // dashboard: return null rather than defaulting to 'starter' so the caller
+  // leaves the subscriber's existing plan untouched instead of silently
+  // downgrading them.
+  console.error(`[stripe] unrecognized price ID "${priceId}" on subscription ${stripeSub.id} — leaving existing plan unchanged`);
+  return null;
 }
 
 function stripeStatusToLocal(stripeStatus) {
@@ -237,3 +245,5 @@ function stripeStatusToLocal(stripeStatus) {
 }
 
 exports.router = router;
+exports.handleWebhookEvent = handleWebhookEvent;
+exports.planFromStripeSub = planFromStripeSub;
