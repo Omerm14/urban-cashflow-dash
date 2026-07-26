@@ -68,9 +68,14 @@ describe('runGc end-to-end (CASH-47: logos survive a live, non-dry-run pass)', (
         return builder;
       },
     };
+    const oldEnough = Date.now() - 2 * 60 * 60 * 1000; // outside the CASH-118 1hr grace period
     const storageMock = {
       activeBackend: () => 'supabase',
-      listAllKeys: async () => ['user1/inv-1.pdf', 'logos/user1/1700000000000.png', 'user1/abandoned.pdf'],
+      listAllKeys: async () => [
+        { key: 'user1/inv-1.pdf', lastModified: oldEnough },
+        { key: 'logos/user1/1700000000000.png', lastModified: oldEnough },
+        { key: 'user1/abandoned.pdf', lastModified: oldEnough },
+      ],
       deleteAttachment: async key => { deleted.push(key); },
     };
     const { runGc } = freshGc(supabaseMock, storageMock);
