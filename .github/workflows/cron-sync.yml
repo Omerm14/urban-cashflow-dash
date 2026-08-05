@@ -9,21 +9,22 @@ name: Auto-sync cron
 # Requires a repository secret CRON_SECRET matching the server's
 # CRON_SECRET env var (Settings -> Secrets and variables -> Actions).
 #
-# SCHEDULE RE-PAUSED 2026-08-05: a manual workflow_dispatch test after
-# re-enabling the schedule (see git history) still hit a 504
-# FUNCTION_INVOCATION_TIMEOUT with only 4 due integrations. Root cause:
-# syncGmail (server/services/syncProcessor.js) has no per-run processing cap
-# or sync_jobs-style chunking like syncGoogleDrive does — it processes every
-# new message sequentially with no bound, so one Gmail integration with more
-# than a handful of new messages can alone exceed Vercel's 60s limit. The
-# concurrency cap added for the 2026-07-19 incident doesn't help here since
-# it bounds how many integrations run in parallel, not how long any one
-# integration's sync can take. Re-enable the `schedule:` trigger below only
-# after Gmail sync gets a bounded per-run cap (matching Drive's pattern).
+# Schedule re-enabled 2026-08-05 after fixing the actual root cause of the
+# repeated 504 FUNCTION_INVOCATION_TIMEOUTs: processFile() was re-uploading
+# the full source file to storage once PER PAGE of a multi-page PDF (17x
+# redundant uploads for a 17-page file), which alone could exceed Vercel's
+# 60s limit and left a stuck sync_jobs row retrying the same file forever
+# (server/services/syncProcessor.js — see PR #150). Along the way this also
+# picked up: a per-integration concurrency cap in cron.js (#144), a signaled
+# (not silent) block when a prior Drive sync_jobs run is still active (#146),
+# and the same bounded-processing + sync_jobs chunking pattern extended to
+# Gmail, which previously had no cap at all (#148). Verified via a manual
+# workflow_dispatch run completing in ~13s (HTTP 200) after #150 merged,
+# down from the ~60s+ timeouts seen before.
 
 on:
-  # schedule:
-  #   - cron: '0 * * * *'
+  schedule:
+    - cron: '0 * * * *'
   workflow_dispatch: {} # allows a manual run from the Actions tab, for testing
 
 jobs:
