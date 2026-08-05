@@ -157,6 +157,23 @@ const processFile = async (buffer, filename, mediaType, userId, suppliers, integ
   const results = [];
   let skipped = 0;
 
+  // Upload the source file once, keyed by its content hash — every page of a
+  // multi-page PDF shares this same physical object. Previously this ran once
+  // PER PAGE inside the loop below (identical bytes re-uploaded N times for an
+  // N-page file), which was slow enough on large scanned batches to blow past
+  // Vercel's 60s function limit on its own — confirmed via a stuck sync_jobs
+  // row retrying the same 17-page PDF from scratch on every timeout.
+  const ext = filename.split('.').pop().toLowerCase() || 'bin';
+  let attachment = null; // { storedKey, backend } | null on upload failure
+  try {
+    const { key: storedKey, backend } = await storage.putAttachment({
+      key: `${userId}/${fileHash}.${ext}`, body: buffer, contentType: mediaType,
+    });
+    attachment = { storedKey, backend };
+  } catch (storageErr) {
+    console.error(`[sync] storage upload failed for ${filename}:`, storageErr.message);
+  }
+
   for (const [i, extracted] of extractedList.entries()) {
     const pageLabel = extractedList.length > 1 ? `${filename} (page ${i + 1})` : filename;
 
@@ -226,24 +243,21 @@ const processFile = async (buffer, filename, mediaType, userId, suppliers, integ
       continue;
     }
 
-    // Store the original file (verbatim — no compression) in the active backend.
-    try {
-      const ext  = filename.split('.').pop().toLowerCase() || 'bin';
-      const key  = `${userId}/${data.id}.${ext}`;
-      const { key: storedKey, backend } = await storage.putAttachment({ key, body: buffer, contentType: mediaType });
+    // Point this row at the file-level upload done once above (verbatim — no
+    // compression). Every page of the same source file shares that object.
+    if (attachment) {
       await supabase.from('invoices')
-        .update({ attachment_path: storedKey, attachment_backend: backend, attachment_status: 'present' })
+        .update({ attachment_path: attachment.storedKey, attachment_backend: attachment.backend, attachment_status: 'present' })
         .eq('id', data.id);
-      data.attachment_path    = storedKey;
-      data.attachment_backend = backend;
+      data.attachment_path    = attachment.storedKey;
+      data.attachment_backend = attachment.backend;
       data.attachment_status  = 'present';
-    } catch (storageErr) {
+    } else {
       // Surface the failure instead of swallowing it — the row is openable-less
       // and flagged 'missing' so it can be retried by the repair tooling.
-      console.error(`[sync] storage upload failed for ${pageLabel}:`, storageErr.message);
       await supabase.from('invoices').update({ attachment_status: 'missing' }).eq('id', data.id);
       data.attachment_status = 'missing';
-      logSyncEvent(integrationId, userId, 'attachment_failed', { source_file: pageLabel, file_hash: fileHash, invoice_id: data.id, error_message: storageErr.message });
+      logSyncEvent(integrationId, userId, 'attachment_failed', { source_file: pageLabel, file_hash: fileHash, invoice_id: data.id, error_message: 'storage upload failed for source file' });
     }
 
     logSyncEvent(integrationId, userId, 'saved', { source_file: pageLabel, file_hash: fileHash, invoice_id: data.id });
@@ -252,6 +266,7 @@ const processFile = async (buffer, filename, mediaType, userId, suppliers, integ
 
   return { saved: results, skipped };
 };
+exports.processFile = processFile;
 
 // ─── Shared DB helpers ───────────────────────────────────────────────────────
 
