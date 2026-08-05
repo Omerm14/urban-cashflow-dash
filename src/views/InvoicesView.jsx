@@ -177,17 +177,18 @@ function GroupedView({ invoices, allInvoices, selectedMonth, onMonthChange, sele
         <button onClick={() => setWindowAnchor(prev => shiftMonthYM(prev, -1))} aria-label={t("inv_month_prev")} style={{ display: "flex", alignItems: "center", justifyContent: "center", width: 28, height: 28, flexShrink: 0, borderRadius: "50%", background: "transparent", border: `1px solid ${T.bdr}`, color: T.t2, cursor: "pointer" }}>
           <ChevronLeft size={14} aria-hidden="true" />
         </button>
-        <div style={{ display: "flex", gap: 6, flexWrap: "wrap", flex: 1 }}>
+        <div style={{ display: "flex", gap: 6, flexWrap: "nowrap", overflowX: "auto", flex: 1, minWidth: 0 }}>
           {(() => {
             const yms = [-3, -2, -1, 0, 1, 2].map(delta => shiftMonthYM(windowAnchor, delta));
             return yms.map(ym => {
               const active = ym === selectedMonth;
               const mInvoices = allInvoices.filter(i => i.dueDate?.startsWith(ym));
+              if (mInvoices.length === 0 && !active) return null;
               const mTotal = mInvoices.reduce((s, i) => s + Number(i.amount), 0);
               const [y, m] = ym.split("-").map(Number);
               const shortLabel = new Date(y, m - 1, 1).toLocaleDateString("en-US", { month: "short" }) + " '" + String(y).slice(2);
               return (
-                <button key={ym} onClick={() => onMonthChange(ym)} style={{ padding: "7px 16px", background: active ? T.accent : T.surf2, border: `1px solid ${active ? "transparent" : T.bdr}`, borderRadius: 24, fontFamily: SANS, fontSize: 13, fontWeight: active ? 700 : 500, color: active ? T.accentInk : T.t2, cursor: "pointer", whiteSpace: "nowrap" }}>
+                <button key={ym} onClick={() => onMonthChange(ym)} style={{ padding: "7px 16px", background: active ? T.accent : T.surf2, border: `1px solid ${active ? "transparent" : T.bdr}`, borderRadius: 24, fontFamily: SANS, fontSize: 13, fontWeight: active ? 700 : 500, color: active ? T.accentInk : T.t2, cursor: "pointer", whiteSpace: "nowrap", flexShrink: 0 }}>
                   {shortLabel}
                   {mTotal > 0 && <span className="num" style={{ opacity: active ? 0.75 : 0.7, fontWeight: 400, marginInlineStart: 4 }}>₪{Math.round(mTotal / 1000)}k</span>}
                 </button>
