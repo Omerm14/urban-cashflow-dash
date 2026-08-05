@@ -3,6 +3,12 @@ const sync     = require('../services/syncProcessor');
 const { assertInvoiceLimit } = require('../lib/plans');
 const BATCH_SIZE = 5;  // larger batch for cron (no timeout pressure)
 
+// Caps how many integrations sync concurrently per tick, so a large due-backlog
+// can't fan out unbounded API/OCR calls in one invocation and risk the 60s
+// serverless limit (suspected cause of the 2026-07-19 incident that paused
+// this cron's schedule). Overflow just waits for the next tick.
+const CRON_CONCURRENCY = 5;
+
 // GET /api/cron/sync
 // Not scheduled via vercel.json's `crons` (Vercel's Hobby plan caps cron
 // frequency at once/day, too infrequent for auto-sync) — triggered hourly by
@@ -40,7 +46,7 @@ exports.runSync = async (req, res) => {
 
   console.log(`[cron] ${due.length} integration(s) due for sync`);
 
-  const results = await Promise.allSettled(due.map(async integration => {
+  const syncIntegration = async integration => {
     try {
       // Skip (not error) an integration whose owner is at/over their plan's
       // monthly invoice quota — auto_sync_enabled is never reset on plan
@@ -88,7 +94,13 @@ exports.runSync = async (req, res) => {
       }).eq('id', integration.id);
       throw err;
     }
-  }));
+  };
+
+  const results = [];
+  for (let i = 0; i < due.length; i += CRON_CONCURRENCY) {
+    const chunk = due.slice(i, i + CRON_CONCURRENCY);
+    results.push(...await Promise.allSettled(chunk.map(syncIntegration)));
+  }
 
   const succeeded = results.filter(r => r.status === 'fulfilled').map(r => r.value);
   const failed    = results.filter(r => r.status === 'rejected').length;
