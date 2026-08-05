@@ -479,7 +479,7 @@ exports.syncGoogleDrive = async (integration, userId) => {
     .maybeSingle();
   if (activeJob) {
     console.log(`[sync:drive] sync_jobs ${activeJob.id} still in progress for integration ${integration.id}; skipping this run`);
-    return { added: 0, skipped: 0, filesFound: 0, errors: 0 };
+    return { added: 0, skipped: 0, filesFound: 0, errors: 0, blocked: 'active_job', jobId: activeJob.id };
   }
 
   const auth  = makeOAuth2({ ...integration.credentials, _userId: userId, _type: 'google_drive' });
