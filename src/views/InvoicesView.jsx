@@ -223,6 +223,7 @@ function GroupedView({ invoices, allInvoices, selectedMonth, onMonthChange, sele
         </button>
         <div
           ref={scrollerRef}
+          className="scroll-hidden"
           onPointerDown={onPointerDown}
           onPointerMove={onPointerMove}
           onPointerUp={onPointerUp}
