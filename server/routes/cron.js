@@ -57,12 +57,13 @@ exports.runSync = async (req, res) => {
       // or on upgrade), not a broken integration.
       await assertInvoiceLimit(integration.user_id);
 
-      // All sync fns return { added, filesFound, errors }; Drive additionally
-      // returns `blocked` when a prior sync_jobs run for this integration is
-      // still active — resumed separately by the stale-job pickup below.
+      // All sync fns return { added, filesFound, errors }; Drive and Gmail
+      // additionally return `blocked` when a prior sync_jobs run for this
+      // integration is still active — resumed separately by the stale-job
+      // pickup below.
       let added = 0, blocked = null;
       if (integration.type === 'google_drive')      ({ added, blocked } = await sync.syncGoogleDrive(integration, integration.user_id));
-      else if (integration.type === 'gmail')         ({ added } = await sync.syncGmail(integration, integration.user_id));
+      else if (integration.type === 'gmail')         ({ added, blocked } = await sync.syncGmail(integration, integration.user_id));
       else if (integration.type === 'green_invoice') ({ added } = await sync.syncGreenInvoice(integration, integration.user_id));
 
       if (blocked) {
@@ -148,7 +149,9 @@ exports.runSync = async (req, res) => {
       if (!claimed) return; // lost the race — another caller already has it
 
       const batch = (claimed.file_list || []).slice(claimed.cursor, claimed.cursor + BATCH_SIZE);
-      const { results: invs, errors: batchErrors } = await sync.processGoogleDriveFileBatch(integration, claimed.user_id, batch);
+      const { results: invs, errors: batchErrors } = claimed.type === 'gmail'
+        ? await sync.processGmailMessageBatch(integration, claimed.user_id, batch)
+        : await sync.processGoogleDriveFileBatch(integration, claimed.user_id, batch);
 
       const newCursor = claimed.cursor + batch.length;
       const newAdded  = claimed.added  + invs.length;
