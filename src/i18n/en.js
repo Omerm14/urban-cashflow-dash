@@ -47,6 +47,8 @@ const en = {
   inv_add: "Add Invoice",
   inv_grouped: "Grouped",
   inv_table: "Table",
+  inv_month_prev: "Previous month",
+  inv_month_next: "Next month",
   inv_col_supplier: "Supplier",
   inv_col_invoice: "Invoice #",
   inv_col_issued: "Issued",

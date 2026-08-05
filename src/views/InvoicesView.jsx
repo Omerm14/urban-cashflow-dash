@@ -1,14 +1,20 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useT, useLayout, useLang } from "../contexts/AppContexts";
 import { FONT_UI as SANS, FONT_DISPLAY as DISPLAY, FONT_MONO as MONO, chartPalette } from "../theme";
-import { fmt, fmtMonth, fmtDate, nextMonthYM } from "../utils/format";
+import { fmt, fmtMonth, fmtDate, nextMonthYM, shiftMonthYM } from "../utils/format";
 import { downloadCSV } from "../utils/csv";
 import StatusPill from "../components/StatusPill";
 import TermsPicker from "../components/TermsPicker";
 import ListSkeleton from "../components/ListSkeleton";
 import {
   Calendar, Filter, X, Check, CheckCircle2, AlertTriangle, Zap, Paperclip, Pencil, Download, Clock,
+  ChevronLeft, ChevronRight,
 } from "lucide-react";
+
+const currentYM = () => {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+};
 
 const SOURCE_LABELS = { google_drive: { icon: "📁", label: "Drive" }, gmail: { icon: "✉️", label: "Gmail" }, whatsapp: { icon: "💬", label: "WA" }, green_invoice: { icon: "🧾", label: "GI" } };
 const isPaidStatus = (s) => s === "Paid" || s === "paid";
@@ -146,10 +152,12 @@ function SupplierGroup({ supplier, invoices, selectedIds, onToggleSelect, onTogg
   );
 }
 
-function GroupedView({ invoices, selectedMonth, onMonthChange, selectedIds, onToggleSelect, onToggleAll, onMarkPaid, onSelectAll, onAllPaid, onEditInvoice, onViewAttachment, anomalyMap, onDeleteInvoice, onAddSupplier, supplierColor, onFilterStatus }) {
+function GroupedView({ invoices, allInvoices, selectedMonth, onMonthChange, selectedIds, onToggleSelect, onToggleAll, onMarkPaid, onSelectAll, onAllPaid, onEditInvoice, onViewAttachment, anomalyMap, onDeleteInvoice, onAddSupplier, supplierColor, onFilterStatus }) {
   const T = useT();
   const { isMobile } = useLayout();
   const { t } = useLang();
+  const [windowAnchor, setWindowAnchor] = useState(() => selectedMonth || currentYM());
+  useEffect(() => { setWindowAnchor(selectedMonth); }, [selectedMonth]);
   const monthInvoices = invoices.filter(inv => inv.dueDate?.startsWith(selectedMonth));
   const unpaid = monthInvoices.filter(i => !isPaidStatus(i.status));
   const paidCount = monthInvoices.length - unpaid.length;
@@ -165,25 +173,31 @@ function GroupedView({ invoices, selectedMonth, onMonthChange, selectedIds, onTo
 
   return (
     <div>
-      <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 14 }}>
-        {(() => {
-          const yms = [...new Set(invoices.map(i => i.dueDate?.slice(0, 7)).filter(Boolean))].sort();
-          if (!yms.includes(selectedMonth)) yms.push(selectedMonth);
-          yms.sort();
-          return yms.slice(0, 8).map(ym => {
-            const active = ym === selectedMonth;
-            const mInvoices = invoices.filter(i => i.dueDate?.startsWith(ym));
-            const mTotal = mInvoices.reduce((s, i) => s + Number(i.amount), 0);
-            const [y, m] = ym.split("-").map(Number);
-            const shortLabel = new Date(y, m - 1, 1).toLocaleDateString("en-US", { month: "short" }) + " '" + String(y).slice(2);
-            return (
-              <button key={ym} onClick={() => onMonthChange(ym)} style={{ padding: "7px 16px", background: active ? T.accent : T.surf2, border: `1px solid ${active ? "transparent" : T.bdr}`, borderRadius: 24, fontFamily: SANS, fontSize: 13, fontWeight: active ? 700 : 500, color: active ? T.accentInk : T.t2, cursor: "pointer", whiteSpace: "nowrap" }}>
-                {shortLabel}
-                {mTotal > 0 && <span className="num" style={{ opacity: active ? 0.75 : 0.7, fontWeight: 400, marginInlineStart: 4 }}>₪{Math.round(mTotal / 1000)}k</span>}
-              </button>
-            );
-          });
-        })()}
+      <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 14 }}>
+        <button onClick={() => setWindowAnchor(prev => shiftMonthYM(prev, -1))} aria-label={t("inv_month_prev")} style={{ display: "flex", alignItems: "center", justifyContent: "center", width: 28, height: 28, flexShrink: 0, borderRadius: "50%", background: "transparent", border: `1px solid ${T.bdr}`, color: T.t2, cursor: "pointer" }}>
+          <ChevronLeft size={14} aria-hidden="true" />
+        </button>
+        <div style={{ display: "flex", gap: 6, flexWrap: "wrap", flex: 1 }}>
+          {(() => {
+            const yms = [-3, -2, -1, 0, 1, 2].map(delta => shiftMonthYM(windowAnchor, delta));
+            return yms.map(ym => {
+              const active = ym === selectedMonth;
+              const mInvoices = allInvoices.filter(i => i.dueDate?.startsWith(ym));
+              const mTotal = mInvoices.reduce((s, i) => s + Number(i.amount), 0);
+              const [y, m] = ym.split("-").map(Number);
+              const shortLabel = new Date(y, m - 1, 1).toLocaleDateString("en-US", { month: "short" }) + " '" + String(y).slice(2);
+              return (
+                <button key={ym} onClick={() => onMonthChange(ym)} style={{ padding: "7px 16px", background: active ? T.accent : T.surf2, border: `1px solid ${active ? "transparent" : T.bdr}`, borderRadius: 24, fontFamily: SANS, fontSize: 13, fontWeight: active ? 700 : 500, color: active ? T.accentInk : T.t2, cursor: "pointer", whiteSpace: "nowrap" }}>
+                  {shortLabel}
+                  {mTotal > 0 && <span className="num" style={{ opacity: active ? 0.75 : 0.7, fontWeight: 400, marginInlineStart: 4 }}>₪{Math.round(mTotal / 1000)}k</span>}
+                </button>
+              );
+            });
+          })()}
+        </div>
+        <button onClick={() => setWindowAnchor(prev => shiftMonthYM(prev, 1))} aria-label={t("inv_month_next")} style={{ display: "flex", alignItems: "center", justifyContent: "center", width: 28, height: 28, flexShrink: 0, borderRadius: "50%", background: "transparent", border: `1px solid ${T.bdr}`, color: T.t2, cursor: "pointer" }}>
+          <ChevronRight size={14} aria-hidden="true" />
+        </button>
       </div>
       {monthInvoices.length > 0 && (
         <>
@@ -385,7 +399,7 @@ export default function InvoicesView({ invoices, loading, selectedMonth, onMonth
       </div>
 
       {(isMobile || viewMode === "grouped") ? (
-        <GroupedView invoices={filteredInvoices} selectedMonth={selectedMonth} onMonthChange={onMonthChange}
+        <GroupedView invoices={filteredInvoices} allInvoices={invoices} selectedMonth={selectedMonth} onMonthChange={onMonthChange}
           selectedIds={selectedIds} onToggleSelect={toggleSelect} onToggleAll={toggleAll}
           onMarkPaid={onMarkPaid} onSelectAll={ids => setSelectedIds(new Set(ids))}
           onAllPaid={() => setShowCelebration(true)} onEditInvoice={onEditInvoice} onViewAttachment={onViewAttachment}
