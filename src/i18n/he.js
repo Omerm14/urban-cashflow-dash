@@ -103,6 +103,8 @@ const he = {
   inv_add: "הוסף חשבונית",
   inv_grouped: "לפי ספק",
   inv_table: "טבלה",
+  inv_month_prev: "חודש קודם",
+  inv_month_next: "חודש הבא",
   inv_col_supplier: "ספק",
   inv_col_invoice: "מס׳ חשבונית",
   inv_col_issued: "הופקה",

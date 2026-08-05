@@ -5,12 +5,15 @@ export const fmt = (n) =>
 
 export const MONTHS_SHORT = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
-// "2026-07" → "2026-08"
-export const nextMonthYM = (ym) => {
+// "2026-07" + delta → shifted "YYYY-MM" (delta may be negative)
+export const shiftMonthYM = (ym, delta) => {
   const [y, m] = ym.split("-").map(Number);
-  const d = new Date(y, m, 1);
+  const d = new Date(y, m - 1 + delta, 1);
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
 };
+
+// "2026-07" → "2026-08"
+export const nextMonthYM = (ym) => shiftMonthYM(ym, 1);
 
 // "2026-07" → "July 2026"
 export const fmtMonth = (ym) => {
