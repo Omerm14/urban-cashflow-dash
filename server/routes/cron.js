@@ -57,11 +57,21 @@ exports.runSync = async (req, res) => {
       // or on upgrade), not a broken integration.
       await assertInvoiceLimit(integration.user_id);
 
-      // All sync fns return { added, filesFound, errors }; destructure `added`.
-      let added = 0;
-      if (integration.type === 'google_drive')      ({ added } = await sync.syncGoogleDrive(integration, integration.user_id));
+      // All sync fns return { added, filesFound, errors }; Drive additionally
+      // returns `blocked` when a prior sync_jobs run for this integration is
+      // still active — resumed separately by the stale-job pickup below.
+      let added = 0, blocked = null;
+      if (integration.type === 'google_drive')      ({ added, blocked } = await sync.syncGoogleDrive(integration, integration.user_id));
       else if (integration.type === 'gmail')         ({ added } = await sync.syncGmail(integration, integration.user_id));
       else if (integration.type === 'green_invoice') ({ added } = await sync.syncGreenInvoice(integration, integration.user_id));
+
+      if (blocked) {
+        // Nothing ran this tick — leave last_sync/status untouched so the next
+        // tick's cutoff window doesn't silently skip past whatever the stuck
+        // job hasn't gotten to yet.
+        console.log(`[cron] ${integration.id} blocked: ${blocked}`);
+        return { id: integration.id, type: integration.type, added: 0, skipped: `blocked:${blocked}` };
+      }
 
       await supabase.from('integrations').update({
         last_sync:     new Date().toISOString(),
