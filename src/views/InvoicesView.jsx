@@ -16,6 +16,9 @@ const currentYM = () => {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
 };
 
+const PILLS_VISIBLE = 6;
+const PILL_WIDTH = 104;
+
 const SOURCE_LABELS = { google_drive: { icon: "📁", label: "Drive" }, gmail: { icon: "✉️", label: "Gmail" }, whatsapp: { icon: "💬", label: "WA" }, green_invoice: { icon: "🧾", label: "GI" } };
 const isPaidStatus = (s) => s === "Paid" || s === "paid";
 
@@ -224,7 +227,7 @@ function GroupedView({ invoices, allInvoices, selectedMonth, onMonthChange, sele
           onPointerMove={onPointerMove}
           onPointerUp={onPointerUp}
           onPointerLeave={onPointerUp}
-          style={{ display: "flex", gap: 6, flexWrap: "nowrap", overflowX: "auto", flex: 1, minWidth: 0, scrollBehavior: "smooth", scrollSnapType: "x proximity", cursor: "grab", touchAction: "pan-x" }}
+          style={{ display: "flex", gap: 6, flexWrap: "nowrap", overflowX: "auto", flex: "1 1 auto", maxWidth: PILLS_VISIBLE * (PILL_WIDTH + 6) - 6, minWidth: 0, scrollBehavior: "smooth", scrollSnapType: "x proximity", cursor: "grab", touchAction: "pan-x" }}
         >
           {monthPills.map(ym => {
             const active = ym === selectedMonth;
@@ -233,7 +236,7 @@ function GroupedView({ invoices, allInvoices, selectedMonth, onMonthChange, sele
             const [y, m] = ym.split("-").map(Number);
             const shortLabel = new Date(y, m - 1, 1).toLocaleDateString("en-US", { month: "short" }) + " '" + String(y).slice(2);
             return (
-              <button key={ym} data-ym={ym} onClick={() => onPillClick(ym)} style={{ padding: "7px 16px", background: active ? T.accent : T.surf2, border: `1px solid ${active ? "transparent" : T.bdr}`, borderRadius: 24, fontFamily: SANS, fontSize: 13, fontWeight: active ? 700 : 500, color: active ? T.accentInk : T.t2, cursor: "pointer", whiteSpace: "nowrap", flexShrink: 0, scrollSnapAlign: "start" }}>
+              <button key={ym} data-ym={ym} onClick={() => onPillClick(ym)} style={{ width: PILL_WIDTH, padding: "7px 8px", display: "flex", alignItems: "center", justifyContent: "center", background: active ? T.accent : T.surf2, border: `1px solid ${active ? "transparent" : T.bdr}`, borderRadius: 24, fontFamily: SANS, fontSize: 13, fontWeight: active ? 700 : 500, color: active ? T.accentInk : T.t2, cursor: "pointer", whiteSpace: "nowrap", overflow: "hidden", flexShrink: 0, scrollSnapAlign: "start" }}>
                 {shortLabel}
                 {mTotal > 0 && <span className="num" style={{ opacity: active ? 0.75 : 0.7, fontWeight: 400, marginInlineStart: 4 }}>₪{Math.round(mTotal / 1000)}k</span>}
               </button>
