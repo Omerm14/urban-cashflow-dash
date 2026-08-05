@@ -288,10 +288,11 @@ exports.resync = async (req, res) => {
     if (integration.type === 'gmail')              result = await sync.syncGmail(resetIntegration, req.user.id);
     else if (integration.type === 'green_invoice') result = await sync.syncGreenInvoice(resetIntegration, req.user.id);
 
-    // Cancelled partway through a from-scratch resync — leave last_sync null (already
-    // cleared above) so the next attempt still pulls the full history, not just from here.
+    // Cancelled partway through a from-scratch resync, or blocked by a prior
+    // sync_jobs run still in progress — leave last_sync null (already cleared
+    // above) so the next attempt still pulls the full history, not just from here.
     await supabase.from('integrations').update({
-      ...(result.cancelled ? {} : { last_sync: new Date().toISOString() }),
+      ...(result.cancelled || result.blocked ? {} : { last_sync: new Date().toISOString() }),
       sync_count:       (integration.sync_count || 0) + result.added,
       status:           'connected',
       error_message:    null,
@@ -555,9 +556,10 @@ exports.triggerSync = async (req, res) => {
 
     // On cancellation, don't advance last_sync — the loop stopped partway through, so the
     // next sync should re-scan from the same starting point rather than skip whatever it
-    // never reached (already-saved items are deduped on re-scan, so this is safe).
+    // never reached (already-saved items are deduped on re-scan, so this is safe). Same
+    // for `blocked` — a prior sync_jobs run is still resuming, nothing happened this call.
     await supabase.from('integrations').update({
-      ...(result.cancelled ? {} : { last_sync: new Date().toISOString() }),
+      ...(result.cancelled || result.blocked ? {} : { last_sync: new Date().toISOString() }),
       sync_count:       (integration.sync_count || 0) + result.added,
       status:           'connected',
       error_message:    null,
@@ -678,7 +680,9 @@ exports.processSyncJob = async (req, res) => {
 
   let batchRes = { results: [], skipped: 0, errors: 0 };
   try {
-    batchRes = await sync.processGoogleDriveFileBatch(integration, job.user_id, batch);
+    batchRes = job.type === 'gmail'
+      ? await sync.processGmailMessageBatch(integration, job.user_id, batch)
+      : await sync.processGoogleDriveFileBatch(integration, job.user_id, batch);
   } catch (err) {
     console.error('[sync-jobs] batch error:', err.message);
     batchRes.errors = batch.length;

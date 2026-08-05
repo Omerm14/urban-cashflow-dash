@@ -413,6 +413,7 @@ const DRIVE_PROCESS_PER_RUN = 50;   // matches the previous default cap; overflo
 
 const GMAIL_LIST_PAGE_SIZE = 200;
 const GMAIL_LIST_MAX_PAGES = 10;    // up to 2000 messages listed per run
+const GMAIL_PROCESS_PER_RUN = 50;   // mirrors DRIVE_PROCESS_PER_RUN; overflow hands off to sync_jobs
 
 // `truncated: true` means MAX_PAGES was exhausted while the API still had a
 // nextPageToken — a genuine ceiling hit (real backlog beyond what one run
@@ -579,7 +580,56 @@ exports.syncGoogleDrive = async (integration, userId) => {
 
 // ─── Gmail sync ──────────────────────────────────────────────────────────────
 
+const collectGmailAttachmentParts = payload => {
+  const result = [];
+  const walk = p => {
+    if (p.filename && (p.mimeType === 'application/pdf' || p.mimeType.startsWith('image/'))) result.push(p);
+    (p.parts || []).forEach(walk);
+  };
+  walk(payload || {});
+  return result;
+};
+
+// Fetches one Gmail message plus its attachments and runs them through the OCR
+// pipeline. Shared by syncGmail (live discovery) and processGmailMessageBatch
+// (sync_jobs resume) so both paths handle a message identically.
+const processGmailMessage = async (gmail, msg, userId, suppliers, integration) => {
+  const { data: message } = await gmail.users.messages.get({ userId: 'me', id: msg.id, format: 'full' });
+  const parts = collectGmailAttachmentParts(message.payload);
+  const saved = [];
+  let skipped = 0;
+  for (const part of parts) {
+    if (!part.body?.attachmentId) continue;
+    const { data: att } = await gmail.users.messages.attachments.get({
+      userId: 'me', messageId: msg.id, id: part.body.attachmentId,
+    });
+    const buffer = Buffer.from(att.data, 'base64url');
+    const { saved: partSaved, skipped: contentSkipped } = await processFile(
+      buffer, part.filename, part.mimeType, userId, suppliers,
+      integration.id, 'gmail', { message_id: msg.id, thread_id: message.threadId },
+    );
+    saved.push(...partSaved);
+    skipped += contentSkipped;
+  }
+  return { saved, skipped };
+};
+
 exports.syncGmail = async (integration, userId) => {
+  // A previous run may have handed off overflow messages to sync_jobs (see below);
+  // let that finish (picked up by cron's stale-job resume) before starting a new
+  // discovery — mirrors syncGoogleDrive's active-job guard.
+  const { data: activeJob } = await supabase
+    .from('sync_jobs')
+    .select('id')
+    .eq('integration_id', integration.id)
+    .eq('type', 'gmail')
+    .in('status', ['pending', 'running'])
+    .maybeSingle();
+  if (activeJob) {
+    console.log(`[sync:gmail] sync_jobs ${activeJob.id} still in progress for integration ${integration.id}; skipping this run`);
+    return { added: 0, skipped: 0, filesFound: 0, errors: 0, blocked: 'active_job', jobId: activeJob.id };
+  }
+
   const auth  = makeOAuth2({ ...integration.credentials, _userId: userId, _type: 'gmail' });
   const gmail = google.gmail({ version: 'v1', auth });
 
@@ -630,47 +680,78 @@ exports.syncGmail = async (integration, userId) => {
 
   let added = 0, skipped = skippedIds.length, errors = 0;
 
-  for (const msg of toProcess) {
+  // Bound synchronous processing per run to stay well under the 60s function
+  // limit; anything beyond that hands off to sync_jobs (same contract Drive
+  // already uses), resumed by cron's stale-job pickup.
+  const toProcessNow = toProcess.slice(0, GMAIL_PROCESS_PER_RUN);
+  const leftover      = toProcess.slice(GMAIL_PROCESS_PER_RUN);
+
+  const CONCURRENCY = 3;
+  for (let i = 0; i < toProcessNow.length; i += CONCURRENCY) {
     if (await isCancelRequested(integration.id, userId)) {
       return { added, skipped, filesFound: messages.length, errors, cancelled: true };
     }
-    try {
-      const { data: message } = await gmail.users.messages.get({
-        userId: 'me', id: msg.id, format: 'full',
-      });
-
-      const collectParts = payload => {
-        const result = [];
-        const walk = p => {
-          if (p.filename && (p.mimeType === 'application/pdf' || p.mimeType.startsWith('image/'))) result.push(p);
-          (p.parts || []).forEach(walk);
-        };
-        walk(payload || {});
-        return result;
-      };
-      const parts = collectParts(message.payload);
-
-      for (const part of parts) {
-        if (!part.body?.attachmentId) continue;
-        const { data: att } = await gmail.users.messages.attachments.get({
-          userId: 'me', messageId: msg.id, id: part.body.attachmentId,
-        });
-        const buffer = Buffer.from(att.data, 'base64url');
-        const { saved, skipped: contentSkipped } = await processFile(
-          buffer, part.filename, part.mimeType, userId, suppliers,
-          integration.id, 'gmail', { message_id: msg.id, thread_id: message.threadId },
-        );
-        added += saved.length;
-        skipped += contentSkipped;
+    const batch = toProcessNow.slice(i, i + CONCURRENCY);
+    const batchResults = await Promise.all(batch.map(async msg => {
+      try {
+        return await processGmailMessage(gmail, msg, userId, suppliers, integration);
+      } catch (err) {
+        errors++;
+        console.error(`[sync:gmail] msg ${msg.id}:`, err.message);
+        logSyncEvent(integration.id, userId, 'download_failed', { source_file: `msg:${msg.id}`, error_message: err.message });
+        return { saved: [], skipped: 0 };
       }
-    } catch (err) {
-      errors++;
-      console.error(`[sync:gmail] msg ${msg.id}:`, err.message);
-      logSyncEvent(integration.id, userId, 'download_failed', { source_file: `msg:${msg.id}`, error_message: err.message });
+    }));
+    for (const { saved, skipped: contentSkipped } of batchResults) {
+      added += saved.length;
+      skipped += contentSkipped;
     }
   }
 
+  if (leftover.length) {
+    const { error: jobErr } = await supabase.from('sync_jobs').insert({
+      integration_id: integration.id,
+      user_id:        userId,
+      type:           'gmail',
+      status:         'pending',
+      file_list:      leftover.map(m => ({ id: m.id })),
+      total_files:    leftover.length,
+    });
+    if (jobErr) console.error('[sync:gmail] failed to hand off leftover messages to sync_jobs:', jobErr.message);
+    else console.log(`[sync:gmail] ${leftover.length} message(s) handed off to sync_jobs for continuation`);
+  }
+
   return { added, skipped, filesFound: messages.length, errors };
+};
+
+// Resumes a chunked Gmail sync_jobs row — mirrors processGoogleDriveFileBatch's
+// contract ({results, skipped, errors}) so cron's stale-job resume can treat
+// both job types the same way beyond picking which batch fn to call.
+exports.processGmailMessageBatch = async (integration, userId, messages) => {
+  const auth  = makeOAuth2({ ...integration.credentials, _userId: userId, _type: 'gmail' });
+  const gmail = google.gmail({ version: 'v1', auth });
+  const suppliers = await getSuppliers(userId);
+
+  const results = [];
+  let errors = 0, skipped = 0;
+
+  const CONCURRENCY = 3;
+  for (let i = 0; i < messages.length; i += CONCURRENCY) {
+    const chunk = messages.slice(i, i + CONCURRENCY);
+    await Promise.all(chunk.map(async msg => {
+      try {
+        const { saved, skipped: contentSkipped } = await processGmailMessage(gmail, msg, userId, suppliers, integration);
+        results.push(...saved);
+        skipped += contentSkipped;
+      } catch (err) {
+        errors++;
+        console.error(`[sync:gmail:batch] msg ${msg.id}:`, err.message);
+        logSyncEvent(integration.id, userId, 'download_failed', { source_file: `msg:${msg.id}`, error_message: err.message });
+      }
+    }));
+  }
+
+  return { results, skipped, errors };
 };
 
 // ─── Green Invoice (חשבונית ירוקה) sync ─────────────────────────────────────
