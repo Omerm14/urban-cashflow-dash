@@ -9,15 +9,21 @@ name: Auto-sync cron
 # Requires a repository secret CRON_SECRET matching the server's
 # CRON_SECRET env var (Settings -> Secrets and variables -> Actions).
 #
-# Schedule re-enabled 2026-08-05: cron.js now caps how many integrations it
-# syncs concurrently per tick (server/routes/cron.js CRON_CONCURRENCY), which
-# addresses the leading suspect behind the 2026-07-19 timeout incident that
-# had paused this schedule. `workflow_dispatch` stays available for a manual
-# test/trigger outside the hourly schedule.
+# SCHEDULE RE-PAUSED 2026-08-05: a manual workflow_dispatch test after
+# re-enabling the schedule (see git history) still hit a 504
+# FUNCTION_INVOCATION_TIMEOUT with only 4 due integrations. Root cause:
+# syncGmail (server/services/syncProcessor.js) has no per-run processing cap
+# or sync_jobs-style chunking like syncGoogleDrive does — it processes every
+# new message sequentially with no bound, so one Gmail integration with more
+# than a handful of new messages can alone exceed Vercel's 60s limit. The
+# concurrency cap added for the 2026-07-19 incident doesn't help here since
+# it bounds how many integrations run in parallel, not how long any one
+# integration's sync can take. Re-enable the `schedule:` trigger below only
+# after Gmail sync gets a bounded per-run cap (matching Drive's pattern).
 
 on:
-  schedule:
-    - cron: '0 * * * *'
+  # schedule:
+  #   - cron: '0 * * * *'
   workflow_dispatch: {} # allows a manual run from the Actions tab, for testing
 
 jobs:
