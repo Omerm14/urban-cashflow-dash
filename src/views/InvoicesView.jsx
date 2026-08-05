@@ -181,25 +181,24 @@ function GroupedView({ invoices, allInvoices, selectedMonth, onMonthChange, sele
     const el = scrollerRef.current;
     if (!el) return;
     dragRef.current = { dragging: true, moved: false, startX: e.clientX, startScroll: el.scrollLeft };
-    el.setPointerCapture(e.pointerId);
     el.style.scrollBehavior = "auto";
     el.style.cursor = "grabbing";
-  };
-  const onPointerMove = (e) => {
-    const d = dragRef.current;
-    const el = scrollerRef.current;
-    if (!d.dragging || !el) return;
-    const dx = e.clientX - d.startX;
-    if (Math.abs(dx) > 4) d.moved = true;
-    el.scrollLeft = d.startScroll - dx;
-  };
-  const onPointerUp = (e) => {
-    const el = scrollerRef.current;
-    if (!el) return;
-    dragRef.current.dragging = false;
-    el.releasePointerCapture(e.pointerId);
-    el.style.scrollBehavior = "smooth";
-    el.style.cursor = "grab";
+    const handleMove = (ev) => {
+      const d = dragRef.current;
+      if (!d.dragging) return;
+      const dx = ev.clientX - d.startX;
+      if (Math.abs(dx) > 4) d.moved = true;
+      el.scrollLeft = d.startScroll - dx;
+    };
+    const handleUp = () => {
+      dragRef.current.dragging = false;
+      el.style.scrollBehavior = "smooth";
+      el.style.cursor = "grab";
+      document.removeEventListener("pointermove", handleMove);
+      document.removeEventListener("pointerup", handleUp);
+    };
+    document.addEventListener("pointermove", handleMove);
+    document.addEventListener("pointerup", handleUp);
   };
   const onPillClick = (ym) => { if (dragRef.current.moved) return; onMonthChange(ym); };
   const monthInvoices = invoices.filter(inv => inv.dueDate?.startsWith(selectedMonth));
@@ -225,9 +224,6 @@ function GroupedView({ invoices, allInvoices, selectedMonth, onMonthChange, sele
           ref={scrollerRef}
           className="scroll-hidden"
           onPointerDown={onPointerDown}
-          onPointerMove={onPointerMove}
-          onPointerUp={onPointerUp}
-          onPointerLeave={onPointerUp}
           style={{ display: "flex", gap: 6, flexWrap: "nowrap", overflowX: "auto", flex: "1 1 auto", maxWidth: PILLS_VISIBLE * (PILL_WIDTH + 6) - 6, minWidth: 0, scrollBehavior: "smooth", scrollSnapType: "x proximity", cursor: "grab", touchAction: "pan-x" }}
         >
           {monthPills.map(ym => {
