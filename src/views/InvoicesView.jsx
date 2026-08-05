@@ -156,8 +156,49 @@ function GroupedView({ invoices, allInvoices, selectedMonth, onMonthChange, sele
   const T = useT();
   const { isMobile } = useLayout();
   const { t } = useLang();
-  const [windowAnchor, setWindowAnchor] = useState(() => selectedMonth || currentYM());
-  useEffect(() => { setWindowAnchor(selectedMonth); }, [selectedMonth]);
+  const scrollerRef = useRef(null);
+  const dragRef = useRef({ dragging: false, moved: false, startX: 0, startScroll: 0 });
+  const monthPills = (() => {
+    const today = currentYM();
+    const defaultRange = [-3, -2, -1, 0, 1, 2].map(delta => shiftMonthYM(today, delta));
+    const withData = allInvoices.map(i => i.dueDate?.slice(0, 7)).filter(Boolean);
+    const yms = [...new Set([...defaultRange, ...withData, selectedMonth])].sort();
+    return yms.filter(ym => ym === selectedMonth || allInvoices.some(i => i.dueDate?.startsWith(ym)));
+  })();
+  useEffect(() => {
+    const el = scrollerRef.current?.querySelector(`[data-ym="${selectedMonth}"]`);
+    el?.scrollIntoView({ behavior: "smooth", inline: "center", block: "nearest" });
+  }, [selectedMonth]);
+  const scrollByPage = (dir) => {
+    const el = scrollerRef.current;
+    if (!el) return;
+    el.scrollBy({ left: dir * Math.max(el.clientWidth * 0.6, 120), behavior: "smooth" });
+  };
+  const onPointerDown = (e) => {
+    const el = scrollerRef.current;
+    if (!el) return;
+    dragRef.current = { dragging: true, moved: false, startX: e.clientX, startScroll: el.scrollLeft };
+    el.setPointerCapture(e.pointerId);
+    el.style.scrollBehavior = "auto";
+    el.style.cursor = "grabbing";
+  };
+  const onPointerMove = (e) => {
+    const d = dragRef.current;
+    const el = scrollerRef.current;
+    if (!d.dragging || !el) return;
+    const dx = e.clientX - d.startX;
+    if (Math.abs(dx) > 4) d.moved = true;
+    el.scrollLeft = d.startScroll - dx;
+  };
+  const onPointerUp = (e) => {
+    const el = scrollerRef.current;
+    if (!el) return;
+    dragRef.current.dragging = false;
+    el.releasePointerCapture(e.pointerId);
+    el.style.scrollBehavior = "smooth";
+    el.style.cursor = "grab";
+  };
+  const onPillClick = (ym) => { if (dragRef.current.moved) return; onMonthChange(ym); };
   const monthInvoices = invoices.filter(inv => inv.dueDate?.startsWith(selectedMonth));
   const unpaid = monthInvoices.filter(i => !isPaidStatus(i.status));
   const paidCount = monthInvoices.length - unpaid.length;
@@ -174,29 +215,32 @@ function GroupedView({ invoices, allInvoices, selectedMonth, onMonthChange, sele
   return (
     <div>
       <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 14 }}>
-        <button onClick={() => setWindowAnchor(prev => shiftMonthYM(prev, -1))} aria-label={t("inv_month_prev")} style={{ display: "flex", alignItems: "center", justifyContent: "center", width: 28, height: 28, flexShrink: 0, borderRadius: "50%", background: "transparent", border: `1px solid ${T.bdr}`, color: T.t2, cursor: "pointer" }}>
+        <button onClick={() => scrollByPage(-1)} aria-label={t("inv_month_prev")} style={{ display: "flex", alignItems: "center", justifyContent: "center", width: 28, height: 28, flexShrink: 0, borderRadius: "50%", background: "transparent", border: `1px solid ${T.bdr}`, color: T.t2, cursor: "pointer" }}>
           <ChevronLeft size={14} aria-hidden="true" />
         </button>
-        <div style={{ display: "flex", gap: 6, flexWrap: "nowrap", overflowX: "auto", flex: 1, minWidth: 0 }}>
-          {(() => {
-            const yms = [-3, -2, -1, 0, 1, 2].map(delta => shiftMonthYM(windowAnchor, delta));
-            return yms.map(ym => {
-              const active = ym === selectedMonth;
-              const mInvoices = allInvoices.filter(i => i.dueDate?.startsWith(ym));
-              if (mInvoices.length === 0 && !active) return null;
-              const mTotal = mInvoices.reduce((s, i) => s + Number(i.amount), 0);
-              const [y, m] = ym.split("-").map(Number);
-              const shortLabel = new Date(y, m - 1, 1).toLocaleDateString("en-US", { month: "short" }) + " '" + String(y).slice(2);
-              return (
-                <button key={ym} onClick={() => onMonthChange(ym)} style={{ padding: "7px 16px", background: active ? T.accent : T.surf2, border: `1px solid ${active ? "transparent" : T.bdr}`, borderRadius: 24, fontFamily: SANS, fontSize: 13, fontWeight: active ? 700 : 500, color: active ? T.accentInk : T.t2, cursor: "pointer", whiteSpace: "nowrap", flexShrink: 0 }}>
-                  {shortLabel}
-                  {mTotal > 0 && <span className="num" style={{ opacity: active ? 0.75 : 0.7, fontWeight: 400, marginInlineStart: 4 }}>₪{Math.round(mTotal / 1000)}k</span>}
-                </button>
-              );
-            });
-          })()}
+        <div
+          ref={scrollerRef}
+          onPointerDown={onPointerDown}
+          onPointerMove={onPointerMove}
+          onPointerUp={onPointerUp}
+          onPointerLeave={onPointerUp}
+          style={{ display: "flex", gap: 6, flexWrap: "nowrap", overflowX: "auto", flex: 1, minWidth: 0, scrollBehavior: "smooth", scrollSnapType: "x proximity", cursor: "grab", touchAction: "pan-x" }}
+        >
+          {monthPills.map(ym => {
+            const active = ym === selectedMonth;
+            const mInvoices = allInvoices.filter(i => i.dueDate?.startsWith(ym));
+            const mTotal = mInvoices.reduce((s, i) => s + Number(i.amount), 0);
+            const [y, m] = ym.split("-").map(Number);
+            const shortLabel = new Date(y, m - 1, 1).toLocaleDateString("en-US", { month: "short" }) + " '" + String(y).slice(2);
+            return (
+              <button key={ym} data-ym={ym} onClick={() => onPillClick(ym)} style={{ padding: "7px 16px", background: active ? T.accent : T.surf2, border: `1px solid ${active ? "transparent" : T.bdr}`, borderRadius: 24, fontFamily: SANS, fontSize: 13, fontWeight: active ? 700 : 500, color: active ? T.accentInk : T.t2, cursor: "pointer", whiteSpace: "nowrap", flexShrink: 0, scrollSnapAlign: "start" }}>
+                {shortLabel}
+                {mTotal > 0 && <span className="num" style={{ opacity: active ? 0.75 : 0.7, fontWeight: 400, marginInlineStart: 4 }}>₪{Math.round(mTotal / 1000)}k</span>}
+              </button>
+            );
+          })}
         </div>
-        <button onClick={() => setWindowAnchor(prev => shiftMonthYM(prev, 1))} aria-label={t("inv_month_next")} style={{ display: "flex", alignItems: "center", justifyContent: "center", width: 28, height: 28, flexShrink: 0, borderRadius: "50%", background: "transparent", border: `1px solid ${T.bdr}`, color: T.t2, cursor: "pointer" }}>
+        <button onClick={() => scrollByPage(1)} aria-label={t("inv_month_next")} style={{ display: "flex", alignItems: "center", justifyContent: "center", width: 28, height: 28, flexShrink: 0, borderRadius: "50%", background: "transparent", border: `1px solid ${T.bdr}`, color: T.t2, cursor: "pointer" }}>
           <ChevronRight size={14} aria-hidden="true" />
         </button>
       </div>
