@@ -1,9 +1,20 @@
 const express  = require('express');
-const Stripe   = require('stripe');
 const supabase = require('../lib/supabase');
 const { PLANS } = require('../lib/plans');
 
-const stripe = Stripe(process.env.STRIPE_SECRET_KEY || 'sk_test_placeholder');
+// Stripe SDK require + client construction both deferred to first real use —
+// api/index.js requires every route unconditionally at boot, so this file
+// loads on every cold start regardless of which route was actually hit;
+// deferring the SDK resolution here means only a request that actually
+// touches billing pays that cost, not every cold start.
+let stripeClient = null;
+const getStripe = () => {
+  if (!stripeClient) {
+    const Stripe = require('stripe');
+    stripeClient = Stripe(process.env.STRIPE_SECRET_KEY || 'sk_test_placeholder');
+  }
+  return stripeClient;
+};
 
 // `basic` is retired from sale but kept resolvable for existing Stripe
 // subscriptions still on it — never offered by the checkout UI anymore.
@@ -50,7 +61,7 @@ router.post('/checkout', async (req, res) => {
       sessionParams.customer_email = req.user.email;
     }
 
-    const session = await stripe.checkout.sessions.create(sessionParams);
+    const session = await getStripe().checkout.sessions.create(sessionParams);
 
     // Optimistically store customer_id so the next checkout reuses it
     if (!sub?.stripe_customer_id && session.customer) {
@@ -85,7 +96,7 @@ router.post('/portal', async (req, res) => {
     }
 
     const origin = process.env.FRONTEND_URL || 'http://localhost:5173';
-    const session = await stripe.billingPortal.sessions.create({
+    const session = await getStripe().billingPortal.sessions.create({
       customer:   sub.stripe_customer_id,
       return_url: `${origin}/app?view=settings`,
     });
@@ -117,7 +128,7 @@ exports.webhook = async (req, res) => {
 
   let event;
   try {
-    event = stripe.webhooks.constructEvent(
+    event = getStripe().webhooks.constructEvent(
       req.rawBody,
       req.headers['stripe-signature'],
       process.env.STRIPE_WEBHOOK_SECRET,
@@ -149,7 +160,7 @@ async function handleWebhookEvent(event) {
 
       // Fetch full subscription details from Stripe
       const stripeSub = session.subscription
-        ? await stripe.subscriptions.retrieve(session.subscription)
+        ? await getStripe().subscriptions.retrieve(session.subscription)
         : null;
 
       await upsertSubscription(userId, {

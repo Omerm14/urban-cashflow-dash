@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { useT, useLayout, useLang } from "../contexts/AppContexts";
 import { FONT_UI as SANS, FONT_DISPLAY as DISPLAY, FONT_MONO as MONO, chartPalette } from "../theme";
 import { fmt, fmtMonth, fmtDate, nextMonthYM, shiftMonthYM } from "../utils/format";
@@ -306,7 +306,7 @@ export default function InvoicesView({ invoices, loading, selectedMonth, onMonth
   const T = useT();
   const { isMobile, isTablet } = useLayout();
   const { t } = useLang();
-  const supplierList = [...new Set(invoices.map(i => i.supplier))];
+  const supplierList = useMemo(() => [...new Set(invoices.map(i => i.supplier))], [invoices]);
   const palette = chartPalette(T.isDark);
   const supplierColor = supplierColorProp || (name => palette[Math.max(supplierList.indexOf(name), 0) % palette.length]);
   const [viewMode, setViewMode] = useState("grouped");
@@ -331,12 +331,15 @@ export default function InvoicesView({ invoices, loading, selectedMonth, onMonth
   const toggleStatus = (s) => setFilterStatuses(prev => { const n = new Set(prev); n.has(s) ? n.delete(s) : n.add(s); return n; });
   const toggleSupplier = (s) => setFilterSuppliers(prev => { const n = new Set(prev); n.has(s) ? n.delete(s) : n.add(s); return n; });
   const activeFilters = filterStatuses.size + filterSuppliers.size;
-  const filteredInvoices = invoices.filter(inv => {
+  const filteredInvoices = useMemo(() => invoices.filter(inv => {
     if (filterStatuses.size > 0 && !filterStatuses.has(inv.status)) return false;
     if (filterSuppliers.size > 0 && !filterSuppliers.has(inv.supplier)) return false;
     return true;
-  });
-  const overdueThisMonth = invoices.filter(inv => inv.dueDate?.startsWith(selectedMonth) && (inv.status === "Overdue" || inv.status === "overdue"));
+  }), [invoices, filterStatuses, filterSuppliers]);
+  const overdueThisMonth = useMemo(
+    () => invoices.filter(inv => inv.dueDate?.startsWith(selectedMonth) && (inv.status === "Overdue" || inv.status === "overdue")),
+    [invoices, selectedMonth]
+  );
 
   useEffect(() => {
     if (preSelectAll) {

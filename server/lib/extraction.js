@@ -2,11 +2,22 @@
 // (routes/extract.js) and the integration sync path (services/syncProcessor.js)
 // call into here so the prompt, JSON parsing, and field rules never drift.
 
-const Anthropic      = require('@anthropic-ai/sdk');
 const supabase       = require('./supabase');
 const { jsonrepair } = require('jsonrepair');
 
-const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+// Anthropic SDK require + client construction both deferred to first real
+// use — api/index.js requires every route unconditionally at boot, so this
+// file loads on every cold start regardless of which route was actually hit;
+// deferring the SDK resolution here means only a request that actually
+// reaches callClaude() pays that cost, not every cold start.
+let client = null;
+const getClient = () => {
+  if (!client) {
+    const Anthropic = require('@anthropic-ai/sdk');
+    client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+  }
+  return client;
+};
 const MODEL  = 'claude-sonnet-4-6';
 
 // ─── Prompt fragments ────────────────────────────────────────────────────────
@@ -97,7 +108,7 @@ const callClaude = async ({ messages, maxTokens }) => {
   let lastErr;
   for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
     try {
-      return await client.messages.create({ model: MODEL, max_tokens: maxTokens, messages });
+      return await getClient().messages.create({ model: MODEL, max_tokens: maxTokens, messages });
     } catch (err) {
       const status = err.status || err.statusCode;
       const isRateLimited = status === 429;
