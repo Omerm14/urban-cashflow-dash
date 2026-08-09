@@ -79,6 +79,32 @@ const computeOrphans = (allKeys, referenced) =>
   allKeys.filter(k => !k.startsWith(LOGO_KEY_PREFIX) && !referenced.has(k));
 exports.computeOrphans = computeOrphans;
 
+// CASH-118: the manual upload flow writes the file to storage *before* the
+// invoice row is inserted (src/hooks/useUpload.js: resolveAttachmentSafe runs,
+// then addInvoice inserts the row). An orphan candidate is only a genuine
+// abandoned upload once it's older than a grace threshold — otherwise it may
+// just be mid-flight (a network hiccup, many concurrent uploads, or the user
+// closing the tab between the storage write and the DB insert), and deleting
+// it is permanent, irreversible data loss. An unknown last-modified time (a
+// backend/listing quirk) is treated the same as "too recent" — safer to skip
+// a genuine orphan for one more GC cycle than to delete a file we can't
+// verify the age of.
+const GC_GRACE_PERIOD_MS = 60 * 60 * 1000; // 1 hour
+const partitionByGrace = (orphanKeys, lastModifiedByKey, { now = Date.now(), graceMs = GC_GRACE_PERIOD_MS } = {}) => {
+  const toDelete = [];
+  const skippedGrace = [];
+  for (const key of orphanKeys) {
+    const lastModified = lastModifiedByKey.get(key);
+    if (lastModified == null || now - lastModified < graceMs) {
+      skippedGrace.push(key);
+    } else {
+      toDelete.push(key);
+    }
+  }
+  return { toDelete, skippedGrace };
+};
+exports.partitionByGrace = partitionByGrace;
+
 exports.runGc = async (req, res) => {
   if (!secretOk(req)) return res.status(401).json({ error: 'Unauthorized' });
   const dryRun = req.query.dryRun === '1' || req.query.dryRun === 'true';
@@ -94,22 +120,35 @@ exports.runGc = async (req, res) => {
     const referencedPaths = await fetchAllReferencedPaths();
     const referenced = new Set(referencedPaths);
 
-    const allKeys = await storage.listAllKeys();
+    const allEntries = await storage.listAllKeys();
+    const allKeys = allEntries.map(e => e.key);
+    const lastModifiedByKey = new Map(allEntries.map(e => [e.key, e.lastModified]));
+
     const orphans = computeOrphans(allKeys, referenced);
+    const { toDelete, skippedGrace } = partitionByGrace(orphans, lastModifiedByKey);
 
     if (!dryRun) {
       // Delete sequentially-ish in small concurrent groups; failures are logged,
       // not fatal — next run retries.
       const CHUNK = 20;
-      for (let i = 0; i < orphans.length; i += CHUNK) {
+      for (let i = 0; i < toDelete.length; i += CHUNK) {
         await Promise.allSettled(
-          orphans.slice(i, i + CHUNK).map(k => storage.deleteAttachment(k, backend)),
+          toDelete.slice(i, i + CHUNK).map(k => storage.deleteAttachment(k, backend)),
         );
       }
     }
 
-    console.log(`[gc] backend=${backend} total=${allKeys.length} referenced=${referenced.size} orphans=${orphans.length} dryRun=${dryRun}`);
-    res.json({ ok: true, backend, totalObjects: allKeys.length, referenced: referenced.size, orphans: orphans.length, deleted: dryRun ? 0 : orphans.length, dryRun });
+    console.log(`[gc] backend=${backend} total=${allKeys.length} referenced=${referenced.size} orphans=${orphans.length} skippedGrace=${skippedGrace.length} deleted=${dryRun ? 0 : toDelete.length} dryRun=${dryRun}`);
+    res.json({
+      ok: true,
+      backend,
+      totalObjects: allKeys.length,
+      referenced: referenced.size,
+      orphans: orphans.length,
+      skippedGrace: skippedGrace.length,
+      deleted: dryRun ? 0 : toDelete.length,
+      dryRun,
+    });
   } catch (err) {
     console.error('[gc] error:', err.message);
     res.status(500).json({ error: 'Internal server error' });

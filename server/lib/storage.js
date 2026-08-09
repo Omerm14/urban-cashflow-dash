@@ -104,26 +104,32 @@ exports.objectSize = async (key, backend) => {
   return null;
 };
 
-// List every object key in the active backend. Used by the orphan GC job.
+// List every object in the active backend as { key, lastModified } — the
+// timestamp comes from each backend's existing list/metadata response (R2's
+// `LastModified`, Supabase Storage's `updated_at`/`created_at`), no extra
+// round-trip. Used by the orphan GC job, including its grace-period check.
 exports.listAllKeys = async () => {
   const backend = activeBackend();
   if (backend === 'r2') {
     const { ListObjectsV2Command } = require('@aws-sdk/client-s3');
-    const keys = [];
+    const entries = [];
     let token;
     do {
       const out = await r2Client().send(new ListObjectsV2Command({
         Bucket: r2Bucket(), ContinuationToken: token,
       }));
-      (out.Contents || []).forEach(o => keys.push(o.Key));
+      (out.Contents || []).forEach(o => entries.push({
+        key: o.Key,
+        lastModified: o.LastModified ? new Date(o.LastModified).getTime() : null,
+      }));
       token = out.IsTruncated ? out.NextContinuationToken : undefined;
     } while (token);
-    return keys;
+    return entries;
   }
 
   // Supabase: objects are namespaced under per-user folders → list folders, then
   // each folder's objects (paginated).
-  const keys = [];
+  const entries = [];
   const pageSize = 1000;
   const listDir = async (prefix) => {
     let offset = 0;
@@ -134,15 +140,20 @@ exports.listAllKeys = async () => {
       if (!data || !data.length) break;
       for (const entry of data) {
         // A folder entry has no `id`; a file entry has one.
-        if (entry.id) keys.push(prefix ? `${prefix}/${entry.name}` : entry.name);
-        else await listDir(prefix ? `${prefix}/${entry.name}` : entry.name);
+        if (entry.id) {
+          const key = prefix ? `${prefix}/${entry.name}` : entry.name;
+          const stamp = entry.updated_at || entry.created_at;
+          entries.push({ key, lastModified: stamp ? new Date(stamp).getTime() : null });
+        } else {
+          await listDir(prefix ? `${prefix}/${entry.name}` : entry.name);
+        }
       }
       if (data.length < pageSize) break;
       offset += pageSize;
     }
   };
   await listDir('');
-  return keys;
+  return entries;
 };
 
 exports.activeBackend = activeBackend;

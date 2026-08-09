@@ -108,7 +108,9 @@ describe('runGc (CASH-22: no orphan false-positives past 1000 referenced attachm
     const supabaseMock = paginatedInvoicesMock(allRows);
     const storageMock = {
       activeBackend: () => 'supabase',
-      listAllKeys: async () => allRows.map(r => r.attachment_path), // storage has exactly what's referenced
+      // storage has exactly what's referenced; old timestamps so grace-period
+      // filtering (CASH-118) doesn't interfere with this test's orphan count.
+      listAllKeys: async () => allRows.map(r => ({ key: r.attachment_path, lastModified: Date.now() - 2 * 60 * 60 * 1000 })),
       deleteAttachment: async () => {},
     };
     const { runGc } = freshGc(supabaseMock, storageMock);
