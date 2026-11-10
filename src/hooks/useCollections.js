@@ -121,6 +121,17 @@ export const useCollections = () => {
     updateReceivable(id, { collected_date: date, payment_method: method }), [updateReceivable]);
   const markOpen = useCallback(id => updateReceivable(id, { collected_date: null, payment_method: null }), [updateReceivable]);
 
+  // Undo several collections at once (one update, scoped by user_id).
+  const bulkMarkOpen = useCallback(async ids => {
+    if (!ids.length) return 0;
+    const patch = { collected_date: null, payment_method: null };
+    const { error } = await supabase.from("receivables").update(patch).in("id", ids).eq("user_id", user.id);
+    if (error) { console.error("bulkMarkOpen:", error.message); throw error; }
+    const set = new Set(ids);
+    setReceivables(p => p.map(r => set.has(r.id) ? { ...r, ...patch } : r));
+    return ids.length;
+  }, [user]);
+
   // Collect several receivables, each with its own date and method. Rows sharing a
   // (date, method) go out as one update (usually 1–3 round-trips). Local state only
   // reflects groups that actually saved; a failure is rethrown after partial success
@@ -142,7 +153,7 @@ export const useCollections = () => {
   return {
     customers, receivables, loading, loadError,
     addCustomer, updateCustomer, deleteCustomer,
-    addReceivable, updateReceivable, deleteReceivable, markCollected, markOpen, bulkMarkCollected,
+    addReceivable, updateReceivable, deleteReceivable, markCollected, markOpen, bulkMarkCollected, bulkMarkOpen,
     importCollections,
   };
 };
