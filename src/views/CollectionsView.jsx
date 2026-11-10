@@ -13,13 +13,15 @@ import SuccessOverlay from "../components/SuccessOverlay";
 import ReceivablesTab from "../components/collections/ReceivablesTab";
 import CustomersTab from "../components/collections/CustomersTab";
 import CustomerPanel from "../components/collections/CustomerPanel";
+import AnalysisTab from "../components/collections/AnalysisTab";
 import { monthLong } from "../components/collections/shared";
-import { Plus, Sparkles, Download, Check } from "lucide-react";
+import { Plus, Sparkles, Download, Check, Undo2 } from "lucide-react";
 
 export default function CollectionsView({
   customers, receivables, loading, selectedMonth, onMonthChange,
   addCustomer, updateCustomer, deleteCustomer, addReceivable, updateReceivable, deleteReceivable,
-  markCollected, markOpen, bulkMarkCollected, importCollections,
+  markCollected, markOpen, bulkMarkCollected, bulkMarkOpen, importCollections,
+  deepLink, // { customerId, nonce } from global search → open that customer's panel
 }) {
   const T = useT();
   const { t, lang } = useLang();
@@ -42,6 +44,8 @@ export default function CollectionsView({
   useEffect(() => {
     setSelected(prev => { const ids = new Set(receivables.map(r => r.id)); const n = new Set([...prev].filter(id => ids.has(id))); return n.size === prev.size ? prev : n; });
   }, [receivables]);
+
+  useEffect(() => { if (deepLink?.customerId) setPanelId(deepLink.customerId); }, [deepLink]);
 
   const statsMap = useMemo(() => customerStats(receivables), [receivables]);
   // Colors by stable customer order (created order), same palette slots as suppliers.
@@ -69,6 +73,14 @@ export default function CollectionsView({
 
   const selectedRows = receivables.filter(r => selected.has(r.id));
   const selectedOpen = selectedRows.filter(r => !r.collected_date);
+  const selectedDone = selectedRows.filter(r => r.collected_date);
+  const reopenSelected = async () => {
+    try {
+      const n = await bulkMarkOpen(selectedDone.map(r => r.id));
+      setSelected(new Set());
+      notify(t("coll_reopened_ok", { n }), true);
+    } catch { notify(t("coll_save_error"), false); }
+  };
   const selTotal = selectedRows.reduce((s, r) => s + Number(r.amount), 0);
   const exportCsv = () => {
     const rows = selectedRows.length ? selectedRows : receivables.filter(r => r.expected_date?.startsWith(selectedMonth));
@@ -85,7 +97,7 @@ export default function CollectionsView({
       )}
       <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14, flexWrap: "wrap" }}>
         <div style={{ display: "flex", background: T.surf, border: `1px solid ${T.bdr}`, borderRadius: 8, padding: 2, gap: 2 }} role="tablist">
-          {[["receivables", t("coll_tab_receivables")], ["customers", t("coll_tab_customers")]].map(([id, label]) => (
+          {[["receivables", t("coll_tab_receivables")], ["customers", t("coll_tab_customers")], ["analysis", t("coll_tab_analysis")]].map(([id, label]) => (
             <button key={id} role="tab" aria-selected={tab === id} onClick={() => { setTab(id); setSelected(new Set()); }}
               style={{ padding: "4px 12px", borderRadius: 6, border: "none", cursor: "pointer", fontFamily: SANS, fontSize: 12, fontWeight: tab === id ? 600 : 400, background: tab === id ? T.accentTint : "transparent", color: tab === id ? T.accent : T.t2 }}>
               {label}{id === "customers" ? ` (${customers.length})` : ""}
@@ -113,14 +125,21 @@ export default function CollectionsView({
           selected={selected} setSelected={setSelected}
           onAdd={openNew} onImport={() => setImporting(true)} onEdit={setModal} onOpenCustomer={setPanelId}
           onCollect={openCollect} onUndo={guard(markOpen)} />
-      ) : (
+      ) : tab === "customers" ? (
         <CustomersTab customers={customers} statsMap={statsMap} colorOf={colorOf}
           onAdd={addCustomer} onOpenCustomer={setPanelId} notify={notify} />
+      ) : (
+        <AnalysisTab customers={customers} receivables={receivables} />
       )}
 
       <BulkBar count={selected.size} onClear={() => setSelected(new Set())}
         label={<>{t("coll_selected", { n: selected.size })} · <span className="num" style={{ color: T.t1 }}>{fmt(selTotal)}</span></>}>
         <button className="btn btn-ghost btn-pill" style={{ padding: "7px 14px" }} onClick={exportCsv}><Download size={12} aria-hidden="true" />{t("inv_export")}</button>
+        {selectedDone.length > 0 && (
+          <button className="btn btn-ghost btn-pill" style={{ padding: "7px 14px" }} onClick={reopenSelected}>
+            <Undo2 size={12} aria-hidden="true" />{t("coll_mark_open", { n: selectedDone.length })}
+          </button>
+        )}
         {selectedOpen.length > 0 && (
           <button className="btn btn-accent btn-pill" style={{ padding: "7px 18px" }} onClick={() => openCollect(selectedOpen.map(r => r.id))}>
             <Check size={13} aria-hidden="true" />{t("coll_mark_collected", { n: selectedOpen.length })} →

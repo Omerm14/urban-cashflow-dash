@@ -3,7 +3,8 @@ import { useT, useLang } from "../contexts/AppContexts";
 import { FONT_UI as SANS, FONT_MONO as MONO } from "../theme";
 import { fmt } from "../utils/format";
 
-export default function SearchOverlay({ invoices, suppliers, onNavigate, onClose }) {
+// onOpenCustomer(customerId, ym?) opens Collections at that month with the customer's panel.
+export default function SearchOverlay({ invoices, suppliers, customers = [], receivables = [], onNavigate, onOpenCustomer, onClose }) {
   const T = useT();
   const { t } = useLang();
   const [query, setQuery] = useState("");
@@ -26,7 +27,19 @@ export default function SearchOverlay({ invoices, suppliers, onNavigate, onClose
   const supResults = q
     ? (suppliers || []).filter(s => s.name?.toLowerCase().includes(q)).slice(0, 5)
     : [];
-  const hasResults = invResults.length > 0 || supResults.length > 0;
+  const custName = new Map(customers.map(c => [c.id, c.name]));
+  const custResults = q
+    ? customers.filter(c => [c.name, c.phone, c.email].some(v => v && String(v).toLowerCase().includes(q))).slice(0, 5)
+    : [];
+  const recResults = q
+    ? receivables.filter(r =>
+        (custName.get(r.customer_id) || "").toLowerCase().includes(q) ||
+        (r.reference || "").toLowerCase().includes(q) ||
+        (r.description || "").toLowerCase().includes(q) ||
+        String(r.amount || "").includes(q)
+      ).sort((a, b) => (b.expected_date || "").localeCompare(a.expected_date || "")).slice(0, 5)
+    : [];
+  const hasResults = invResults.length > 0 || supResults.length > 0 || custResults.length > 0 || recResults.length > 0;
 
   const ResultItem = ({ icon, title, sub, onClick }) => (
     <button onClick={onClick}
@@ -83,6 +96,32 @@ export default function SearchOverlay({ invoices, suppliers, onNavigate, onClose
                 title={sup.name}
                 sub={sup.terms || ""}
                 onClick={() => { onNavigate("suppliers"); onClose(); }}
+              />
+            ))}
+          </div>
+        )}
+        {custResults.length > 0 && (
+          <div style={{ borderTop: (invResults.length || supResults.length) ? `1px solid ${T.bdr}` : "none" }}>
+            <div style={{ padding: "8px 18px 4px", fontFamily: SANS, fontSize: 10, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: T.t3 }}>{t("search_customers")}</div>
+            {custResults.map(c => (
+              <ResultItem key={c.id}
+                icon={c.name?.charAt(0) || "?"}
+                title={c.name}
+                sub={c.phone || c.email || t("nav_collections")}
+                onClick={() => { onOpenCustomer?.(c.id); onClose(); }}
+              />
+            ))}
+          </div>
+        )}
+        {recResults.length > 0 && (
+          <div style={{ borderTop: (invResults.length || supResults.length || custResults.length) ? `1px solid ${T.bdr}` : "none" }}>
+            <div style={{ padding: "8px 18px 4px", fontFamily: SANS, fontSize: 10, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: T.t3 }}>{t("search_receivables")}</div>
+            {recResults.map(r => (
+              <ResultItem key={r.id}
+                icon="₪"
+                title={custName.get(r.customer_id) || t("cust_unknown")}
+                sub={`${[r.reference, r.description].filter(Boolean).join(" · ") || "—"} · ${fmt(Number(r.amount))} · ${r.collected_date ? t("coll_collected") : t("coll_open")}`}
+                onClick={() => { onOpenCustomer?.(r.customer_id, (r.expected_date || "").slice(0, 7)); onClose(); }}
               />
             ))}
           </div>

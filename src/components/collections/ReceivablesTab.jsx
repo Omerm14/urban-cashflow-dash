@@ -278,11 +278,16 @@ export default function ReceivablesTab({
               {s.collected > 0 && chip(T.green, t("coll_collected"), s.collected)}
               {s.open > 0 && chip(T.amber, t("coll_open"), s.open)}
               {s.overdue > 0 && chip(T.red, t("coll_overdue"), s.overdue)}
+              <div style={{ marginInlineStart: "auto", display: "flex", gap: 6, flexWrap: "wrap" }}>
+              <button onClick={() => toggleMany(shown.map(r => r.id), true)} style={{ padding: "4px 9px", background: "transparent", border: `1px solid ${T.accentBdr}`, borderRadius: 5, color: T.accent, cursor: "pointer", fontFamily: SANS, fontSize: 12, fontWeight: 600, whiteSpace: "nowrap" }}>
+                {t("coll_select_all", { n: shown.length })}
+              </button>
               {openInMonth.length > 0 && (
-                <button onClick={() => toggleMany(openInMonth.map(r => r.id), true)} style={{ marginInlineStart: "auto", padding: "4px 9px", background: "transparent", border: `1px solid ${T.accentBdr}`, borderRadius: 5, color: T.accent, cursor: "pointer", fontFamily: SANS, fontSize: 12, fontWeight: 600, whiteSpace: "nowrap" }}>
+                <button onClick={() => toggleMany(openInMonth.map(r => r.id), true)} style={{ padding: "4px 9px", background: "transparent", border: `1px solid ${T.accentBdr}`, borderRadius: 5, color: T.accent, cursor: "pointer", fontFamily: SANS, fontSize: 12, fontWeight: 600, whiteSpace: "nowrap" }}>
                   {t("coll_select_open", { n: openInMonth.length })}
                 </button>
               )}
+              </div>
             </div>
           </div>
         </>
