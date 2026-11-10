@@ -44,7 +44,7 @@ export const chunkText = (text, max = 6000) => {
 const dupKey = (customerKey, amount, expected) => `${customerKey}|${Number(amount).toFixed(2)}|${expected || ""}`;
 
 // items → review rows. Each row: { key, include, customer, customerId, isNew, amount,
-// expected_date, collected_date, reference, description, source, duplicate }.
+// expected_date, collected_date, payment_method, reference, description, source, duplicate }.
 // Possible duplicates (already saved, or repeated within this paste) start unchecked.
 export const buildReviewRows = (items, customers, receivables) => {
   const existing = new Set(
@@ -68,6 +68,7 @@ export const buildReviewRows = (items, customers, receivables) => {
       amount: it.amount,
       expected_date: it.expected_date || "",
       collected_date: it.collected_date || "",
+      payment_method: it.payment_method || "",
       reference: it.reference || "",
       description: it.description || "",
       source: it.source || "",

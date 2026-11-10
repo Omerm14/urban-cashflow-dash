@@ -4,6 +4,7 @@ import { FONT_UI as SANS, FONT_DISPLAY as DISPLAY, FONT_MONO as MONO } from "../
 import { supabase } from "../lib/supabase";
 import { fmt } from "../utils/format";
 import { chunkText, buildReviewRows, validateRow, rematchRow, newCustomerNames } from "../utils/collectionsImport";
+import { PAYMENT_METHODS } from "../utils/collections";
 import { X, Upload, Sparkles, AlertTriangle } from "lucide-react";
 
 const CHUNK = 6000;
@@ -94,12 +95,12 @@ export default function ImportCollectionsModal({ customers, receivables, onImpor
 
   const cell = { height: 30, padding: "0 7px", background: T.surf2, border: `1px solid ${T.bdr}`, borderRadius: 6, fontFamily: SANS, fontSize: 12, color: T.t1, minWidth: 0, width: "100%", outline: "none" };
   const headCell = { fontFamily: SANS, fontSize: 9, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.07em", color: T.t3, padding: "0 4px" };
-  const COLS = "28px minmax(140px,1.4fr) 100px 128px 128px minmax(120px,1fr)";
+  const COLS = "28px minmax(140px,1.4fr) 100px 128px 128px 130px minmax(120px,1fr)";
 
   return (
     <div className="modal-overlay" onClick={e => e.target === e.currentTarget && !busy && onClose()}>
       <div className="modal" role="dialog" aria-modal="true" aria-label={t("imp_title")}
-        style={{ width: step === "review" ? "min(980px, 96vw)" : undefined, maxWidth: "96vw", maxHeight: "92vh", display: "flex", flexDirection: "column" }}>
+        style={{ width: step === "review" ? "min(1100px, 96vw)" : undefined, maxWidth: "96vw", maxHeight: "92vh", display: "flex", flexDirection: "column" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12, marginBottom: 16 }}>
           <div>
             <div style={{ fontFamily: DISPLAY, fontWeight: 700, fontSize: 17, color: T.t1 }}>{t("imp_title")}</div>
@@ -135,13 +136,14 @@ export default function ImportCollectionsModal({ customers, receivables, onImpor
               {rows.some(r => r.duplicate) && <span style={{ color: T.amber }}>{t("imp_dupes", { n: rows.filter(r => r.duplicate).length })}</span>}
             </div>
             <div style={{ overflow: "auto", border: `1px solid ${T.bdr}`, borderRadius: 10, flex: "1 1 auto", minHeight: 0 }}>
-              <div style={{ minWidth: isMobile ? 680 : 0 }}>
+              <div style={{ minWidth: isMobile ? 800 : 0 }}>
                 <div style={{ display: "grid", gridTemplateColumns: COLS, gap: 6, alignItems: "center", padding: "0 10px", height: 30, background: T.surf2, position: "sticky", top: 0, zIndex: 1 }}>
                   <span />
                   <span style={headCell}>{t("coll_field_customer")}</span>
                   <span style={headCell}>{t("coll_col_amount")}</span>
                   <span style={headCell}>{t("coll_col_expected")}</span>
                   <span style={headCell}>{t("coll_col_collected_on")}</span>
+                  <span style={headCell}>{t("pm_label")}</span>
                   <span style={headCell}>{t("coll_field_desc")}</span>
                 </div>
                 {rows.map(r => {
@@ -159,6 +161,10 @@ export default function ImportCollectionsModal({ customers, receivables, onImpor
                         <input id={`imp-amt-${r.key}`} type="number" min="0.01" step="0.01" value={r.amount} aria-label={t("coll_col_amount")} onChange={e => update(r.key, { amount: e.target.value })} style={{ ...cell, fontFamily: MONO }} />
                         <input id={`imp-exp-${r.key}`} type="date" value={r.expected_date} aria-label={t("coll_col_expected")} onChange={e => update(r.key, { expected_date: e.target.value })} style={{ ...cell, fontFamily: MONO, fontSize: 11 }} />
                         <input id={`imp-col-${r.key}`} type="date" value={r.collected_date} aria-label={t("coll_col_collected_on")} onChange={e => update(r.key, { collected_date: e.target.value })} style={{ ...cell, fontFamily: MONO, fontSize: 11 }} />
+                        <select id={`imp-pm-${r.key}`} value={r.payment_method} disabled={!r.collected_date} aria-label={t("pm_label")} onChange={e => update(r.key, { payment_method: e.target.value })} style={{ ...cell, opacity: r.collected_date ? 1 : 0.5 }}>
+                          <option value="">—</option>
+                          {PAYMENT_METHODS.map(m => <option key={m} value={m}>{t(`pm_${m}`)}</option>)}
+                        </select>
                         <input id={`imp-desc-${r.key}`} value={r.description} dir="auto" aria-label={t("coll_field_desc")} onChange={e => update(r.key, { description: e.target.value })} style={cell} />
                       </div>
                       {(r.source || err || r.duplicate) && (

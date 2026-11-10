@@ -12,7 +12,7 @@ describe("normalizeParsedCollections (server)", () => {
     const out = normalizeParsedCollections([
       { customer: "  יוסי   כהן ", amount: "3,500", expected_date: "2026-09-12", collected_date: null, reference: null, description: "עבודה", source: "יוסי כהן 3500 12/9" },
     ]);
-    expect(out).toEqual([{ customer: "יוסי כהן", amount: 3500, expected_date: "2026-09-12", collected_date: null, reference: null, description: "עבודה", source: "יוסי כהן 3500 12/9" }]);
+    expect(out).toEqual([{ customer: "יוסי כהן", amount: 3500, expected_date: "2026-09-12", collected_date: null, payment_method: null, reference: null, description: "עבודה", source: "יוסי כהן 3500 12/9" }]);
   });
   it("drops rows without a customer or a positive amount", () => {
     const out = normalizeParsedCollections([
@@ -33,6 +33,14 @@ describe("normalizeParsedCollections (server)", () => {
     expect(normalizeParsedCollections([{ customer: "A", amount: "₪1,234.567" }])[0].amount).toBe(1234.57);
     const many = Array.from({ length: MAX_ROWS + 20 }, (_, i) => ({ customer: `c${i}`, amount: 1 }));
     expect(normalizeParsedCollections(many)).toHaveLength(MAX_ROWS);
+  });
+  it("keeps a known payment method only on collected rows", () => {
+    const [a, b, c] = normalizeParsedCollections([
+      { customer: "A", amount: 1, expected_date: "2026-01-01", collected_date: "2026-01-02", payment_method: "bit_paybox" },
+      { customer: "B", amount: 1, expected_date: "2026-01-01", collected_date: null, payment_method: "cash" },
+      { customer: "C", amount: 1, expected_date: "2026-01-01", collected_date: "2026-01-02", payment_method: "paypal" },
+    ]);
+    expect([a.payment_method, b.payment_method, c.payment_method]).toEqual(["bit_paybox", null, null]);
   });
   it("returns [] for non-array input", () => {
     expect(normalizeParsedCollections({ customer: "A", amount: 1 })).toEqual([]);
