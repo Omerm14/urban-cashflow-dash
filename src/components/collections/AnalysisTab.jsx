@@ -17,7 +17,7 @@ export default function AnalysisTab({ customers, receivables }) {
   const { t, lang } = useLang();
   const { isMobile } = useLayout();
   const today = todayISO();
-  const [basis, setBasis] = useState("collected");
+  const [basis, setBasis] = useState("billed");
   // In January the current year has no complete month yet, so it isn't offered.
   const years = useMemo(() => analysisYears(receivables, basis)
     .filter(y => !(y === Number(today.slice(0, 4)) && today.slice(5, 7) === "01")), [receivables, basis, today]);
@@ -151,7 +151,7 @@ export default function AnalysisTab({ customers, receivables }) {
           </select>
         </label>
         <div role="group" aria-label={t("ana_basis")} style={{ display: "flex", background: T.surf, border: `1px solid ${T.bdr}`, borderRadius: 8, padding: 2, gap: 2 }}>
-          {["collected", "billed"].map(b => <button key={b} aria-pressed={basis === b} onClick={() => setBasis(b)} style={pill(basis === b)}>{t(`ana_basis_${b}`)}</button>)}
+          {["billed", "collected"].map(b => <button key={b} aria-pressed={basis === b} onClick={() => setBasis(b)} style={pill(basis === b)}>{t(`ana_basis_${b}`)}</button>)}
         </div>
         <div ref={pickerRef} style={{ position: "relative" }}>
           <button onClick={() => setPickerOpen(v => !v)} aria-expanded={pickerOpen} className="btn btn-ghost" style={{ height: 32, padding: "0 12px", fontSize: 12 }}>
