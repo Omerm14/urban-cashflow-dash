@@ -69,3 +69,15 @@ describe("chartRows", () => {
     expect(seriesTotal([1, null, 2])).toBe(3);
   });
 });
+
+import { lineStyleFor, ANALYSIS_TOP_N } from "../src/utils/collectionsAnalysis.js";
+describe("lineStyleFor", () => {
+  it("15 lines: 7 colors solid, then dashed, then dotted — never a repeated color+style", () => {
+    expect(ANALYSIS_TOP_N).toBe(15);
+    const styles = Array.from({ length: ANALYSIS_TOP_N }, (_, i) => lineStyleFor(i));
+    expect(styles[0]).toEqual({ color: 0, style: "solid" });
+    expect(styles[7]).toEqual({ color: 0, style: "dashed" });
+    expect(styles[14]).toEqual({ color: 0, style: "dotted" });
+    expect(new Set(styles.map(s => `${s.color}-${s.style}`)).size).toBe(15);
+  });
+});

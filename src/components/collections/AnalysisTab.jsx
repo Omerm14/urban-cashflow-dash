@@ -5,7 +5,7 @@ import { FONT_UI as SANS, FONT_DISPLAY as DISPLAY, FONT_MONO as MONO, chartPalet
 import { fmt } from "../../utils/format";
 import { downloadCSV } from "../../utils/csv";
 import { todayISO } from "../../utils/collections";
-import { analysisYears, yearSeries, topCustomerIds, paymentSpikes, chartRows, seriesTotal, ANALYSIS_TOP_N } from "../../utils/collectionsAnalysis";
+import { analysisYears, yearSeries, topCustomerIds, paymentSpikes, chartRows, seriesTotal, ANALYSIS_TOP_N, lineStyleFor } from "../../utils/collectionsAnalysis";
 import { monthShortName, monthLong } from "./shared";
 import { Download, TrendingUp, TrendingDown, Users } from "lucide-react";
 
@@ -56,7 +56,21 @@ export default function AnalysisTab({ customers, receivables }) {
   const hasOthers = [...series.keys()].some(id => !lineIds.includes(id) && seriesTotal(series.get(id)) > 0);
   const palette = chartPalette(T.isDark);
   // Color follows the line's slot in the chosen set (fixed palette order); hiding a line never repaints the others.
-  const colorOf = key => key === OTHER ? palette[7] : palette[lineIds.indexOf(key) % 7];
+  const colorOf = key => key === OTHER ? palette[7] : palette[lineStyleFor(lineIds.indexOf(key)).color];
+  const DASHES = { solid: undefined, dashed: "6 4", dotted: "1 4" };
+  const dashOf = key => key === OTHER ? undefined : DASHES[lineStyleFor(lineIds.indexOf(key)).style];
+  const TOTAL_DASH = "10 3 1 3"; // dash-dot, distinct from every customer style
+  const totalSwatch = (
+    <svg width={14} height={6} aria-hidden="true" style={{ flexShrink: 0 }}>
+      <line x1={1} x2={13} y1={3} y2={3} stroke={T.t2} strokeWidth={2.5} strokeLinecap="round" strokeDasharray="5 2 0.5 2" />
+    </svg>
+  );
+  // Legend / tooltip swatch that shows the line style as well as the color.
+  const swatch = (key, w = 16) => (
+    <svg width={w} height={6} aria-hidden="true" style={{ flexShrink: 0 }}>
+      <line x1={1} x2={w - 1} y1={3} y2={3} stroke={colorOf(key)} strokeWidth={2.5} strokeLinecap="round" strokeDasharray={dashOf(key) === "6 4" ? "4 3" : dashOf(key) === "1 4" ? "0.5 3" : undefined} />
+    </svg>
+  );
 
   const rows = useMemo(() => chartRows(series, lineIds).slice(0, visibleMonths), [series, lineIds, visibleMonths]);
   const spikesFor = id => paymentSpikes(series.get(id) || [], prevSeries.get(id) || []);
@@ -107,7 +121,7 @@ export default function AnalysisTab({ customers, receivables }) {
         <div style={{ fontFamily: DISPLAY, fontWeight: 700, fontSize: 12, color: T.t1, marginBottom: 4 }}>{monthLong(monthKey(label), lang)}</div>
         {items.map(p => (
           <div key={p.dataKey} style={{ display: "flex", justifyContent: "space-between", gap: 14, alignItems: "center", fontFamily: SANS, fontSize: 12, color: T.t2, lineHeight: 1.7 }}>
-            <span style={{ display: "flex", alignItems: "center", gap: 6 }}><i style={{ width: 8, height: 8, borderRadius: "50%", background: p.stroke }} />{p.name}</span>
+            <span style={{ display: "flex", alignItems: "center", gap: 6 }}>{p.dataKey === "total" ? totalSwatch : swatch(p.dataKey === "other" ? OTHER : lineIds.find(id => `c_${id}` === p.dataKey) ?? OTHER, 14)}{p.name}</span>
             <span className="num" style={{ color: T.t1 }}>{fmt(p.value)}</span>
           </div>
         ))}
@@ -177,7 +191,7 @@ export default function AnalysisTab({ customers, receivables }) {
           {legendKeys.map(key => (
             <button key={key} onClick={() => toggle(key)} aria-pressed={!hidden.has(key)}
               style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "4px 10px", borderRadius: 999, border: `1px solid ${T.bdr}`, background: T.surf2, cursor: "pointer", fontFamily: SANS, fontSize: 12, color: T.t1, opacity: hidden.has(key) ? 0.45 : 1, textDecoration: hidden.has(key) ? "line-through" : "none" }}>
-              <i aria-hidden="true" style={{ width: 12, height: 3, borderRadius: 2, background: colorOf(key) }} />
+              {swatch(key)}
               {nameOf(key)} <span className="num" style={{ color: T.t3, fontSize: 11 }}>{kfmt(totalOf(key))}</span>
             </button>
           ))}
@@ -190,13 +204,13 @@ export default function AnalysisTab({ customers, receivables }) {
               <YAxis tick={{ fontFamily: MONO, fontSize: 10, fill: T.t3 }} axisLine={false} tickLine={false} tickFormatter={kfmt} width={isMobile ? 40 : 48} />
               <Tooltip content={<TooltipBox />} cursor={{ stroke: T.bdr2, strokeWidth: 1 }} animationDuration={120} />
               {lineIds.map(id => !hidden.has(id) && (
-                <Line key={id} type="monotone" dataKey={`c_${id}`} name={names.get(id)} stroke={colorOf(id)} strokeWidth={2} dot={makeDot(id)} activeDot={{ r: 5, stroke: T.surf, strokeWidth: 2 }} connectNulls={false} isAnimationActive={false} />
+                <Line key={id} type="monotone" dataKey={`c_${id}`} name={names.get(id)} stroke={colorOf(id)} strokeWidth={2} strokeLinecap="round" strokeDasharray={dashOf(id)} dot={makeDot(id)} activeDot={{ r: 5, stroke: T.surf, strokeWidth: 2 }} connectNulls={false} isAnimationActive={false} />
               ))}
               {hasOthers && !hidden.has(OTHER) && (
                 <Line type="monotone" dataKey="other" name={t("ana_others")} stroke={colorOf(OTHER)} strokeWidth={2} dot={{ r: 3, fill: colorOf(OTHER), stroke: T.surf, strokeWidth: 2 }} isAnimationActive={false} />
               )}
               {showTotal && (
-                <Line type="monotone" dataKey="total" name={t("ana_total_line")} stroke={T.t2} strokeWidth={1.5} strokeDasharray="5 4" dot={false} isAnimationActive={false} />
+                <Line type="monotone" dataKey="total" name={t("ana_total_line")} stroke={T.t2} strokeWidth={2} strokeLinecap="round" strokeDasharray={TOTAL_DASH} dot={false} isAnimationActive={false} />
               )}
             </LineChart>
           </ResponsiveContainer>
@@ -215,7 +229,7 @@ export default function AnalysisTab({ customers, receivables }) {
               return (
                 <div key={`${n.id}-${n.i}`} style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 10px", background: T.surf, border: `1px solid ${T.bdr}`, borderRadius: 9, fontFamily: SANS, fontSize: 12.5, color: T.t1 }}>
                   <Icon size={15} color={up ? T.green : T.red} aria-hidden="true" />
-                  <i aria-hidden="true" style={{ width: 8, height: 8, borderRadius: "50%", background: colorOf(n.id), flexShrink: 0 }} />
+                  {swatch(n.id, 14)}
                   <span>{t(up ? "ana_spike_up" : "ana_spike_down", { name: names.get(n.id), pct: Math.abs(n.pct), month: monthShortName(monthKey(n.i), lang) })}</span>
                 </div>
               );

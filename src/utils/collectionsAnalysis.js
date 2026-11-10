@@ -2,7 +2,12 @@
 // basis "collected": money by the month it actually came in (collected_date);
 // basis "billed":    money by the month it was expected (expected_date).
 
-export const ANALYSIS_TOP_N = 7;        // lines with their own color; the rest fold into "Others" (palette slot 8)
+// Up to 15 customer lines: 7 palette colors, each reused with a second encoding (solid → dashed →
+// dotted), so no two lines share color + style. The rest fold into "Others" (palette slot 8).
+export const ANALYSIS_COLORS = 7;
+export const ANALYSIS_TOP_N = 15;
+export const LINE_STYLES = ["solid", "dashed", "dotted"];
+export const lineStyleFor = slot => ({ color: slot % ANALYSIS_COLORS, style: LINE_STYLES[Math.floor(slot / ANALYSIS_COLORS)] });
 export const SPIKE_UP_PCT = 60;         // ≥ +60% vs the customer's trailing average
 export const SPIKE_DOWN_PCT = -50;      // ≤ −50%
 export const SPIKE_WINDOW = 6;          // trailing months used for the average
