@@ -58,6 +58,30 @@ ${CREDIT_RULE}
 Return ONLY a valid JSON array — one object per invoice page, skip non-invoice pages, no markdown, no explanation:
 [{"supplier":"<legal company name from letterhead>","invoiceNo":"<invoice number>","invoiceDate":"<YYYY-MM-DD>","amount":<positive number>,"type":"invoice"}]`;
 
+// Collections import: free-form SMS / phone-note text → receivables (money owed TO the user).
+const collectionsPrompt = (text, today) => `You are reading a small Israeli business owner's own notes and text messages about money their CUSTOMERS owe them (receivables / גבייה). Extract every receivable mentioned.
+
+Today's date is ${today}.
+
+RULES:
+• customer — the person or business that owes the money (or that paid it). Keep the name exactly as written (Hebrew stays Hebrew).
+• amount — a positive number in shekels. "3,500", "3500 ש\"ח", "₪3.5K" → 3500. Never invent an amount; skip the entry if none is stated.
+• Dates are Israeli day-first: "12/9" = 12 September, "2.11" = 2 November, "14/04/26" = 2026-04-14. A date with no year takes the most recent occurrence on or before today. Relative words ("אתמול", "היום", "סוף החודש", "סוף אוקטובר") resolve against today. Output ISO YYYY-MM-DD.
+• expected_date — when the money was due or expected. If only one date exists, use it.
+• collected_date — set ONLY if the text says the money was received: שילם, שילמה, שילמו, העביר, העבירה, קיבלתי, התקבל, נגבה, נכנס, הופקד, סגר, ✓, paid, received. Use the payment date stated, otherwise the message date, otherwise expected_date. If not clearly paid, null.
+• reference — invoice / receipt number if one appears (e.g. "חשבונית 1042"), else null.
+• description — a few words about what it was for, else null.
+• source — the exact original line or fragment this entry came from (max ~120 characters).
+• Skip lines that are not about money owed to the user (greetings, the user's own expenses, supplier bills). Never invent data; use null when unknown. One entry per distinct debt — if a later line says an earlier debt was paid, return ONE entry with collected_date set.
+
+Return ONLY a valid JSON array, no markdown, no explanation (empty array if nothing found):
+[{"customer":"<name>","amount":<number>,"expected_date":"<YYYY-MM-DD or null>","collected_date":"<YYYY-MM-DD or null>","reference":null,"description":null,"source":"<original text>"}]
+
+TEXT:
+"""
+${text}
+"""`;
+
 const translatePrompt = name =>
   `You are a transliteration assistant. The following is an Israeli company name written in English. Transliterate/translate it to Hebrew as it appears on Israeli business documents. Return ONLY valid JSON: {"hebrew":"<Hebrew company name>"}. No markdown, no explanation.\n\nCompany name: ${name}`;
 
@@ -170,6 +194,18 @@ const extractFromText = async (text, userId) => {
   return extractJson(collectText(msg), false);
 };
 
+// Free-form receivables text (Collections history import) → raw array of entries.
+// Parse only: the caller normalizes the result and never writes it to the DB here.
+const extractCollectionsFromText = async (text, userId, today) => {
+  const msg = await callClaude({
+    messages: [{ role: 'user', content: [{ type: 'text', text: collectionsPrompt(text, today) }] }],
+    maxTokens: 6000,
+  });
+  logUsage(userId, msg);
+  const parsed = extractJson(collectText(msg), true);
+  return Array.isArray(parsed) ? parsed : [parsed];
+};
+
 // Transliterate an English company name to Hebrew. Returns { hebrew } or throws.
 const translate = async (name, userId) => {
   const msg = await callClaude({
@@ -188,5 +224,6 @@ module.exports = {
   extractFromBuffer,
   extractFromImageB64,
   extractFromText,
+  extractCollectionsFromText,
   translate,
 };
