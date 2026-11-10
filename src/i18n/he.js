@@ -684,7 +684,7 @@ const he = {
   ana_no_notable: "אין שינויים חריגים השנה",
   ana_spike_up: "{name}: עלייה של {pct}% ב{month}",
   ana_spike_down: "{name}: ירידה של {pct}% ב{month}",
-  ana_partial_hint: "{month} עדיין לא הסתיים, לכן הגרף נעצר בחודש הקודם.",
+  ana_partial_hint: "{month} עדיין לא הסתיים ולכן מוסתר עד סוף החודש.",
   ana_table: "טבלה חודשית",
   search_customers: "לקוחות",
   search_receivables: "חובות לגבייה",

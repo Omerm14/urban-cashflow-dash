@@ -18,7 +18,9 @@ export default function AnalysisTab({ customers, receivables }) {
   const { isMobile } = useLayout();
   const today = todayISO();
   const [basis, setBasis] = useState("collected");
-  const years = useMemo(() => analysisYears(receivables, basis), [receivables, basis]);
+  // In January the current year has no complete month yet, so it isn't offered.
+  const years = useMemo(() => analysisYears(receivables, basis)
+    .filter(y => !(y === Number(today.slice(0, 4)) && today.slice(5, 7) === "01")), [receivables, basis, today]);
   const [year, setYear] = useState(() => Number(today.slice(0, 4)));
   const activeYear = years.includes(year) ? year : (years[years.length - 1] ?? Number(today.slice(0, 4)));
   // "Others" starts hidden: it sums every remaining customer and would flatten the named lines.
@@ -35,7 +37,19 @@ export default function AnalysisTab({ customers, receivables }) {
   }, [pickerOpen]);
 
   const names = useMemo(() => new Map(customers.map(c => [c.id, c.name])), [customers]);
-  const series = useMemo(() => yearSeries(receivables, activeYear, basis, today.slice(0, 7)), [receivables, activeYear, basis, today]);
+  // For the current year, only complete months are shown (the current month would read as a
+  // sudden drop for everyone). Applies to both bases and to the chart, table, totals and CSV.
+  const visibleMonths = activeYear === Number(today.slice(0, 4)) ? Number(today.slice(5, 7)) - 1 : 12;
+  const rawSeries = useMemo(() => yearSeries(receivables, activeYear, basis, today.slice(0, 7)), [receivables, activeYear, basis, today]);
+  const series = useMemo(() => {
+    if (visibleMonths >= 12) return rawSeries;
+    const m = new Map();
+    for (const [id, vals] of rawSeries) {
+      const trimmed = vals.map((v, i) => (i >= visibleMonths ? null : v));
+      if (seriesTotal(trimmed) > 0) m.set(id, trimmed);
+    }
+    return m;
+  }, [rawSeries, visibleMonths]);
   const prevSeries = useMemo(() => yearSeries(receivables, activeYear - 1, basis, today.slice(0, 7)), [receivables, activeYear, basis, today]);
   const autoTop = useMemo(() => topCustomerIds(series, ANALYSIS_TOP_N), [series]);
   const lineIds = (picked || autoTop).filter(id => series.has(id));
@@ -44,22 +58,13 @@ export default function AnalysisTab({ customers, receivables }) {
   // Color follows the line's slot in the chosen set (fixed palette order); hiding a line never repaints the others.
   const colorOf = key => key === OTHER ? palette[7] : palette[lineIds.indexOf(key) % 7];
 
-  // On the "collected" basis the current month is still in progress, so the chart and the
-  // spike detection stop at last month (the table still shows the partial month).
-  const partialIdx = basis === "collected" && activeYear === Number(today.slice(0, 4)) ? Number(today.slice(5, 7)) - 1 : -1;
-  const chartSeries = useMemo(() => {
-    if (partialIdx < 0) return series;
-    const m = new Map();
-    for (const [id, vals] of series) m.set(id, vals.map((v, i) => (i >= partialIdx ? null : v)));
-    return m;
-  }, [series, partialIdx]);
-  const rows = useMemo(() => chartRows(chartSeries, lineIds), [chartSeries, lineIds]);
-  const spikesFor = id => paymentSpikes(chartSeries.get(id) || [], prevSeries.get(id) || []);
+  const rows = useMemo(() => chartRows(series, lineIds).slice(0, visibleMonths), [series, lineIds, visibleMonths]);
+  const spikesFor = id => paymentSpikes(series.get(id) || [], prevSeries.get(id) || []);
   const spikes = useMemo(() => {
     const m = new Map();
     for (const id of lineIds) m.set(id, spikesFor(id));
     return m;
-  }, [chartSeries, prevSeries, lineIds]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [series, prevSeries, lineIds]); // eslint-disable-line react-hooks/exhaustive-deps
   const monthKey = i => `${activeYear}-${String(i + 1).padStart(2, "0")}`;
   const notable = lineIds.filter(id => !hidden.has(id))
     .flatMap(id => spikes.get(id).map(s => ({ ...s, id })))
@@ -68,11 +73,11 @@ export default function AnalysisTab({ customers, receivables }) {
   const toggle = key => setHidden(prev => { const n = new Set(prev); n.has(key) ? n.delete(key) : n.add(key); return n; });
   const tableIds = [...series.keys()].filter(id => seriesTotal(series.get(id)) > 0).sort((a, b) => seriesTotal(series.get(b)) - seriesTotal(series.get(a)));
   const exportCsv = () => {
-    const cols = ["customer", ...Array.from({ length: 12 }, (_, i) => monthKey(i)), "total"];
+    const cols = ["customer", ...Array.from({ length: visibleMonths }, (_, i) => monthKey(i)), "total"];
     const out = tableIds.map(id => {
       const vals = series.get(id);
       const row = { customer: names.get(id) || "", total: seriesTotal(vals).toFixed(2) };
-      vals.forEach((v, i) => { row[monthKey(i)] = v === null ? "" : v.toFixed(2); });
+      vals.slice(0, visibleMonths).forEach((v, i) => { row[monthKey(i)] = v === null ? "" : v.toFixed(2); });
       return row;
     });
     downloadCSV(`collections-analysis-${basis}-${activeYear}.csv`, out, cols, { bom: true });
@@ -167,7 +172,7 @@ export default function AnalysisTab({ customers, receivables }) {
 
       <div className="card" style={{ padding: isMobile ? 12 : 16 }}>
         <div style={{ fontFamily: DISPLAY, fontWeight: 700, fontSize: 15, color: T.t1 }}>{t(`ana_title_${basis}`, { year: activeYear })}</div>
-        <div style={{ fontFamily: SANS, fontSize: 12, color: T.t3, marginTop: 2, marginBottom: 10 }}>{t("ana_hint")}{partialIdx >= 0 ? ` ${t("ana_partial_hint", { month: monthShortName(monthKey(partialIdx), lang) })}` : ""}</div>
+        <div style={{ fontFamily: SANS, fontSize: 12, color: T.t3, marginTop: 2, marginBottom: 10 }}>{t("ana_hint")}{visibleMonths < 12 ? ` ${t("ana_partial_hint", { month: monthShortName(monthKey(visibleMonths), lang) })}` : ""}</div>
         <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 8 }}>
           {legendKeys.map(key => (
             <button key={key} onClick={() => toggle(key)} aria-pressed={!hidden.has(key)}
@@ -226,7 +231,7 @@ export default function AnalysisTab({ customers, receivables }) {
             <thead>
               <tr>
                 <th style={{ ...lbl, marginBottom: 0, padding: "8px 10px", textAlign: "start", background: T.surf2, position: "sticky", insetInlineStart: 0 }}>{t("coll_field_customer")}</th>
-                {Array.from({ length: 12 }, (_, i) => <th key={i} style={{ ...lbl, marginBottom: 0, padding: "8px 6px", textAlign: "end", background: T.surf2 }}>{monthShortName(monthKey(i), lang)}</th>)}
+                {Array.from({ length: visibleMonths }, (_, i) => <th key={i} style={{ ...lbl, marginBottom: 0, padding: "8px 6px", textAlign: "end", background: T.surf2 }}>{monthShortName(monthKey(i), lang)}</th>)}
                 <th style={{ ...lbl, marginBottom: 0, padding: "8px 10px", textAlign: "end", background: T.surf2 }}>{t("coll_total")}</th>
               </tr>
             </thead>
@@ -237,7 +242,7 @@ export default function AnalysisTab({ customers, receivables }) {
                 return (
                   <tr key={id} style={{ borderTop: `1px solid ${T.bdr}` }}>
                     <td style={{ padding: "7px 10px", fontFamily: SANS, color: T.t1, whiteSpace: "nowrap", position: "sticky", insetInlineStart: 0, background: T.surf }}>{names.get(id)}</td>
-                    {vals.map((v, i) => {
+                    {vals.slice(0, visibleMonths).map((v, i) => {
                       const s = sp.find(x => x.i === i);
                       return (
                         <td key={i} className="num" title={s ? t("ana_vs_avg", { pct: `${s.pct > 0 ? "+" : ""}${s.pct}` }) : undefined}
@@ -254,8 +259,8 @@ export default function AnalysisTab({ customers, receivables }) {
             <tfoot>
               <tr style={{ borderTop: `1px solid ${T.bdr2}`, background: T.surf2 }}>
                 <td style={{ padding: "8px 10px", fontFamily: SANS, fontWeight: 700, color: T.t1, position: "sticky", insetInlineStart: 0, background: T.surf2 }}>{t("coll_total")}</td>
-                {chartRows(series, lineIds).map(r => <td key={r.i} className="num" style={{ padding: "8px 6px", textAlign: "end", fontWeight: 700, color: T.t1, whiteSpace: "nowrap" }}>{r.total === null ? "" : Math.round(r.total).toLocaleString("en-US")}</td>)}
-                <td className="num" style={{ padding: "8px 10px", textAlign: "end", fontWeight: 700, color: T.t1, whiteSpace: "nowrap" }}>{Math.round(chartRows(series, lineIds).reduce((a, r) => a + (r.total || 0), 0)).toLocaleString("en-US")}</td>
+                {rows.map(r => <td key={r.i} className="num" style={{ padding: "8px 6px", textAlign: "end", fontWeight: 700, color: T.t1, whiteSpace: "nowrap" }}>{r.total === null ? "" : Math.round(r.total).toLocaleString("en-US")}</td>)}
+                <td className="num" style={{ padding: "8px 10px", textAlign: "end", fontWeight: 700, color: T.t1, whiteSpace: "nowrap" }}>{Math.round(rows.reduce((a, r) => a + (r.total || 0), 0)).toLocaleString("en-US")}</td>
               </tr>
             </tfoot>
           </table>
