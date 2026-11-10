@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "../lib/supabase";
 import { useAuth } from "../contexts/AuthContext";
-import { todayISO } from "../utils/collections";
+import { todayISO, groupCollectUpdates, DEFAULT_PAYMENT_METHOD } from "../utils/collections";
 import { normalizeName, newCustomerNames } from "../utils/collectionsImport";
 
 // Customers + receivables for the Collections tab. Reads/writes go straight to
@@ -106,6 +106,7 @@ export const useCollections = () => {
       amount: Math.round(Number(r.amount) * 100) / 100,
       expected_date: r.expected_date,
       collected_date: r.collected_date || null,
+      payment_method: r.collected_date ? (r.payment_method || null) : null,
       reference: r.reference?.trim() || null,
       description: r.description?.trim() || null,
     }));
@@ -116,13 +117,32 @@ export const useCollections = () => {
     return { receivables: data?.length ?? 0, customers: created.length };
   }, [user]);
 
-  const markCollected = useCallback((id, date = todayISO()) => updateReceivable(id, { collected_date: date }), [updateReceivable]);
-  const markOpen = useCallback(id => updateReceivable(id, { collected_date: null }), [updateReceivable]);
+  const markCollected = useCallback((id, { date = todayISO(), method = DEFAULT_PAYMENT_METHOD } = {}) =>
+    updateReceivable(id, { collected_date: date, payment_method: method }), [updateReceivable]);
+  const markOpen = useCallback(id => updateReceivable(id, { collected_date: null, payment_method: null }), [updateReceivable]);
+
+  // Collect several receivables, each with its own date and method. Rows sharing a
+  // (date, method) go out as one update (usually 1–3 round-trips). Local state only
+  // reflects groups that actually saved; a failure is rethrown after partial success
+  // has been applied so the screen never shows something the DB doesn't have.
+  const bulkMarkCollected = useCallback(async rows => {
+    let firstError = null;
+    const saved = new Map();
+    for (const g of groupCollectUpdates(rows)) {
+      const patch = { collected_date: g.date, payment_method: g.method };
+      const { error } = await supabase.from("receivables").update(patch).in("id", g.ids).eq("user_id", user.id);
+      if (error) { console.error("bulkMarkCollected:", error.message); firstError = firstError || error; continue; }
+      g.ids.forEach(id => saved.set(id, patch));
+    }
+    if (saved.size) setReceivables(p => p.map(r => saved.has(r.id) ? { ...r, ...saved.get(r.id) } : r));
+    if (firstError) { firstError.savedCount = saved.size; throw firstError; }
+    return saved.size;
+  }, [user]);
 
   return {
     customers, receivables, loading, loadError,
     addCustomer, updateCustomer, deleteCustomer,
-    addReceivable, updateReceivable, deleteReceivable, markCollected, markOpen,
+    addReceivable, updateReceivable, deleteReceivable, markCollected, markOpen, bulkMarkCollected,
     importCollections,
   };
 };

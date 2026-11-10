@@ -6,6 +6,8 @@ import { downloadCSV } from "../utils/csv";
 import StatusPill from "../components/StatusPill";
 import TermsPicker from "../components/TermsPicker";
 import ListSkeleton from "../components/ListSkeleton";
+import BulkBar from "../components/BulkBar";
+import SuccessOverlay from "../components/SuccessOverlay";
 import {
   Calendar, Filter, X, Check, CheckCircle2, AlertTriangle, Zap, Paperclip, Pencil, Download, Clock,
   ChevronLeft, ChevronRight,
@@ -22,7 +24,6 @@ const PILL_WIDTH = 104;
 const SOURCE_LABELS = { google_drive: { icon: "📁", label: "Drive" }, gmail: { icon: "✉️", label: "Gmail" }, whatsapp: { icon: "💬", label: "WA" }, green_invoice: { icon: "🧾", label: "GI" } };
 const isPaidStatus = (s) => s === "Paid" || s === "paid";
 
-const CONFETTI_COLORS = ["#3DD6A3", "#D9A93F", "#3987E5", "#D55181", "#8FE8C9"];
 
 function TrashIcon({ size = 12 }) {
   return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M9 6V4h6v2"/></svg>;
@@ -542,23 +543,15 @@ export default function InvoicesView({ invoices, loading, selectedMonth, onMonth
       )}
 
       {/* Floating batch bar */}
-      {selectedIds.size > 0 && (
-        <div style={{ position: "fixed", bottom: isMobile ? 0 : 24, insetInlineStart: isMobile || isTablet ? 0 : 232, insetInlineEnd: 0, display: "flex", justifyContent: "center", pointerEvents: "none", zIndex: 200, animation: "slideUp 0.25s cubic-bezier(.16,1,.3,1)" }}>
-          <div style={{ pointerEvents: "auto", background: T.surf3, border: `1px solid ${T.bdr2}`, padding: isMobile ? "14px 20px" : "10px 12px 10px 20px", display: "flex", alignItems: "center", gap: 12, boxShadow: "var(--shadow-pop)", borderRadius: isMobile ? "14px 14px 0 0" : 999, width: isMobile ? "100%" : "auto", whiteSpace: "nowrap" }}>
-            <span aria-hidden="true" style={{ width: 22, height: 22, borderRadius: "50%", background: T.accent, display: "flex", alignItems: "center", justifyContent: "center", fontFamily: MONO, fontWeight: 700, fontSize: 11, color: T.accentInk }}>{selectedIds.size}</span>
-            <span style={{ fontFamily: SANS, fontWeight: 500, color: T.t2, fontSize: 13, flex: 1 }}>
-              {t("inv_selected", { n: selectedIds.size })} · <span className="num" style={{ color: T.t1 }}>{fmt(selTotal)}</span>
-            </span>
-            <button className="btn btn-ghost btn-pill" style={{ padding: "7px 14px", opacity: canExportCsv ? 1 : .6 }} title={canExportCsv ? undefined : t("entitlement_locked")} onClick={canExportCsv ? handleExportSelected : onUpgrade}><Download size={12} aria-hidden="true" />{canExportCsv ? t("inv_export") : `🔒 ${t("inv_export")}`}</button>
-            <button className="btn btn-ghost btn-pill" style={{ padding: "7px 14px", opacity: canBulkAct ? 1 : .6 }} title={canBulkAct ? undefined : t("entitlement_locked")} onClick={canBulkAct ? () => { onBulkUnpaid?.([...selectedIds]); setSelectedIds(new Set()); } : onUpgrade}><X size={12} aria-hidden="true" />{canBulkAct ? t("inv_unpaid") : `🔒 ${t("inv_unpaid")}`}</button>
-            <button className="btn btn-accent btn-pill" style={{ padding: "7px 18px", opacity: canBulkAct ? 1 : .6 }} title={canBulkAct ? undefined : t("entitlement_locked")} onClick={canBulkAct ? () => setShowPayConfirm(true) : onUpgrade}>{canBulkAct ? t("inv_pay_selected") : `🔒 ${t("inv_pay_selected")}`} →</button>
-            <button className="btn btn-danger btn-pill" style={{ padding: "7px 14px", opacity: canBulkAct ? 1 : .6 }} title={canBulkAct ? undefined : t("entitlement_locked")} onClick={canBulkAct ? () => { if (window.confirm(t("inv_bulk_delete_confirm", { n: selectedIds.size }))) { onBulkDelete?.([...selectedIds]); setSelectedIds(new Set()); } } : onUpgrade}>
-              <TrashIcon />{canBulkAct ? t("delete") : `🔒 ${t("delete")}`}
-            </button>
-            <button onClick={() => setSelectedIds(new Set())} aria-label={t("close")} style={{ background: "none", border: "none", color: T.t3, cursor: "pointer", display: "flex" }}><X size={15} /></button>
-          </div>
-        </div>
-      )}
+      <BulkBar count={selectedIds.size} onClear={() => setSelectedIds(new Set())}
+        label={<>{t("inv_selected", { n: selectedIds.size })} · <span className="num" style={{ color: T.t1 }}>{fmt(selTotal)}</span></>}>
+        <button className="btn btn-ghost btn-pill" style={{ padding: "7px 14px", opacity: canExportCsv ? 1 : .6 }} title={canExportCsv ? undefined : t("entitlement_locked")} onClick={canExportCsv ? handleExportSelected : onUpgrade}><Download size={12} aria-hidden="true" />{canExportCsv ? t("inv_export") : `🔒 ${t("inv_export")}`}</button>
+        <button className="btn btn-ghost btn-pill" style={{ padding: "7px 14px", opacity: canBulkAct ? 1 : .6 }} title={canBulkAct ? undefined : t("entitlement_locked")} onClick={canBulkAct ? () => { onBulkUnpaid?.([...selectedIds]); setSelectedIds(new Set()); } : onUpgrade}><X size={12} aria-hidden="true" />{canBulkAct ? t("inv_unpaid") : `🔒 ${t("inv_unpaid")}`}</button>
+        <button className="btn btn-accent btn-pill" style={{ padding: "7px 18px", opacity: canBulkAct ? 1 : .6 }} title={canBulkAct ? undefined : t("entitlement_locked")} onClick={canBulkAct ? () => setShowPayConfirm(true) : onUpgrade}>{canBulkAct ? t("inv_pay_selected") : `🔒 ${t("inv_pay_selected")}`} →</button>
+        <button className="btn btn-danger btn-pill" style={{ padding: "7px 14px", opacity: canBulkAct ? 1 : .6 }} title={canBulkAct ? undefined : t("entitlement_locked")} onClick={canBulkAct ? () => { if (window.confirm(t("inv_bulk_delete_confirm", { n: selectedIds.size }))) { onBulkDelete?.([...selectedIds]); setSelectedIds(new Set()); } } : onUpgrade}>
+          <TrashIcon />{canBulkAct ? t("delete") : `🔒 ${t("delete")}`}
+        </button>
+      </BulkBar>
 
       {/* Pay confirm */}
       {showPayConfirm && (
@@ -617,23 +610,10 @@ export default function InvoicesView({ invoices, loading, selectedMonth, onMonth
 
       {/* Payment success overlay with confetti */}
       {showSuccess && successData && (
-        <div style={{ position: "fixed", inset: 0, zIndex: 400, background: "rgba(6,11,9,0.95)", backdropFilter: "blur(14px)", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", animation: "fadeIn 0.3s", padding: 24 }}>
-          {[...Array(20)].map((_, i) => (
-            <span key={i} aria-hidden="true" style={{ position: "fixed", left: `${5 + i * 4.5}%`, top: `${20 + (i % 5) * 10}%`, width: i % 3 === 0 ? 9 : 6, height: i % 3 === 0 ? 9 : 6, borderRadius: i % 2 === 0 ? 2 : "50%", background: CONFETTI_COLORS[i % CONFETTI_COLORS.length], animation: `confettiFall ${0.5 + (i % 7) * 0.07}s ease-out ${i * 0.05}s both`, pointerEvents: "none" }} />
-          ))}
-          <div style={{ width: 72, height: 72, borderRadius: "50%", background: "rgba(61,214,163,0.14)", border: "1px solid rgba(61,214,163,0.3)", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 20 }}>
-            <CheckCircle2 size={34} color="#3DD6A3" strokeWidth={1.5} aria-hidden="true" />
-          </div>
-          <div style={{ fontFamily: DISPLAY, fontWeight: 700, fontSize: 28, letterSpacing: "-0.02em", color: "#F2F1EA", marginBottom: 7 }}>{t("inv_success_title")}</div>
-          <div style={{ fontFamily: SANS, color: "#A8B5AE", fontSize: 15, marginBottom: 5 }}>{t("inv_success_sub", { n: successData.count })}</div>
-          <div className="num" style={{ fontWeight: 500, fontSize: 24, color: "#3DD6A3", marginBottom: 24 }}>{fmt(successData.total)}</div>
-          <div style={{ display: "flex", gap: 10, width: "100%", maxWidth: 320 }}>
-            <button onClick={() => setShowSuccess(false)} style={{ flex: 1, padding: "10px 0", background: "transparent", border: "1px solid rgba(242,241,234,0.16)", borderRadius: 999, color: "#A8B5AE", cursor: "pointer", fontFamily: SANS, fontWeight: 600, fontSize: 14 }}>{t("back")}</button>
-            <button onClick={() => { setShowSuccess(false); onMonthChange(successData.nextMonth); }} style={{ flex: 2, padding: "10px 0", background: "#3DD6A3", border: "none", borderRadius: 999, color: "#07120E", cursor: "pointer", fontFamily: SANS, fontWeight: 700, fontSize: 14 }}>
-              {t("inv_next_label", { month: fmtMonth(successData.nextMonth) })} →
-            </button>
-          </div>
-        </div>
+        <SuccessOverlay title={t("inv_success_title")} sub={t("inv_success_sub", { n: successData.count })} total={successData.total}
+          onBack={() => setShowSuccess(false)}
+          nextLabel={t("inv_next_label", { month: fmtMonth(successData.nextMonth) })}
+          onNext={() => { setShowSuccess(false); onMonthChange(successData.nextMonth); }} />
       )}
     </div>
   );

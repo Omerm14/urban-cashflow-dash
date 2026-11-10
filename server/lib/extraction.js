@@ -69,13 +69,14 @@ RULES:
 • Dates are Israeli day-first: "12/9" = 12 September, "2.11" = 2 November, "14/04/26" = 2026-04-14. A date with no year takes the most recent occurrence on or before today. Relative words ("אתמול", "היום", "סוף החודש", "סוף אוקטובר") resolve against today. Output ISO YYYY-MM-DD.
 • expected_date — when the money was due or expected. If only one date exists, use it.
 • collected_date — set ONLY if the text says the money was received: שילם, שילמה, שילמו, העביר, העבירה, קיבלתי, התקבל, נגבה, נכנס, הופקד, סגר, ✓, paid, received. Use the payment date stated, otherwise the message date, otherwise expected_date. If not clearly paid, null.
+• payment_method — only when collected and the text says how: העברה/העביר/בנק → "bank_transfer", אשראי/כרטיס → "credit_card", מזומן/קאש → "cash", צ'ק/שיק → "cheque", ביט/פייבוקס/bit/paybox → "bit_paybox". Otherwise null.
 • reference — invoice / receipt number if one appears (e.g. "חשבונית 1042"), else null.
 • description — a few words about what it was for, else null.
 • source — the exact original line or fragment this entry came from (max ~120 characters).
 • Skip lines that are not about money owed to the user (greetings, the user's own expenses, supplier bills). Never invent data; use null when unknown. One entry per distinct debt — if a later line says an earlier debt was paid, return ONE entry with collected_date set.
 
 Return ONLY a valid JSON array, no markdown, no explanation (empty array if nothing found):
-[{"customer":"<name>","amount":<number>,"expected_date":"<YYYY-MM-DD or null>","collected_date":"<YYYY-MM-DD or null>","reference":null,"description":null,"source":"<original text>"}]
+[{"customer":"<name>","amount":<number>,"expected_date":"<YYYY-MM-DD or null>","collected_date":"<YYYY-MM-DD or null>","payment_method":null,"reference":null,"description":null,"source":"<original text>"}]
 
 TEXT:
 """

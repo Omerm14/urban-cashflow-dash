@@ -2,6 +2,8 @@
 // review table. Pure — no DB, no network. The browser is still the one that saves
 // (under RLS) after the user reviews; this just guarantees well-formed values.
 
+// Mirrors PAYMENT_METHODS in src/utils/collections.js and the CHECK in migration 021.
+const PAYMENT_METHODS = ['bank_transfer', 'credit_card', 'cash', 'cheque', 'bit_paybox', 'other'];
 const MAX_ROWS = 500;
 const MAX_NAME = 120;
 const MAX_TEXT = 300;
@@ -44,6 +46,7 @@ const normalizeParsedCollections = (raw) => {
       amount,
       expected_date: expected,
       collected_date: collected,
+      payment_method: collected && PAYMENT_METHODS.includes(item.payment_method) ? item.payment_method : null,
       reference: cleanText(item.reference, MAX_NAME),
       description: cleanText(item.description, MAX_TEXT),
       source: cleanText(item.source, MAX_TEXT),
@@ -53,4 +56,4 @@ const normalizeParsedCollections = (raw) => {
   return out;
 };
 
-module.exports = { normalizeParsedCollections, isIsoDate, MAX_ROWS };
+module.exports = { normalizeParsedCollections, isIsoDate, MAX_ROWS, PAYMENT_METHODS };

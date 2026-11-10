@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useT, useLang } from "../contexts/AppContexts";
 import { FONT_UI as SANS, FONT_DISPLAY as DISPLAY } from "../theme";
 import { X } from "lucide-react";
+import { PAYMENT_METHODS } from "../utils/collections";
 
 const NEW = "__new__";
 
@@ -17,6 +18,7 @@ export default function ReceivableModal({ initial, customers, onSave, onDelete, 
     amount: initial?.amount != null ? String(Number(initial.amount)) : "",
     expected_date: initial?.expected_date ?? "",
     collected_date: initial?.collected_date ?? "",
+    payment_method: initial?.payment_method ?? "",
     reference: initial?.reference ?? "",
     description: initial?.description ?? "",
   });
@@ -47,6 +49,8 @@ export default function ReceivableModal({ initial, customers, onSave, onDelete, 
         amount: Math.round(amount * 100) / 100,
         expected_date: form.expected_date,
         collected_date: isEdit ? (form.collected_date || null) : null,
+        // Clearing the date reopens the receivable, so the method goes with it.
+        ...(isEdit && initial.collected_date ? { payment_method: form.collected_date ? (form.payment_method || null) : null } : {}),
         reference: form.reference.trim() || null,
         description: form.description.trim() || null,
       });
@@ -104,9 +108,18 @@ export default function ReceivableModal({ initial, customers, onSave, onDelete, 
             </div>
           </div>
           {isEdit && initial.collected_date && (
-            <div>
-              <label htmlFor="rcv-collected" style={label}>{t("coll_field_collected")}</label>
-              <input id="rcv-collected" className="input" type="date" value={form.collected_date} onChange={e => set("collected_date", e.target.value)} />
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: 14 }}>
+              <div>
+                <label htmlFor="rcv-collected" style={label}>{t("coll_field_collected")}</label>
+                <input id="rcv-collected" className="input" type="date" value={form.collected_date} onChange={e => set("collected_date", e.target.value)} />
+              </div>
+              <div>
+                <label htmlFor="rcv-method" style={label}>{t("pm_label")}</label>
+                <select id="rcv-method" className="input" value={form.payment_method} disabled={!form.collected_date} onChange={e => set("payment_method", e.target.value)}>
+                  {!form.payment_method && <option value="">—</option>}
+                  {PAYMENT_METHODS.map(m => <option key={m} value={m}>{t(`pm_${m}`)}</option>)}
+                </select>
+              </div>
             </div>
           )}
         </div>
