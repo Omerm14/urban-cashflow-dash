@@ -58,6 +58,7 @@ export default function App() {
   const [selectedMonth, setSelectedMonth] = useState(currentYM);
   const [calMonth, setCalMonth] = useState(currentYM);
   const [collMonth, setCollMonth] = useState(currentYM);
+  const [collDeepLink, setCollDeepLink] = useState(null); // { customerId, nonce } from global search
   const [preSelectAll, setPreSelectAll] = useState(false);
   const [initialFilterStatus, setInitialFilterStatus] = useState(null);
   const [deepLinkInvoiceId, setDeepLinkInvoiceId] = useState(null);
@@ -333,8 +334,8 @@ export default function App() {
                         invoices={invoices} onContinue={() => setOnboardingDismissed(true)} />
                     : <DashboardView invoices={invoices} suppliers={suppliers} loading={invoicesLoading} onPayAll={handlePayAll} chartData={chartData} supplierNames={allNames} supplierColor={getSupplierColor} user={user} onMissingAlert={() => setShowMissingModal(true)} onAnomalyAlert={() => setShowAnomalyModal(true)} missingSuppliers={missingSuppliers} anomalyMap={anomalyMap} onViewMonth={handleViewMonth} onNavigateFiltered={(status) => { setView("invoices"); setInitialFilterStatus(status); }} />)}
                   {view === "invoices" && <InvoicesView invoices={invoices} loading={invoicesLoading} selectedMonth={selectedMonth} onMonthChange={setSelectedMonth} onMarkPaid={handleMarkPaid} onAddSupplier={addSupplier} onDeleteInvoice={deleteInvoice} onBulkPaid={handleBulkPaid} onBulkUnpaid={handleBulkUnpaid} onBulkDelete={bulkDelete} preSelectAll={preSelectAll} onEditInvoice={setEditInvoice} anomalyMap={anomalyMap} missingSuppliers={missingSuppliers} onMissingAlert={() => setShowMissingModal(true)} initialFilterStatus={initialFilterStatus} initialSelectedId={deepLinkInvoiceId} onViewAttachment={handleViewAttachment} supplierColor={getSupplierColor} entitlements={entitlements} onUpgrade={handleUpgradeClick} onCheckExportEntitlement={checkCsvExportEntitlement} />}
-                  {view === "collections" && <CollectionsView {...collections} selectedMonth={collMonth} onMonthChange={setCollMonth} />}
-                  {view === "calendar" && <CalendarView computed={invoices} calMonth={calMonth} setCalMonth={setCalMonth} color={getSupplierColor} />}
+                  {view === "collections" && <CollectionsView {...collections} selectedMonth={collMonth} onMonthChange={setCollMonth} deepLink={collDeepLink} />}
+                  {view === "calendar" && <CalendarView computed={invoices} receivables={collections.receivables} customers={collections.customers} calMonth={calMonth} setCalMonth={setCalMonth} color={getSupplierColor} onOpenCustomer={(customerId, month) => { setView("collections"); if (month) setCollMonth(month); setCollDeepLink({ customerId, nonce: Date.now() }); }} />}
                   {view === "integrations" && <IntegrationsPage
                     syncJobs={syncJobs} onStartSync={startSync} onCancelSync={cancelSync}
                     onInvoicesRefresh={refreshInvoices} maxSources={maxSources} onUpgrade={handleUpgradeClick}
@@ -377,7 +378,10 @@ export default function App() {
               <SearchOverlay
                 invoices={invoices}
                 suppliers={suppliers}
+                customers={collections.customers}
+                receivables={collections.receivables}
                 onNavigate={(v, month, invId) => { setView(v); if (month) setSelectedMonth(month); if (invId) setDeepLinkInvoiceId(invId); }}
+                onOpenCustomer={(customerId, month) => { setView("collections"); if (month) setCollMonth(month); setCollDeepLink({ customerId, nonce: Date.now() }); }}
                 onClose={() => setShowSearch(false)}
               />
             )}
