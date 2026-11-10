@@ -8,7 +8,8 @@ import {
 } from "../utils/collections";
 import ListSkeleton from "../components/ListSkeleton";
 import ReceivableModal from "../components/ReceivableModal";
-import { Plus, Pencil, Trash2, Check, X, ChevronLeft, ChevronRight, Calendar, HandCoins, Undo2 } from "lucide-react";
+import ImportCollectionsModal from "../components/ImportCollectionsModal";
+import { Plus, Pencil, Trash2, Check, X, ChevronLeft, ChevronRight, Calendar, HandCoins, Undo2, Sparkles } from "lucide-react";
 
 const PILL_WIDTH = 104;
 const PILLS_VISIBLE = 6;
@@ -142,7 +143,7 @@ function MonthScroller({ pills, selected, onSelect, receivables }) {
   );
 }
 
-function ReceivablesTab({ customers, receivables, colorOf, onCollect, onUndo, onSetCollectedDate, onEdit, onAdd, month, setMonth }) {
+function ReceivablesTab({ customers, receivables, colorOf, onCollect, onUndo, onSetCollectedDate, onEdit, onAdd, onImport, month, setMonth }) {
   const T = useT();
   const { t, lang } = useLang();
   const today = todayISO();
@@ -159,7 +160,10 @@ function ReceivablesTab({ customers, receivables, colorOf, onCollect, onUndo, on
         <HandCoins size={30} strokeWidth={1.25} style={{ margin: "0 auto 12px", display: "block" }} aria-hidden="true" />
         <div style={{ fontFamily: DISPLAY, fontSize: 15, fontWeight: 700, color: T.t1, marginBottom: 4 }}>{t("coll_empty_title")}</div>
         <div style={{ fontFamily: SANS, fontSize: 13, marginBottom: 16 }}>{customers.length ? t("coll_empty_sub") : t("coll_no_customers")}</div>
-        <button className="btn btn-accent" onClick={onAdd}><Plus size={13} aria-hidden="true" />{t("coll_add")}</button>
+        <div style={{ display: "flex", gap: 8, justifyContent: "center", flexWrap: "wrap" }}>
+          <button className="btn btn-accent" onClick={onImport}><Sparkles size={13} aria-hidden="true" />{t("imp_btn")}</button>
+          <button className="btn btn-ghost" onClick={onAdd}><Plus size={13} aria-hidden="true" />{t("coll_add")}</button>
+        </div>
       </div>
     );
   }
@@ -299,11 +303,13 @@ function CustomersTab({ customers, receivables, colorOf, onAdd, onUpdate, onDele
 export default function CollectionsView({
   customers, receivables, loading, selectedMonth, onMonthChange,
   addCustomer, updateCustomer, deleteCustomer, addReceivable, updateReceivable, deleteReceivable, markCollected, markOpen,
+  importCollections,
 }) {
   const T = useT();
   const { t } = useLang();
   const [tab, setTab] = useState("receivables");
   const [modal, setModal] = useState(null); // receivable row (edit) or partial (new)
+  const [importing, setImporting] = useState(false);
   const [toast, setToast] = useState(null);
   const toastTimer = useRef(null);
   useEffect(() => () => clearTimeout(toastTimer.current), []);
@@ -340,20 +346,34 @@ export default function CollectionsView({
         </div>
         <span style={{ fontFamily: SANS, fontSize: 12, color: T.t3 }}>{t("coll_sub")}</span>
         {tab === "receivables" && (
-          <button className="btn btn-accent" style={{ marginInlineStart: "auto", height: 32, padding: "0 12px", fontSize: 12 }} onClick={openNew}>
-            <Plus size={13} aria-hidden="true" />{t("coll_add")}
-          </button>
+          <div style={{ marginInlineStart: "auto", display: "flex", gap: 8, flexWrap: "wrap" }}>
+            <button className="btn btn-ghost" style={{ height: 32, padding: "0 12px", fontSize: 12 }} onClick={() => setImporting(true)}>
+              <Sparkles size={13} aria-hidden="true" />{t("imp_btn")}
+            </button>
+            <button className="btn btn-accent" style={{ height: 32, padding: "0 12px", fontSize: 12 }} onClick={openNew}>
+              <Plus size={13} aria-hidden="true" />{t("coll_add")}
+            </button>
+          </div>
         )}
       </div>
 
       {tab === "receivables" ? (
         <ReceivablesTab customers={customers} receivables={receivables} colorOf={colorOf} month={selectedMonth} setMonth={onMonthChange}
-          onAdd={openNew} onEdit={setModal}
+          onAdd={openNew} onImport={() => setImporting(true)} onEdit={setModal}
           onCollect={guard(id => markCollected(id))} onUndo={guard(markOpen)}
           onSetCollectedDate={guard((id, d) => updateReceivable(id, { collected_date: d }))} />
       ) : (
         <CustomersTab customers={customers} receivables={receivables} colorOf={colorOf}
           onAdd={addCustomer} onUpdate={updateCustomer} onDelete={deleteCustomer} notify={notify} />
+      )}
+
+      {importing && (
+        <ImportCollectionsModal customers={customers} receivables={receivables} onImport={importCollections}
+          onClose={() => setImporting(false)}
+          onDone={(res, latestDate) => {
+            notify(t("imp_done", { n: res.receivables, c: res.customers }), true);
+            if (latestDate) onMonthChange(latestDate.slice(0, 7));
+          }} />
       )}
 
       {modal && (

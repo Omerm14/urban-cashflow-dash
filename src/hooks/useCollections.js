@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { supabase } from "../lib/supabase";
 import { useAuth } from "../contexts/AuthContext";
 import { todayISO } from "../utils/collections";
+import { normalizeName, newCustomerNames } from "../utils/collectionsImport";
 
 // Customers + receivables for the Collections tab. Reads/writes go straight to
 // Supabase with the user's JWT (RLS-scoped, migration 020); every query also
@@ -85,6 +86,36 @@ export const useCollections = () => {
     setReceivables(p => p.filter(r => r.id !== id));
   }, [user]);
 
+  // History import: create missing customers in one insert, then all receivables in one
+  // insert (atomic per statement — never a partial set of receivables). If the second
+  // insert fails, the new customers remain; they're visible and harmless.
+  // `rows` are review rows (src/utils/collectionsImport.js) already filtered to include=true.
+  const importCollections = useCallback(async rows => {
+    const names = newCustomerNames(rows.map(r => ({ ...r, include: true })));
+    let created = [];
+    if (names.length) {
+      const { data, error } = await supabase.from("customers").insert(names.map(name => ({ name, user_id: user.id }))).select();
+      if (error) { console.error("importCollections customers:", error.message); throw error; }
+      created = data ?? [];
+      setCustomers(p => [...p, ...created]);
+    }
+    const idByName = new Map(created.map(c => [normalizeName(c.name), c.id]));
+    const payload = rows.map(r => ({
+      user_id: user.id,
+      customer_id: r.customerId || idByName.get(normalizeName(r.customer)),
+      amount: Math.round(Number(r.amount) * 100) / 100,
+      expected_date: r.expected_date,
+      collected_date: r.collected_date || null,
+      reference: r.reference?.trim() || null,
+      description: r.description?.trim() || null,
+    }));
+    if (payload.some(p => !p.customer_id)) throw new Error("import: unresolved customer");
+    const { data, error } = await supabase.from("receivables").insert(payload).select();
+    if (error) { console.error("importCollections receivables:", error.message); throw error; }
+    setReceivables(p => [...p, ...(data ?? [])]);
+    return { receivables: data?.length ?? 0, customers: created.length };
+  }, [user]);
+
   const markCollected = useCallback((id, date = todayISO()) => updateReceivable(id, { collected_date: date }), [updateReceivable]);
   const markOpen = useCallback(id => updateReceivable(id, { collected_date: null }), [updateReceivable]);
 
@@ -92,5 +123,6 @@ export const useCollections = () => {
     customers, receivables, loading, loadError,
     addCustomer, updateCustomer, deleteCustomer,
     addReceivable, updateReceivable, deleteReceivable, markCollected, markOpen,
+    importCollections,
   };
 };
