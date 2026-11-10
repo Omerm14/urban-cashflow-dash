@@ -1,7 +1,7 @@
 import { useT, useLayout, useLang } from "../../contexts/AppContexts";
 import { FONT_UI as SANS, FONT_DISPLAY as DISPLAY, FONT_MONO as MONO } from "../../theme";
 import {
-  LayoutDashboard, FileText, Calendar, Zap, Users, Settings, X, Plus, LogOut, History,
+  LayoutDashboard, FileText, Calendar, Zap, Users, Settings, X, Plus, LogOut, History, HandCoins,
 } from "lucide-react";
 
 export function BrandMark({ size = 28 }) {
@@ -71,6 +71,7 @@ export default function Sidebar({ view, setView, suppliersCount, onUpgrade, onUp
         <div style={{ display: "flex", flexDirection: "column", gap: 1 }}>
           <NavItem id="dashboard" label={t("nav_dashboard")} Icon={LayoutDashboard} />
           <NavItem id="invoices" label={t("nav_invoices")} Icon={FileText} />
+          <NavItem id="collections" label={t("nav_collections")} Icon={HandCoins} />
           <NavItem id="calendar" label={t("nav_calendar")} Icon={Calendar} />
           <NavItem id="integrations" label={t("nav_integrations")} Icon={Zap} alert={integrationError} />
           <NavItem id="activity" label={t("nav_activity")} Icon={History} />

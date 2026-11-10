@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useAuth } from "./contexts/AuthContext";
 import { supabase } from "./lib/supabase";
 import { useInvoiceData } from "./hooks/useInvoiceData";
+import { useCollections } from "./hooks/useCollections";
 import { usePlan } from "./hooks/usePlan";
 import { useSyncJob } from "./hooks/useSyncJob";
 import { useUpload } from "./hooks/useUpload";
@@ -30,6 +31,7 @@ import LoginView from "./views/LoginView";
 import DashboardView from "./views/DashboardView";
 import InvoicesView from "./views/InvoicesView";
 import SuppliersView from "./views/SuppliersView";
+import CollectionsView from "./views/CollectionsView";
 import SettingsView from "./views/SettingsView";
 import OnboardingView from "./views/OnboardingView";
 import ActivityView from "./views/ActivityView";
@@ -55,6 +57,7 @@ export default function App() {
   const [view, setView] = useState("dashboard");
   const [selectedMonth, setSelectedMonth] = useState(currentYM);
   const [calMonth, setCalMonth] = useState(currentYM);
+  const [collMonth, setCollMonth] = useState(currentYM);
   const [preSelectAll, setPreSelectAll] = useState(false);
   const [initialFilterStatus, setInitialFilterStatus] = useState(null);
   const [deepLinkInvoiceId, setDeepLinkInvoiceId] = useState(null);
@@ -93,6 +96,9 @@ export default function App() {
     addSupplier, updateSupplier, deleteSupplier, getSupplier,
     refreshInvoices, checkCsvExportEntitlement,
   } = useInvoiceData();
+
+  // Receivables (Collections tab) — separate tables, separate hook.
+  const collections = useCollections();
 
   const { plan, used: planUsed, limit: planLimit, pct: planPct, isAtLimit, isNearLimit, maxSources, entitlements, isPro, refresh: refreshPlan } = usePlan();
   // Pro/Enterprise have no self-serve upgrade — route straight to Enterprise contact.
@@ -327,6 +333,7 @@ export default function App() {
                         invoices={invoices} onContinue={() => setOnboardingDismissed(true)} />
                     : <DashboardView invoices={invoices} suppliers={suppliers} loading={invoicesLoading} onPayAll={handlePayAll} chartData={chartData} supplierNames={allNames} supplierColor={getSupplierColor} user={user} onMissingAlert={() => setShowMissingModal(true)} onAnomalyAlert={() => setShowAnomalyModal(true)} missingSuppliers={missingSuppliers} anomalyMap={anomalyMap} onViewMonth={handleViewMonth} onNavigateFiltered={(status) => { setView("invoices"); setInitialFilterStatus(status); }} />)}
                   {view === "invoices" && <InvoicesView invoices={invoices} loading={invoicesLoading} selectedMonth={selectedMonth} onMonthChange={setSelectedMonth} onMarkPaid={handleMarkPaid} onAddSupplier={addSupplier} onDeleteInvoice={deleteInvoice} onBulkPaid={handleBulkPaid} onBulkUnpaid={handleBulkUnpaid} onBulkDelete={bulkDelete} preSelectAll={preSelectAll} onEditInvoice={setEditInvoice} anomalyMap={anomalyMap} missingSuppliers={missingSuppliers} onMissingAlert={() => setShowMissingModal(true)} initialFilterStatus={initialFilterStatus} initialSelectedId={deepLinkInvoiceId} onViewAttachment={handleViewAttachment} supplierColor={getSupplierColor} entitlements={entitlements} onUpgrade={handleUpgradeClick} onCheckExportEntitlement={checkCsvExportEntitlement} />}
+                  {view === "collections" && <CollectionsView {...collections} selectedMonth={collMonth} onMonthChange={setCollMonth} />}
                   {view === "calendar" && <CalendarView computed={invoices} calMonth={calMonth} setCalMonth={setCalMonth} color={getSupplierColor} />}
                   {view === "integrations" && <IntegrationsPage
                     syncJobs={syncJobs} onStartSync={startSync} onCancelSync={cancelSync}

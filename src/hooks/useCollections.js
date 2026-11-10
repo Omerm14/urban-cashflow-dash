@@ -7,6 +7,7 @@ import { todayISO } from "../utils/collections";
 // Supabase with the user's JWT (RLS-scoped, migration 020); every query also
 // filters by user_id explicitly, matching the supplier CRUD in useInvoiceData.
 // Kept separate from useInvoiceData so supplier/invoice logic is untouched.
+// Customers come back in creation order so avatar colors stay stable; views sort by name.
 
 // Postgres FK violation — deleting a customer that still has receivables (ON DELETE RESTRICT).
 const FK_VIOLATION = "23503";
@@ -24,7 +25,7 @@ export const useCollections = () => {
     setLoading(true);
     setLoadError(null);
     Promise.all([
-      supabase.from("customers").select("*").eq("user_id", user.id).order("name"),
+      supabase.from("customers").select("*").eq("user_id", user.id).order("created_at"),
       supabase.from("receivables").select("*").eq("user_id", user.id).order("expected_date"),
     ]).then(([{ data: cs, error: ce }, { data: rs, error: re }]) => {
       if (!mounted) return;
