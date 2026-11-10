@@ -27,7 +27,8 @@ async function deleteUserAttachments(userId) {
 }
 
 // FK-safe delete order — do not reorder.
-const TABLES_TO_DELETE = ['invoices', 'suppliers', 'sync_jobs', 'integrations', 'subscriptions'];
+// receivables before customers: receivables → customers FK is ON DELETE RESTRICT (migration 020).
+const TABLES_TO_DELETE = ['invoices', 'suppliers', 'receivables', 'customers', 'sync_jobs', 'integrations', 'subscriptions'];
 
 // Deletes all app-table rows for a user (FK-safe order) then removes the Supabase Auth user
 // itself. Shared by self-service account deletion and admin-driven user deletion — the only
