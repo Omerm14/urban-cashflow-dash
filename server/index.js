@@ -60,6 +60,7 @@ app.post('/api/stripe/webhook',
 app.use(express.json({ limit: '20mb' }));
 
 app.post('/api/extract',    extractLimiter, auth, require('./routes/extract'));
+app.post('/api/collections/parse', extractLimiter, auth, require('./routes/collectionsParse'));
 
 // Admin
 const admin = require('./routes/admin');

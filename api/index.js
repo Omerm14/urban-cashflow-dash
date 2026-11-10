@@ -54,6 +54,7 @@ app.use(express.json({ limit: '20mb' }));
 const { extractLimiter, syncLimiter, googleApiLimiter, accountLimiter } = require('../server/middleware/rateLimiters');
 
 app.post('/api/extract',    extractLimiter, auth, require('../server/routes/extract'));
+app.post('/api/collections/parse', extractLimiter, auth, require('../server/routes/collectionsParse'));
 
 // Admin
 const admin = require('../server/routes/admin');

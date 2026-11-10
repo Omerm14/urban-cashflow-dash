@@ -113,4 +113,47 @@ describe('accountCleanup.js deleteUserData — per-table delete error handling',
     expect(thrown.message).toContain('subscriptions');
     expect(deleteUserSpy).not.toHaveBeenCalled();
   });
+
+  // Collections (migration 020): receivables reference customers with ON DELETE RESTRICT,
+  // so receivables must go first, and both must be scoped to the user being deleted.
+  it('deletes receivables before customers, each scoped by user_id', async () => {
+    const deletes = [];
+    const fake = {
+      from: (table) => {
+        let type = null;
+        const self = {
+          select: () => { type = 'select'; return self; },
+          delete: () => { type = 'delete'; return self; },
+          eq: (col, val) => { if (type === 'delete') deletes.push({ table, col, val }); return self; },
+          not: () => self,
+          then: (resolve) => resolve({ data: type === 'select' ? [] : null, error: null }),
+        };
+        return self;
+      },
+      auth: { admin: { deleteUser: vi.fn().mockResolvedValue({ error: null }) } },
+    };
+    mockModule(supabasePath, fake);
+    mockModule(storagePath, { deleteAttachment: vi.fn() });
+
+    const { deleteUserData } = freshRequire('../server/lib/accountCleanup.js');
+    await deleteUserData('u1');
+
+    const order = deletes.map(d => d.table);
+    expect(order).toContain('receivables');
+    expect(order).toContain('customers');
+    expect(order.indexOf('receivables')).toBeLessThan(order.indexOf('customers'));
+    for (const t of ['receivables', 'customers']) {
+      expect(deletes.find(d => d.table === t)).toEqual({ table: t, col: 'user_id', val: 'u1' });
+    }
+  });
+
+  it('does NOT delete the Auth user when the customers delete fails', async () => {
+    const deleteUserSpy = vi.fn().mockResolvedValue({ error: null });
+    mockModule(supabasePath, makeSupabase({ deleteErrors: { customers: { message: 'fk violation' } }, deleteUserSpy }));
+    mockModule(storagePath, { deleteAttachment: vi.fn() });
+
+    const { deleteUserData } = freshRequire('../server/lib/accountCleanup.js');
+    await expect(deleteUserData('u1')).rejects.toThrow(/customers/);
+    expect(deleteUserSpy).not.toHaveBeenCalled();
+  });
 });
