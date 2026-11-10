@@ -691,6 +691,7 @@ const en = {
   ana_spike_up: "{name}: up {pct}% in {month}",
   ana_spike_down: "{name}: down {pct}% in {month}",
   ana_partial_hint: "{month} is still in progress and is hidden until it ends.",
+  ana_not_in_chart: "Not in chart",
   ana_table: "Monthly table",
   search_customers: "Customers",
   search_receivables: "Receivables",
