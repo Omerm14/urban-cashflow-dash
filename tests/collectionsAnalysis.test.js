@@ -72,12 +72,10 @@ describe("chartRows", () => {
 
 import { lineStyleFor, ANALYSIS_TOP_N } from "../src/utils/collectionsAnalysis.js";
 describe("lineStyleFor", () => {
-  it("15 lines: 7 colors solid, then dashed, then dotted — never a repeated color+style", () => {
-    expect(ANALYSIS_TOP_N).toBe(15);
+  it("7 solid lines, each its own palette color", () => {
+    expect(ANALYSIS_TOP_N).toBe(7);
     const styles = Array.from({ length: ANALYSIS_TOP_N }, (_, i) => lineStyleFor(i));
-    expect(styles[0]).toEqual({ color: 0, style: "solid" });
-    expect(styles[7]).toEqual({ color: 0, style: "dashed" });
-    expect(styles[14]).toEqual({ color: 0, style: "dotted" });
-    expect(new Set(styles.map(s => `${s.color}-${s.style}`)).size).toBe(15);
+    expect(styles.every(s => s.style === "solid")).toBe(true);
+    expect(new Set(styles.map(s => s.color)).size).toBe(7);
   });
 });
