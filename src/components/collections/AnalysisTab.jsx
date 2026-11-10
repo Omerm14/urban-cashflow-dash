@@ -80,10 +80,9 @@ export default function AnalysisTab({ customers, receivables }) {
     return m;
   }, [series, prevSeries, lineIds]); // eslint-disable-line react-hooks/exhaustive-deps
   const monthKey = i => `${activeYear}-${String(i + 1).padStart(2, "0")}`;
-  // Every customer's notable changes, not only the lines on the chart (newest first).
-  const notable = [...series.keys()]
-    .flatMap(id => spikesFor(id).map(s => ({ ...s, id, onChart: lineIds.includes(id) && !hidden.has(id) })))
-    .sort((a, b) => b.i - a.i || Math.abs(b.pct) - Math.abs(a.pct));
+  const notable = lineIds.filter(id => !hidden.has(id))
+    .flatMap(id => spikes.get(id).map(s => ({ ...s, id })))
+    .sort((a, b) => b.i - a.i || Math.abs(b.pct) - Math.abs(a.pct)).slice(0, 6);
 
   const toggle = key => setHidden(prev => { const n = new Set(prev); n.has(key) ? n.delete(key) : n.add(key); return n; });
   const tableIds = [...series.keys()].filter(id => seriesTotal(series.get(id)) > 0).sort((a, b) => seriesTotal(series.get(b)) - seriesTotal(series.get(a)));
@@ -223,27 +222,15 @@ export default function AnalysisTab({ customers, receivables }) {
         {notable.length === 0 ? (
           <div style={{ fontFamily: SANS, fontSize: 12.5, color: T.t3 }}>{t("ana_no_notable")}</div>
         ) : (
-          <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(2, minmax(0, 1fr))", gap: 12, alignItems: "start" }}>
-            {[[true, "ana_notable_on"], [false, "ana_notable_off"]].map(([onChart, head]) => {
-              const items = notable.filter(n => n.onChart === onChart);
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))", gap: 8 }}>
+            {notable.map(n => {
+              const up = n.kind === "up";
+              const Icon = up ? TrendingUp : TrendingDown;
               return (
-                <div key={head} style={{ background: T.surf, border: `1px solid ${T.bdr}`, borderRadius: 10, overflow: "hidden" }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "9px 12px", background: T.surf2, borderBottom: `1px solid ${T.bdr}`, fontFamily: SANS, fontSize: 12, fontWeight: 700, color: T.t1 }}>
-                    <span>{t(head)}</span><span className="num" style={{ color: T.t3, fontWeight: 600 }}>{items.length}</span>
-                  </div>
-                  {items.length === 0 ? (
-                    <div style={{ padding: "12px", fontFamily: SANS, fontSize: 12, color: T.t3 }}>{t("ana_no_notable")}</div>
-                  ) : items.map((n, k) => {
-                    const up = n.kind === "up";
-                    const Icon = up ? TrendingUp : TrendingDown;
-                    return (
-                      <div key={`${n.id}-${n.i}`} style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 12px", borderTop: k ? `1px solid ${T.bdr}` : "none", fontFamily: SANS, fontSize: 12.5, color: T.t1 }}>
-                        <Icon size={15} color={up ? T.green : T.red} aria-hidden="true" style={{ flexShrink: 0 }} />
-                        {onChart && swatch(n.id, 14)}
-                        <span style={{ flex: 1, minWidth: 0 }}>{t(up ? "ana_spike_up" : "ana_spike_down", { name: names.get(n.id), pct: Math.abs(n.pct), month: monthShortName(monthKey(n.i), lang) })}</span>
-                      </div>
-                    );
-                  })}
+                <div key={`${n.id}-${n.i}`} style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 10px", background: T.surf, border: `1px solid ${T.bdr}`, borderRadius: 9, fontFamily: SANS, fontSize: 12.5, color: T.t1 }}>
+                  <Icon size={15} color={up ? T.green : T.red} aria-hidden="true" />
+                  {swatch(n.id, 14)}
+                  <span>{t(up ? "ana_spike_up" : "ana_spike_down", { name: "\u0000", pct: Math.abs(n.pct), month: monthShortName(monthKey(n.i), lang) }).split("\u0000").flatMap((part, k) => k ? [<bdi key={k}>{names.get(n.id)}</bdi>, part] : [part])}</span>
                 </div>
               );
             })}

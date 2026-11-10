@@ -685,8 +685,6 @@ const he = {
   ana_spike_up: "{name}: עלייה של {pct}% ב{month}",
   ana_spike_down: "{name}: ירידה של {pct}% ב{month}",
   ana_partial_hint: "{month} עדיין לא הסתיים ולכן מוסתר עד סוף החודש.",
-  ana_notable_on: "בגרף",
-  ana_notable_off: "לא מוצגים בגרף",
   ana_table: "טבלה חודשית",
   search_customers: "לקוחות",
   search_receivables: "חובות לגבייה",
