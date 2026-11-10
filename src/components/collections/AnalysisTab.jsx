@@ -219,20 +219,31 @@ export default function AnalysisTab({ customers, receivables }) {
       </div>
 
       <div>
-        <div style={lbl}>{t("ana_notable")}{notable.length ? ` · ${notable.length}` : ""}</div>
+        <div style={lbl}>{t("ana_notable")}</div>
         {notable.length === 0 ? (
           <div style={{ fontFamily: SANS, fontSize: 12.5, color: T.t3 }}>{t("ana_no_notable")}</div>
         ) : (
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))", gap: 8 }}>
-            {notable.map(n => {
-              const up = n.kind === "up";
-              const Icon = up ? TrendingUp : TrendingDown;
+          <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(2, minmax(0, 1fr))", gap: 12, alignItems: "start" }}>
+            {[[true, "ana_notable_on"], [false, "ana_notable_off"]].map(([onChart, head]) => {
+              const items = notable.filter(n => n.onChart === onChart);
               return (
-                <div key={`${n.id}-${n.i}`} style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 10px", background: T.surf, border: `1px solid ${T.bdr}`, borderRadius: 9, fontFamily: SANS, fontSize: 12.5, color: T.t1 }}>
-                  <Icon size={15} color={up ? T.green : T.red} aria-hidden="true" />
-                  {n.onChart ? swatch(n.id, 14) : <span style={{ width: 14, flexShrink: 0 }} aria-hidden="true" />}
-                  <span style={{ flex: 1, minWidth: 0 }}>{t(up ? "ana_spike_up" : "ana_spike_down", { name: names.get(n.id), pct: Math.abs(n.pct), month: monthShortName(monthKey(n.i), lang) })}</span>
-                  {!n.onChart && <span style={{ flexShrink: 0, fontSize: 10.5, fontWeight: 600, color: T.t3, background: T.surf2, border: `1px solid ${T.bdr}`, borderRadius: 999, padding: "1px 7px", whiteSpace: "nowrap" }}>{t("ana_not_in_chart")}</span>}
+                <div key={head} style={{ background: T.surf, border: `1px solid ${T.bdr}`, borderRadius: 10, overflow: "hidden" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "9px 12px", background: T.surf2, borderBottom: `1px solid ${T.bdr}`, fontFamily: SANS, fontSize: 12, fontWeight: 700, color: T.t1 }}>
+                    <span>{t(head)}</span><span className="num" style={{ color: T.t3, fontWeight: 600 }}>{items.length}</span>
+                  </div>
+                  {items.length === 0 ? (
+                    <div style={{ padding: "12px", fontFamily: SANS, fontSize: 12, color: T.t3 }}>{t("ana_no_notable")}</div>
+                  ) : items.map((n, k) => {
+                    const up = n.kind === "up";
+                    const Icon = up ? TrendingUp : TrendingDown;
+                    return (
+                      <div key={`${n.id}-${n.i}`} style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 12px", borderTop: k ? `1px solid ${T.bdr}` : "none", fontFamily: SANS, fontSize: 12.5, color: T.t1 }}>
+                        <Icon size={15} color={up ? T.green : T.red} aria-hidden="true" style={{ flexShrink: 0 }} />
+                        {onChart && swatch(n.id, 14)}
+                        <span style={{ flex: 1, minWidth: 0 }}>{t(up ? "ana_spike_up" : "ana_spike_down", { name: names.get(n.id), pct: Math.abs(n.pct), month: monthShortName(monthKey(n.i), lang) })}</span>
+                      </div>
+                    );
+                  })}
                 </div>
               );
             })}
