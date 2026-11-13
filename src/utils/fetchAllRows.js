@@ -12,7 +12,13 @@ const PAGE_SIZE = 1000;
 const buildQuery = (supabaseClient, table, filters) => {
   let query = supabaseClient.from(table).select('*', { count: 'exact' });
   for (const [key, value] of Object.entries(filters)) query = query.eq(key, value);
-  return query.order('created_at');
+  // .order('id') is a stable tiebreaker: without it, Postgres/PostgREST gives
+  // no ordering guarantee across rows sharing the same created_at (common
+  // after a Drive/Gmail sync batch or a Green Invoice bulk import), and a row
+  // landing on a page boundary can be skipped entirely or returned twice
+  // across sequential .range() fetches. Same fix already applied in gc.js's
+  // fetchAllReferencedPaths and syncProcessor.js's getSeenFilenames.
+  return query.order('created_at').order('id');
 };
 
 export const fetchAllRows = async (supabaseClient, table, filters) => {
